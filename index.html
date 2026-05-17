@@ -10,36 +10,13 @@
   <title>Daily Truck Operations</title>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5098781549114915"
      crossorigin="anonymous"></script>
-  <!-- AdSense Auto Ads activation -->
+  <!-- AdSense Auto Ads — programmatic activation (belt+suspenders with dashboard toggle) -->
   <script>
-    window.addEventListener('load', function(){
-      try {
-        (adsbygoogle = window.adsbygoogle || []).push({
-          google_ad_client: "ca-pub-5098781549114915",
-          enable_page_level_ads: true
-        });
-      } catch(e){}
+    (adsbygoogle = window.adsbygoogle || []).push({
+      google_ad_client: "ca-pub-5098781549114915",
+      enable_page_level_ads: true
     });
   </script>
-  <style>
-    /* AdSense ad containers */
-    .ad-slot {
-      display: block;
-      width: 100%;
-      min-height: 90px;
-      margin: 12px 0;
-      text-align: center;
-      overflow: hidden;
-    }
-    .ad-slot ins {
-      display: block !important;
-    }
-    /* Hide empty ad slots so they don't take space before approval */
-    .ad-slot:empty,
-    .ad-slot ins[data-ad-status="unfilled"] {
-      display: none !important;
-    }
-  </style>
   <style>
     :root {
       color-scheme: light;
@@ -2409,16 +2386,6 @@
       </div>
     </nav>
 
-    <!-- AdSense — top leaderboard (below nav, above all content) -->
-    <div class="ad-slot" id="ad-top" style="max-width:970px;margin:8px auto;">
-      <ins class="adsbygoogle"
-           style="display:block;width:100%;height:90px;"
-           data-ad-client="ca-pub-5098781549114915"
-           data-ad-format="horizontal"
-           data-full-width-responsive="true"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-    </div>
-
     <main>
       <section id="overviewPanel" class="tab-panel active" aria-label="Overview">
         <div class="motivation-bar" id="motivBar_overview"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
@@ -2429,16 +2396,6 @@
           <div class="brand-swoosh" aria-hidden="true"></div>
 
         </div>
-        <!-- AdSense — overview panel in-content -->
-        <div class="ad-slot" style="max-width:728px;margin:10px auto;">
-          <ins class="adsbygoogle"
-               style="display:block"
-               data-ad-client="ca-pub-5098781549114915"
-               data-ad-format="auto"
-               data-full-width-responsive="true"></ins>
-          <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-        </div>
-
         <div id="emptyOverview" class="empty-state">
           <div class="empty-inner">
             <div class="empty-mark">
@@ -3940,16 +3897,6 @@
       </section>
 
     </main>
-
-    <!-- AdSense — bottom banner -->
-    <div class="ad-slot" id="ad-bottom" style="max-width:970px;margin:0 auto 12px;padding:0 8px;">
-      <ins class="adsbygoogle"
-           style="display:block;width:100%;height:90px;"
-           data-ad-client="ca-pub-5098781549114915"
-           data-ad-format="horizontal"
-           data-full-width-responsive="true"></ins>
-      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-    </div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
