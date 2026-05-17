@@ -4531,26 +4531,54 @@
       var btn      = document.getElementById('loginBtn');
       var signOut  = document.getElementById('signOutBtn');
 
+      // Tab visibility by role
+      var WORK_TABS  = ['overview','data','ddp','truckFinder','audit','clerkDoor','doorSuggestor','breakdownsAudit','truckChargeAudit','history','help'];
+      var GUEST_TABS = ['inOtherNews','localWeather','flappyBird','paperPlane','jetpackJames'];
+
+      function applyRole(role) {
+        var allButtons = document.querySelectorAll('.tab-button[data-tab]');
+        allButtons.forEach(function(btn) {
+          var tab = btn.getAttribute('data-tab');
+          var show = false;
+          if (role === 'admin') {
+            show = true;
+          } else if (role === 'work') {
+            show = WORK_TABS.indexOf(tab) !== -1;
+          } else if (role === 'guest') {
+            show = GUEST_TABS.indexOf(tab) !== -1;
+          }
+          btn.style.display = show ? '' : 'none';
+        });
+        // If current active tab is hidden, jump to first visible tab
+        var activeBtn = document.querySelector('.tab-button[aria-selected="true"]');
+        if (activeBtn && activeBtn.style.display === 'none') {
+          var firstVisible = document.querySelector('.tab-button[data-tab]:not([style*="none"])');
+          if (firstVisible) firstVisible.click();
+        }
+      }
+
       function showLogin() {
         overlay.classList.remove('hidden');
         document.getElementById('loginUser').focus();
       }
-      function hideLogin() {
+      function hideLogin(role) {
         overlay.classList.add('hidden');
         if (signOut) signOut.style.display = 'inline-block';
+        applyRole(role || 'guest');
       }
 
       // Check if already logged in
       fetch('/api/me', { credentials: 'include' }).then(function(r) {
         if (r.ok) {
-          hideLogin();
-          loadDecisionsFromBackend();
+          return r.json().then(function(d) {
+            hideLogin(d.role);
+            loadDecisionsFromBackend();
+          });
         } else {
           showLogin();
         }
       }).catch(function() {
-        // Server down locally — still show app (dev mode)
-        hideLogin();
+        hideLogin('admin');
         loadDecisionsFromBackend();
       });
 
@@ -4569,8 +4597,10 @@
           body: JSON.stringify({ username: user, password: pass })
         }).then(function(r) {
           if (r.ok) {
-            hideLogin();
-            loadDecisionsFromBackend();
+            return r.json().then(function(d) {
+              hideLogin(d.role);
+              loadDecisionsFromBackend();
+            });
           } else {
             return r.json().then(function(d) {
               errEl.textContent = d.detail || 'Invalid username or password.';

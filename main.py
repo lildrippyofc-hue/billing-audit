@@ -36,10 +36,25 @@ def _hash(pw: str) -> str:
 # Default password for local dev only — override it in production!
 _APP_PASSWORD = os.environ.get("APP_PASSWORD", "N3747P9R")
 
+# Three-tier access system:
+# james → full access
+# work  → truck/billing tabs only
+# guest → break time / news / games only
 _USERS: Dict[str, str] = {
-    "aldioks": _hash(_APP_PASSWORD),
     "james":   _hash(_APP_PASSWORD),
+    "aldioks": _hash(_APP_PASSWORD),
     "dean":    _hash(_APP_PASSWORD),
+    "work":    _hash(os.environ.get("WORK_PASSWORD", "work1")),
+    "guest":   _hash(os.environ.get("GUEST_PASSWORD", "guest1")),
+}
+
+# Role lookup
+_ROLES: Dict[str, str] = {
+    "james":   "admin",
+    "aldioks": "admin",
+    "dean":    "admin",
+    "work":    "work",
+    "guest":   "guest",
 }
 
 # In-memory session store (fine for a single-process server)
@@ -137,15 +152,16 @@ def login(creds: LoginIn, response: Response):
     if stored is None or stored != pw_hash:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = secrets.token_hex(32)
-    _sessions[token] = creds.username.strip().lower()
+    uname = creds.username.strip().lower()
+    _sessions[token] = uname
     response.set_cookie(
         "session", token,
         httponly=True,
         samesite="lax",
         max_age=60 * 60 * 24 * 7,   # 7 days
-        secure=os.environ.get("RAILWAY_ENVIRONMENT") is not None,  # True on Railway (HTTPS), False locally
+        secure=os.environ.get("RAILWAY_ENVIRONMENT") is not None,
     )
-    return {"ok": True, "username": creds.username.strip().lower()}
+    return {"ok": True, "username": uname, "role": _ROLES.get(uname, "guest")}
 
 
 @app.post("/api/logout")
@@ -158,7 +174,7 @@ def logout(response: Response, session: Optional[str] = Cookie(default=None)):
 
 @app.get("/api/me")
 def me(username: str = Depends(require_auth)):
-    return {"username": username}
+    return {"username": username, "role": _ROLES.get(username, "guest")}
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
