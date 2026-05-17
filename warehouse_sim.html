@@ -467,6 +467,8 @@ class GameScene extends Phaser.Scene {
     this.createTrucks();
 
     // Camera
+    // Physics world bounds MUST match the game world size, not the canvas size
+    this.physics.world.setBounds(0, 0, WW, WH);
     this.cameras.main.setBounds(0, 0, WW, WH);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     this.cameras.main.setZoom(GW < 600 ? 0.7 : 0.85);
