@@ -15,8 +15,6 @@ body {
   touch-action: none;
 }
 canvas { display: block; cursor: crosshair; }
-
-/* ── Screens ── */
 .screen {
   position: fixed; inset: 0; z-index: 20;
   display: none; place-items: center;
@@ -24,8 +22,6 @@ canvas { display: block; cursor: crosshair; }
   padding: 16px;
 }
 .screen.active { display: grid; }
-
-/* ── Menu Card ── */
 .menu-card {
   width: min(520px, 100%);
   background: linear-gradient(160deg, rgba(20,40,80,0.98) 0%, rgba(8,18,45,0.99) 100%);
@@ -36,33 +32,33 @@ canvas { display: block; cursor: crosshair; }
   display: flex; flex-direction: column; align-items: center; gap: 18px;
 }
 .menu-title {
-  font-size: clamp(30px, 8vw, 48px);
+  font-size: clamp(28px, 7vw, 44px);
   font-weight: 900;
   letter-spacing: -1px;
   color: #fff;
   text-shadow: 0 0 30px rgba(80,160,255,0.5);
   display: flex; align-items: center; gap: 14px;
 }
-.menu-title svg { flex-shrink: 0; }
 .menu-stats {
-  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
 }
 .stat-chip {
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: 6px 13px;
   font-size: 13px; font-weight: 700;
   color: rgba(255,255,255,0.85);
 }
 .stat-chip span { color: #7eb8ff; }
 .menu-btns {
-  display: flex; flex-direction: column; gap: 11px; width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;
 }
+.menu-btns .btn-primary { grid-column: 1 / -1; }
 .btn-primary {
   background: linear-gradient(135deg, #1e5ccc, #3b8ef0);
-  color: #fff; font-weight: 900; font-size: 18px;
-  border: none; border-radius: 14px; padding: 16px;
+  color: #fff; font-weight: 900; font-size: 17px;
+  border: none; border-radius: 14px; padding: 15px;
   cursor: pointer; letter-spacing: 0.5px;
   box-shadow: 0 6px 24px rgba(30,90,200,0.45);
   transition: transform 0.12s, box-shadow 0.12s;
@@ -72,16 +68,14 @@ canvas { display: block; cursor: crosshair; }
 .btn-primary:active { transform: translateY(0); }
 .btn-secondary {
   background: rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.9); font-weight: 800; font-size: 15px;
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 13px;
+  color: rgba(255,255,255,0.9); font-weight: 800; font-size: 14px;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 12px;
   cursor: pointer; font-family: inherit;
   transition: background 0.12s;
 }
 .btn-secondary:hover { background: rgba(255,255,255,0.12); }
-
-/* ── Maps Screen ── */
 .big-card {
-  width: min(900px, 100%);
+  width: min(920px, 100%);
   max-height: calc(100vh - 32px);
   overflow-y: auto;
   background: linear-gradient(160deg, rgba(15,28,60,0.99) 0%, rgba(6,14,36,0.99) 100%);
@@ -92,24 +86,22 @@ canvas { display: block; cursor: crosshair; }
 .big-card-head {
   position: sticky; top: 0; z-index: 2;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 22px 26px 18px;
+  padding: 20px 26px 16px;
   background: rgba(12,24,54,0.98);
   border-bottom: 1px solid rgba(255,255,255,0.08);
   border-radius: 24px 24px 0 0;
 }
-.big-card-head h2 { font-size: 22px; color: #fff; font-weight: 900; }
+.big-card-head h2 { font-size: 21px; color: #fff; font-weight: 900; }
 .head-sub { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 3px; }
 .btn-close {
   background: rgba(255,255,255,0.1); color: #fff; border: none;
-  border-radius: 10px; padding: 10px 16px; font-weight: 800; cursor: pointer;
+  border-radius: 10px; padding: 9px 15px; font-weight: 800; cursor: pointer;
   font-family: inherit; font-size: 14px;
 }
 .btn-close:hover { background: rgba(255,255,255,0.18); }
-.big-card-body { padding: 22px 26px 28px; }
-
-/* ── Map Grid ── */
+.big-card-body { padding: 20px 24px 26px; }
 .maps-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px;
 }
 .map-card {
   border-radius: 16px; overflow: hidden;
@@ -117,52 +109,50 @@ canvas { display: block; cursor: crosshair; }
   background: rgba(255,255,255,0.04);
   position: relative;
 }
+.map-card.selected { border-color: rgba(74,222,128,0.5); }
 .map-banner {
-  height: 90px; position: relative; overflow: hidden;
+  height: 88px; position: relative; overflow: hidden;
   display: flex; align-items: flex-end; padding: 10px 14px;
 }
 .map-banner-name {
   font-size: 17px; font-weight: 900; color: #fff;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.6); z-index: 1;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7); z-index: 1; position: relative;
 }
-.map-banner canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.map-body { padding: 14px; }
-.map-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.45; margin-bottom: 12px; }
-.map-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.map-body { padding: 12px 14px 14px; }
+.map-desc { color: rgba(255,255,255,0.6); font-size: 12px; line-height: 1.45; margin-bottom: 10px; }
+.map-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tag {
   background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700;
-  color: rgba(255,255,255,0.7); letter-spacing: 0.05em;
+  border-radius: 999px; padding: 3px 9px; font-size: 10px; font-weight: 700;
+  color: rgba(255,255,255,0.7);
 }
 .map-btn {
-  width: 100%; border: none; border-radius: 10px; padding: 12px;
-  font-weight: 900; font-size: 14px; font-family: inherit; cursor: pointer;
+  width: 100%; border: none; border-radius: 10px; padding: 11px;
+  font-weight: 900; font-size: 13px; font-family: inherit; cursor: pointer;
   transition: opacity 0.12s;
 }
 .map-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .map-btn.play { background: linear-gradient(135deg,#1e5ccc,#3b8ef0); color:#fff; }
 .map-btn.unlock { background: linear-gradient(135deg,#b8860b,#daa520); color:#fff; }
-.map-btn.active { background: rgba(60,200,100,0.2); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+.map-btn.active { background: rgba(60,200,100,0.15); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
 .map-lock-overlay {
   position: absolute; inset: 0; border-radius: 16px;
   background: rgba(0,0,0,0.55);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
   pointer-events: none;
 }
-.lock-icon { font-size: 32px; }
-.lock-cost { font-size: 14px; font-weight: 900; color: #ffd700; }
-
-/* ── Upgrades Grid ── */
-.upgrades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.lock-icon { font-size: 28px; }
+.lock-cost { font-size: 13px; font-weight: 900; color: #ffd700; }
+.upgrades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
 .upgrade-card {
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  border-radius: 14px; padding: 15px; display: flex; flex-direction: column; gap: 9px;
 }
-.upgrade-card h3 { font-size: 16px; color: #fff; font-weight: 800; }
-.upgrade-card p { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.4; }
+.upgrade-card h3 { font-size: 15px; color: #fff; font-weight: 800; }
+.upgrade-card p { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.4; }
 .upgrade-levels { display: flex; gap: 5px; }
 .level-dot {
-  width: 22px; height: 8px; border-radius: 4px;
+  width: 20px; height: 7px; border-radius: 4px;
   background: rgba(255,255,255,0.12);
   transition: background 0.2s;
 }
@@ -170,146 +160,214 @@ canvas { display: block; cursor: crosshair; }
 .level-dot.maxed { background: linear-gradient(90deg,#ffa500,#ffd700); }
 .upgrade-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); }
 .upgrade-btn {
-  border: none; border-radius: 9px; padding: 11px; font-weight: 900; font-size: 13px;
+  border: none; border-radius: 9px; padding: 10px; font-weight: 900; font-size: 12px;
   font-family: inherit; cursor: pointer; transition: opacity 0.12s;
 }
 .upgrade-btn:disabled { opacity: 0.38; cursor: not-allowed; }
 .upgrade-btn.buy { background: linear-gradient(135deg,#1e5ccc,#3b8ef0); color: #fff; }
 .upgrade-btn.maxed { background: linear-gradient(135deg,#7b5e0a,#c49a0e); color:#fff; }
-
-/* ── HUD ── */
-#hud {
-  position: fixed; inset: 0; pointer-events: none; z-index: 5;
+.skins-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.skin-card {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  align-items: center; text-align: center;
 }
-
-/* ── Result Overlay ── */
+.skin-card.equipped { border-color: rgba(74,222,128,0.5); background: rgba(74,222,128,0.06); }
+.skin-preview { width: 80px; height: 50px; }
+.skin-name { font-size: 14px; font-weight: 800; color: #fff; }
+.skin-desc { font-size: 11px; color: rgba(255,255,255,0.5); }
+.skin-btn {
+  border: none; border-radius: 9px; padding: 9px 14px; font-weight: 900; font-size: 12px;
+  font-family: inherit; cursor: pointer; width: 100%;
+}
+.skin-btn.buy { background: linear-gradient(135deg,#1e5ccc,#3b8ef0); color:#fff; }
+.skin-btn.equip { background: rgba(255,255,255,0.1); color:#fff; border: 1px solid rgba(255,255,255,0.2); }
+.skin-btn.equipped { background: rgba(74,222,128,0.2); color:#4ade80; border: 1px solid rgba(74,222,128,0.3); cursor:default; }
+.skin-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.missions-list { display: flex; flex-direction: column; gap: 10px; }
+.mission-card {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 15px; display: flex; align-items: center; gap: 14px;
+}
+.mission-card.done { border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.05); }
+.mission-card.claimed { opacity: 0.45; }
+.mission-icon { font-size: 26px; flex-shrink: 0; }
+.mission-info { flex: 1; }
+.mission-title { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+.mission-bar-wrap { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-bottom: 4px; }
+.mission-bar-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#4488ff,#77aaff); transition: width 0.3s; }
+.mission-prog { font-size: 11px; color: rgba(255,255,255,0.5); }
+.mission-reward { font-size: 13px; font-weight: 900; color: #ffd700; white-space: nowrap; }
+.mission-btn {
+  border: none; border-radius: 9px; padding: 9px 14px; font-weight: 900; font-size: 12px;
+  font-family: inherit; cursor: pointer; white-space: nowrap;
+  background: linear-gradient(135deg,#1e5ccc,#3b8ef0); color:#fff;
+}
+.mission-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+#hud { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
 #result-screen {
   position: fixed; inset: 0; z-index: 18;
   display: none; place-items: center; padding: 16px;
-  background: rgba(0,8,24,0.75);
+  background: rgba(0,8,24,0.8);
 }
 #result-screen.active { display: grid; }
 .result-card {
-  width: min(480px, 100%);
+  width: min(500px, 100%);
   background: linear-gradient(160deg, rgba(20,40,80,0.99) 0%, rgba(8,18,45,0.99) 100%);
   border: 1px solid rgba(100,160,255,0.25);
   border-radius: 24px;
   box-shadow: 0 32px 100px rgba(0,0,0,0.7);
-  padding: 36px 30px 30px;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 32px 28px 28px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
   text-align: center;
 }
-.result-badge {
-  font-size: 12px; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase;
-  background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
-  border-radius: 999px; padding: 6px 14px; color: #ffd700;
+.result-grade-circle {
+  width: 100px; height: 100px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px; font-weight: 900; border: 3px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
 }
-.result-dist { font-size: clamp(50px, 12vw, 72px); font-weight: 900; color: #fff; line-height: 1; }
-.result-sub { font-size: 14px; color: rgba(255,255,255,0.55); }
-.result-coins {
+.result-new-best {
+  font-size: 15px; font-weight: 900; color: #ffd700;
+  background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 999px; padding: 6px 16px; letter-spacing: 0.1em;
+}
+.result-dist { font-size: clamp(44px, 10vw, 64px); font-weight: 900; color: #fff; line-height: 1; }
+.result-stats-row {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+}
+.result-stat {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 8px 14px; font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,0.8);
+}
+.result-stat span { color: #7eb8ff; display: block; font-size: 18px; font-weight: 900; }
+.result-coins-row {
   display: flex; align-items: center; gap: 8px;
   background: rgba(255,200,0,0.1); border: 1px solid rgba(255,200,0,0.25);
-  border-radius: 12px; padding: 10px 18px;
+  border-radius: 12px; padding: 9px 16px;
 }
-.coin-icon { font-size: 20px; }
-.result-coin-text { font-size: 15px; font-weight: 800; color: #ffd700; }
-.result-msg { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.5; max-width: 380px; }
-.result-btns { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
-.result-btns .btn-primary { flex: 2; font-size: 16px; padding: 14px; }
-.result-btns .btn-secondary { flex: 1; font-size: 14px; }
-
-/* scrollbar */
-::-webkit-scrollbar { width: 6px; }
+.result-coin-text { font-size: 14px; font-weight: 800; color: #ffd700; }
+.result-msg { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.5; max-width: 380px; font-style: italic; }
+.result-unlocks { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.result-unlock-row {
+  background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.3);
+  border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 800; color: #4ade80;
+}
+.result-btns { display: flex; gap: 8px; width: 100%; margin-top: 2px; }
+.result-btns .btn-primary { flex: 2; font-size: 15px; padding: 13px; }
+.result-btns .btn-secondary { flex: 1; font-size: 13px; }
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
-
 @media (max-width: 500px) {
-  .big-card-head { padding: 16px 16px 14px; }
-  .big-card-body { padding: 16px; }
+  .big-card-head { padding: 14px 14px 12px; }
+  .big-card-body { padding: 14px; }
   .maps-grid { grid-template-columns: 1fr; }
-  .menu-card { padding: 28px 20px 24px; }
+  .menu-card { padding: 26px 18px 22px; }
+  .menu-btns { grid-template-columns: 1fr; }
+  .menu-btns .btn-primary { grid-column: auto; }
 }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-
-<!-- ── HUD (always on top during flight) ── -->
 <div id="hud"></div>
 
-<!-- ── Main Menu ── -->
+<!-- MAIN MENU -->
 <div class="screen active" id="menuScreen">
   <div class="menu-card">
     <div class="menu-title">
-      <svg width="46" height="38" viewBox="0 0 46 38" fill="none">
+      <svg width="44" height="36" viewBox="0 0 46 38" fill="none">
         <polygon points="45,19 2,2 10,19 2,36" fill="#fff" opacity="0.95"/>
         <polygon points="45,19 10,19 2,2" fill="#c8dcff" opacity="0.8"/>
         <line x1="10" y1="19" x2="45" y2="19" stroke="rgba(180,200,255,0.6)" stroke-width="1"/>
-        <line x1="2" y1="2" x2="28" y2="13" stroke="rgba(200,220,255,0.4)" stroke-width="0.8"/>
       </svg>
       PAPER JAMES
     </div>
     <div class="menu-stats">
       <div class="stat-chip">Best: <span id="menuBest">0</span> ft</div>
-      <div class="stat-chip">Coins: <span id="menuCoins">0</span></div>
-      <div class="stat-chip" id="menuMapChip">Map: Suburbs</div>
+      <div class="stat-chip">🪙 <span id="menuCoins">0</span></div>
+      <div class="stat-chip" id="menuMapChip">Map: Backyard</div>
     </div>
     <div class="menu-btns">
-      <button class="btn-primary" id="menuPlayBtn">PLAY</button>
-      <button class="btn-secondary" id="menuMapsBtn">MAPS</button>
-      <button class="btn-secondary" id="menuUpgradesBtn">UPGRADES</button>
+      <button class="btn-primary" id="menuPlayBtn">✈ PLAY</button>
+      <button class="btn-secondary" id="menuMapsBtn">🗺 MAPS</button>
+      <button class="btn-secondary" id="menuUpgradesBtn">⚙ UPGRADES</button>
+      <button class="btn-secondary" id="menuMissionsBtn">📋 MISSIONS</button>
+      <button class="btn-secondary" id="menuSkinsBtn">🎨 SKINS</button>
+      <button class="btn-secondary" id="menuSoundBtn">🔊 SOUND</button>
     </div>
-    <div style="font-size:11px;color:rgba(255,255,255,0.28);letter-spacing:0.1em;text-transform:uppercase;">
-      Drag plane to aim · Move mouse / touch to steer
+    <div style="font-size:11px;color:rgba(255,255,255,0.28);letter-spacing:0.08em;text-transform:uppercase;">
+      Drag plane to aim · Move mouse/touch to steer
     </div>
   </div>
 </div>
 
-<!-- ── Maps Screen ── -->
+<!-- MAPS SCREEN -->
 <div class="screen" id="mapsScreen">
   <div class="big-card">
     <div class="big-card-head">
-      <div>
-        <h2>Select Map</h2>
-        <div class="head-sub" id="mapsCoinsLabel">0 coins available</div>
-      </div>
-      <button class="btn-close" id="mapsCloseBtn">Close</button>
+      <div><h2>Select Map</h2><div class="head-sub" id="mapsCoinsLabel">0 coins</div></div>
+      <button class="btn-close" id="mapsCloseBtn">✕ Close</button>
     </div>
-    <div class="big-card-body">
-      <div class="maps-grid" id="mapsGrid"></div>
-    </div>
+    <div class="big-card-body"><div class="maps-grid" id="mapsGrid"></div></div>
   </div>
 </div>
 
-<!-- ── Upgrades Screen ── -->
+<!-- UPGRADES SCREEN -->
 <div class="screen" id="upgradesScreen">
   <div class="big-card">
     <div class="big-card-head">
-      <div>
-        <h2>Upgrades Shop</h2>
-        <div class="head-sub" id="upgradesCoinsLabel">0 coins available</div>
-      </div>
-      <button class="btn-close" id="upgradesCloseBtn">Close</button>
+      <div><h2>Upgrades</h2><div class="head-sub" id="upgradesCoinsLabel">0 coins</div></div>
+      <button class="btn-close" id="upgradesCloseBtn">✕ Close</button>
     </div>
-    <div class="big-card-body">
-      <div class="upgrades-grid" id="upgradesGrid"></div>
-    </div>
+    <div class="big-card-body"><div class="upgrades-grid" id="upgradesGrid"></div></div>
   </div>
 </div>
 
-<!-- ── Result Screen ── -->
+<!-- MISSIONS SCREEN -->
+<div class="screen" id="missionsScreen">
+  <div class="big-card" style="width:min(600px,100%)">
+    <div class="big-card-head">
+      <div><h2>Daily Missions</h2><div class="head-sub" id="missionsSubLabel">Resets daily</div></div>
+      <button class="btn-close" id="missionsCloseBtn">✕ Close</button>
+    </div>
+    <div class="big-card-body"><div class="missions-list" id="missionsList"></div></div>
+  </div>
+</div>
+
+<!-- SKINS SCREEN -->
+<div class="screen" id="skinsScreen">
+  <div class="big-card">
+    <div class="big-card-head">
+      <div><h2>Plane Skins</h2><div class="head-sub" id="skinsCoinsLabel">0 coins</div></div>
+      <button class="btn-close" id="skinsCloseBtn">✕ Close</button>
+    </div>
+    <div class="big-card-body"><div class="skins-grid" id="skinsGrid"></div></div>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
 <div id="result-screen">
   <div class="result-card">
-    <div class="result-badge" id="resultBadge">Flight Complete</div>
+    <div class="result-grade-circle" id="resultGrade">?</div>
+    <div class="result-new-best" id="resultNewBest" style="display:none">🎉 NEW BEST!</div>
     <div class="result-dist" id="resultDist">0 ft</div>
-    <div class="result-sub" id="resultSub">Best: 0 ft · Rings: 0</div>
-    <div class="result-coins">
-      <div class="coin-icon">🪙</div>
-      <div class="result-coin-text" id="resultCoins">+0 coins this run · Total: 0</div>
+    <div class="result-stats-row">
+      <div class="result-stat">Rings<span id="resRings">0</span></div>
+      <div class="result-stat">Airtime<span id="resTime">0s</span></div>
+      <div class="result-stat">Coins<span id="resCoins">+0</span></div>
     </div>
-    <div class="result-msg" id="resultMsg">Here we go.</div>
+    <div class="result-coins-row">
+      <span style="font-size:18px">🪙</span>
+      <div class="result-coin-text" id="resultCoinsTotal">Total: 0 coins</div>
+    </div>
+    <div class="result-msg" id="resultMsg"></div>
+    <div class="result-unlocks" id="resultUnlocks"></div>
     <div class="result-btns">
       <button class="btn-primary" id="resultFlyBtn">FLY AGAIN</button>
+      <button class="btn-secondary" id="resultMapBtn">MAP</button>
       <button class="btn-secondary" id="resultMenuBtn">MENU</button>
     </div>
   </div>
@@ -318,1628 +376,1375 @@ canvas { display: block; cursor: crosshair; }
 <script>
 'use strict';
 
-// ══════════════════════════════════════════════════════════════════
-//  POLYFILLS
-// ══════════════════════════════════════════════════════════════════
+// ── POLYFILL ──
 if (!CanvasRenderingContext2D.prototype.roundRect) {
   CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
     r = Math.min(+r||0, w/2, h/2);
     this.beginPath();
-    this.moveTo(x+r,y);
-    this.arcTo(x+w,y,   x+w,y+h, r);
-    this.arcTo(x+w,y+h, x,  y+h, r);
-    this.arcTo(x,  y+h, x,  y,   r);
-    this.arcTo(x,  y,   x+w,y,   r);
-    this.closePath();
-    return this;
+    this.moveTo(x+r,y); this.arcTo(x+w,y,x+w,y+h,r);
+    this.arcTo(x+w,y+h,x,y+h,r); this.arcTo(x,y+h,x,y,r);
+    this.arcTo(x,y,x+w,y,r); this.closePath(); return this;
   };
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  CANVAS
-// ══════════════════════════════════════════════════════════════════
+// ── CANVAS ──
 const canvas = document.getElementById('c');
-const ctx    = canvas.getContext('2d');
+const ctx = canvas.getContext('2d');
 let W, H;
-function resize(){
-  W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-}
+function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
 resize();
 window.addEventListener('resize', ()=>{ resize(); if(appState!=='fly') resetPlanePos(); });
 
-// ══════════════════════════════════════════════════════════════════
-//  DATA — MAPS
-// ══════════════════════════════════════════════════════════════════
+// ── SOUND ──
+let audioCtx = null;
+let soundEnabled = localStorage.getItem('pp_sound') === '1';
+function getACtx(){
+  if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  return audioCtx;
+}
+function playDing(){
+  if(!soundEnabled) return;
+  try{
+    const a = getACtx(); if(!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.connect(g); g.connect(a.destination);
+    o.frequency.setValueAtTime(880, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1100, a.currentTime+0.05);
+    g.gain.setValueAtTime(0.3, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime+0.4);
+    o.start(); o.stop(a.currentTime+0.4);
+  }catch(e){}
+}
+function playCrash(){
+  if(!soundEnabled) return;
+  try{
+    const a = getACtx(); if(!a) return;
+    const buf = a.createBuffer(1, a.sampleRate*0.5, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*0.12));
+    const s = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter();
+    f.type='bandpass'; f.frequency.value=400; f.Q.value=0.8;
+    s.buffer=buf; s.connect(f); f.connect(g); g.connect(a.destination);
+    g.gain.setValueAtTime(0.5, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime+0.5);
+    s.start();
+  }catch(e){}
+}
+function playWhoosh(){
+  if(!soundEnabled) return;
+  try{
+    const a = getACtx(); if(!a) return;
+    const buf = a.createBuffer(1, a.sampleRate*0.25, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(a.sampleRate*0.05));
+    const s = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter();
+    f.type='highpass'; f.frequency.value=1200;
+    s.buffer=buf; s.connect(f); f.connect(g); g.connect(a.destination);
+    g.gain.setValueAtTime(0.4, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime+0.25);
+    s.start();
+  }catch(e){}
+}
+function playThermal(){
+  if(!soundEnabled) return;
+  try{
+    const a = getACtx(); if(!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type='sine'; o.connect(g); g.connect(a.destination);
+    o.frequency.setValueAtTime(300, a.currentTime);
+    o.frequency.exponentialRampToValueAtTime(600, a.currentTime+0.3);
+    g.gain.setValueAtTime(0.15, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, a.currentTime+0.35);
+    o.start(); o.stop(a.currentTime+0.35);
+  }catch(e){}
+}
+
+let windNode = null, windGain = null;
+function startWindSound(){
+  if(!soundEnabled) return;
+  try{
+    const a = getACtx(); if(!a) return;
+    if(windNode) return;
+    const buf = a.createBuffer(1, a.sampleRate*2, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    windNode = a.createBufferSource(); windNode.loop=true; windNode.buffer=buf;
+    const f = a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=200;
+    windGain = a.createGain(); windGain.gain.value=0;
+    windNode.connect(f); f.connect(windGain); windGain.connect(a.destination);
+    windNode.start();
+  }catch(e){}
+}
+function stopWindSound(){
+  try{ if(windNode){ windNode.stop(); windNode=null; windGain=null; } }catch(e){}
+}
+function setWindVolume(v){
+  try{ if(windGain) windGain.gain.setValueAtTime(Math.min(0.08, v), getACtx().currentTime); }catch(e){}
+}
+
+// ── DATA: MAPS ──
 const MAP_DEFS = [
   {
-    key: 'suburbs',
-    name: 'Suburbs',
-    desc: 'Blue sky, green grass, and the unmistakable smell of someone else\'s lawn care.',
-    unlockCoins: 0,
-    gravity: 0.095,
-    windBase: 0,
-    windGust: 0.012,
-    thermalStrength: 1.0,
-    thermalCount: 10,
-    ringCount: 14,
-    tailwind: 0,
-    tags: ['Normal Gravity','Gentle Wind','Good Thermals'],
-    skyColors: ['#1060b8','#2e84d4','#6bbce8','#a8d8f0'],
-    groundColor: '#3a7d44',
-    groundTopColor: '#4a9e55',
-    horizon: 0.78,
+    key:'backyard', name:'Backyard', desc:'Blue sky, green grass, and thermals off the neighbour\'s roof. Training wheels included.',
+    unlockCoins:0, gravity:0.092, windBase:0, windGust:0.010, thermalStrength:1.0, thermalCount:10,
+    ringCount:14, coinBonus:1.0, ringGap:28,
+    tags:['⚖ Balanced','🌬 Gentle Wind','🌀 Good Thermals'],
+    skyTop:'#1060b8', skyBot:'#a8d8f0', groundColor:'#3a7d44', groundTop:'#4a9e55',
+    horizon:0.78, hasCityGusts:false, hasStormGusts:false, lowGravity:false,
   },
   {
-    key: 'city',
-    name: 'City',
-    desc: 'Skyscrapers, wind tunnels, and pigeons judging your technique from above.',
-    unlockCoins: 500,
-    gravity: 0.095,
-    windBase: 0.018,
-    windGust: 0.035,
-    thermalStrength: 1.6,
-    thermalCount: 7,
-    ringCount: 18,
-    tailwind: 0,
-    tags: ['Strong Gusts','Updrafts','More Rings'],
-    skyColors: ['#1a2030','#3a5070','#7898b0','#bbc8d8'],
-    groundColor: '#3a3a3a',
-    groundTopColor: '#555',
-    horizon: 0.72,
+    key:'city', name:'City', desc:'Wind tunnels, tight rings, pigeons side-eyeing you. Coins pay 50% more.',
+    unlockCoins:500, gravity:0.095, windBase:0.018, windGust:0.032, thermalStrength:1.5, thermalCount:7,
+    ringCount:18, coinBonus:1.5, ringGap:22,
+    tags:['💰 +50% Coins','💨 Wind Tunnels','🏙 More Rings'],
+    skyTop:'#1a2030', skyBot:'#bbc8d8', groundColor:'#3a3a3a', groundTop:'#555',
+    horizon:0.72, hasCityGusts:true, hasStormGusts:false, lowGravity:false,
   },
   {
-    key: 'moon',
-    name: 'Moon',
-    desc: 'Low gravity, no air resistance, no excuses. Also Earth is visible but unhelpful.',
-    unlockCoins: 1500,
-    gravity: 0.042,
-    windBase: 0,
-    windGust: 0,
-    thermalStrength: 0,
-    thermalCount: 0,
-    ringCount: 12,
-    tailwind: 0,
-    tags: ['Low Gravity (0.45x)','No Wind','No Thermals'],
-    skyColors: ['#000005','#05060f','#08091a','#0c0e22'],
-    groundColor: '#6a6a72',
-    groundTopColor: '#9090a0',
-    horizon: 0.82,
+    key:'desert', name:'Desert', desc:'Scorching thermals every 300ft. The crosswind is basically a physical assault.',
+    unlockCoins:1000, gravity:0.098, windBase:0.025, windGust:0.045, thermalStrength:2.2, thermalCount:14,
+    ringCount:12, coinBonus:1.2, ringGap:30,
+    tags:['⬆ Strong Thermals','💨 Crosswind','🌵 Sandy'],
+    skyTop:'#7a3010', skyBot:'#f0a060', groundColor:'#c8a050', groundTop:'#e0b860',
+    horizon:0.80, hasCityGusts:false, hasStormGusts:false, lowGravity:false,
   },
   {
-    key: 'beach',
-    name: 'Sunset Beach',
-    desc: 'Warm thermals off the sand, tailwind from the sea. Perfect day to show off.',
-    unlockCoins: 3000,
-    gravity: 0.092,
-    windBase: 0.006,
-    windGust: 0.010,
-    thermalStrength: 1.5,
-    thermalCount: 12,
-    ringCount: 15,
-    tailwind: 0.08,
-    tags: ['Tailwind Boost','Strong Thermals','Scenic'],
-    skyColors: ['#1a0830','#7a2060','#d05028','#f0a060'],
-    groundColor: '#d4a85a',
-    groundTopColor: '#e8c06a',
-    horizon: 0.80,
-  }
+    key:'arctic', name:'Arctic', desc:'Thin air means better glide. Also random ice-wind that shoves you sideways.',
+    unlockCoins:2000, gravity:0.085, windBase:0, windGust:0.008, thermalStrength:0.3, thermalCount:4,
+    ringCount:13, coinBonus:1.3, ringGap:30,
+    tags:['🧊 Low Drag','💨 Ice Bursts','❄ Aurora Sky'],
+    skyTop:'#050e20', skyBot:'#1a3a6a', groundColor:'#c8d8f0', groundTop:'#e8f0ff',
+    horizon:0.82, hasCityGusts:false, hasStormGusts:false, lowGravity:false, hasIceBursts:true,
+  },
+  {
+    key:'storm', name:'Storm', desc:'Chaotic gusts every 1-3 seconds. 2x coins. You asked for this.',
+    unlockCoins:3500, gravity:0.094, windBase:0, windGust:0.060, thermalStrength:0.5, thermalCount:5,
+    ringCount:16, coinBonus:2.0, ringGap:26,
+    tags:['⚡ Chaos Gusts','💰 2x Coins','🌩 Lightning'],
+    skyTop:'#100820', skyBot:'#3a2850', groundColor:'#2a2a2a', groundTop:'#333',
+    horizon:0.76, hasCityGusts:false, hasStormGusts:true, lowGravity:false,
+  },
+  {
+    key:'moon', name:'Moon', desc:'0.4x gravity. No wind. No thermals. Just silence and enormous glides.',
+    unlockCoins:6000, gravity:0.038, windBase:0, windGust:0, thermalStrength:0, thermalCount:0,
+    ringCount:12, coinBonus:1.5, ringGap:30,
+    tags:['🌙 0.4x Gravity','🔕 No Wind','🚀 Long Glides'],
+    skyTop:'#000005', skyBot:'#0c0e22', groundColor:'#6a6a72', groundTop:'#9090a0',
+    horizon:0.84, hasCityGusts:false, hasStormGusts:false, lowGravity:true,
+  },
 ];
 
-// ══════════════════════════════════════════════════════════════════
-//  DATA — UPGRADES
-// ══════════════════════════════════════════════════════════════════
+// ── DATA: UPGRADES ──
 const UPGRADE_DEFS = [
   {
-    key: 'flaps',
-    name: 'Flaps',
-    icon: '🪁',
-    desc: 'Better wing folds for more lift and stall resistance.',
-    levels: [
-      { cost: 0,   label: 'Basic paper flaps',       liftMult: 1.00, stallBonus: 0 },
-      { cost: 50,  label: 'Better fold (+15% lift)',  liftMult: 1.15, stallBonus: 0.05 },
-      { cost: 150, label: 'Precision crease (+25%)',  liftMult: 1.25, stallBonus: 0.10 },
-      { cost: 400, label: 'Aerodynamic wing (+40%)',  liftMult: 1.40, stallBonus: 0.18 },
+    key:'flaps', name:'Flaps', icon:'🪁',
+    desc:'Wing shape. Better flaps = more lift and stall resistance.',
+    levels:[
+      {cost:0,   label:'Basic fold',          liftK:0.44, stallBonus:0.00},
+      {cost:50,  label:'+15% lift',            liftK:0.506,stallBonus:0.04},
+      {cost:150, label:'+30% lift + stall res',liftK:0.572,stallBonus:0.10},
+      {cost:400, label:'+50% lift + best stall',liftK:0.66, stallBonus:0.18},
     ]
   },
   {
-    key: 'weight',
-    name: 'Weight',
-    icon: '⚖️',
-    desc: 'Lighter materials for better glide ratio.',
-    levels: [
-      { cost: 0,   label: 'Standard paper',     glideMult: 1.00, fallMult: 1.00 },
-      { cost: 75,  label: 'Lightweight paper',  glideMult: 1.12, fallMult: 0.88 },
-      { cost: 200, label: 'Ultra-light',         glideMult: 1.28, fallMult: 0.74 },
-      { cost: 500, label: 'Carbon fiber fold',   glideMult: 1.45, fallMult: 0.62 },
+    key:'nose', name:'Nose', icon:'✏️',
+    desc:'Sharper nose = less drag = longer glide.',
+    levels:[
+      {cost:0,   label:'Round nose',     dragK:0.013, speedBonus:0},
+      {cost:75,  label:'-20% drag',      dragK:0.0104,speedBonus:0},
+      {cost:200, label:'-35% drag',      dragK:0.00845,speedBonus:0},
+      {cost:500, label:'-50% drag + speed',dragK:0.0065,speedBonus:0.4},
     ]
   },
   {
-    key: 'launch',
-    name: 'Launch',
-    icon: '🚀',
-    desc: 'More power and precision on release.',
-    levels: [
-      { cost: 0,   label: 'Basic throw',        speedMult: 1.00 },
-      { cost: 60,  label: 'Strong arm (+20%)',   speedMult: 1.20 },
-      { cost: 175, label: 'Perfect release (+35%)', speedMult: 1.35 },
-      { cost: 450, label: 'Rocket launch (+55%)', speedMult: 1.55 },
+    key:'tail', name:'Tail', icon:'🐟',
+    desc:'Bigger tail fin = faster, more precise steering.',
+    levels:[
+      {cost:0,   label:'No tail',       lerpRate:0.055},
+      {cost:60,  label:'Small fin',     lerpRate:0.075},
+      {cost:175, label:'Medium fin',    lerpRate:0.10},
+      {cost:450, label:'Large fin',     lerpRate:0.135},
+    ]
+  },
+  {
+    key:'band', name:'Launch Band', icon:'🎯',
+    desc:'Stronger rubber band = faster launch speed.',
+    levels:[
+      {cost:0,   label:'Basic throw',   speedMult:1.00},
+      {cost:80,  label:'+25% speed',    speedMult:1.25},
+      {cost:220, label:'+45% speed',    speedMult:1.45},
+      {cost:550, label:'+70% speed',    speedMult:1.70},
+    ]
+  },
+  {
+    key:'thermal', name:'Thermal Sense', icon:'🌡',
+    desc:'Feel thermals more. They glow bigger and push harder.',
+    levels:[
+      {cost:0,   label:'Faint thermals',   senseRange:1.0, senseStrength:1.0},
+      {cost:100, label:'Visible shimmer',  senseRange:1.3, senseStrength:1.3},
+      {cost:300, label:'Glow columns',     senseRange:1.7, senseStrength:1.7},
+      {cost:700, label:'Strong shimmer',   senseRange:2.2, senseStrength:2.2},
     ]
   },
 ];
 
-// plane colors per flap upgrade level
-const PLANE_COLORS = [
-  { body:'#f8f6f0', wing2:'#eae6dc', crease:'#d8d0c8', nose:'#e84040' },
-  { body:'#d8eaff', wing2:'#c4daff', crease:'#a8c8f0', nose:'#3060e8' },
-  { body:'#c8d0d8', wing2:'#b8c0c8', crease:'#9098a8', nose:'#608090' },
-  { body:'#f0d870', wing2:'#e8c840', crease:'#c8a820', nose:'#a87010' },
+// ── DATA: SKINS ──
+const SKIN_DEFS = [
+  {key:'standard',  name:'Standard',          cost:0,    desc:'Classic white paper plane.'},
+  {key:'notebook',  name:'Notebook Paper',    cost:200,  desc:'Blue-lined notebook look.'},
+  {key:'gold',      name:'Gold Foil',         cost:500,  desc:'Shiny metallic gold finish.'},
+  {key:'cardboard', name:'Cardboard',         cost:300,  desc:'Sturdy corrugated brown.'},
+  {key:'receipt',   name:'Receipt Paper',     cost:150,  desc:'Off-white thermal paper. "THANK YOU" on wing.'},
+  {key:'jh',        name:'James Hinna Ed.',   cost:1000, desc:'Red & black, JH initials, gold trim.'},
+  {key:'ea',        name:'Eclipse Advantage', cost:750,  desc:'Navy & orange, EA on wing.'},
 ];
 
-// ══════════════════════════════════════════════════════════════════
-//  SAVE DATA
-// ══════════════════════════════════════════════════════════════════
-function defaultSave(){
-  return {
-    upgrades: { flaps:0, weight:0, launch:0 },
-    map: 'suburbs',
-    unlocked: ['suburbs'],
-  };
+// ── DATA: MISSIONS POOL ──
+const MISSION_POOL = [
+  {id:'fly500',   desc:'Fly 500 ft',                icon:'📏', reward:25,  type:'dist',   target:500},
+  {id:'fly1000',  desc:'Fly 1,000 ft',              icon:'📏', reward:60,  type:'dist',   target:1000},
+  {id:'fly2000',  desc:'Fly 2,000 ft',              icon:'📏', reward:150, type:'dist',   target:2000},
+  {id:'rings5',   desc:'Hit 5 rings in one run',    icon:'⭕', reward:40,  type:'rings',  target:5},
+  {id:'rings10',  desc:'Hit 10 rings in one run',   icon:'⭕', reward:80,  type:'rings',  target:10},
+  {id:'air20',    desc:'Stay airborne 20 seconds',  icon:'⏱', reward:35,  type:'time',   target:20},
+  {id:'air45',    desc:'Stay airborne 45 seconds',  icon:'⏱', reward:90,  type:'time',   target:45},
+  {id:'noRing1k', desc:'Fly 1,000 ft without any ring',icon:'🚫',reward:100,type:'distNoRing',target:1000},
+  {id:'earn50',   desc:'Earn 50 coins in one flight',icon:'🪙',reward:45, type:'coins',  target:50},
+  {id:'earn100',  desc:'Earn 100 coins in one flight',icon:'🪙',reward:75, type:'coins',  target:100},
+  {id:'runs3',    desc:'Play 3 runs in a row',      icon:'🔄', reward:30,  type:'runs',   target:3},
+  {id:'newBest',  desc:'Beat your best distance',   icon:'🏆', reward:50,  type:'newBest',target:1},
+  {id:'storm',    desc:'Fly on the Storm map',      icon:'⛈', reward:20,  type:'map',    target:'storm'},
+  {id:'moon2',    desc:'Fly on the Moon map',       icon:'🌙', reward:20,  type:'map',    target:'moon'},
+  {id:'maxPower', desc:'Launch with max power',     icon:'💥', reward:15,  type:'maxPower',target:1},
+];
+
+// ── SAVE DATA ──
+let best    = +localStorage.getItem('ppBest2') || 0;
+let ppCoins = +localStorage.getItem('pp_coins') || 0;
+
+function defaultUpgrades(){ return {flaps:0, nose:0, tail:0, band:0, thermal:0}; }
+let ppUpgrades = (()=>{
+  try{
+    const r = JSON.parse(localStorage.getItem('pp_upgrades')||'null');
+    if(!r) return defaultUpgrades();
+    return {flaps:r.flaps||0, nose:r.nose||0, tail:r.tail||0, band:r.band||0, thermal:r.thermal||0};
+  }catch(e){ return defaultUpgrades(); }
+})();
+
+let ppMap = (()=>{ const k=localStorage.getItem('pp_map')||'backyard'; return MAP_DEFS.find(m=>m.key===k)?k:'backyard'; })();
+let ppUnlocked = (()=>{ try{ const u=JSON.parse(localStorage.getItem('pp_unlocked')||'["backyard"]'); return Array.isArray(u)?u:['backyard']; }catch(e){ return ['backyard']; }})();
+let ppSkin = localStorage.getItem('pp_skin')||'standard';
+let ppSkinOwned = (()=>{ try{ return JSON.parse(localStorage.getItem('pp_skin_owned')||'["standard"]'); }catch(e){ return ['standard']; }})();
+let ppSound = soundEnabled;
+
+function loadMissions(){
+  const today = new Date().toISOString().slice(0,10);
+  try{
+    const raw = JSON.parse(localStorage.getItem('pp_missions')||'null');
+    if(raw && raw.date===today) return raw;
+  }catch(e){}
+  // Generate 3 random missions for today
+  const pool = [...MISSION_POOL];
+  const picked = [];
+  while(picked.length<3 && pool.length){ const i=Math.floor(Math.random()*pool.length); picked.push(pool.splice(i,1)[0]); }
+  const obj = { date: today, missions: picked.map(m=>({...m, progress:0, claimed:false})) };
+  localStorage.setItem('pp_missions', JSON.stringify(obj));
+  return obj;
 }
+let missionData = loadMissions();
 
-let best     = +localStorage.getItem('ppBest2') || 0;
-let ppCoins  = +localStorage.getItem('pp_coins') || 0;
-let ppSave   = parseSave();
-
-function parseSave(){
-  try {
-    const raw = JSON.parse(localStorage.getItem('pp_upgrades') || 'null');
-    const mapRaw = localStorage.getItem('pp_map') || 'suburbs';
-    const unlockedRaw = JSON.parse(localStorage.getItem('pp_unlocked') || '["suburbs"]');
-    if(!raw) return defaultSave();
-    return {
-      upgrades: { flaps: raw.flaps||0, weight: raw.weight||0, launch: raw.launch||0 },
-      map: MAP_DEFS.find(m=>m.key===mapRaw) ? mapRaw : 'suburbs',
-      unlocked: Array.isArray(unlockedRaw) ? unlockedRaw : ['suburbs'],
-    };
-  } catch(e){ return defaultSave(); }
-}
-
-function persistSave(){
-  localStorage.setItem('pp_upgrades', JSON.stringify(ppSave.upgrades));
-  localStorage.setItem('pp_map', ppSave.map);
-  localStorage.setItem('pp_unlocked', JSON.stringify(ppSave.unlocked));
+function persist(){
+  localStorage.setItem('pp_upgrades', JSON.stringify(ppUpgrades));
+  localStorage.setItem('pp_map', ppMap);
+  localStorage.setItem('pp_unlocked', JSON.stringify(ppUnlocked));
   localStorage.setItem('pp_coins', String(ppCoins));
+  localStorage.setItem('pp_skin', ppSkin);
+  localStorage.setItem('pp_skin_owned', JSON.stringify(ppSkinOwned));
+  localStorage.setItem('pp_sound', soundEnabled?'1':'0');
+  localStorage.setItem('pp_missions', JSON.stringify(missionData));
 }
 
-function currentMapDef(){ return MAP_DEFS.find(m=>m.key===ppSave.map)||MAP_DEFS[0]; }
+function currentMapDef(){ return MAP_DEFS.find(m=>m.key===ppMap)||MAP_DEFS[0]; }
 
 function upgradeStats(){
-  const f = ppSave.upgrades.flaps;
-  const w = ppSave.upgrades.weight;
-  const l = ppSave.upgrades.launch;
-  const fd = UPGRADE_DEFS[0].levels[f];
-  const wd = UPGRADE_DEFS[1].levels[w];
-  const ld = UPGRADE_DEFS[2].levels[l];
+  const f=ppUpgrades.flaps, n=ppUpgrades.nose, t=ppUpgrades.tail, b=ppUpgrades.band, th=ppUpgrades.thermal;
   return {
-    liftMult:  fd.liftMult,
-    stallBonus:fd.stallBonus,
-    glideMult: wd.glideMult,
-    fallMult:  wd.fallMult,
-    speedMult: ld.speedMult,
-    flapsLvl:  f, weightLvl: w, launchLvl: l
+    liftK:  UPGRADE_DEFS[0].levels[f].liftK,
+    stallBonus: UPGRADE_DEFS[0].levels[f].stallBonus,
+    dragK:  UPGRADE_DEFS[1].levels[n].dragK,
+    speedBonus: UPGRADE_DEFS[1].levels[n].speedBonus,
+    lerpRate: UPGRADE_DEFS[2].levels[t].lerpRate,
+    speedMult: UPGRADE_DEFS[3].levels[b].speedMult,
+    senseRange: UPGRADE_DEFS[4].levels[th].senseRange,
+    senseStrength: UPGRADE_DEFS[4].levels[th].senseStrength,
+    flapsLvl:f, noseLvl:n, tailLvl:t, bandLvl:b, thermalLvl:th,
   };
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  APP STATE MACHINE
-// ══════════════════════════════════════════════════════════════════
-// appState: 'menu' | 'aim' | 'fly' | 'crash' | 'result'
+// ── APP STATE ──
 let appState = 'menu';
-
 function showScreen(id){
-  ['menuScreen','mapsScreen','upgradesScreen'].forEach(s=>{
+  ['menuScreen','mapsScreen','upgradesScreen','missionsScreen','skinsScreen'].forEach(s=>{
     document.getElementById(s).classList.remove('active');
   });
   if(id) document.getElementById(id).classList.add('active');
 }
-
 function goMenu(){
-  appState = 'menu';
-  showScreen('menuScreen');
+  appState='menu'; showScreen('menuScreen');
   document.getElementById('result-screen').classList.remove('active');
+  stopWindSound(); updateMenuUI();
+}
+
+// ── WORLD ──
+const WORLD_LEN = 20000;
+const LAUNCH_X  = 200;
+let worldClouds=[], worldThermals=[], worldRings=[], worldDecos=[], particles=[], crashPieces=[], stormLightnings=[];
+function rnd(a,b){ return a+Math.random()*(b-a); }
+function rndInt(a,b){ return Math.floor(rnd(a,b+1)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function buildWorld(){
+  const map = currentMapDef();
+  worldClouds=[]; worldThermals=[]; worldRings=[]; worldDecos=[]; particles=[]; crashPieces=[]; stormLightnings=[];
+  // Clouds
+  if(map.key!=='moon'){
+    const n = map.key==='storm'?8:22;
+    for(let i=0;i<n;i++){
+      worldClouds.push({ wx:rnd(200,WORLD_LEN), wy:rnd(30,H*0.48), r:rnd(22,80),
+        alpha:map.key==='storm'?rnd(0.2,0.4):rnd(0.3,0.7), grey:map.key==='city'?0.7:map.key==='storm'?0.4:1.0 });
+    }
+  }
+  // Thermals
+  for(let i=0;i<map.thermalCount;i++){
+    const seg=WORLD_LEN/Math.max(map.thermalCount,1);
+    worldThermals.push({ wx:rnd(400+i*seg,400+(i+1)*seg), wy:H*0.2+rnd(0,H*0.45),
+      r:rnd(28,52), strength:rnd(0.8,1.4)*map.thermalStrength, phase:rnd(0,Math.PI*2) });
+  }
+  // Rings
+  for(let i=0;i<map.ringCount;i++){
+    const seg=WORLD_LEN/map.ringCount;
+    worldRings.push({ wx:rnd(500+i*seg,500+(i+1)*seg-80), wy:H*0.10+rnd(0,H*0.60),
+      r:rnd(18,map.ringGap), hit:false, flash:0, coins:rndInt(1,3) });
+  }
+  buildDecos(map);
+}
+
+function buildDecos(map){
+  const groundY=H*map.horizon;
+  for(let i=0;i<65;i++){
+    const wx=rnd(0,WORLD_LEN);
+    if(map.key==='backyard') worldDecos.push(...genBackyardDeco(wx,groundY));
+    else if(map.key==='city') worldDecos.push(...genCityDeco(wx,groundY));
+    else if(map.key==='desert') worldDecos.push(...genDesertDeco(wx,groundY));
+    else if(map.key==='arctic') worldDecos.push(...genArcticDeco(wx,groundY));
+    else if(map.key==='storm') worldDecos.push(...genStormDeco(wx,groundY));
+    else if(map.key==='moon') worldDecos.push(...genMoonDeco(wx,groundY));
+  }
+  worldDecos.sort((a,b)=>a.layer-b.layer||a.wx-b.wx);
+}
+
+function genBackyardDeco(wx,gy){
+  const t=pick(['tree','tree','house','fence']);
+  if(t==='tree') return [{type:'tree_back',wx,wy:gy,layer:2,h:rnd(35,70),w:rnd(18,35),color:pick(['#3a8040','#2d7035','#4a9048'])}];
+  if(t==='house'){
+    return [{type:'house',wx,wy:gy,layer:2,w:rnd(50,80),h:rnd(35,55),
+      wallColor:pick(['#e8cba8','#c8b4a0','#b8ccd8','#d4c0a0']),
+      roofColor:pick(['#8b4030','#604040','#405060']),chimney:Math.random()<0.4}];
+  }
+  return [{type:'fence',wx,wy:gy,layer:2,w:rnd(50,100)}];
+}
+function genCityDeco(wx,gy){
+  if(Math.random()<0.8){
+    const bw=rnd(38,78),bh=rnd(80,230);
+    return [{type:'building',wx,wy:gy,layer:bh>160?1:2,w:bw,h:bh,
+      color:pick(['#2a3040','#303848','#222a38']),winRows:Math.floor(bh/16),winCols:Math.floor(bw/14),
+      billboard:Math.random()<0.1}];
+  }
+  return [{type:'lamp',wx,wy:gy,layer:2,h:rnd(36,50)}];
+}
+function genDesertDeco(wx,gy){
+  const t=pick(['cactus','cactus','dune','mirage']);
+  if(t==='cactus') return [{type:'cactus',wx,wy:gy,layer:2,h:rnd(30,60)}];
+  if(t==='dune') return [{type:'dune',wx,wy:gy,layer:1,w:rnd(80,180),h:rnd(20,40)}];
+  return [{type:'mirage',wx,wy:gy,layer:1}];
+}
+function genArcticDeco(wx,gy){
+  const t=pick(['ice','ice','snow_mound','aurora']);
+  if(t==='ice') return [{type:'ice_shard',wx,wy:gy,layer:2,h:rnd(20,55),w:rnd(10,22)}];
+  if(t==='snow_mound') return [{type:'snow_mound',wx,wy:gy,layer:2,w:rnd(40,90),h:rnd(10,22)}];
+  return [{type:'aurora',wx,wy:rnd(30,H*0.35),layer:0,w:rnd(80,200),h:rnd(40,90),color:pick(['#00ff88','#0088ff','#aa44ff'])}];
+}
+function genStormDeco(wx,gy){
+  return [{type:'storm_rain',wx,wy:gy,layer:2}];
+}
+function genMoonDeco(wx,gy){
+  const t=pick(['crater','crater','rock','flag']);
+  if(t==='crater') return [{type:'crater',wx,wy:gy,layer:2,r:rnd(8,28)}];
+  if(t==='rock') return [{type:'rock',wx,wy:gy,layer:2,w:rnd(8,20),h:rnd(5,14)}];
+  if(t==='flag') return [{type:'flag',wx,wy:gy,layer:2}];
+  return [];
+}
+
+// ── PLANE STATE ──
+let plane={}, camX=0, dist=0, tik=0, wind=0;
+let mouseX=0, mouseY=0;
+let isDragging=false, dragSX=0, dragSY=0, aimX=0, aimY=0;
+let coinsThisRun=0, ringsThisRun=0, timeThisRun=0, maxPowerLaunched=false;
+let consecutiveRuns=0, launchPower=0;
+let stormGustTimer=0, iceBurstTimer=0;
+let midFlightMsgs=[], msgTimer=0, currentMsg='', msgAlpha=0;
+let thermalSoundTimer=0;
+
+function resetPlanePos(){
+  plane={ x:LAUNCH_X, y:H*0.42, vx:0, vy:0, angle:-0.12, trail:[], glowTimer:0, thermalGlow:0 };
+  camX=0; dist=0; coinsThisRun=0; ringsThisRun=0; timeThisRun=0; maxPowerLaunched=false;
+  isDragging=false; mouseY=H*0.42; wind=0;
+  stormGustTimer=0; iceBurstTimer=0; midFlightMsgs=[]; currentMsg=''; msgAlpha=0; launchPower=0;
+}
+
+// ── PHYSICS CONSTANTS ──
+const AIR_RES = 0.9994;
+const MIN_SPD = 1.1;
+
+function physicsStep(){
+  const map=currentMapDef(), stats=upgradeStats();
+  const groundY=H*map.horizon;
+  tik++;
+
+  // Time
+  timeThisRun += 1/60;
+
+  // Wind
+  wind += (Math.random()-0.5)*map.windGust;
+  wind = Math.max(-0.14, Math.min(0.14, wind*0.98+map.windBase*0.02));
+
+  // Storm gusts
+  if(map.hasStormGusts){
+    stormGustTimer--;
+    if(stormGustTimer<=0){
+      wind += (Math.random()-0.5)*0.25;
+      stormGustTimer = rnd(60,180);
+      showMsg(pick(['Brace yourself.','Gust incoming.','Wind says no.','Turbulence is a lifestyle.']));
+    }
+  }
+  // City gusts (horizontal between buildings)
+  if(map.hasCityGusts && Math.random()<0.003){
+    wind += (Math.random()-0.5)*0.12;
+  }
+  // Arctic ice bursts
+  if(map.hasIceBursts){
+    iceBurstTimer--;
+    if(iceBurstTimer<=0){
+      plane.vx += (Math.random()-0.5)*3.5;
+      iceBurstTimer = rnd(180,360);
+      showMsg('Ice burst!');
+    }
+  }
+
+  // Steering
+  let norm=(mouseY/H)*2-1;
+  let tgtAngle=norm*0.52;
+  tgtAngle=Math.max(-0.52, Math.min(0.68, tgtAngle));
+  plane.angle += (tgtAngle-plane.angle)*stats.lerpRate;
+
+  let speed=Math.hypot(plane.vx,plane.vy)||0.001;
+  let velAng=Math.atan2(plane.vy,plane.vx);
+  let aoa=plane.angle-velAng;
+  let eff=speed>MIN_SPD?1:speed/MIN_SPD;
+  const stallThresh = 0.38 - stats.stallBonus;
+
+  // Lift
+  const liftMag=speed*Math.sin(aoa)*stats.liftK*eff;
+  plane.vx += -liftMag*Math.sin(velAng);
+  plane.vy +=  liftMag*Math.cos(velAng);
+
+  // Drag
+  const dragF=speed*speed*stats.dragK;
+  plane.vx -= (plane.vx/speed)*dragF;
+  plane.vy -= (plane.vy/speed)*dragF;
+
+  plane.vx *= AIR_RES;
+  plane.vy += map.gravity;
+  plane.vx += wind + stats.speedBonus*0.02;
+
+  // Thermals
+  plane.glowTimer=Math.max(0,plane.glowTimer-1);
+  plane.thermalGlow=Math.max(0,plane.thermalGlow-1);
+  for(const t of worldThermals){
+    const dx=plane.x-t.wx, dy=plane.y-t.wy;
+    const d=Math.hypot(dx,dy);
+    const effectR=t.r*2*stats.senseRange;
+    if(d<effectR){
+      const fac=(1-d/effectR)*t.strength*stats.senseStrength;
+      plane.vy -= fac*0.22;
+      plane.glowTimer=18; plane.thermalGlow=22;
+      if(d<t.r*0.7){ burst(plane.x,plane.y,'#ffd700',8); playThermal(); thermalSoundTimer=30; showMsg(pick(['Nature said yes','Free lift — suspicious','Thermal secured','Going up.'])); }
+    }
+  }
+
+  // Camera
+  const targetX=plane.x-W*0.28;
+  camX += (targetX-camX)*0.08;
+  dist=Math.max(dist,plane.x-LAUNCH_X);
+
+  // Wind sound
+  setWindVolume(speed*0.004);
+
+  // Trail
+  plane.trail.push({x:plane.x,y:plane.y,age:0});
+  if(plane.trail.length>32) plane.trail.shift();
+  plane.trail.forEach(p=>p.age++);
+
+  // Stall messages
+  if(Math.abs(aoa)>stallThresh+0.15 && speed<3 && Math.random()<0.02) showMsg('Speed is your friend. You have no friends.');
+
+  // Altitude messages
+  const planeScreenY=plane.y-0;
+  if(planeScreenY<H*0.07 && Math.random()<0.01) showMsg('Icarus energy detected');
+  if(plane.y>groundY-40 && Math.random()<0.02) showMsg('The worms say hi');
+
+  // Distance milestones
+  const distFt=Math.floor(dist*3.28084);
+  if(distFt>0 && distFt%500<5 && tik%30===0) showDistMsg(distFt);
+
+  // Long airtime
+  if(timeThisRun>30 && tik%300===0) showMsg("You've been up there a while");
+
+  // Map-specific
+  if(map.key==='moon' && tik===60) showMsg('One small flight for James...');
+  if(map.key==='storm' && tik===120) showMsg('Brave. Stupid. Same thing.');
+
+  // Ring collision
+  for(const ring of worldRings){
+    if(ring.hit) continue;
+    const dx=plane.x-ring.wx, dy=plane.y-ring.wy;
+    if(Math.hypot(dx,dy)<ring.r+8){
+      ring.hit=true; ring.flash=20;
+      const c=Math.round(ring.coins*map.coinBonus);
+      coinsThisRun+=c; ppCoins+=c; ringsThisRun++;
+      burst(ring.wx,ring.wy,'#ffd700',12); playDing();
+      showMsg(pick(['Ring secured. Barely.','That counted somehow','Ding!','Threading the needle.']));
+      updateMissionProgress('rings',1); updateMissionProgress('coins',c);
+    }
+  }
+
+  // Crash check
+  if(plane.y>=groundY+4||plane.x<-200){
+    appState='crash'; playCrash(); stopWindSound();
+    for(let i=0;i<18;i++) crashPieces.push({ x:plane.x,y:plane.y,vx:rnd(-4,4),vy:rnd(-5,1),angle:rnd(0,Math.PI*2),va:rnd(-0.2,0.2),alpha:1 });
+    setTimeout(showResult,900);
+  }
+
+  // Ceiling
+  if(plane.y<0){ plane.y=0; plane.vy=Math.abs(plane.vy)*0.3; }
+
+  // Update mission tracking
+  updateMissionProgress('dist', dist*3.28084);
+  updateMissionProgress('time', timeThisRun);
+  if(map.key==='storm'||map.key==='moon') updateMissionProgress('map', map.key);
+}
+
+function showDistMsg(ft){
+  const msgs={
+    500:"500 feet. Not bad for paper.",
+    1000:"1,000 feet. Somebody's been practicing.",
+    1500:"1,500 feet. Are you even tired?",
+    2000:"2,000 feet. Certified pilot at this point.",
+    2500:"2,500 feet. The birds are judging you.",
+    3000:"3,000 feet. Physics is just a suggestion.",
+    4000:"4,000 feet. Put this on your resume.",
+    5000:"5,000 feet. Are you even human?",
+  };
+  showMsg(msgs[ft]||`${ft} ft and counting...`);
+}
+
+function showMsg(txt){
+  currentMsg=txt; msgAlpha=1; msgTimer=180;
+}
+
+function updateMissionProgress(type, val){
+  for(const m of missionData.missions){
+    if(m.claimed) continue;
+    if(type==='dist' && m.type==='dist') m.progress=Math.max(m.progress,val);
+    if(type==='dist' && m.type==='distNoRing' && ringsThisRun===0) m.progress=Math.max(m.progress,val);
+    if(type==='rings' && m.type==='rings') m.progress=Math.min(m.target,m.progress+1);
+    if(type==='time' && m.type==='time') m.progress=Math.max(m.progress,val);
+    if(type==='coins' && m.type==='coins') m.progress=Math.min(m.target, m.progress+val);
+    if(type==='map' && m.type==='map' && m.target===val) m.progress=1;
+  }
+}
+
+// ── PARTICLES ──
+function burst(x,y,color,n){
+  for(let i=0;i<n;i++) particles.push({ x,y,vx:rnd(-3,3),vy:rnd(-4,0.5),color,alpha:1,r:rnd(2,5) });
+}
+function stepParticles(){
+  particles=particles.filter(p=>p.alpha>0.02);
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.12; p.alpha-=0.028; });
+  crashPieces=crashPieces.filter(p=>p.alpha>0.02);
+  crashPieces.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.18; p.angle+=p.va; p.alpha-=0.018; });
+}
+
+// ── DRAW ──
+function drawBg(){
+  const map=currentMapDef();
+  // Sky gradient
+  const skyGrad=ctx.createLinearGradient(0,0,0,H);
+  skyGrad.addColorStop(0, map.skyTop);
+  skyGrad.addColorStop(1, map.skyBot);
+  ctx.fillStyle=skyGrad; ctx.fillRect(0,0,W,H);
+
+  // Moon map: stars
+  if(map.key==='moon'){
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    // deterministic stars based on camX
+    for(let i=0;i<200;i++){
+      const sx=((i*137.5+camX*0.02)%W+W)%W;
+      const sy=(i*67.3)%H;
+      const sr=i%5===0?1.5:0.8;
+      ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+    }
+    // Earth
+    const ex=W*0.82-camX*0.02;
+    const ey=H*0.18;
+    const eg=ctx.createRadialGradient(ex-10,ey-10,5,ex,ey,55);
+    eg.addColorStop(0,'#4488ff'); eg.addColorStop(0.4,'#2244aa'); eg.addColorStop(0.7,'#44aa44'); eg.addColorStop(1,'rgba(0,0,100,0)');
+    ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(ex,ey,55,0,Math.PI*2); ctx.fill();
+  }
+
+  // Arctic aurora
+  if(map.key==='arctic'){
+    for(const d of worldDecos.filter(d=>d.type==='aurora')){
+      const sx=d.wx-camX;
+      if(sx<-d.w||sx>W+d.w) continue;
+      const ag=ctx.createLinearGradient(sx,d.wy,sx,d.wy+d.h);
+      ag.addColorStop(0,'rgba(0,0,0,0)');
+      ag.addColorStop(0.3,`rgba(${d.color==='#00ff88'?'0,255,136':'0,136,255'},0.18)`);
+      ag.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=ag; ctx.fillRect(sx-d.w/2,d.wy,d.w,d.h);
+    }
+  }
+
+  // Storm rain streaks
+  if(map.key==='storm'){
+    ctx.strokeStyle='rgba(180,200,255,0.12)'; ctx.lineWidth=1;
+    for(let i=0;i<80;i++){
+      const rx=((i*241+tik*2)%W+W)%W;
+      const ry=((i*113+tik*3)%H);
+      ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx-4,ry+14); ctx.stroke();
+    }
+    // Lightning
+    if(Math.random()<0.003){
+      const lx=rnd(0,W); ctx.strokeStyle='rgba(255,255,150,0.6)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(lx,0);
+      let ly=0; while(ly<H*0.6){ ly+=rnd(20,50); ctx.lineTo(lx+rnd(-20,20),ly); }
+      ctx.stroke();
+    }
+  }
+
+  // Clouds
+  if(map.key!=='moon'){
+    for(const c of worldClouds){
+      const sx=c.wx-camX*0.55;
+      if(sx<-200||sx>W+200) continue;
+      const g=ctx.createRadialGradient(sx,c.wy,0,sx,c.wy,c.r);
+      const col=map.key==='storm'?`rgba(60,50,80,${c.alpha})`:`rgba(${Math.round(230*c.grey)},${Math.round(240*c.grey)},255,${c.alpha})`;
+      g.addColorStop(0,col); g.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,c.wy,c.r*1.3,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx-c.r*0.5,c.wy+c.r*0.1,c.r*0.8,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx+c.r*0.45,c.wy+c.r*0.08,c.r*0.7,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Thermals glow
+  const stats=upgradeStats();
+  for(const t of worldThermals){
+    const sx=t.wx-camX, sy=t.wy;
+    if(sx<-200||sx>W+200) continue;
+    const tg=ctx.createRadialGradient(sx,sy,0,sx,sy,t.r*2.5*stats.senseRange);
+    tg.addColorStop(0,'rgba(255,200,50,0.12)'); tg.addColorStop(0.5,'rgba(255,150,0,0.05)'); tg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(sx,sy,t.r*2.5*stats.senseRange,0,Math.PI*2); ctx.fill();
+    // Shimmer column for high thermal sense
+    if(stats.senseRange>=1.7){
+      ctx.strokeStyle=`rgba(255,200,50,${0.08+0.04*Math.sin(tik*0.1+t.phase)})`;
+      ctx.lineWidth=t.r*0.6; ctx.beginPath();
+      const groundY=H*map.horizon;
+      ctx.moveTo(sx,groundY); ctx.lineTo(sx+Math.sin(tik*0.05+t.phase)*8,sy); ctx.stroke();
+    }
+  }
+}
+
+function drawGround(){
+  const map=currentMapDef();
+  const groundY=H*map.horizon;
+  ctx.fillStyle=map.groundColor; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle=map.groundTop; ctx.fillRect(0,groundY,W,6);
+
+  // Decorations
+  for(const d of worldDecos){
+    const sx=d.wx-camX;
+    if(sx<-300||sx>W+300) continue;
+    drawDeco(d,sx,map);
+  }
+}
+
+function drawDeco(d,sx,map){
+  const gy=H*map.horizon;
+  ctx.save();
+  switch(d.type){
+    case 'tree_back':{
+      const tx=sx, ty=gy-d.h;
+      ctx.fillStyle='#5a3a1a'; ctx.fillRect(tx-3,ty+d.h*0.6,6,d.h*0.4);
+      ctx.fillStyle=d.color;
+      ctx.beginPath(); ctx.arc(tx,ty+d.h*0.35,d.w*0.55,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(tx,ty+d.h*0.15,d.w*0.38,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case 'house':{
+      const hx=sx, hy=gy-d.h;
+      ctx.fillStyle=d.wallColor; ctx.fillRect(hx-d.w/2,hy,d.w,d.h);
+      ctx.fillStyle=d.roofColor;
+      ctx.beginPath(); ctx.moveTo(hx-d.w/2-4,hy); ctx.lineTo(hx,hy-d.h*0.45); ctx.lineTo(hx+d.w/2+4,hy); ctx.fill();
+      ctx.fillStyle='rgba(100,180,255,0.5)';
+      ctx.fillRect(hx-d.w*0.25-6,hy+d.h*0.25,12,12); ctx.fillRect(hx+d.w*0.1,hy+d.h*0.25,12,12);
+      ctx.fillStyle='rgba(80,40,10,0.8)'; ctx.fillRect(hx-5,hy+d.h*0.55,10,d.h*0.45);
+      if(d.chimney){ ctx.fillStyle='#7a5040'; ctx.fillRect(hx+d.w*0.15,hy-d.h*0.55,8,d.h*0.3); }
+      break;
+    }
+    case 'fence':{
+      ctx.fillStyle='#c8a87a'; ctx.fillRect(sx-d.w/2,gy-14,d.w,3);
+      for(let i=0;i<d.w;i+=10){ ctx.fillRect(sx-d.w/2+i,gy-20,5,20); }
+      break;
+    }
+    case 'building':{
+      const bx=sx-d.w/2, by=gy-d.h;
+      ctx.fillStyle=d.color; ctx.fillRect(bx,by,d.w,d.h);
+      ctx.fillStyle='rgba(255,255,150,0.25)';
+      for(let r=0;r<d.winRows;r++) for(let c=0;c<d.winCols;c++){
+        if(Math.random()<0.55) ctx.fillRect(bx+4+c*14,by+4+r*16,8,9);
+      }
+      if(d.billboard){
+        ctx.fillStyle='rgba(255,80,0,0.8)'; ctx.fillRect(bx,by-20,d.w,16);
+        ctx.fillStyle='#fff'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+        ctx.fillText('ADS',sx,by-7);
+      }
+      break;
+    }
+    case 'lamp':{
+      ctx.strokeStyle='#888'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(sx,gy); ctx.lineTo(sx,gy-d.h); ctx.lineTo(sx+12,gy-d.h+5); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,150,0.8)'; ctx.beginPath(); ctx.arc(sx+12,gy-d.h+5,4,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case 'cactus':{
+      ctx.fillStyle='#3a7a30'; ctx.fillRect(sx-5,gy-d.h,10,d.h);
+      ctx.fillRect(sx-18,gy-d.h*0.6,13,6); ctx.fillRect(sx+5,gy-d.h*0.7,13,6);
+      ctx.fillRect(sx-18,gy-d.h*0.6-16,6,16); ctx.fillRect(sx+12,gy-d.h*0.7-16,6,16);
+      break;
+    }
+    case 'dune':{
+      ctx.fillStyle='#d4a850';
+      ctx.beginPath(); ctx.ellipse(sx,gy,d.w/2,d.h,0,Math.PI,0); ctx.fill();
+      break;
+    }
+    case 'mirage':{
+      ctx.fillStyle='rgba(200,180,100,0.15)';
+      ctx.fillRect(sx-40,gy-4,80,4);
+      break;
+    }
+    case 'ice_shard':{
+      ctx.fillStyle='rgba(180,220,255,0.7)';
+      ctx.beginPath(); ctx.moveTo(sx,gy-d.h); ctx.lineTo(sx-d.w/2,gy); ctx.lineTo(sx+d.w/2,gy); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.4)';
+      ctx.beginPath(); ctx.moveTo(sx,gy-d.h); ctx.lineTo(sx-d.w/4,gy-d.h*0.4); ctx.lineTo(sx,gy-d.h*0.6); ctx.fill();
+      break;
+    }
+    case 'snow_mound':{
+      ctx.fillStyle='rgba(220,235,255,0.9)';
+      ctx.beginPath(); ctx.ellipse(sx,gy,d.w/2,d.h,0,Math.PI,0); ctx.fill();
+      break;
+    }
+    case 'crater':{
+      ctx.strokeStyle='rgba(80,80,90,0.7)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(sx,gy-2,d.r,d.r*0.35,0,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(60,60,70,0.25)';
+      ctx.beginPath(); ctx.ellipse(sx,gy-2,d.r*0.7,d.r*0.22,0,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case 'rock':{
+      ctx.fillStyle='#707080';
+      ctx.beginPath(); ctx.ellipse(sx,gy-d.h/2,d.w/2,d.h/2,0,0,Math.PI*2); ctx.fill();
+      break;
+    }
+    case 'flag':{
+      ctx.strokeStyle='#aaa'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.moveTo(sx,gy); ctx.lineTo(sx,gy-40); ctx.stroke();
+      ctx.fillStyle='#cc2222';
+      ctx.beginPath(); ctx.moveTo(sx,gy-40); ctx.lineTo(sx+18,gy-34); ctx.lineTo(sx,gy-28); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='5px Arial'; ctx.textAlign='left'; ctx.fillText('NASA',sx+2,gy-33);
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+function drawRings(){
+  const map=currentMapDef();
+  for(const ring of worldRings){
+    if(ring.hit && ring.flash<=0) continue;
+    const sx=ring.wx-camX, sy=ring.wy;
+    if(sx<-60||sx>W+60) continue;
+    if(ring.flash>0) ring.flash--;
+    ctx.save();
+    if(ring.hit){
+      ctx.globalAlpha=ring.flash/20;
+      ctx.strokeStyle='#ffd700'; ctx.lineWidth=4;
+    } else {
+      ctx.strokeStyle=map.key==='moon'?'rgba(150,200,255,0.9)':'rgba(255,200,50,0.85)';
+      ctx.lineWidth=2.5;
+      // glow
+      ctx.shadowColor=map.key==='moon'?'#88bbff':'#ffd700';
+      ctx.shadowBlur=10;
+    }
+    ctx.beginPath(); ctx.arc(sx,sy,ring.r,0,Math.PI*2); ctx.stroke();
+    if(!ring.hit){
+      ctx.fillStyle='rgba(255,200,50,0.08)'; ctx.shadowBlur=0;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawPlane(){
+  const stats=upgradeStats();
+  ctx.save();
+  ctx.translate(plane.x-camX, plane.y);
+  ctx.rotate(plane.angle);
+
+  // Thermal glow
+  if(plane.thermalGlow>0){
+    const a=plane.thermalGlow/22*0.4;
+    const gg=ctx.createRadialGradient(0,0,0,0,0,28);
+    gg.addColorStop(0,`rgba(255,200,50,${a})`); gg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,28,0,Math.PI*2); ctx.fill();
+  }
+
+  drawPlaneSkin(ppSkin, stats.flapsLvl, stats.noseLvl, stats.tailLvl);
+  ctx.restore();
+}
+
+function drawPlaneSkin(skin, flapsLvl, noseLvl, tailLvl){
+  // Wing scale based on flaps level
+  const wingScale = 1 + flapsLvl*0.12;
+  // Nose sharpness: extra nose length
+  const noseExtra = noseLvl*2;
+  // Tail prominence
+  const tailH = 4 + tailLvl*2.5;
+
+  let bodyColor, wingTopColor, wingBotColor, accentColor, lineColor;
+  switch(skin){
+    case 'notebook':  bodyColor='#e8f0ff'; wingTopColor='#d0e4ff'; wingBotColor='#c0d8ff'; accentColor='#3366cc'; lineColor='#6699ee'; break;
+    case 'gold':      bodyColor='#f0d060'; wingTopColor='#e8c030'; wingBotColor='#c8a010'; accentColor='#8a6000'; lineColor='#ffd700'; break;
+    case 'cardboard': bodyColor='#c8a060'; wingTopColor='#b89050'; wingBotColor='#a07840'; accentColor='#604020'; lineColor='#987040'; break;
+    case 'receipt':   bodyColor='#f5f0e8'; wingTopColor='#ede8e0'; wingBotColor='#e0dcd4'; accentColor='#888'; lineColor='#aaa'; break;
+    case 'jh':        bodyColor='#cc1122'; wingTopColor='#aa0011'; wingBotColor='#880008'; accentColor='#ffd700'; lineColor='#ff4444'; break;
+    case 'ea':        bodyColor='#1a2a4a'; wingTopColor='#142038'; wingBotColor='#0e1828'; accentColor='#ff7700'; lineColor='#ff9933'; break;
+    default:          bodyColor='#f8f6f0'; wingTopColor='#eae6dc'; wingBotColor='#ddd8cc'; accentColor='#e84040'; lineColor='#c8c0b8'; break;
+  }
+
+  const W2=18+flapsLvl*3, H2=7*wingScale;
+  // Top wing
+  ctx.fillStyle=wingTopColor;
+  ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(-W2,-H2); ctx.lineTo(-W2+3,0); ctx.fill();
+  // Bottom wing
+  ctx.fillStyle=wingBotColor;
+  ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(-W2,H2*0.7); ctx.lineTo(-W2+3,0); ctx.fill();
+  // Body
+  ctx.fillStyle=bodyColor;
+  ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(-W2+3,0); ctx.lineTo(-W2+3+2,-3); ctx.closePath(); ctx.fill();
+  // Crease line
+  ctx.strokeStyle=lineColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(-W2+3,0); ctx.stroke();
+  // Tail fin
+  if(tailLvl>0){
+    ctx.fillStyle=accentColor; ctx.globalAlpha=0.7;
+    ctx.beginPath(); ctx.moveTo(-W2+3,0); ctx.lineTo(-W2+3-8,-tailH); ctx.lineTo(-W2+3+2,0); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  // Nose accent
+  ctx.fillStyle=accentColor;
+  ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(18+noseExtra,-2); ctx.lineTo(18+noseExtra,2); ctx.fill();
+
+  // Skin-specific details
+  if(skin==='notebook'){
+    ctx.strokeStyle='rgba(100,150,255,0.5)'; ctx.lineWidth=0.6;
+    for(let i=-2;i<3;i++){ ctx.beginPath(); ctx.moveTo(10,-i*2.2); ctx.lineTo(-14,-i*2.2); ctx.stroke(); }
+  }
+  if(skin==='receipt'){
+    ctx.fillStyle='rgba(0,0,0,0.18)'; ctx.font='3px monospace'; ctx.textAlign='center';
+    ctx.fillText('THANK YOU', 0, -2);
+  }
+  if(skin==='jh'){
+    ctx.fillStyle='#ffd700'; ctx.font='bold 7px Arial'; ctx.textAlign='center';
+    ctx.fillText('JH', -2, 2);
+    ctx.strokeStyle='#ffd700'; ctx.lineWidth=0.5;
+    ctx.strokeRect(-W2+5,-H2+1,W2+14,H2*1.6);
+  }
+  if(skin==='ea'){
+    ctx.fillStyle='#ff7700'; ctx.font='bold 6px Arial'; ctx.textAlign='center';
+    ctx.fillText('EA', -2, 2);
+    ctx.strokeStyle='#ff7700'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(-W2+3,0); ctx.stroke();
+  }
+  if(skin==='gold'){
+    // shine effect
+    const sg=ctx.createLinearGradient(-W2,-H2,0,0);
+    sg.addColorStop(0,'rgba(255,255,255,0)'); sg.addColorStop(0.4,'rgba(255,255,200,0.3)'); sg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sg;
+    ctx.beginPath(); ctx.moveTo(22+noseExtra,0); ctx.lineTo(-W2,-H2); ctx.lineTo(-W2+3,0); ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawTrail(){
+  if(plane.trail.length<2) return;
+  ctx.save();
+  for(let i=1;i<plane.trail.length;i++){
+    const a=i/plane.trail.length*0.35;
+    const sx1=plane.trail[i-1].x-camX, sy1=plane.trail[i-1].y;
+    const sx2=plane.trail[i].x-camX,   sy2=plane.trail[i].y;
+    ctx.strokeStyle=`rgba(180,210,255,${a})`;
+    ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(sx1,sy1); ctx.lineTo(sx2,sy2); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawParticles(){
+  for(const p of particles){
+    ctx.globalAlpha=p.alpha; ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x-camX,p.y,p.r,0,Math.PI*2); ctx.fill();
+  }
+  for(const p of crashPieces){
+    ctx.save(); ctx.globalAlpha=p.alpha; ctx.translate(p.x-camX,p.y); ctx.rotate(p.angle);
+    ctx.fillStyle='#f0ece4'; ctx.fillRect(-6,-2,12,3);
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawHUD(){
+  const distFt = Math.floor(dist*3.28084);
+  const map = currentMapDef();
+  // top bar
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.roundRect(12,12,200,52,10); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 22px system-ui'; ctx.textAlign='left';
+  ctx.fillText(distFt+' ft', 22, 38);
+  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='12px system-ui';
+  ctx.fillText('Best: '+Math.floor(best*3.28084)+' ft  |  '+map.name, 22, 56);
+  // coins
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.roundRect(W-140,12,128,36,10); ctx.fill();
+  ctx.fillStyle='#ffd700'; ctx.font='bold 15px system-ui'; ctx.textAlign='right';
+  ctx.fillText('🪙 '+ppCoins, W-18, 35);
+  ctx.restore();
+
+  // Floating message
+  if(msgAlpha>0){
+    msgTimer--; if(msgTimer<60) msgAlpha=Math.max(0,msgAlpha-0.02);
+    ctx.save(); ctx.globalAlpha=msgAlpha;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.roundRect(W/2-180,H*0.22-18,360,36,10); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 14px system-ui'; ctx.textAlign='center';
+    ctx.fillText(currentMsg, W/2, H*0.22+5);
+    ctx.restore();
+  }
+
+  // Launch aim line
+  if(appState==='aim'&&isDragging){
+    const px=plane.x-camX, py=plane.y;
+    const dx=px-aimX, dy=py-aimY;
+    launchPower=Math.min(1, Math.hypot(dx,dy)/180);
+    ctx.save();
+    ctx.strokeStyle='rgba(255,255,255,0.5)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(aimX,aimY); ctx.stroke();
+    ctx.setLineDash([]);
+    // Power bar
+    const barX=W/2-80, barY=H-70;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.roundRect(barX,barY,160,20,8); ctx.fill();
+    ctx.fillStyle=launchPower>0.8?'#ff4444':launchPower>0.5?'#ffaa00':'#44cc88';
+    ctx.roundRect(barX+2,barY+2,156*launchPower,16,6); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('POWER', W/2, barY+14);
+    ctx.restore();
+  }
+
+  // Sound icon (always visible during flight)
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.roundRect(W-46,H-46,34,34,8); ctx.fill();
+  ctx.font='16px system-ui'; ctx.textAlign='center';
+  ctx.fillText(soundEnabled?'🔊':'🔇', W-29, H-23);
+  ctx.restore();
+}
+
+// ── LAUNCH SCREEN (aim) ──
+function drawAimScreen(){
+  drawBg(); drawGround(); drawRings();
+  // rubber band visual
+  if(isDragging){
+    const px=plane.x-camX, py=plane.y;
+    const stats=upgradeStats();
+    const bandColor=stats.bandLvl>=3?'#ff8800':stats.bandLvl>=2?'#cc6600':'#884422';
+    ctx.save();
+    ctx.strokeStyle=bandColor; ctx.lineWidth=2+stats.bandLvl*0.5;
+    ctx.beginPath(); ctx.moveTo(px-5,py-4); ctx.lineTo(aimX,aimY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px-5,py+4); ctx.lineTo(aimX,aimY); ctx.stroke();
+    ctx.restore();
+  }
+  drawPlane(); drawHUD();
+}
+
+// ── MAIN GAME LOOP ──
+let lastTime=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min(ts-lastTime,50); lastTime=ts;
+  ctx.clearRect(0,0,W,H);
+  if(appState==='aim'){ drawAimScreen(); return; }
+  if(appState==='menu'){ drawBg(); return; }
+  drawBg();
+  if(appState==='fly'||appState==='crash'){
+    if(appState==='fly') physicsStep();
+    stepParticles();
+    drawGround(); drawRings(); drawTrail();
+    drawParticles(); drawPlane(); drawHUD();
+  }
+}
+requestAnimationFrame(loop);
+
+// ── RESULT SCREEN ──
+function showResult(){
+  const distFt=Math.floor(dist*3.28084);
+  const wasNewBest=dist>best;
+  if(dist>best){ best=dist; localStorage.setItem('ppBest2',String(best)); }
+  consecutiveRuns++;
+
+  // Mission completion finalization
+  updateMissionProgress('dist', distFt);
+  updateMissionProgress('time', timeThisRun);
+  updateMissionProgress('coins', coinsThisRun);
+  if(ringsThisRun===0) updateMissionProgress('distNoRing', distFt);
+  if(wasNewBest) updateMissionProgress('newBest', 1);
+  if(maxPowerLaunched) updateMissionProgress('maxPower', 1);
+  updateMissionProgress('runs', consecutiveRuns);
+
+  // Check map missions
+  const map=currentMapDef();
+  if(map.key==='storm') updateMissionProgress('map','storm');
+  if(map.key==='moon') updateMissionProgress('map','moon');
+
+  persist();
+
+  // Grade
+  let grade, gradeColor;
+  if(distFt<50)        { grade='F';  gradeColor='#cc2222'; }
+  else if(distFt<200)  { grade='D';  gradeColor='#cc5522'; }
+  else if(distFt<500)  { grade='C+'; gradeColor='#cc9900'; }
+  else if(distFt<1000) { grade='B';  gradeColor='#88aa22'; }
+  else if(distFt<2000) { grade='A-'; gradeColor='#44aa44'; }
+  else                  { grade='S';  gradeColor='#cc9900'; }
+
+  // Sarcastic message
+  const msgs={
+    'F':["Did the plane want to fly? Because it didn't.","Bold attempt. Catastrophic result.","Zero to ground in record time."],
+    'D':["Respectable for a paper napkin.","It flew. Briefly.","The runway was right there."],
+    'C+':["C+ for effort, F for landing.","Mediocre in an inspiring way.","The thermometer of adequacy."],
+    'B':["Getting there. Slowly.","Almost competent.","A solid meh."],
+    'A-':["Okay you can actually fly.","This is getting suspicious.","Respectable. Annoyingly so."],
+    'S':["Are you even human?","Paper can do that?","We may have a situation."],
+  };
+  const msg=pick(msgs[grade]||["Hm."]);
+
+  document.getElementById('resultGrade').textContent=grade;
+  document.getElementById('resultGrade').style.background=gradeColor;
+  document.getElementById('resultGrade').style.color='#fff';
+  document.getElementById('resultNewBest').style.display=wasNewBest?'block':'none';
+  document.getElementById('resultDist').textContent=distFt+' ft';
+  document.getElementById('resRings').textContent=ringsThisRun;
+  document.getElementById('resTime').textContent=Math.floor(timeThisRun)+'s';
+  document.getElementById('resCoins').textContent='+'+coinsThisRun;
+  document.getElementById('resultCoinsTotal').textContent='Total: '+ppCoins+' coins';
+  document.getElementById('resultMsg').textContent=msg;
+
+  // Unlocks
+  const unlockDiv=document.getElementById('resultUnlocks');
+  unlockDiv.innerHTML='';
+  for(const m of MAP_DEFS){
+    if(!ppUnlocked.includes(m.key)&&ppCoins>=m.unlockCoins&&m.unlockCoins>0){
+      ppUnlocked.push(m.key);
+      unlockDiv.innerHTML+=`<div class="result-unlock-row">🔓 ${m.name} Map Unlocked!</div>`;
+    }
+  }
+  for(const s of SKIN_DEFS){
+    if(!ppSkinOwned.includes(s.key)&&ppCoins>=s.cost&&s.cost>0&&s.cost<=300){
+      ppSkinOwned.push(s.key);
+      unlockDiv.innerHTML+=`<div class="result-unlock-row">🎨 ${s.name} Skin Unlocked!</div>`;
+    }
+  }
+  persist();
+
+  appState='result';
+  document.getElementById('result-screen').classList.add('active');
+}
+
+// ── UI BUILDERS ──
+function updateMenuUI(){
+  document.getElementById('menuBest').textContent=Math.floor(best*3.28084);
+  document.getElementById('menuCoins').textContent=ppCoins;
+  document.getElementById('menuMapChip').textContent='Map: '+currentMapDef().name;
+  document.getElementById('menuSoundBtn').textContent=(soundEnabled?'🔊':'🔇')+' SOUND';
+}
+
+function buildMapsUI(){
+  document.getElementById('mapsCoinsLabel').textContent=ppCoins+' coins available';
+  const grid=document.getElementById('mapsGrid'); grid.innerHTML='';
+  for(const map of MAP_DEFS){
+    const owned=ppUnlocked.includes(map.key);
+    const active=map.key===ppMap;
+    const card=document.createElement('div');
+    card.className='map-card'+(active?' selected':'');
+    // Banner
+    const banner=document.createElement('div');
+    banner.className='map-banner';
+    banner.style.background=`linear-gradient(135deg,${map.skyTop},${map.skyBot})`;
+    const nameEl=document.createElement('div');
+    nameEl.className='map-banner-name'; nameEl.textContent=map.name;
+    banner.appendChild(nameEl);
+    // Body
+    const body=document.createElement('div'); body.className='map-body';
+    const desc=document.createElement('div'); desc.className='map-desc'; desc.textContent=map.desc;
+    const meta=document.createElement('div'); meta.className='map-meta';
+    map.tags.forEach(t=>{ const tag=document.createElement('span'); tag.className='tag'; tag.textContent=t; meta.appendChild(tag); });
+    const btn=document.createElement('button'); btn.className='map-btn';
+    if(active){ btn.className+=' active'; btn.textContent='✓ SELECTED'; }
+    else if(owned){ btn.className+=' play'; btn.textContent='SELECT'; }
+    else if(ppCoins>=map.unlockCoins){ btn.className+=' unlock'; btn.textContent='🔓 UNLOCK ('+map.unlockCoins+' 🪙)'; }
+    else{ btn.className+=' unlock'; btn.textContent='🔒 '+map.unlockCoins+' 🪙'; btn.disabled=true; }
+    btn.onclick=()=>{
+      if(active) return;
+      if(owned){ ppMap=map.key; persist(); buildMapsUI(); updateMenuUI(); }
+      else if(ppCoins>=map.unlockCoins){ ppCoins-=map.unlockCoins; ppUnlocked.push(map.key); ppMap=map.key; persist(); buildMapsUI(); updateMenuUI(); }
+    };
+    body.appendChild(desc); body.appendChild(meta); body.appendChild(btn);
+    card.appendChild(banner); card.appendChild(body);
+    if(!owned&&ppCoins<map.unlockCoins){
+      const ov=document.createElement('div'); ov.className='map-lock-overlay';
+      ov.innerHTML=`<div class="lock-icon">🔒</div><div class="lock-cost">${map.unlockCoins} 🪙</div>`;
+      card.appendChild(ov);
+    }
+    grid.appendChild(card);
+  }
+}
+
+function buildUpgradesUI(){
+  document.getElementById('upgradesCoinsLabel').textContent=ppCoins+' coins available';
+  const grid=document.getElementById('upgradesGrid'); grid.innerHTML='';
+  for(const def of UPGRADE_DEFS){
+    const lvl=ppUpgrades[def.key];
+    const maxed=lvl>=def.levels.length-1;
+    const card=document.createElement('div'); card.className='upgrade-card';
+    const h3=document.createElement('h3'); h3.textContent=def.icon+' '+def.name;
+    const p=document.createElement('p'); p.textContent=def.desc;
+    const dotsWrap=document.createElement('div'); dotsWrap.className='upgrade-levels';
+    for(let i=0;i<def.levels.length;i++){
+      const dot=document.createElement('div'); dot.className='level-dot';
+      if(i<lvl) dot.classList.add(maxed&&i===def.levels.length-1?'maxed':'filled');
+      else if(i===lvl&&maxed) dot.classList.add('maxed');
+      dotsWrap.appendChild(dot);
+    }
+    const meta=document.createElement('div'); meta.className='upgrade-meta';
+    meta.innerHTML=`<span>Level ${lvl+1}/${def.levels.length}</span><span>${def.levels[lvl].label}</span>`;
+    const btn=document.createElement('button'); btn.className='upgrade-btn';
+    if(maxed){ btn.className+=' maxed'; btn.textContent='MAX LEVEL ⭐'; btn.disabled=true; }
+    else{
+      const next=def.levels[lvl+1];
+      if(ppCoins>=next.cost){ btn.className+=' buy'; btn.textContent=`UPGRADE — ${next.cost} 🪙`; }
+      else{ btn.className+=' buy'; btn.textContent=`${next.cost} 🪙 needed`; btn.disabled=true; }
+      btn.onclick=()=>{
+        if(ppCoins>=next.cost){ ppCoins-=next.cost; ppUpgrades[def.key]++; persist(); buildUpgradesUI(); updateMenuUI(); }
+      };
+    }
+    card.appendChild(h3); card.appendChild(p); card.appendChild(dotsWrap); card.appendChild(meta); card.appendChild(btn);
+    grid.appendChild(card);
+  }
+}
+
+function buildSkinsUI(){
+  document.getElementById('skinsCoinsLabel').textContent=ppCoins+' coins available';
+  const grid=document.getElementById('skinsGrid'); grid.innerHTML='';
+  for(const skin of SKIN_DEFS){
+    const owned=ppSkinOwned.includes(skin.key)||skin.cost===0;
+    const equipped=ppSkin===skin.key;
+    const card=document.createElement('div'); card.className='skin-card'+(equipped?' equipped':'');
+    // Preview canvas
+    const previewCanvas=document.createElement('canvas'); previewCanvas.className='skin-preview'; previewCanvas.width=80; previewCanvas.height=50;
+    const pc=previewCanvas.getContext('2d');
+    pc.translate(50,25); pc.rotate(-0.1);
+    drawPlaneSkinOnCtx(pc, skin.key, 3, 3, 3);
+    const nameEl=document.createElement('div'); nameEl.className='skin-name'; nameEl.textContent=skin.name;
+    const descEl=document.createElement('div'); descEl.className='skin-desc'; descEl.textContent=skin.desc;
+    const btn=document.createElement('button');
+    if(equipped){ btn.className='skin-btn equipped'; btn.textContent='✓ EQUIPPED'; btn.disabled=true; }
+    else if(owned){ btn.className='skin-btn equip'; btn.textContent='EQUIP'; btn.onclick=()=>{ ppSkin=skin.key; persist(); buildSkinsUI(); }; }
+    else if(ppCoins>=skin.cost){ btn.className='skin-btn buy'; btn.textContent='BUY — '+skin.cost+' 🪙'; btn.onclick=()=>{ if(ppCoins>=skin.cost){ ppCoins-=skin.cost; ppSkinOwned.push(skin.key); ppSkin=skin.key; persist(); buildSkinsUI(); updateMenuUI(); } }; }
+    else{ btn.className='skin-btn buy'; btn.textContent=skin.cost+' 🪙'; btn.disabled=true; }
+    card.appendChild(previewCanvas); card.appendChild(nameEl); card.appendChild(descEl); card.appendChild(btn);
+    grid.appendChild(card);
+  }
+}
+
+function drawPlaneSkinOnCtx(c, skin, flapsLvl, noseLvl, tailLvl){
+  // Minimal version for preview - just call drawPlaneSkin with context swap
+  const savedCtx=ctx;
+  // We need to draw on c instead of ctx
+  // Override temporarily
+  const noseExtra=noseLvl*1.5, wingScale=1+flapsLvl*0.1, tailH=3+tailLvl*2, W2=16+flapsLvl*2;
+  let bodyColor, wingTopColor, wingBotColor, accentColor;
+  switch(skin){
+    case 'notebook':  bodyColor='#e8f0ff'; wingTopColor='#d0e4ff'; wingBotColor='#c0d8ff'; accentColor='#3366cc'; break;
+    case 'gold':      bodyColor='#f0d060'; wingTopColor='#e8c030'; wingBotColor='#c8a010'; accentColor='#8a6000'; break;
+    case 'cardboard': bodyColor='#c8a060'; wingTopColor='#b89050'; wingBotColor='#a07840'; accentColor='#604020'; break;
+    case 'receipt':   bodyColor='#f5f0e8'; wingTopColor='#ede8e0'; wingBotColor='#e0dcd4'; accentColor='#888'; break;
+    case 'jh':        bodyColor='#cc1122'; wingTopColor='#aa0011'; wingBotColor='#880008'; accentColor='#ffd700'; break;
+    case 'ea':        bodyColor='#1a2a4a'; wingTopColor='#142038'; wingBotColor='#0e1828'; accentColor='#ff7700'; break;
+    default:          bodyColor='#f8f6f0'; wingTopColor='#eae6dc'; wingBotColor='#ddd8cc'; accentColor='#e84040'; break;
+  }
+  const H2=6*wingScale;
+  c.fillStyle=wingTopColor; c.beginPath(); c.moveTo(20+noseExtra,0); c.lineTo(-W2,-H2); c.lineTo(-W2+3,0); c.fill();
+  c.fillStyle=wingBotColor; c.beginPath(); c.moveTo(20+noseExtra,0); c.lineTo(-W2,H2*0.7); c.lineTo(-W2+3,0); c.fill();
+  c.fillStyle=bodyColor; c.beginPath(); c.moveTo(20+noseExtra,0); c.lineTo(-W2+3,0); c.lineTo(-W2+3+2,-3); c.closePath(); c.fill();
+  c.fillStyle=accentColor; c.beginPath(); c.moveTo(20+noseExtra,0); c.lineTo(16+noseExtra,-2); c.lineTo(16+noseExtra,2); c.fill();
+  if(tailLvl>0){ c.fillStyle=accentColor; c.globalAlpha=0.7; c.beginPath(); c.moveTo(-W2+3,0); c.lineTo(-W2+3-6,-tailH); c.lineTo(-W2+3+2,0); c.fill(); c.globalAlpha=1; }
+  if(skin==='jh'){ c.fillStyle='#ffd700'; c.font='bold 5px Arial'; c.textAlign='center'; c.fillText('JH',-2,2); }
+  if(skin==='ea'){ c.fillStyle='#ff7700'; c.font='bold 5px Arial'; c.textAlign='center'; c.fillText('EA',-2,2); }
+}
+
+function buildMissionsUI(){
+  const today=new Date().toISOString().slice(0,10);
+  document.getElementById('missionsSubLabel').textContent='Daily missions — '+today;
+  const list=document.getElementById('missionsList'); list.innerHTML='';
+  for(const m of missionData.missions){
+    const done=m.progress>=m.target;
+    const card=document.createElement('div');
+    card.className='mission-card'+(done?' done':'')+(m.claimed?' claimed':'');
+    const progress=Math.min(1, m.progress/m.target);
+    const progText=m.type==='newBest'||m.type==='maxPower'||m.type==='map'
+      ? (done?'Done':'Not yet')
+      : `${m.type==='dist'||m.type==='distNoRing'?Math.floor(m.progress):Math.floor(m.progress)}/${m.target}`;
+    card.innerHTML=`
+      <div class="mission-icon">${m.icon}</div>
+      <div class="mission-info">
+        <div class="mission-title">${m.desc}</div>
+        <div class="mission-bar-wrap"><div class="mission-bar-fill" style="width:${progress*100}%"></div></div>
+        <div class="mission-prog">${progText}${m.claimed?' — CLAIMED':''}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="mission-reward">+${m.reward} 🪙</div>
+        ${done&&!m.claimed?`<button class="mission-btn" data-id="${m.id}">CLAIM</button>`:''}
+      </div>
+    `;
+    list.appendChild(card);
+  }
+  list.querySelectorAll('.mission-btn').forEach(btn=>{
+    btn.onclick=()=>{
+      const id=btn.dataset.id;
+      const m=missionData.missions.find(x=>x.id===id);
+      if(m&&m.progress>=m.target&&!m.claimed){ m.claimed=true; ppCoins+=m.reward; persist(); buildMissionsUI(); updateMenuUI(); }
+    };
+  });
+}
+
+// ── INPUT ──
+function getXY(e){ if(e.touches) return {x:e.touches[0].clientX,y:e.touches[0].clientY}; return {x:e.clientX,y:e.clientY}; }
+
+canvas.addEventListener('mousedown', onDown);
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); onDown(e); }, {passive:false});
+canvas.addEventListener('mousemove', onMove);
+canvas.addEventListener('touchmove', e=>{ e.preventDefault(); onMove(e); }, {passive:false});
+canvas.addEventListener('mouseup', onUp);
+canvas.addEventListener('touchend', e=>{ e.preventDefault(); onUp(e); }, {passive:false});
+
+function onDown(e){
+  const {x,y}=getXY(e);
+  if(appState==='aim'){
+    const px=plane.x-camX, py=plane.y;
+    if(Math.hypot(x-px,y-py)<40){ isDragging=true; dragSX=x; dragSY=y; aimX=x; aimY=y; }
+  }
+  if(appState==='fly'){
+    // Check sound toggle
+    if(x>W-50&&y>H-50){ toggleSound(); return; }
+    mouseX=x; mouseY=y;
+  }
+}
+
+function onMove(e){
+  const {x,y}=getXY(e);
+  mouseX=x; mouseY=y;
+  if(isDragging){ aimX=x; aimY=y; }
+}
+
+function onUp(e){
+  if(isDragging && appState==='aim'){
+    isDragging=false;
+    const px=plane.x-camX, py=plane.y;
+    const dx=px-aimX, dy=py-aimY;
+    const power=Math.min(1, Math.hypot(dx,dy)/180);
+    if(power>0.05){
+      const stats=upgradeStats();
+      const spd=(5+power*14)*stats.speedMult;
+      const ang=Math.atan2(dy,dx);
+      plane.vx=Math.cos(ang)*spd;
+      plane.vy=Math.sin(ang)*spd;
+      plane.angle=ang;
+      if(power>0.9){ maxPowerLaunched=true; showMsg('Full power!'); }
+      appState='fly';
+      playWhoosh();
+      startWindSound();
+      updateMissionProgress('maxPower', power>0.9?1:0);
+    }
+  }
+}
+
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  persist();
   updateMenuUI();
 }
+
+// ── BUTTON WIRING ──
+document.getElementById('menuPlayBtn').onclick=startGame;
+document.getElementById('menuMapsBtn').onclick=()=>{ buildMapsUI(); showScreen('mapsScreen'); };
+document.getElementById('menuUpgradesBtn').onclick=()=>{ buildUpgradesUI(); showScreen('upgradesScreen'); };
+document.getElementById('menuMissionsBtn').onclick=()=>{ buildMissionsUI(); showScreen('missionsScreen'); };
+document.getElementById('menuSkinsBtn').onclick=()=>{ buildSkinsUI(); showScreen('skinsScreen'); };
+document.getElementById('menuSoundBtn').onclick=()=>{ toggleSound(); };
+document.getElementById('mapsCloseBtn').onclick=goMenu;
+document.getElementById('upgradesCloseBtn').onclick=goMenu;
+document.getElementById('missionsCloseBtn').onclick=goMenu;
+document.getElementById('skinsCloseBtn').onclick=goMenu;
+document.getElementById('resultFlyBtn').onclick=startGame;
+document.getElementById('resultMapBtn').onclick=()=>{ document.getElementById('result-screen').classList.remove('active'); buildMapsUI(); showScreen('mapsScreen'); };
+document.getElementById('resultMenuBtn').onclick=goMenu;
 
 function startGame(){
   showScreen(null);
   document.getElementById('result-screen').classList.remove('active');
   buildWorld();
   resetPlanePos();
-  appState = 'aim';
+  appState='aim';
+  if(soundEnabled) try{ getACtx()?.resume(); }catch(e){}
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  WORLD GENERATION
-// ══════════════════════════════════════════════════════════════════
-const WORLD_LEN = 18000;
-const LAUNCH_X  = 180;
-
-let worldClouds   = [];
-let worldThermals = [];
-let worldRings    = [];
-let worldDecos    = [];  // decorations (trees, buildings, etc)
-let particles     = [];
-let crashPieces   = [];
-
-function rnd(a,b){ return a + Math.random()*(b-a); }
-function rndInt(a,b){ return Math.floor(rnd(a,b+1)); }
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-
-function buildWorld(){
-  const map = currentMapDef();
-  worldClouds   = [];
-  worldThermals = [];
-  worldRings    = [];
-  worldDecos    = [];
-  particles     = [];
-  crashPieces   = [];
-
-  // Clouds (skip moon)
-  if(map.key !== 'moon'){
-    const cloudCount = map.key==='city' ? 18 : map.key==='beach' ? 30 : 25;
-    for(let i=0;i<cloudCount;i++){
-      worldClouds.push({
-        wx: rnd(200, WORLD_LEN),
-        wy: rnd(30, H * 0.5),
-        r:  rnd(25, 85),
-        alpha: rnd(0.35, 0.72),
-        layer: i<12 ? 0 : 1,
-        bumps: Math.floor(rnd(2,5)),
-        grey: map.key==='city' ? 0.85 : 1.0,
-      });
-    }
-  }
-
-  // Thermals
-  for(let i=0;i<map.thermalCount;i++){
-    worldThermals.push({
-      wx: rnd(400 + i*(WORLD_LEN/Math.max(map.thermalCount,1)), 400 + (i+1)*(WORLD_LEN/Math.max(map.thermalCount,1))),
-      wy: H*0.25 + rnd(0, H*0.40),
-      r:  rnd(30,55),
-      strength: rnd(0.8,1.5) * map.thermalStrength,
-      phase: rnd(0, Math.PI*2),
-    });
-  }
-
-  // Rings
-  for(let i=0;i<map.ringCount;i++){
-    const seg = WORLD_LEN / map.ringCount;
-    worldRings.push({
-      wx: rnd(500 + i*seg, 500 + (i+1)*seg - 60),
-      wy: H*0.12 + rnd(0, H*0.58),
-      r:  rnd(20, 34),
-      hit: false, flash: 0,
-      coins: rndInt(1,3),
-    });
-  }
-
-  // Decorations
-  buildDecos(map);
-}
-
-function buildDecos(map){
-  const groundY = H * map.horizon;
-  const count = 60;
-  for(let i=0;i<count;i++){
-    const wx = rnd(0, WORLD_LEN);
-    if(map.key==='suburbs') worldDecos.push(...genSuburbDeco(wx, groundY));
-    else if(map.key==='city') worldDecos.push(...genCityDeco(wx, groundY));
-    else if(map.key==='moon') worldDecos.push(...genMoonDeco(wx, groundY));
-    else if(map.key==='beach') worldDecos.push(...genBeachDeco(wx, groundY));
-  }
-  // sort by layer then wx so painter order is right
-  worldDecos.sort((a,b)=> a.layer - b.layer || a.wx - b.wx);
-}
-
-function genSuburbDeco(wx, groundY){
-  const items = [];
-  const type = pick(['tree','house','tree','tree','fence']);
-  if(type==='tree'){
-    items.push({ type:'tree_suburb', wx, wy: groundY, layer: rnd(0,1)<0.3?1:2,
-      h: rnd(38,75), w: rnd(20,38), color: pick(['#3a8040','#2d7035','#4a9048','#2e5e2a']) });
-  } else if(type==='house'){
-    const houseW = rnd(50,80), houseH = rnd(35,55);
-    items.push({ type:'house', wx, wy: groundY, layer:2,
-      w: houseW, h: houseH,
-      wallColor: pick(['#e8cba8','#c8b4a0','#a8c4b8','#d4c0a0','#b8ccd8']),
-      roofColor: pick(['#8b4030','#604040','#405060','#703030','#506060']),
-      chimney: Math.random()<0.4,
-    });
-  } else if(type==='fence'){
-    items.push({ type:'fence', wx, wy: groundY, layer:2, w: rnd(50,100) });
-  }
-  return items;
-}
-
-function genCityDeco(wx, groundY){
-  const items = [];
-  const type = pick(['building','building','building','lamp']);
-  if(type==='building'){
-    const bw = rnd(40,80), bh = rnd(80,220);
-    items.push({ type:'building', wx, wy: groundY, layer: bh>160?1:2,
-      w: bw, h: bh,
-      color: pick(['#2a3040','#303848','#283040','#384050','#222a38']),
-      winRows: Math.floor(bh/16), winCols: Math.floor(bw/14),
-      waterTower: Math.random()<0.15,
-      billboard: Math.random()<0.12,
-    });
-  } else {
-    items.push({ type:'lamp', wx, wy: groundY, layer:2, h: rnd(36,50) });
-  }
-  return items;
-}
-
-function genMoonDeco(wx, groundY){
-  const items = [];
-  const type = pick(['crater','crater','rock','flag','earth']);
-  if(type==='crater'){
-    items.push({ type:'crater', wx, wy: groundY, layer:2, r: rnd(8,28) });
-  } else if(type==='rock'){
-    items.push({ type:'rock', wx, wy: groundY, layer:2, w:rnd(8,20), h:rnd(5,14) });
-  } else if(type==='flag'){
-    items.push({ type:'flag', wx, wy: groundY, layer:2 });
-  } else {
-    items.push({ type:'earth', wx: rnd(2000,WORLD_LEN-1000), wy: rnd(50,H*0.35), layer:0 });
-  }
-  return items;
-}
-
-function genBeachDeco(wx, groundY){
-  const items = [];
-  const type = pick(['palm','palm','umbrella','wave']);
-  if(type==='palm'){
-    items.push({ type:'palm', wx, wy: groundY, layer: rnd(0,1)<0.3?1:2,
-      h: rnd(55,95), lean: rnd(-0.15,0.25) });
-  } else if(type==='umbrella'){
-    items.push({ type:'umbrella', wx, wy: groundY, layer:2,
-      color: pick(['#e84040','#4070d0','#e0a020','#30a050','#9040c0']) });
-  } else {
-    items.push({ type:'wave', wx, wy: groundY + rnd(-4,4), layer:2 });
-  }
-  return items;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  PLANE STATE
-// ══════════════════════════════════════════════════════════════════
-let plane = {};
-let camX  = 0;
-let dist  = 0;
-let tik   = 0;
-let wind  = 0;
-let mouseX = 0, mouseY = 0;
-let isDragging = false, dragSX=0, dragSY=0, aimX=0, aimY=0;
-let coinsThisRun = 0;
-let ringsThisRun = 0;
-
-function resetPlanePos(){
-  plane = {
-    x: LAUNCH_X, y: H*0.42,
-    vx: 0, vy: 0,
-    angle: -0.12,
-    trail: [],
-    glowTimer: 0,
-  };
-  camX = 0; dist = 0;
-  coinsThisRun = 0; ringsThisRun = 0;
-  isDragging = false;
-  mouseY = H*0.42;
-  wind = 0;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  PHYSICS
-// ══════════════════════════════════════════════════════════════════
-const LIFT_K  = 0.44;
-const DRAG_K  = 0.013;
-const AIR_RES = 0.9994;
-const MIN_SPD = 1.1;
-
-function physicsStep(){
-  const map   = currentMapDef();
-  const stats = upgradeStats();
-  const groundY = H * map.horizon;
-
-  // Wind
-  wind += (Math.random()-0.5) * map.windGust;
-  wind = Math.max(-0.12, Math.min(0.12, wind * 0.98 + map.windBase * 0.02));
-
-  // Steering
-  let norm = (mouseY/H)*2 - 1;  // -1 top, +1 bottom
-  let tgtAngle = norm * 0.52;
-  tgtAngle = Math.max(-0.52, Math.min(0.68, tgtAngle));
-  plane.angle += (tgtAngle - plane.angle) * 0.062;
-
-  let speed = Math.hypot(plane.vx, plane.vy) || 0.001;
-  let velAng = Math.atan2(plane.vy, plane.vx);
-  let aoa    = plane.angle - velAng;
-  let eff    = speed > MIN_SPD ? 1 : speed / MIN_SPD;
-
-  // Lift
-  const liftMag = speed * Math.sin(aoa) * LIFT_K * stats.liftMult * eff;
-  plane.vx += -liftMag * Math.sin(velAng);
-  plane.vy +=  liftMag * Math.cos(velAng);
-
-  // Drag
-  const dragF = speed * speed * DRAG_K / stats.glideMult;
-  plane.vx -= (plane.vx/speed) * dragF;
-  plane.vy -= (plane.vy/speed) * dragF;
-
-  // Air resistance
-  plane.vx *= AIR_RES;
-
-  // Gravity
-  plane.vy += map.gravity * stats.fallMult;
-
-  // Wind + tailwind
-  plane.vx += wind + map.tailwind * 0.012;
-
-  // Thermals
-  for(const t of worldThermals){
-    const dx = plane.x - t.wx;
-    const dy = plane.y - t.wy;
-    const d  = Math.hypot(dx, dy);
-    if(d < t.r * 2){
-      const fac = (1 - d/(t.r*2)) * t.strength;
-      plane.vy  -= fac * 0.22;
-      plane.glowTimer = 18;
-      if(d < t.r * 0.7) burst(plane.x, plane.y, '#ffd700', 8);
-    }
-  }
-
-  // Rings
-  for(const ring of worldRings){
-    if(ring.hit){ if(ring.flash>0) ring.flash -= 0.04; continue; }
-    if(Math.hypot(plane.x-ring.wx, plane.y-ring.wy) < ring.r * 1.2){
-      ring.hit = true; ring.flash = 1;
-      dist += 35; ringsThisRun++;
-      ppCoins += ring.coins; coinsThisRun += ring.coins;
-      persistSave();
-      burst(ring.wx, ring.wy, map.key==='moon'?'#c0e0ff':'#ffd040', 18);
-    }
-  }
-
-  // Trail
-  plane.trail.push({x:plane.x, y:plane.y});
-  if(plane.trail.length > 65) plane.trail.shift();
-
-  // Move
-  plane.x += plane.vx;
-  plane.y += plane.vy;
-  if(plane.glowTimer>0) plane.glowTimer--;
-
-  // Camera
-  camX = plane.x - W * 0.24;
-
-  // Distance (feet)
-  dist = Math.max(dist, Math.round((plane.x - LAUNCH_X) * 0.62));
-
-  // Ceiling
-  if(plane.y < 5){ plane.y=5; plane.vy = Math.abs(plane.vy)*0.3; }
-
-  // Ground crash
-  if(plane.y >= groundY - 10){ plane.y = groundY-10; doCrash(); }
-}
-
-function burst(x,y,color,n){
-  for(let i=0;i<n;i++){
-    const a = Math.random()*Math.PI*2;
-    const s = rnd(1.5,5);
-    particles.push({ x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
-      life:1, decay:rnd(0.028,0.05), color, r:rnd(2,4.5) });
-  }
-}
-
-function doCrash(){
-  if(appState!=='fly') return;
-  appState = 'crash';
-
-  if(dist > best){ best = dist; localStorage.setItem('ppBest2', best); }
-
-  // Base coins from distance
-  const baseCoins = Math.max(5, Math.floor(dist / 30) + ringsThisRun * 8);
-  ppCoins += baseCoins; coinsThisRun += baseCoins;
-  persistSave();
-
-  // Crash pieces
-  for(let i=0;i<12;i++){
-    const a = -Math.PI*0.9 + Math.random()*Math.PI*0.5;
-    const s = rnd(2,6);
-    crashPieces.push({
-      x:plane.x, y:plane.y,
-      vx:Math.cos(a)*s + plane.vx*0.3,
-      vy:Math.sin(a)*s + plane.vy*0.3,
-      angle:Math.random()*Math.PI*2,
-      spin:(Math.random()-0.5)*0.3,
-      w:rnd(8,18), h:rnd(3,6),
-      life:1, decay:rnd(0.006,0.012),
-    });
-  }
-
-  setTimeout(()=>{ if(appState==='crash') showResult(); }, 1800);
-}
-
-function showResult(){
-  appState = 'result';
-  const isNew = dist >= best && dist > 0;
-
-  document.getElementById('resultBadge').textContent = isNew ? 'New Record! 🎉' : 'Flight Complete';
-  document.getElementById('resultDist').textContent  = dist + ' ft';
-  document.getElementById('resultSub').textContent   = 'Best: '+best+' ft  ·  Rings: '+ringsThisRun;
-  document.getElementById('resultCoins').textContent = '+'+coinsThisRun+' coins this run  ·  Total: '+ppCoins;
-  document.getElementById('resultMsg').textContent   = funnyMsg(dist);
-  document.getElementById('result-screen').classList.add('active');
-}
-
-function funnyMsg(ft){
-  if(ft < 50)  return pick(['Did you even try? The plane barely left your hand.',
-    'The ground received you almost immediately. Impressive in its own way.',
-    'A bold throw. A bolder failure. Respect.']);
-  if(ft < 150) return pick(['Decent toss. Nothing to write home about, but nothing to hide either.',
-    'You got it airborne. That counts for something. Barely.',
-    'Physics acknowledged your attempt and then overruled it.']);
-  if(ft < 350) return pick(['Solid flight. The paper is cautiously not embarrassed.',
-    'Now we\'re talking. A genuine attempt at aeronautics.',
-    'Good distance. The thermals liked you today.']);
-  if(ft < 700) return pick(['Strong throw. That plane had real intention.',
-    'Excellent glide. The air cooperated and so did you.',
-    'You\'re getting dangerous. In a paper airplane sense.']);
-  if(ft < 1500)return pick(['Remarkable. Somewhere an engineer is concerned.',
-    'That flight had style. And distance. Possibly too much of both.',
-    'That\'s a proper flight. The plane has earned its retirement.']);
-  return pick(['Absolutely ridiculous. File this under \'unreasonably good\'.',
-    'The paper has transcended its origins as office supply.',
-    'You just broke the laws of origami. No refunds.']);
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — SKY & BACKGROUNDS
-// ══════════════════════════════════════════════════════════════════
-function drawSky(){
-  const map = currentMapDef();
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, map.skyColors[0]);
-  g.addColorStop(0.4, map.skyColors[1]);
-  g.addColorStop(0.75, map.skyColors[2]);
-  g.addColorStop(1, map.skyColors[3]);
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,W,H);
-
-  if(map.key==='moon') drawStars();
-  if(map.key==='beach') drawOcean();
-}
-
-function drawStars(){
-  // Static star field seeded by position
-  ctx.save();
-  ctx.fillStyle = '#fff';
-  for(let i=0;i<180;i++){
-    const sx = (i*137.5 % W);
-    const sy = (i*79.3 % (H*0.65));
-    const r  = (i%5===0) ? 1.5 : 0.8;
-    const a  = 0.4 + (i%7)*0.08;
-    ctx.globalAlpha = a;
-    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawOcean(){
-  const groundY = H * currentMapDef().horizon;
-  // Ocean strip just above ground
-  const g = ctx.createLinearGradient(0, groundY-60, 0, groundY);
-  g.addColorStop(0,'rgba(20,80,180,0)');
-  g.addColorStop(1,'rgba(20,80,180,0.35)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, groundY-60, W, 60);
-}
-
-function drawFarBackground(){
-  const map = currentMapDef();
-  const off = camX * 0.05;
-  const groundY = H * map.horizon;
-
-  if(map.key==='suburbs'){
-    // Distant mountains
-    ctx.save(); ctx.globalAlpha=0.3;
-    ctx.fillStyle='#4060a0';
-    ctx.beginPath(); ctx.moveTo(0, groundY);
-    for(let x=-80;x<=W+80;x+=25){
-      const wx=x+off;
-      const my=groundY - 80 - 55*Math.sin(wx*0.0038) - 28*Math.sin(wx*0.009+1.3);
-      x===-80?ctx.moveTo(x,my):ctx.lineTo(x,my);
-    }
-    ctx.lineTo(W,groundY); ctx.lineTo(0,groundY); ctx.fill(); ctx.restore();
-  } else if(map.key==='city'){
-    // Far city skyline silhouette
-    ctx.save(); ctx.globalAlpha=0.25;
-    ctx.fillStyle='#1a2535';
-    ctx.beginPath(); ctx.moveTo(0,groundY);
-    for(let x=0;x<W;x+=2){
-      const wx=(x+off)*0.5;
-      const hh = 60 + 50*Math.abs(Math.sin(wx*0.04)) + 30*Math.abs(Math.sin(wx*0.11+2));
-      const my = groundY - hh;
-      x===0?ctx.moveTo(x,my):ctx.lineTo(x,my);
-    }
-    ctx.lineTo(W,groundY); ctx.fill(); ctx.restore();
-  } else if(map.key==='beach'){
-    // Distant islands/cliffs
-    ctx.save(); ctx.globalAlpha=0.18;
-    ctx.fillStyle='#6040a0';
-    ctx.beginPath(); ctx.moveTo(0,groundY);
-    for(let x=-80;x<=W+80;x+=30){
-      const wx=x+off;
-      const my=groundY - 40 - 35*Math.sin(wx*0.005+0.5);
-      x===-80?ctx.moveTo(x,my):ctx.lineTo(x,my);
-    }
-    ctx.lineTo(W,groundY); ctx.fill(); ctx.restore();
-  }
-  // moon earth is drawn as a deco object
-}
-
-function drawMidBackground(){
-  const map = currentMapDef();
-  const off = camX * 0.15;
-  const groundY = H * map.horizon;
-
-  if(map.key==='suburbs'){
-    // Rolling green hills
-    ctx.save();
-    ctx.fillStyle='#2e7032';
-    ctx.beginPath(); ctx.moveTo(0,groundY);
-    for(let x=-60;x<=W+60;x+=18){
-      const wx=x+off;
-      const my=groundY - 22 - 15*Math.sin(wx*0.018) - 9*Math.sin(wx*0.032+2.1);
-      x===-60?ctx.moveTo(x,my):ctx.lineTo(x,my);
-    }
-    ctx.lineTo(W,groundY); ctx.fill(); ctx.restore();
-  } else if(map.key==='city'){
-    // Mid-distance buildings
-    ctx.save(); ctx.fillStyle='#222c3c'; ctx.globalAlpha=0.7;
-    for(let i=0;i<14;i++){
-      const wx=(i*320 - off*0.3) % (W+100) - 50;
-      const bh=rnd(60,140); // deterministic via seed
-      const bw=rnd(30,65);
-      ctx.fillRect(wx, groundY-bh, bw, bh);
-    }
-    ctx.restore();
-  } else if(map.key==='beach'){
-    // Beach haze / horizon
-    const g=ctx.createLinearGradient(0,groundY-40,0,groundY);
-    g.addColorStop(0,'rgba(255,150,80,0)');
-    g.addColorStop(1,'rgba(255,120,60,0.15)');
-    ctx.fillStyle=g; ctx.fillRect(0,groundY-40,W,40);
-  }
-}
-
-function drawGround(){
-  const map = currentMapDef();
-  const groundY = H * map.horizon;
-  const groundH = H - groundY;
-
-  // Main ground
-  const gg = ctx.createLinearGradient(0,groundY,0,H);
-  gg.addColorStop(0, map.groundTopColor);
-  gg.addColorStop(0.15, map.groundColor);
-  gg.addColorStop(1, map.key==='moon'?'#404050':'#1a1a1a');
-  ctx.fillStyle=gg;
-  ctx.fillRect(0, groundY, W, groundH);
-
-  // Ground edge line
-  if(map.key!=='city'){
-    ctx.fillStyle = map.groundTopColor;
-    ctx.fillRect(0, groundY, W, 6);
-  }
-
-  // Moon: grid lines
-  if(map.key==='moon'){
-    ctx.save(); ctx.strokeStyle='rgba(150,150,180,0.18)'; ctx.lineWidth=1;
-    for(let x=0;x<W;x+=40){
-      ctx.beginPath(); ctx.moveTo(x,groundY); ctx.lineTo(x,H); ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // Distance markers
-  ctx.save();
-  ctx.fillStyle='rgba(255,255,255,0.18)';
-  ctx.font='9px Arial';
-  const step=100;
-  const first=Math.ceil((camX+LAUNCH_X)/step)*step;
-  for(let wx=first; wx<camX+W+LAUNCH_X; wx+=step){
-    const sx=wx-LAUNCH_X-camX;
-    ctx.fillRect(sx-0.5, groundY, 1, 7);
-    if(wx>LAUNCH_X) ctx.fillText(Math.round((wx-LAUNCH_X)*0.62)+'ft', sx+2, groundY+16);
-  }
-  ctx.restore();
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — DECORATIONS
-// ══════════════════════════════════════════════════════════════════
-// Parallax speeds by layer
-const LAYER_SPD = [0.05, 0.18, 0.82];
-
-function drawDecos(targetLayer){
-  for(const d of worldDecos){
-    if(d.layer!==targetLayer) continue;
-    const spd = LAYER_SPD[d.layer] || 0.5;
-    const sx  = d.wx - camX * spd;
-    if(sx < -300 || sx > W+300) continue;
-    drawSingleDeco(d, sx);
-  }
-}
-
-function drawSingleDeco(d, sx){
-  const groundY = H * currentMapDef().horizon;
-  ctx.save();
-  switch(d.type){
-    case 'tree_suburb': drawSuburbTree(sx, d.wy, d.w, d.h, d.color); break;
-    case 'house':       drawHouse(sx, d.wy, d.w, d.h, d.wallColor, d.roofColor, d.chimney); break;
-    case 'fence':       drawFence(sx, d.wy, d.w); break;
-    case 'building':    drawBuilding(sx, d.wy, d.w, d.h, d.color, d.winRows, d.winCols, d.waterTower, d.billboard); break;
-    case 'lamp':        drawLamp(sx, d.wy, d.h); break;
-    case 'crater':      drawCrater(sx, groundY, d.r); break;
-    case 'rock':        drawRock(sx, groundY, d.w, d.h); break;
-    case 'flag':        drawFlag(sx, d.wy); break;
-    case 'earth':       drawEarth(sx, d.wy); break;
-    case 'palm':        drawPalm(sx, d.wy, d.h, d.lean); break;
-    case 'umbrella':    drawUmbrella(sx, d.wy, d.color); break;
-    case 'wave':        drawWave(sx, d.wy); break;
-  }
-  ctx.restore();
-}
-
-function drawSuburbTree(sx, groundY, w, h, color){
-  // Trunk
-  ctx.fillStyle='#7a5230';
-  const tw=w*0.18, th=h*0.35;
-  ctx.fillRect(sx-tw/2, groundY-th, tw, th);
-  // Canopy layers (3 triangles)
-  ctx.fillStyle=color;
-  for(let i=0;i<3;i++){
-    const ly = groundY - th - (h-th)*(i/3) - (h-th)*0.18;
-    const lw = w*(1 - i*0.22);
-    ctx.beginPath();
-    ctx.moveTo(sx, ly - (h-th)*0.32*(1-i*0.1));
-    ctx.lineTo(sx - lw/2, ly + (h-th)*0.12);
-    ctx.lineTo(sx + lw/2, ly + (h-th)*0.12);
-    ctx.closePath(); ctx.fill();
-  }
-  // Darker shade on one side
-  ctx.globalAlpha=0.2; ctx.fillStyle='#000';
-  ctx.beginPath();
-  ctx.moveTo(sx, groundY-th-(h-th)*0.32);
-  ctx.lineTo(sx+w/2, groundY-th+(h-th)*0.12);
-  ctx.lineTo(sx, groundY-th+(h-th)*0.22);
-  ctx.closePath(); ctx.fill();
-  ctx.globalAlpha=1;
-}
-
-function drawHouse(sx, groundY, w, h, wallColor, roofColor, chimney){
-  // Body
-  ctx.fillStyle=wallColor;
-  ctx.fillRect(sx - w/2, groundY - h, w, h);
-  // Door
-  ctx.fillStyle='#7a5030';
-  const dw=w*0.22, dh=h*0.36;
-  ctx.fillRect(sx - dw/2, groundY - dh, dw, dh);
-  // Windows
-  ctx.fillStyle='#d4eaff';
-  ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1;
-  const wins=[[-0.3,-0.65],[0.3,-0.65]];
-  for(const [ox,oy] of wins){
-    const wx=sx+ox*w, wy=groundY+oy*h;
-    ctx.fillRect(wx-w*0.1, wy-h*0.1, w*0.2, h*0.18);
-    ctx.beginPath(); ctx.moveTo(wx,wy-h*0.1); ctx.lineTo(wx,wy+h*0.08); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(wx-w*0.1,wy); ctx.lineTo(wx+w*0.1,wy); ctx.stroke();
-  }
-  // Roof
-  ctx.fillStyle=roofColor;
-  ctx.beginPath();
-  ctx.moveTo(sx - w/2 - 3, groundY - h);
-  ctx.lineTo(sx, groundY - h - h*0.42);
-  ctx.lineTo(sx + w/2 + 3, groundY - h);
-  ctx.closePath(); ctx.fill();
-  // Chimney
-  if(chimney){
-    ctx.fillStyle='#8a6050';
-    ctx.fillRect(sx + w*0.2, groundY - h - h*0.28, 10, h*0.25);
-    // Smoke puffs
-    ctx.fillStyle='rgba(200,200,200,0.4)';
-    for(let i=0;i<3;i++){
-      ctx.beginPath();
-      ctx.arc(sx+w*0.2+5, groundY-h-h*0.28-8-i*9+((tik*0.5+i*30)%30)-15, 4+i*2, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
-}
-
-function drawFence(sx, groundY, w){
-  ctx.strokeStyle='#c8b080'; ctx.lineWidth=1.5;
-  const posts=Math.floor(w/12);
-  for(let i=0;i<posts;i++){
-    const px=sx - w/2 + i*(w/posts);
-    ctx.beginPath(); ctx.moveTo(px,groundY); ctx.lineTo(px,groundY-14); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(px,groundY-11); ctx.lineTo(px+8,groundY-9); ctx.stroke();
-  }
-}
-
-function drawBuilding(sx, groundY, w, h, color, winRows, winCols, waterTower, billboard){
-  ctx.fillStyle=color;
-  ctx.fillRect(sx-w/2, groundY-h, w, h);
-  // Windows
-  const ww=Math.max(5, w/winCols - 3);
-  const wh=Math.max(4, 13);
-  for(let r=0;r<winRows;r++){
-    for(let c=0;c<winCols;c++){
-      const lit=Math.random()<0.65;
-      ctx.fillStyle=lit?'rgba(255,240,120,0.85)':'rgba(20,30,50,0.6)';
-      const wx=sx-w/2+3+c*(w/winCols);
-      const wy=groundY-h+6+r*(wh+3);
-      if(wy+wh<groundY-2) ctx.fillRect(wx, wy, ww, wh);
-    }
-  }
-  // Water tower
-  if(waterTower){
-    ctx.fillStyle='#604030';
-    ctx.fillRect(sx-6, groundY-h-20, 12, 20);
-    ctx.fillStyle='#8a6040';
-    ctx.beginPath(); ctx.ellipse(sx,groundY-h-20,12,8,0,0,Math.PI*2); ctx.fill();
-  }
-  // Billboard
-  if(billboard){
-    const bw=w*0.8, bh=14;
-    ctx.fillStyle='#e8d890';
-    ctx.fillRect(sx-bw/2, groundY-h-bh-4, bw, bh);
-    ctx.fillStyle='#303040'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
-    ctx.fillText('FLY HIGHER', sx, groundY-h-4-3);
-  }
-}
-
-function drawLamp(sx, groundY, h){
-  ctx.strokeStyle='#8a9090'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY-h);
-  ctx.quadraticCurveTo(sx,groundY-h-10,sx+14,groundY-h-10); ctx.stroke();
-  ctx.fillStyle='#ffee80'; ctx.globalAlpha=0.9;
-  ctx.beginPath(); ctx.arc(sx+14,groundY-h-10,4,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=0.15; ctx.fillStyle='#ffee80';
-  ctx.beginPath(); ctx.arc(sx+14,groundY-h-10,12,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-}
-
-function drawCrater(sx, groundY, r){
-  ctx.strokeStyle='rgba(50,50,60,0.8)'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.ellipse(sx, groundY, r, r*0.4, 0, 0, Math.PI*2); ctx.stroke();
-  ctx.fillStyle='rgba(0,0,0,0.15)';
-  ctx.beginPath(); ctx.ellipse(sx, groundY+r*0.15, r*0.85, r*0.3, 0, 0, Math.PI*2); ctx.fill();
-}
-
-function drawRock(sx, groundY, w, h){
-  ctx.fillStyle='#808090';
-  ctx.beginPath(); ctx.ellipse(sx, groundY-h/2, w/2, h/2, -0.2, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.2)';
-  ctx.beginPath(); ctx.ellipse(sx-w*0.1, groundY-h*0.6, w*0.2, h*0.15, -0.3, 0, Math.PI*2); ctx.fill();
-}
-
-function drawFlag(sx, groundY){
-  ctx.strokeStyle='#c0c0c0'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY-40); ctx.stroke();
-  // US flag simplified — just red/white stripes
-  for(let i=0;i<5;i++){
-    ctx.fillStyle=i%2===0?'#cc2222':'#ffffff';
-    ctx.fillRect(sx, groundY-40+i*4, 22, 4);
-  }
-  ctx.fillStyle='rgba(0,30,100,0.85)';
-  ctx.fillRect(sx, groundY-40, 10, 10);
-  ctx.fillStyle='white'; ctx.font='5px Arial'; ctx.textAlign='left';
-  ctx.fillText('★★', sx+1, groundY-33);
-}
-
-function drawEarth(sx, wy){
-  const r=60;
-  ctx.save();
-  // Glow
-  const grd=ctx.createRadialGradient(sx,wy,r*0.5,sx,wy,r*1.6);
-  grd.addColorStop(0,'rgba(60,140,255,0.2)');
-  grd.addColorStop(1,'rgba(60,140,255,0)');
-  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(sx,wy,r*1.6,0,Math.PI*2); ctx.fill();
-  // Body
-  const eg=ctx.createRadialGradient(sx-r*0.3,wy-r*0.3,r*0.1,sx,wy,r);
-  eg.addColorStop(0,'#2050c8'); eg.addColorStop(1,'#0a1870');
-  ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(sx,wy,r,0,Math.PI*2); ctx.fill();
-  // Land masses
-  ctx.fillStyle='#2a8040'; ctx.globalAlpha=0.8;
-  ctx.beginPath(); ctx.ellipse(sx-12,wy-10,22,14,-0.3,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(sx+18,wy+8,14,22,0.5,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-  // Atmosphere
-  const atm=ctx.createRadialGradient(sx,wy,r-4,sx,wy,r+6);
-  atm.addColorStop(0,'rgba(100,180,255,0)');
-  atm.addColorStop(1,'rgba(100,180,255,0.35)');
-  ctx.fillStyle=atm; ctx.beginPath(); ctx.arc(sx,wy,r+6,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-
-function drawPalm(sx, groundY, h, lean){
-  // Trunk (quadratic bezier for curve)
-  const tx=sx+lean*h;
-  ctx.strokeStyle='#a07040'; ctx.lineWidth=8; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.quadraticCurveTo(sx+lean*h*0.5,groundY-h*0.5,tx,groundY-h); ctx.stroke();
-  ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.quadraticCurveTo(sx+lean*h*0.5,groundY-h*0.5,tx,groundY-h); ctx.stroke();
-  // Fronds
-  const fronds=[
-    [0,-h*0.4],[h*0.35,-h*0.25],[-h*0.35,-h*0.2],[h*0.2,0],[-h*0.15,h*0.05],
-  ];
-  ctx.strokeStyle='#3a7830'; ctx.lineWidth=3; ctx.lineCap='round';
-  for(const [fdx,fdy] of fronds){
-    ctx.save();
-    ctx.translate(tx,groundY-h);
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(fdx*0.5,fdy*0.5,fdx,fdy); ctx.stroke();
-    // Leaves on each frond
-    ctx.strokeStyle='#4a9840'; ctx.lineWidth=1.5;
-    for(let t=0.3;t<=1;t+=0.2){
-      const bx=fdx*t, by=fdy*t;
-      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+fdy*0.2,by-fdx*0.2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-fdy*0.2,by+fdx*0.2); ctx.stroke();
-    }
-    ctx.restore();
-  }
-}
-
-function drawUmbrella(sx, groundY, color){
-  // Pole
-  ctx.strokeStyle='#c0a060'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY-50); ctx.stroke();
-  // Canopy
-  ctx.fillStyle=color;
-  ctx.beginPath(); ctx.ellipse(sx,groundY-50,32,12,0,Math.PI,0); ctx.fill();
-  // Stripes
-  ctx.fillStyle='rgba(255,255,255,0.3)';
-  for(let i=-3;i<=3;i++){
-    if(i%2===0) continue;
-    ctx.save(); ctx.translate(sx,groundY-50);
-    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(i*10,12); ctx.lineTo(i*10-5,12); ctx.lineTo(0,0); ctx.fill();
-    ctx.restore();
-  }
-  // Handle
-  ctx.strokeStyle='#c0a060'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.arc(sx+6,groundY-3,6,0,Math.PI); ctx.stroke();
-}
-
-function drawWave(sx, wy){
-  ctx.strokeStyle='rgba(100,180,255,0.5)'; ctx.lineWidth=2;
-  ctx.beginPath();
-  for(let x=0;x<40;x++){
-    const y=wy + Math.sin((x/40)*Math.PI*2 + tik*0.05)*4;
-    x===0?ctx.moveTo(sx+x,y):ctx.lineTo(sx+x,y);
-  }
-  ctx.stroke();
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — CLOUDS
-// ══════════════════════════════════════════════════════════════════
-function drawClouds(){
-  const map = currentMapDef();
-  if(map.key==='moon') return;
-  for(const c of worldClouds){
-    const spd = c.layer===0 ? 0.12 : 0.35;
-    const sx  = c.wx - camX*spd;
-    if(sx < -200 || sx > W+200) continue;
-
-    ctx.save();
-    ctx.globalAlpha = c.alpha;
-    const grey=c.grey;
-    ctx.fillStyle=`rgb(${Math.round(255*grey)},${Math.round(255*grey)},${Math.round(255*grey)})`;
-    ctx.shadowBlur=18; ctx.shadowColor=`rgba(255,255,255,${c.alpha*0.3})`;
-
-    // Draw multiple overlapping circles
-    const bumps=c.bumps;
-    ctx.beginPath();
-    ctx.arc(sx,           c.wy,            c.r,     0, Math.PI*2);
-    ctx.arc(sx+c.r*0.75,  c.wy+c.r*0.12,   c.r*0.7, 0, Math.PI*2);
-    ctx.arc(sx-c.r*0.6,   c.wy+c.r*0.15,   c.r*0.6, 0, Math.PI*2);
-    if(bumps>3) ctx.arc(sx+c.r*0.2, c.wy-c.r*0.48, c.r*0.52, 0, Math.PI*2);
-    if(bumps>4) ctx.arc(sx-c.r*0.3, c.wy-c.r*0.35, c.r*0.44, 0, Math.PI*2);
-    ctx.fill();
-
-    // Shadow underneath
-    ctx.globalAlpha=c.alpha*0.18;
-    ctx.fillStyle='#8090a8';
-    ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.ellipse(sx, c.wy+c.r*0.6, c.r*1.1, c.r*0.28, 0, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — THERMALS & RINGS
-// ══════════════════════════════════════════════════════════════════
-function drawThermals(){
-  for(const t of worldThermals){
-    const sx=t.wx-camX;
-    if(sx<-140||sx>W+140) continue;
-    for(let k=0;k<4;k++){
-      const phase=((tik*0.007+k*0.25+t.phase)%1);
-      const alpha=Math.sin(phase*Math.PI)*0.25;
-      const r=t.r*(0.2+phase*0.85);
-      const y=t.wy - phase*160;
-      ctx.save();
-      ctx.globalAlpha=alpha;
-      ctx.strokeStyle='#ffc040'; ctx.lineWidth=2;
-      ctx.shadowBlur=12; ctx.shadowColor='#ff9000';
-      ctx.beginPath(); ctx.ellipse(sx,y,r,r*0.35,0,0,Math.PI*2); ctx.stroke();
-      ctx.restore();
-    }
-  }
-}
-
-function drawRings(){
-  const map=currentMapDef();
-  const moonMode=map.key==='moon';
-  for(const ring of worldRings){
-    const sx=ring.wx-camX;
-    if(sx<-100||sx>W+100) continue;
-    if(ring.hit && ring.flash<=0.02) continue;
-    const alpha=ring.hit?ring.flash:0.88;
-    const baseColor=moonMode?'#a0d0ff':'hsl(48,100%,68%)';
-    const hitColor=moonMode?'#e0f0ff':'#ffe040';
-    const color=ring.hit?hitColor:baseColor;
-
-    ctx.save();
-    ctx.globalAlpha=alpha;
-    ctx.strokeStyle=color; ctx.lineWidth=5;
-    ctx.shadowBlur=22; ctx.shadowColor=color;
-    ctx.beginPath(); ctx.arc(sx,ring.wy,ring.r,0,Math.PI*2); ctx.stroke();
-
-    if(!ring.hit){
-      // Inner glow dot
-      ctx.globalAlpha=alpha*0.4;
-      ctx.fillStyle=color;
-      ctx.beginPath(); ctx.arc(sx,ring.wy,ring.r*0.18,0,Math.PI*2); ctx.fill();
-      // Coin count label
-      ctx.globalAlpha=alpha*0.8;
-      ctx.fillStyle='#fff'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
-      ctx.fillText('+'+ring.coins+'🪙', sx, ring.wy-ring.r-6);
-    }
-    ctx.restore();
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — PLANE
-// ══════════════════════════════════════════════════════════════════
-function drawTrail(){
-  if(!plane.trail||plane.trail.length<2) return;
-  ctx.save();
-  for(let i=1;i<plane.trail.length;i++){
-    const t=i/plane.trail.length;
-    ctx.globalAlpha=t*0.38;
-    ctx.strokeStyle=plane.glowTimer>0?'#ffc030':'rgba(255,255,255,0.9)';
-    ctx.lineWidth=2*t;
-    ctx.beginPath();
-    ctx.moveTo(plane.trail[i-1].x-camX, plane.trail[i-1].y);
-    ctx.lineTo(plane.trail[i].x-camX,   plane.trail[i].y);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawPlane(sx,sy,ang){
-  const stats=upgradeStats();
-  const lvl=stats.flapsLvl;
-  const pal=PLANE_COLORS[Math.min(lvl, PLANE_COLORS.length-1)];
-
-  ctx.save();
-  ctx.translate(sx,sy);
-  ctx.rotate(ang);
-
-  // Glow aura when going fast or in thermal
-  if(plane.glowTimer>0){
-    ctx.shadowBlur=28; ctx.shadowColor='rgba(255,200,0,0.8)';
-  }
-
-  // Speed glow check
-  const spd=Math.hypot(plane.vx||0,plane.vy||0);
-  if(spd>14){
-    ctx.shadowBlur=Math.min(40,(spd-14)*3);
-    ctx.shadowColor='rgba(180,220,255,0.7)';
-  }
-
-  // Bottom wing
-  ctx.fillStyle=pal.wing2; ctx.strokeStyle=pal.crease; ctx.lineWidth=0.9;
-  ctx.beginPath();
-  ctx.moveTo(28,0); ctx.lineTo(-10,17); ctx.lineTo(-24,0); ctx.lineTo(-10,2);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-
-  // Top wing
-  ctx.fillStyle=pal.body;
-  ctx.beginPath();
-  ctx.moveTo(28,0); ctx.lineTo(-10,-17); ctx.lineTo(-24,0); ctx.lineTo(-10,2);
-  ctx.closePath(); ctx.fill(); ctx.stroke();
-
-  // Center keel
-  ctx.strokeStyle=pal.crease; ctx.lineWidth=0.7;
-  ctx.beginPath(); ctx.moveTo(28,0); ctx.lineTo(-24,0); ctx.stroke();
-
-  // Crease lines — top wing
-  ctx.strokeStyle=pal.crease; ctx.lineWidth=0.6;
-  ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-8,-17); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(-10,-16); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-8,17); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(-10,16); ctx.stroke();
-
-  // Flap tabs (level-dependent)
-  if(lvl>=1){
-    const fw=4+lvl*2.5;
-    ctx.fillStyle=pal.wing2; ctx.strokeStyle=pal.crease; ctx.lineWidth=0.7;
-    ctx.beginPath();
-    ctx.moveTo(-9,-16); ctx.lineTo(-20-fw,-23-fw*0.5); ctx.lineTo(-15,-7); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-9,16); ctx.lineTo(-20-fw,23+fw*0.5); ctx.lineTo(-15,7); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-  }
-  // Tail fin (weight upgrade)
-  if(stats.weightLvl>=1){
-    ctx.fillStyle='rgba(180,220,255,0.7)';
-    ctx.beginPath();
-    ctx.moveTo(-24,0); ctx.lineTo(-34-stats.weightLvl*2,-8); ctx.lineTo(-29,0);
-    ctx.lineTo(-34-stats.weightLvl*2,8); ctx.closePath(); ctx.fill();
-  }
-
-  // Nose tip
-  ctx.shadowBlur=0;
-  ctx.fillStyle=pal.nose;
-  ctx.beginPath(); ctx.arc(27,0,2.5,0,Math.PI*2); ctx.fill();
-
-  ctx.restore();
-}
-
-function drawParticles(){
-  for(const p of particles){
-    const sx=p.x-camX;
-    ctx.save();
-    ctx.globalAlpha=p.life*0.9;
-    ctx.fillStyle=p.color;
-    ctx.shadowBlur=8; ctx.shadowColor=p.color;
-    ctx.beginPath(); ctx.arc(sx,p.y,p.r*p.life,0,Math.PI*2); ctx.fill();
-    ctx.restore();
-    p.x+=p.vx; p.y+=p.vy; p.vy+=0.07;
-    p.vx*=0.97; p.vy*=0.97;
-    p.life-=p.decay;
-  }
-  particles=particles.filter(p=>p.life>0);
-}
-
-function drawCrashPieces(){
-  for(const p of crashPieces){
-    const sx=p.x-camX;
-    ctx.save();
-    ctx.globalAlpha=p.life;
-    ctx.translate(sx,p.y); ctx.rotate(p.angle);
-    ctx.fillStyle='#f0e8d4'; ctx.strokeStyle='#c0b49e'; ctx.lineWidth=0.8;
-    ctx.beginPath();
-    ctx.moveTo(p.w/2,0); ctx.lineTo(0,-p.h/2);
-    ctx.lineTo(-p.w/2,0); ctx.lineTo(0,p.h/2);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.restore();
-    p.x+=p.vx; p.y+=p.vy; p.vy+=0.14;
-    p.vx*=0.99; p.vy*=0.99;
-    p.angle+=p.spin; p.life-=p.decay;
-  }
-  crashPieces=crashPieces.filter(p=>p.life>0);
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — AIM
-// ══════════════════════════════════════════════════════════════════
-function drawAim(){
-  if(appState!=='aim') return;
-  const px=plane.x-camX, py=plane.y;
-  ctx.save();
-  if(isDragging){
-    const dx=dragSX-aimX, dy=dragSY-aimY;
-    const len=Math.hypot(dx,dy);
-    const pwr=Math.min(len/130,1);
-    const ang=Math.atan2(dy,dx);
-    const dist=Math.min(len,130)*1.4;
-    const ex=px+Math.cos(ang)*dist, ey=py+Math.sin(ang)*dist;
-
-    // Trajectory dashes
-    ctx.setLineDash([6,7]);
-    ctx.strokeStyle=`rgba(255,220,55,${0.4+pwr*0.5})`;
-    ctx.lineWidth=2.5;
-    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(ex,ey); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Arrow head
-    ctx.save(); ctx.translate(ex,ey); ctx.rotate(ang);
-    ctx.fillStyle='#ffe040';
-    ctx.shadowBlur=12; ctx.shadowColor='#ffc000';
-    ctx.beginPath(); ctx.moveTo(16,0); ctx.lineTo(-6,-6); ctx.lineTo(-6,6); ctx.closePath(); ctx.fill();
-    ctx.restore();
-
-    // Power bar
-    const bx=14, by=H-38, bw=160, bh=16;
-    ctx.fillStyle='rgba(0,0,0,0.5)';
-    ctx.roundRect(bx-3,by-3,bw+6,bh+6,8); ctx.fill();
-    const col=pwr<0.35?'#44dd22':pwr<0.7?'#ffaa00':'#ff3322';
-    if(pwr>0){
-      const grad=ctx.createLinearGradient(bx,0,bx+bw*pwr,0);
-      grad.addColorStop(0,col); grad.addColorStop(1,'#fff');
-      ctx.fillStyle=grad;
-      ctx.roundRect(bx,by,bw*pwr,bh,5); ctx.fill();
-    }
-    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1;
-    ctx.roundRect(bx,by,bw,bh,5); ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.9)';
-    ctx.font='bold 10px Arial'; ctx.textAlign='left';
-    ctx.fillText('POWER  '+(Math.round(pwr*100))+'%', bx+5, by+11);
-
-  } else {
-    // Idle pulse
-    const ph=(tik%80)/80;
-    ctx.strokeStyle=`rgba(255,215,50,${0.7-ph*0.45})`;
-    ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(px,py,24+ph*18,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle='rgba(255,255,255,0.7)';
-    ctx.font='bold 13px Segoe UI';
-    ctx.textAlign='center';
-    ctx.shadowBlur=8; ctx.shadowColor='rgba(0,0,0,0.5)';
-    ctx.fillText('drag to launch', px, py-38);
-  }
-  ctx.restore();
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  DRAWING — HUD
-// ══════════════════════════════════════════════════════════════════
-function drawHUD(){
-  if(appState!=='fly'&&appState!=='crash') return;
-  const map=currentMapDef();
-
-  // Distance pill — top left
-  ctx.save();
-  ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.roundRect(12,12,180,58,14); ctx.fill();
-  ctx.fillStyle='#fff'; ctx.font='bold 34px Segoe UI'; ctx.textAlign='left';
-  ctx.fillText(dist+' ft', 22, 50);
-  ctx.font='11px Segoe UI'; ctx.fillStyle='rgba(255,255,255,0.55)';
-  ctx.fillText('BEST  '+best+' ft', 22, 64);
-  ctx.restore();
-
-  // Coins — top right
-  ctx.save();
-  ctx.fillStyle='rgba(0,0,0,0.5)';
-  ctx.roundRect(W-130,12,118,42,14); ctx.fill();
-  ctx.fillStyle='#ffd040'; ctx.font='bold 16px Segoe UI'; ctx.textAlign='right';
-  ctx.shadowBlur=8; ctx.shadowColor='rgba(255,200,0,0.5)';
-  ctx.fillText('🪙 '+coinsThisRun, W-16, 38);
-  ctx.restore();
-
-  // Map name — top center
-  ctx.save();
-  const mw=ctx.measureText(map.name).width+28;
-  ctx.fillStyle='rgba(0,0,0,0.4)';
-  ctx.roundRect(W/2-mw/2,12,mw,30,999); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font='bold 12px Segoe UI';
-  ctx.textAlign='center';
-  ctx.fillText(map.name.toUpperCase(), W/2, 31);
-  ctx.restore();
-
-  // Altitude bar — right side
-  const groundY=H*map.horizon;
-  const altH=Math.min(H*0.55, 200);
-  const altX=W-18, altY=(H-altH)/2;
-  ctx.save();
-  ctx.fillStyle='rgba(0,0,0,0.4)';
-  ctx.roundRect(altX-6,altY-2,14,altH+4,7); ctx.fill();
-  const altRatio=1-Math.max(0,Math.min(1,(plane.y)/(groundY)));
-  ctx.fillStyle='rgba(80,200,120,0.9)';
-  ctx.roundRect(altX-5,altY+altH*(1-altRatio),12,altH*altRatio,5); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='9px Arial'; ctx.textAlign='center';
-  ctx.fillText('ALT', altX+1, altY-6);
-  ctx.restore();
-
-  // Wind indicator
-  if(map.windGust>0||map.windBase>0){
-    ctx.save();
-    ctx.fillStyle='rgba(0,0,0,0.4)';
-    ctx.roundRect(12,80,90,30,10); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='10px Arial'; ctx.textAlign='left';
-    ctx.fillText('WIND', 20, 97);
-    const arrowLen=Math.abs(wind)*600;
-    const dir=wind<0?-1:1;
-    ctx.strokeStyle=Math.abs(wind)>0.05?'#ff8040':'#80d0ff';
-    ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(55,94); ctx.lineTo(55+dir*arrowLen,94); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(55+dir*arrowLen,94);
-    ctx.lineTo(55+dir*(arrowLen-5),90); ctx.lineTo(55+dir*(arrowLen-5),98); ctx.closePath(); ctx.fill();
-    ctx.restore();
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  INPUT
-// ══════════════════════════════════════════════════════════════════
-function startDrag(mx,my){
-  const px=plane.x-camX;
-  if(Math.hypot(mx-px,my-plane.y)<70){
-    isDragging=true; dragSX=mx; dragSY=my; aimX=mx; aimY=my;
-  }
-}
-
-function endDrag(){
-  if(!isDragging) return;
-  isDragging=false;
-  const dx=dragSX-aimX, dy=dragSY-aimY;
-  const len=Math.hypot(dx,dy);
-  const pwr=Math.min(len/130,1);
-  if(pwr<0.07) return;
-  const ang=Math.atan2(dy,dx);
-  const stats=upgradeStats();
-  const speed=(3.5+pwr*13)*stats.speedMult;
-  plane.vx=Math.cos(ang)*speed;
-  plane.vy=Math.sin(ang)*speed;
-  plane.angle=ang;
-  plane.trail=[];
-  appState='fly';
-}
-
-canvas.addEventListener('mousedown',e=>{
-  const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left, my=e.clientY-r.top;
-  if(appState==='aim') startDrag(mx,my);
-});
-canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect();
-  mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
-  if(isDragging){ aimX=mouseX; aimY=mouseY; }
-});
-canvas.addEventListener('mouseup',()=>{ if(appState==='aim') endDrag(); });
-
-canvas.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  const t=e.touches[0],r=canvas.getBoundingClientRect();
-  mouseX=t.clientX-r.left; mouseY=t.clientY-r.top;
-  if(appState==='aim') startDrag(mouseX,mouseY);
-},{passive:false});
-canvas.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  const t=e.touches[0],r=canvas.getBoundingClientRect();
-  mouseX=t.clientX-r.left; mouseY=t.clientY-r.top;
-  if(isDragging){ aimX=mouseX; aimY=mouseY; }
-},{passive:false});
-canvas.addEventListener('touchend',e=>{
-  e.preventDefault();
-  if(appState==='aim') endDrag();
-},{passive:false});
-
-// Keyboard
-const keys={};
-document.addEventListener('keydown',e=>{
-  keys[e.code]=true;
-  if(e.code==='Space'&&appState==='aim'){ e.preventDefault(); }
-});
-document.addEventListener('keyup',e=>{ keys[e.code]=false; });
-
-// Arrow key steering overlay (maps to virtual mouseY)
-function handleKeys(){
-  if(appState!=='fly') return;
-  if(keys['ArrowUp'])   mouseY=Math.max(0,mouseY-5);
-  if(keys['ArrowDown']) mouseY=Math.min(H,mouseY+5);
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  UI SCREENS
-// ══════════════════════════════════════════════════════════════════
-function updateMenuUI(){
-  document.getElementById('menuBest').textContent=best;
-  document.getElementById('menuCoins').textContent=ppCoins;
-  document.getElementById('menuMapChip').textContent='Map: '+currentMapDef().name;
-}
-
-function renderMapsScreen(){
-  document.getElementById('mapsCoinsLabel').textContent=ppCoins+' coins available';
-  const grid=document.getElementById('mapsGrid');
-  grid.innerHTML='';
-  for(const map of MAP_DEFS){
-    const owned=ppSave.unlocked.includes(map.key);
-    const active=ppSave.map===map.key;
-    const canBuy=ppCoins>=map.unlockCoins;
-
-    const card=document.createElement('div');
-    card.className='map-card';
-
-    // Banner
-    const banner=document.createElement('div');
-    banner.className='map-banner';
-    // Draw sky preview using inline SVG
-    const skyC=map.skyColors;
-    banner.style.background=`linear-gradient(180deg,${skyC[0]} 0%,${skyC[1]} 40%,${skyC[2]} 75%,${skyC[3]} 100%)`;
-    const nameEl=document.createElement('div');
-    nameEl.className='map-banner-name'; nameEl.textContent=map.name;
-    banner.appendChild(nameEl);
-    card.appendChild(banner);
-
-    const body=document.createElement('div'); body.className='map-body';
-    body.innerHTML=`<div class="map-desc">${map.desc}</div>
-      <div class="map-meta">${map.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
-
-    const btn=document.createElement('button');
-    btn.className='map-btn';
-    if(active){ btn.className+=' active'; btn.textContent='Currently Playing'; btn.disabled=true; }
-    else if(owned){ btn.className+=' play'; btn.textContent='PLAY'; btn.addEventListener('click',()=>selectAndPlay(map.key)); }
-    else if(canBuy){ btn.className+=' unlock'; btn.textContent='Unlock — '+map.unlockCoins+' coins'; btn.addEventListener('click',()=>unlockMap(map.key)); }
-    else { btn.className+=' play'; btn.textContent='🔒 Need '+map.unlockCoins+' coins'; btn.disabled=true; }
-    body.appendChild(btn); card.appendChild(body);
-
-    // Lock overlay for locked maps
-    if(!owned){
-      const ov=document.createElement('div'); ov.className='map-lock-overlay';
-      ov.innerHTML=`<div class="lock-icon">🔒</div><div class="lock-cost">${map.unlockCoins} coins to unlock</div>`;
-      ov.style.pointerEvents='none';
-      card.appendChild(ov);
-    }
-
-    grid.appendChild(card);
-  }
-}
-
-function renderUpgradesScreen(){
-  document.getElementById('upgradesCoinsLabel').textContent=ppCoins+' coins available';
-  const grid=document.getElementById('upgradesGrid');
-  grid.innerHTML='';
-  for(const upDef of UPGRADE_DEFS){
-    const curLvl=ppSave.upgrades[upDef.key]||0;
-    const maxLvl=upDef.levels.length-1;
-    const maxed=curLvl>=maxLvl;
-    const nextLvl=upDef.levels[curLvl+1];
-    const nextCost=nextLvl?nextLvl.cost:null;
-    const canBuy=!maxed&&ppCoins>=nextCost;
-
-    const card=document.createElement('div'); card.className='upgrade-card';
-
-    // Level dots
-    const dotsHTML=upDef.levels.slice(1).map((_,i)=>{
-      const filled=i<curLvl;
-      const m=i===maxLvl-1&&curLvl===maxLvl;
-      return `<div class="level-dot ${filled?(curLvl===maxLvl?'maxed':'filled'):''}"></div>`;
-    }).join('');
-
-    const curLabel=upDef.levels[curLvl].label;
-    const costLabel=maxed?'MAX':nextCost+' coins for Level '+(curLvl+1);
-
-    card.innerHTML=`
-      <h3>${upDef.icon} ${upDef.name}</h3>
-      <p>${upDef.desc}</p>
-      <div class="upgrade-levels">${dotsHTML}</div>
-      <div class="upgrade-meta">
-        <span>Level ${curLvl} / ${maxLvl}: ${curLabel}</span>
-        <span>${costLabel}</span>
-      </div>
-    `;
-    const btn=document.createElement('button');
-    btn.className='upgrade-btn '+(maxed?'maxed':'buy');
-    btn.textContent=maxed?'MAXED UP':canBuy?'Upgrade — '+nextCost+' coins':'Need '+nextCost+' coins';
-    btn.disabled=maxed||!canBuy;
-    if(!maxed&&canBuy) btn.addEventListener('click',()=>buyUpgrade(upDef.key));
-    card.appendChild(btn);
-    grid.appendChild(card);
-  }
-}
-
-function unlockMap(key){
-  const map=MAP_DEFS.find(m=>m.key===key);
-  if(!map||ppCoins<map.unlockCoins) return;
-  ppCoins-=map.unlockCoins;
-  ppSave.unlocked.push(key);
-  persistSave();
-  renderMapsScreen();
-}
-
-function selectAndPlay(key){
-  ppSave.map=key;
-  persistSave();
-  showScreen(null);
-  startGame();
-}
-
-function buyUpgrade(key){
-  const upDef=UPGRADE_DEFS.find(u=>u.key===key);
-  if(!upDef) return;
-  const curLvl=ppSave.upgrades[key]||0;
-  const maxLvl=upDef.levels.length-1;
-  if(curLvl>=maxLvl) return;
-  const cost=upDef.levels[curLvl+1].cost;
-  if(ppCoins<cost) return;
-  ppCoins-=cost;
-  ppSave.upgrades[key]=curLvl+1;
-  persistSave();
-  renderUpgradesScreen();
-  // update coin label
-  document.getElementById('upgradesCoinsLabel').textContent=ppCoins+' coins available';
-}
-
-// Button wiring
-document.getElementById('menuPlayBtn').addEventListener('click',()=>startGame());
-document.getElementById('menuMapsBtn').addEventListener('click',()=>{
-  showScreen('mapsScreen');
-  renderMapsScreen();
-});
-document.getElementById('menuUpgradesBtn').addEventListener('click',()=>{
-  showScreen('upgradesScreen');
-  renderUpgradesScreen();
-});
-document.getElementById('mapsCloseBtn').addEventListener('click',()=>{ showScreen('menuScreen'); updateMenuUI(); });
-document.getElementById('upgradesCloseBtn').addEventListener('click',()=>{ showScreen('menuScreen'); updateMenuUI(); });
-document.getElementById('resultFlyBtn').addEventListener('click',()=>{
-  document.getElementById('result-screen').classList.remove('active');
-  startGame();
-});
-document.getElementById('resultMenuBtn').addEventListener('click',()=>{
-  document.getElementById('result-screen').classList.remove('active');
-  goMenu();
-});
-
-// ══════════════════════════════════════════════════════════════════
-//  MAIN LOOP
-// ══════════════════════════════════════════════════════════════════
-function loop(){
-  tik++;
-  ctx.clearRect(0,0,W,H);
-
-  drawSky();
-  drawFarBackground();
-  drawDecos(0);         // far bg layer
-  drawMidBackground();
-  drawDecos(1);         // mid layer
-  drawClouds();
-  drawThermals();
-  drawGround();
-  drawDecos(2);         // near / ground layer
-
-  drawRings();
-
-  if(appState==='fly'||appState==='crash'){
-    drawTrail();
-    if(appState==='fly') physicsStep();
-    drawPlane(plane.x-camX, plane.y, plane.angle);
-  }
-  if(appState==='aim'){
-    drawPlane(plane.x-camX, plane.y, plane.angle);
-    drawAim();
-  }
-  if(appState==='crash'){
-    drawCrashPieces();
-  }
-
-  drawParticles();
-  handleKeys();
-  drawHUD();
-
-  requestAnimationFrame(loop);
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════════════
 updateMenuUI();
-loop();
 </script>
 </body>
 </html>
