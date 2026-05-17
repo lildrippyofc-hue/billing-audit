@@ -96,8 +96,12 @@ const STATE = {
   drewLends: 0,
   events: [],
   achievements: [],
-  leeFollowing: false,    // Lee is tailing the player to smoke spot
-  leeGossipCount: 0,      // how many gossip rounds done this shift
+  leeFollowing: false,
+  leeGossipCount: 0,
+  smokingNPCs: [],          // ids of NPCs currently following player to smoke
+  jamesAnnoyance: 0,        // 0-100; high = James starts losing it
+  jamesAnnoyanceTimer: 0,
+  _caught: false,           // suspicion-100 lose condition triggered
 };
 
 // Zone layout
@@ -120,37 +124,124 @@ for(let i=0;i<6;i++){
 
 // NPC definitions — appearance: { shirt, pants, skin, hair, extras }
 const NPC_DEFS = [
-  { id:'james',   name:'James',   title:'(Manager)',     color:0x3a6abf, zone:'dock',    patrol:true,
+  { id:'james', name:'James', title:'(Manager)', color:0x3a6abf, zone:'dock', patrol:true,
     appearance:{ shirt:0x2a5aaa, pants:0x334466, skin:0xd4956a, hair:0x4a3010, clipboard:true, badge:true },
-    lines:["What now?!","I'm literally everywhere.","I work 7 days. SEVEN.","Someone call for James? Nobody? Good."],
-    choices:["Nothing, just saying hi","Ask for easier truck","Invite to smoke outside"],
+    lines:[
+      "What now?!",
+      "I'm literally everywhere.",
+      "I work 7 days. SEVEN.",
+      "Someone call for James? Nobody? Good.",
+      "I see EVERYTHING that happens on this dock.",
+      "You think this is a game? This is MY dock.",
+      "I haven't taken a lunch break since 2019.",
+      "Eyes forward. Hands moving. Clock's ticking.",
+      "Don't test me today. I already failed my own test.",
+      "I've written up people for BREATHING wrong.",
+    ],
+    choices:["Nothing, just saying hi","Ask for easier truck","Invite to smoke outside 🚬"],
   },
-  { id:'chandler', name:'Chandler', title:'(Bread Boy)',  color:0xc8a050, zone:'floor',   patrol:false,
+  { id:'chandler', name:'Chandler', title:'(Bread Boy)', color:0xc8a050, zone:'floor', patrol:false,
     appearance:{ shirt:0xc8a050, pants:0x4466aa, skin:0xf0c080, hair:0xd4aa30 },
-    lines:["I'm not Bread Boy.","Why does everyone call me that?","I swear to God...","Loafing? Really?"],
-    choices:["Call him Bread Boy 🍞","Ignore him","Ask where he's been"],
+    lines:[
+      "I'm not Bread Boy.",
+      "Why does everyone call me that?",
+      "I swear to God...",
+      "Loafing? Really?",
+      "My name is CHANDLER.",
+      "I have a degree. A real one.",
+      "The bread is for... personal reasons.",
+      "You know what, I don't even care anymore.",
+      "Call me Bread Boy one more time. See what happens.",
+      "I went to college for four years for THIS?",
+      "It's sourdough, for the record. Not that it matters.",
+    ],
+    choices:["Call him Bread Boy 🍞","Ignore him","Ask him to go smoke 🚬"],
   },
-  { id:'lee',     name:'Lee',     title:'(Says Yes)',    color:0xff80c0, zone:'breakRoom',patrol:false,
+  { id:'lee', name:'Lee', title:'(Says Yes)', color:0xff80c0, zone:'breakRoom', patrol:false,
     appearance:{ shirt:0xee6699, pants:0xddbbcc, skin:0xe8a878, hair:0x2a1808, ponytail:true },
-    lines:["Yes!","Of course!","Sure, why not?","Absolutely!","Yeah yeah yeah!"],
+    lines:[
+      "Yes!","Of course!","Sure, why not?","Absolutely!","Yeah yeah yeah!",
+      "I mean... yes.",
+      "Obviously!",
+      "100% yes.",
+      "I was literally just about to suggest that.",
+      "Done. Already did it in my head.",
+    ],
     choices:["Ask to cover your truck","Ask her to distract James","Go smoke together 🚬"],
     gossipChoices:["Spill on Chandler 🍞","What's Drew's deal?","Real talk about James","Have you seen Pam lately?"],
   },
-  { id:'todd',    name:'Todd',    title:'(Freezer Lead)',color:0x44cc44, zone:'freezer',  patrol:false,
+  { id:'todd', name:'Todd', title:'(Freezer Lead)', color:0x44cc44, zone:'freezer', patrol:false,
     appearance:{ shirt:0x1a6622, pants:0x223322, skin:0xd8b888, hair:0x222222, parka:true },
-    lines:["...did you hear that?","The freezer talks to me.","I've been here since Tuesday.","Is it warm in here?"],
-    choices:["Ask if he's okay","Ask what's in the mystery box","Challenge him to a race"],
+    lines:[
+      "...did you hear that?",
+      "The freezer talks to me.",
+      "I've been here since Tuesday.",
+      "Is it warm in here?",
+      "I stopped feeling my fingers last March. They came back though.",
+      "Time moves differently in the freezer.",
+      "They say there's a pallet in here from 2011. I guard it.",
+      "The ice makes sounds at 3 AM. Not bad sounds. Just... sounds.",
+      "I haven't seen sunlight in four days. It's fine.",
+      "The mystery box hums sometimes. I hum back.",
+    ],
+    choices:["Ask if he's okay","Ask what's in the mystery box","Invite him to smoke 🚬"],
   },
-  { id:'drew',    name:'Drew',    title:'(Hungry Drew)', color:0x9955cc, zone:'floor',    patrol:false,
+  { id:'drew', name:'Drew', title:'(Hungry Drew)', color:0x9955cc, zone:'floor', patrol:false,
     appearance:{ shirt:0x7733aa, pants:0x111122, skin:0xc87848, hair:0x111111, hoodie:true },
-    lines:["Hey, you got $5?","Bro I'll pay you back.","I forgot my wallet again.","Come on man it's just $5."],
+    lines:[
+      "Hey, you got $5?",
+      "Bro I'll pay you back.",
+      "I forgot my wallet again.",
+      "Come on man it's just $5.",
+      "I just need like... $3. Or $5. Preferably $5.",
+      "You're literally my best friend right now.",
+      "I promise this is the last time. This week.",
+      "Bro I'm starving. The vending machine takes $2 and I have $1.97.",
+      "I have a system. It's just temporarily broken.",
+      "My card got declined but that's a whole other situation.",
+    ],
     choices:["Lend $5","Refuse","Ask for last week's $5 back"],
   },
-  { id:'pam',     name:'Pam',     title:'(The Manager)', color:0xcc3333, zone:'dock',     patrol:true,
+  { id:'pam', name:'Pam', title:'(The Manager)', color:0xcc3333, zone:'dock', patrol:true,
     appearance:{ shirt:0xcc2222, pants:0x221122, skin:0xf0c890, hair:0xddcc88, blazer:true, clipboard:true },
-    lines:["Why aren't you working?","I'm watching everyone.","That's a write-up.","Interesting choice."],
+    lines:[
+      "Why aren't you working?",
+      "I'm watching everyone.",
+      "That's a write-up.",
+      "Interesting choice.",
+      "I have notes on all of you.",
+      "Don't make me use this clipboard.",
+      "Productivity levels are... disappointing.",
+      "I saw what you did. I see everything.",
+      "This is going in your file.",
+      "I don't need a reason. I just need an opportunity.",
+      "My pen is literally always ready.",
+    ],
     choices:["Pretend to work","Run","Blame Chandler"],
   },
+];
+
+// James annoyance escalated lines (50-79 annoyance)
+const JAMES_SALTY = [
+  "I am THIS close to losing it today.",
+  "Do I look like I'm in the mood? Do I?!",
+  "You know what your problem is? Pick one.",
+  "I didn't come in at 4AM for THIS.",
+  "Every single day. EVERY. SINGLE. DAY.",
+  "I have been patient. The patience is GONE.",
+  "You think I don't see you slacking? I see EVERYTHING.",
+  "My eye has been twitching since Tuesday because of people like you.",
+];
+// James cussing-out lines (80+ annoyance)
+const JAMES_NUCLEAR = [
+  "What in the HELL is going on over here?!",
+  "I swear to GOD if I have to say this one more time—",
+  "Are you KIDDING me right now?! Are you KIDDING?!",
+  "I don't get PAID enough for this NONSENSE.",
+  "EVERYONE on this dock is on my LAST nerve!",
+  "You know what?! FINE. FINE! We're all staying late!",
+  "I have never in my LIFE seen such spectacular nonsense.",
+  "I am about thirty seconds from calling corporate on ALL of you.",
 ];
 
 // ── PERSON SPRITE GENERATOR ────────────────────────────────────────────────
@@ -895,20 +986,64 @@ class GameScene extends Phaser.Scene {
         this.floatText(npc.sprite.x, npc.sprite.y, '+'+scoreChange+' pts 🍞', '#ffd700');
       } else if(idx===1){
         response = '"..."'; suspChange = -5;
-      } else {
-        response = '"I\'ve been... around."'; energyChange = 5;
+      } else { // Go smoke
+        if(STATE.smokingNPCs.includes('chandler')){
+          response = '"I\'m already following you! Stop looking back at me, it\'s weird."';
+        } else {
+          const chandlerSmokeLines = [
+            '"...fine. But I\'m not talking to anyone out there."',
+            '"I guess. It\'s not like I\'m doing anything important. Which I was. But fine."',
+            '"Sure. If someone calls me Bread Boy I\'m coming straight back inside."',
+          ];
+          response = Phaser.Math.RND.pick(chandlerSmokeLines);
+          STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'chandler'])];
+          energyChange = 5;
+          this.floatText(this.player.x, this.player.y, 'Chandler is reluctantly following 🚬', '#c8a050');
+        }
       }
     }
     else if(npc.id === 'james'){
-      if(idx===0){ response = '"Hi. Now please go do something."'; suspChange = -10; STATE.rapportJames++; }
-      else if(idx===1){ response = '"No. Next."'; suspChange = 5; }
+      if(idx===0){
+        const hiLines = [
+          '"Hi. Now please go do something."',
+          '"...hi. Why are you just standing here."',
+          '"Hi yourself. Back to work."',
+          '"Oh good, you\'re upright. Go do something with that."',
+        ];
+        response = Phaser.Math.RND.pick(hiLines);
+        suspChange = -10; STATE.rapportJames++;
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 5);
+      }
+      else if(idx===1){
+        const noLines = [
+          '"No. Next."',
+          '"That\'s not how any of this works."',
+          '"I don\'t negotiate with... whatever this is."',
+          '"No no no no no. Go. Now."',
+        ];
+        response = Phaser.Math.RND.pick(noLines);
+        suspChange = 5; STATE.jamesAnnoyance += 10;
+      }
       else { // Invite to smoke
         if(STATE.rapportJames >= 2){
-          response = '"...yeah okay. Five minutes. Nobody saw this."';
+          const smokeYes = [
+            '"...yeah okay. Five minutes. Nobody saw this."',
+            '"You know what? Fine. Five minutes. I never said this."',
+            '"I swear if Pam sees us I will deny everything. Let\'s go."',
+          ];
+          response = Phaser.Math.RND.pick(smokeYes);
           energyChange = 20; scoreChange = 50; STATE.rapportJames++;
-          this.floatText(this.player.x, this.player.y, '+50 pts! James is cool!', '#ffa01e');
+          STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 20);
+          STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'james'])];
+          this.floatText(this.player.x, this.player.y, '+50 pts! James is rolling with you! 🚬', '#ffa01e');
         } else {
-          response = '"Excuse me?! Back to work."'; suspChange = 15;
+          const smokeNo = [
+            '"Excuse me?! Back to work."',
+            '"I don\'t smoke. I also don\'t joke. Back to the dock."',
+            '"Do you know what I was doing at YOUR age? Working. Go do that."',
+          ];
+          response = Phaser.Math.RND.pick(smokeNo);
+          suspChange = 15; STATE.jamesAnnoyance += 15;
         }
       }
     }
@@ -933,10 +1068,34 @@ class GameScene extends Phaser.Scene {
       }
     }
     else if(npc.id === 'todd'){
-      if(idx===0){ response = '"I\'m GREAT. The freezer just... speaks to me."'; scoreChange = 5; }
-      else if(idx===1){ response = '"The mystery box? We don\'t talk about the mystery box."'; scoreChange = 25;
-        this.floatText(npc.sprite.x, npc.sprite.y, '🧊 +25 pts Freezer Secret', '#44ccff'); }
-      else { response = '"You can\'t race me. I\'m already everywhere."'; energyChange = 10; scoreChange = 15; }
+      if(idx===0){
+        const toddOkLines = [
+          '"I\'m GREAT. The freezer just... speaks to me."',
+          '"Oh I\'m fine. The cold keeps you honest."',
+          '"Define \'okay\'."',
+          '"I\'ve been better. I\'ve been worse. The freezer doesn\'t judge."',
+        ];
+        response = Phaser.Math.RND.pick(toddOkLines); scoreChange = 5;
+      }
+      else if(idx===1){
+        response = '"The mystery box? We don\'t talk about the mystery box."'; scoreChange = 25;
+        this.floatText(npc.sprite.x, npc.sprite.y, '🧊 +25 pts Freezer Secret', '#44ccff');
+      }
+      else { // Smoke with Todd
+        if(STATE.smokingNPCs.includes('todd')){
+          response = '"I\'m following. I can\'t feel my legs but I\'m following."';
+        } else {
+          const toddSmokeLines = [
+            '"...outside? There\'s an outside?"',
+            '"I haven\'t left the freezer in four days. Yeah. Yeah okay."',
+            '"The sun. I remember the sun."',
+          ];
+          response = Phaser.Math.RND.pick(toddSmokeLines);
+          STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'todd'])];
+          energyChange = 10; scoreChange = 15;
+          this.floatText(npc.sprite.x, npc.sprite.y, 'Todd is blinking at sunlight 🚬', '#44cc44');
+        }
+      }
     }
     else if(npc.id === 'drew'){
       if(idx===0){ // Lend $5
@@ -1353,8 +1512,10 @@ class GameScene extends Phaser.Scene {
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
 
-      // Lee follow mode — trail the player toward the smoking area
-      if(npc.id === 'lee' && STATE.leeFollowing){
+      // Smoke follow mode — any NPC in smokingNPCs follows the player
+      const isLeeFollow = npc.id === 'lee' && STATE.leeFollowing;
+      const isSmokeFollow = STATE.smokingNPCs.includes(npc.id);
+      if(isLeeFollow || isSmokeFollow){
         const atSmoke = STATE.currentZone === 'outside';
         if(atSmoke){
           // Arrived — hang around player in the smoking corner
@@ -1404,7 +1565,8 @@ class GameScene extends Phaser.Scene {
       if(dist > 10){
         // Lee runs faster when following so she doesn't fall behind
         let spd = npc.patrol ? 70 : 45;
-        if(npc.id === 'lee' && STATE.leeFollowing) spd = 160;
+        if(STATE.leeFollowing && npc.id === 'lee') spd = 160;
+        if(STATE.smokingNPCs.includes(npc.id)) spd = 150;
         npc.sprite.setVelocity((dx/dist)*spd, (dy/dist)*spd);
       } else {
         npc.sprite.setVelocity(0,0);
@@ -1484,13 +1646,28 @@ class GameScene extends Phaser.Scene {
       },
       ()=>{ // Chandler breakdown
         const c=this.npcs.find(n=>n.id==='chandler');
-        if(c){ this.showBubble(c,'"I WENT TO COLLEGE FOR THIS?!"'); STATE.score+=15; }
-        this.floatText(this.player.x,this.player.y,'😂 Chandler is having a moment. +15','#ffd700');
+        if(c){ this.showBubble(c,'"I WENT TO COLLEGE FOR THIS?! I HAVE A DEGREE!"'); STATE.score+=15; }
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 20);
+        this.floatText(this.player.x,this.player.y,'😂 Chandler breaking down. James annoyed. +15','#ffd700');
       },
       ()=>{ // Health inspector
         this.floatText(WW/2,580,'🏥 HEALTH INSPECTOR INCOMING! Look busy!','#ff6600');
         STATE.suspicion=Math.max(0,STATE.suspicion-30);
         this.cameras.main.shake(200,0.01);
+      },
+      ()=>{ // James full meltdown event
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 30);
+        const james=this.npcs.find(n=>n.id==='james');
+        if(james) this.showBubble(james,'"WHO LEFT THE PALLET JACK IN THE MIDDLE OF THE DOCK?! WHO?! I WANT A NAME!"');
+        this.floatText(WW/2,400,'🔥 JAMES IS HAVING A MOMENT','#ff4400');
+        STATE.suspicion=Math.min(99,STATE.suspicion+10);
+      },
+      ()=>{ // Pam doing a surprise walkthrough
+        this.floatText(WW/2,400,'📋 PAM IS DOING A SURPRISE WALKTHROUGH — LOOK BUSY!','#cc3333');
+        STATE.suspicion=Math.min(99,STATE.suspicion+15);
+        const pam=this.npcs.find(n=>n.id==='pam');
+        if(pam){ pam.targetX=this.player.x; pam.targetY=this.player.y+80; pam.moveTimer=0; }
+        this.cameras.main.shake(200,0.008);
       },
     ];
     const evt = Phaser.Math.RND.pick(events);
@@ -1597,6 +1774,31 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── CAUGHT (suspicion = 100) ──────────────────────────────────────────────
+  triggerCaught(){
+    STATE.miniGameActive = true; // freeze movement
+    this.cameras.main.shake(600, 0.025);
+    this.cameras.main.flash(400, 200, 0, 0);
+
+    // Pam and James converge on player
+    const pam   = this.npcs.find(n=>n.id==='pam');
+    const james  = this.npcs.find(n=>n.id==='james');
+    if(pam){   pam.targetX   = this.player.x+50; pam.targetY   = this.player.y; }
+    if(james){ james.targetX = this.player.x-50; james.targetY = this.player.y; }
+
+    this.time.delayedCall(800, ()=>{
+      if(pam)   this.showBubble(pam,   '"That\'s a TERMINATION. Don\'t clean out your desk — security will do it."');
+      if(james) this.showBubble(james, '"I... I actually can\'t believe this. I\'m FLOORED."');
+      this.floatText(WW/2, WH/2, '🚨 CAUGHT! SUSPICION 100% 🚨', '#ff0000');
+    });
+
+    this.time.delayedCall(3500, ()=>{
+      STATE.miniGameActive = false;
+      STATE.score = Math.floor(STATE.score * 0.5); // half your score
+      this.endShift();
+    });
+  }
+
   // ── SHIFT END ──────────────────────────────────────────────────────────────
   endShift(){
     STATE.miniGameActive = false; STATE.dialogueActive = false;
@@ -1619,7 +1821,7 @@ class GameScene extends Phaser.Scene {
 
     // Tick game clock
     this.gameTimer += delta;
-    STATE.gameMinutes += (delta/1000) * (60/7.5); // 7.5 real sec per game hour
+    STATE.gameMinutes += (delta/1000) * (60/120); // 2 real minutes per game hour → full shift = ~16 real minutes
     if(STATE.gameMinutes >= STATE.shiftEnd){
       this.endShift(); return;
     }
@@ -1646,6 +1848,38 @@ class GameScene extends Phaser.Scene {
         STATE.suspicion = Math.max(0, STATE.suspicion - 2);
       }
       this.suspicionDecayTimer = 0;
+    }
+
+    // Suspicion = 100 → CAUGHT (lose condition)
+    if(STATE.suspicion >= 100 && !STATE._caught && !STATE.dialogueActive){
+      STATE._caught = true;
+      this.triggerCaught();
+      return;
+    }
+
+    // James annoyance passive decay (he calms down when you're working)
+    STATE.jamesAnnoyanceTimer += delta;
+    if(STATE.jamesAnnoyanceTimer > 20000){
+      STATE.jamesAnnoyanceTimer = 0;
+      if(STATE.currentZone === 'dock' || STATE.currentZone === 'floor'){
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 3);
+      }
+    }
+
+    // James starts yelling when annoyance is high
+    if(STATE.jamesAnnoyance >= 50 && !STATE.dialogueActive){
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james && james.bubbleTimer <= 0){
+        const line = STATE.jamesAnnoyance >= 80
+          ? Phaser.Math.RND.pick(JAMES_NUCLEAR)
+          : Phaser.Math.RND.pick(JAMES_SALTY);
+        this.showBubble(james, '"'+line+'"');
+        if(STATE.jamesAnnoyance >= 80){
+          // His yelling raises everyone's suspicion
+          STATE.suspicion = Math.min(99, STATE.suspicion + 8);
+          this.floatText(james.sprite.x, james.sprite.y-40, '😤 JAMES IS LOSING IT!', '#ff4400');
+        }
+      }
     }
 
     // Random event
