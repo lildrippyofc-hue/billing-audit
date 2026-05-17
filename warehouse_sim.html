@@ -96,6 +96,8 @@ const STATE = {
   drewLends: 0,
   events: [],
   achievements: [],
+  leeFollowing: false,    // Lee is tailing the player to smoke spot
+  leeGossipCount: 0,      // how many gossip rounds done this shift
 };
 
 // Zone layout
@@ -131,7 +133,8 @@ const NPC_DEFS = [
   { id:'lee',     name:'Lee',     title:'(Says Yes)',    color:0xff80c0, zone:'breakRoom',patrol:false,
     appearance:{ shirt:0xee6699, pants:0xddbbcc, skin:0xe8a878, hair:0x2a1808, ponytail:true },
     lines:["Yes!","Of course!","Sure, why not?","Absolutely!","Yeah yeah yeah!"],
-    choices:["Ask to cover your truck","Ask her to distract James","Ask if she wants your trash"],
+    choices:["Ask to cover your truck","Ask her to distract James","Go smoke together 🚬"],
+    gossipChoices:["Spill on Chandler 🍞","What's Drew's deal?","Real talk about James","Have you seen Pam lately?"],
   },
   { id:'todd',    name:'Todd',    title:'(Freezer Lead)',color:0x44cc44, zone:'freezer',  patrol:false,
     appearance:{ shirt:0x1a6622, pants:0x223322, skin:0xd8b888, hair:0x222222, parka:true },
@@ -810,36 +813,62 @@ class GameScene extends Phaser.Scene {
     this.dialogue = npc;
     this.player.setVelocity(0,0);
 
-    const line = Phaser.Math.RND.pick(npc.lines);
+    // Gossip mode: Lee + following + outside = switch to gossip dialogue
+    const gossipMode = (npc.id === 'lee' && STATE.leeFollowing && STATE.currentZone === 'outside');
 
-    // Draw background
+    const choices = gossipMode ? npc.gossipChoices : npc.choices;
+
+    let line;
+    if(gossipMode){
+      const gossipOpeners = [
+        '"Okay okay okay, I HAVE to tell you something."',
+        '"Girl... you will NOT believe what I heard."',
+        '"Right, so. Nobody is supposed to know this but—"',
+        '"Okay so this stays between us. Who do you want to start with?"',
+      ];
+      line = Phaser.Math.RND.pick(gossipOpeners);
+    } else if(npc.id === 'lee' && STATE.leeFollowing){
+      line = '"We\'re almost at the smokers corner! Keep walking, don\'t look suspicious."';
+    } else {
+      line = Phaser.Math.RND.pick(npc.lines);
+    }
+
+    // Draw background (gossip = pink tinted)
     this.dlgBg.clear().setVisible(true);
-    this.dlgBg.fillStyle(0x000000, 0.85);
-    this.dlgBg.fillRect(0, GH-155, GW, 155);
-    this.dlgBg.lineStyle(2, 0xffa01e, 0.5);
-    this.dlgBg.strokeRect(0, GH-155, GW, 155);
+    this.dlgBg.fillStyle(gossipMode ? 0x1a0010 : 0x000000, 0.88);
+    this.dlgBg.fillRect(0, GH-165, GW, 165);
+    this.dlgBg.lineStyle(2, gossipMode ? 0xff60c0 : 0xffa01e, 0.6);
+    this.dlgBg.strokeRect(0, GH-165, GW, 165);
+    if(gossipMode){
+      // Smoke emoji trail
+      this.dlgBg.fillStyle(0xff80c0, 0.06);
+      for(let i=0;i<8;i++) this.dlgBg.fillCircle(20+i*110, GH-155+20, 18+i*3);
+    }
 
     // Portrait
     this.dlgPortrait.setFillStyle(npc.color).setVisible(true);
-    this.dlgPortraitTxt.setText(npc.name+'\n'+npc.title).setVisible(true);
+    const portraitLabel = gossipMode ? 'Lee 🚬\n(Gossip)' : npc.name+'\n'+npc.title;
+    this.dlgPortraitTxt.setText(portraitLabel).setVisible(true);
 
     // Text
-    this.dlgText.setText(npc.name+': "'+line+'"').setVisible(true);
+    this.dlgText.setText((gossipMode ? '🚬 Lee: ' : npc.name+': ')+line).setVisible(true);
     this.dlgCloseTxt.setVisible(true);
 
     // Choices
-    npc.choices.forEach((choice, i)=>{
+    choices.forEach((choice, i)=>{
       const btn = this.dlgChoiceBtns[i];
-      btn.setText(`${i+1}. ${choice}`).setPosition(130, GH-100+i*26).setVisible(true);
+      btn.setText(`${i+1}. ${choice}`).setPosition(130, GH-112+i*26).setVisible(true);
       btn.removeAllListeners('pointerdown');
-      btn.on('pointerdown', ()=> this.handleChoice(npc, i));
+      btn.on('pointerdown', ()=> gossipMode ? this.handleGossip(npc, i) : this.handleChoice(npc, i));
     });
 
-    // Keyboard shortcuts 1/2/3
+    // Keyboard shortcuts
     this.choiceKeys = [];
-    npc.choices.forEach((_, i) => {
-      const k = this.input.keyboard.addKey(49+i); // 1, 2, 3
-      k.once('down', ()=>{ if(STATE.dialogueActive) this.handleChoice(npc,i); });
+    choices.forEach((_, i) => {
+      const k = this.input.keyboard.addKey(49+i);
+      k.once('down', ()=>{ if(STATE.dialogueActive){
+        gossipMode ? this.handleGossip(npc, i) : this.handleChoice(npc, i);
+      }});
       this.choiceKeys.push(k);
     });
   }
@@ -889,8 +918,19 @@ class GameScene extends Phaser.Scene {
         this.floatText(this.player.x, this.player.y, 'Lee covers your truck! +30', '#ff80c0'); }
       else if(idx===1){ response = '"Yes! I\'ll totally distract him!"'; suspChange = -15;
         this.floatText(this.player.x, this.player.y, 'James distracted!', '#ff80c0'); }
-      else { response = '"Yes! I love trash!"'; scoreChange = 5;
-        this.floatText(this.player.x, this.player.y, 'Lee agrees to anything.', '#ff80c0'); }
+      else { // Go smoke together
+        if(STATE.leeFollowing){
+          response = '"I know, I know! I\'m right behind you, slow down!"';
+        } else {
+          STATE.leeFollowing = true;
+          response = '"Oh my GOD yes. I have been WAITING for someone to ask me that. Let\'s go."';
+          scoreChange = 5;
+          this.floatText(this.player.x, this.player.y, '🚬 Lee is following you!', '#ff80c0');
+          this.time.delayedCall(400, ()=>{
+            this.showBubble(npc, '"Walk casual. Don\'t let Pam see us."');
+          });
+        }
+      }
     }
     else if(npc.id === 'todd'){
       if(idx===0){ response = '"I\'m GREAT. The freezer just... speaks to me."'; scoreChange = 5; }
@@ -940,6 +980,105 @@ class GameScene extends Phaser.Scene {
     this.dlgCloseTxt.setText('[E/ESC] Close');
 
     this.time.delayedCall(2500, ()=>this.closeDialogue());
+  }
+
+  handleGossip(npc, idx){
+    STATE.leeGossipCount++;
+    const pam = this.npcs.find(n=>n.id==='pam');
+    const chandler = this.npcs.find(n=>n.id==='chandler');
+    const pamNearby = pam && Phaser.Math.Distance.Between(
+      this.player.x, this.player.y, pam.sprite.x, pam.sprite.y) < 250;
+
+    let response = '';
+    let scoreChange = 0;
+    let suspChange = pamNearby ? 15 : -8; // gossiping outside lowers suspicion, unless Pam's close
+    let energyChange = 10; // smoke break = energy
+
+    if(idx === 0){ // Chandler
+      const lines = [
+        '"Okay so — and I PROMISE this is true — he brings a whole loaf of bread in a briefcase every single day. A BRIEFCASE, bro."',
+        '"He applied to be shift lead last year. They said no. The rejection letter just said \'bread concerns\' and nothing else."',
+        '"One time I saw him eating a sandwich at the time clock and he looked me dead in the eyes and said \'this isn\'t a sandwich.\' It was a sandwich."',
+        '"HR has a whole file on him. The tab says BREAD INCIDENTS plural. I\'ve seen it."',
+      ];
+      response = Phaser.Math.RND.pick(lines);
+      scoreChange = 25;
+      if(chandler) this.showBubble(chandler, '"...why does my ear feel weird."');
+      this.floatText(this.player.x, this.player.y, '🍞 Bread Boy discussed! +25', '#ffd700');
+    }
+    else if(idx === 1){ // Drew
+      const lines = [
+        '"He\'s asked me for $5 eleven times this month. ELEVEN. I started keeping a spreadsheet."',
+        '"His wallet is literally just a photo of a Subway footlong and a bus pass from 2019. I saw it. It has no money compartment."',
+        '"I think he spends it all on snacks from the vending machine and then asks people for snack money. It\'s a cycle. A horrible beautiful cycle."',
+        '"He told me he\'s saving up for something big. I asked what. He said \'lunch.\'"',
+      ];
+      response = Phaser.Math.RND.pick(lines);
+      scoreChange = 20;
+      const drew = this.npcs.find(n=>n.id==='drew');
+      if(drew) this.showBubble(drew, '"...I feel like someone\'s talking about me."');
+      this.floatText(this.player.x, this.player.y, '💸 Drew exposed! +20', '#9955cc');
+    }
+    else if(idx === 2){ // James
+      const lines = [
+        '"He told us he works 7 days a week. I literally saw him at Applebee\'s last Sunday with a margarita and a plate of riblets. Full vacation mode."',
+        '"He has a poster in his office that says YOU CAN SLEEP WHEN YOU\'RE DEAD. His kids drew it for him. I think they meant it differently."',
+        '"He keeps a list of everyone\'s names ranked by \'work ethic\'. Your name\'s on it. I won\'t say where. It\'s not first."',
+        '"He once called a mandatory meeting to tell us the meeting could have been an email. Then he scheduled a follow-up meeting."',
+      ];
+      response = Phaser.Math.RND.pick(lines);
+      scoreChange = 30;
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james) this.showBubble(james, '"Why do I feel like I\'m being discussed."');
+      this.floatText(this.player.x, this.player.y, '👔 James roasted! +30', '#ffa01e');
+    }
+    else if(idx === 3){ // Pam
+      const lines = [
+        '"She wrote HERSELF up once. By accident. She shredded it before anyone saw but Todd told me and Todd doesn\'t lie."',
+        '"I heard there\'s a camera hidden IN the break room microwave. Like inside it. I\'ve been heating my food in my car for two weeks."',
+        '"She has a whole binder labeled INCIDENTS. Mine has seventeen pages. I don\'t know what I did for most of them."',
+        '"One time she caught someone sleeping on a pallet and instead of waking them up she just... watched. For twenty minutes. And took notes."',
+      ];
+      response = Phaser.Math.RND.pick(lines);
+      scoreChange = 35;
+      if(pamNearby){
+        suspChange += 30;
+        response += ' 😱';
+        this.cameras.main.shake(150, 0.008);
+        this.floatText(this.player.x, this.player.y, '😱 PAM IS NEARBY! +suspicion!', '#ff2222');
+        if(pam) this.showBubble(pam, '"...interesting."');
+      } else {
+        this.floatText(this.player.x, this.player.y, '📋 Pam exposed! +35', '#cc3333');
+      }
+    }
+
+    // Apply effects
+    STATE.energy    = Math.min(100, STATE.energy + energyChange);
+    STATE.score     = Math.max(0,   STATE.score   + scoreChange);
+    STATE.suspicion = Math.max(0, Math.min(100, STATE.suspicion + suspChange));
+
+    // Show Lee's response
+    this.dlgText.setText('🚬 Lee: ' + response);
+    this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+    this.dlgCloseTxt.setText('[E/ESC] Close  ☁️ Energy +10');
+
+    // After 5 rounds of gossip Lee goes back
+    if(STATE.leeGossipCount >= 5){
+      this.time.delayedCall(3000, ()=>{
+        this.closeDialogue();
+        STATE.leeFollowing = false;
+        const lee = this.npcs.find(n=>n.id==='lee');
+        if(lee){
+          const zone = ZONES['breakRoom'];
+          lee.targetX = zone.x + zone.w/2;
+          lee.targetY = zone.y + zone.h/2;
+          this.showBubble(lee, '"Okay I should probably go back before anyone notices. Same time tomorrow?"');
+        }
+        this.floatText(this.player.x, this.player.y, '☁️ Smoke break done! Lee headed back.', '#ff80c0');
+      });
+    } else {
+      this.time.delayedCall(3500, ()=> this.closeDialogue());
+    }
   }
 
   closeDialogue(){
@@ -1214,19 +1353,47 @@ class GameScene extends Phaser.Scene {
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
 
-      // Movement
-      npc.moveTimer -= delta;
-      if(npc.moveTimer <= 0){
-        if(npc.patrol && npc.patrolPath.length>0){
-          npc.patrolIndex = (npc.patrolIndex+1) % npc.patrolPath.length;
-          const pt = npc.patrolPath[npc.patrolIndex];
-          npc.targetX = pt.x; npc.targetY = pt.y;
-          npc.moveTimer = 3000 + Math.random()*2000;
+      // Lee follow mode — trail the player toward the smoking area
+      if(npc.id === 'lee' && STATE.leeFollowing){
+        const atSmoke = STATE.currentZone === 'outside';
+        if(atSmoke){
+          // Arrived — hang around player in the smoking corner
+          npc.targetX = this.player.x + 40 + Math.sin(this.gameTimer*0.001)*20;
+          npc.targetY = this.player.y + 20;
+          // Occasional idle chatter while smoking
+          if(npc.bubbleTimer <= 0 && Math.random() < 0.002){
+            const smokeLines = [
+              '"This is so good. I needed this."',
+              '"Don\'t look now but... okay look. See that?"',
+              '"We should do this every day."',
+              '"I have more tea whenever you\'re ready."',
+              '"Is Pam coming? I feel like Pam\'s coming."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(smokeLines));
+          }
         } else {
-          const zone = ZONES[npc.zone];
-          npc.targetX = zone.x + 40 + Math.random()*(zone.w-80);
-          npc.targetY = zone.y + 30 + Math.random()*(zone.h-60);
-          npc.moveTimer = 4000 + Math.random()*4000;
+          // Still walking to outside — follow player with slight offset
+          npc.targetX = this.player.x - 35;
+          npc.targetY = this.player.y + 15;
+          if(npc.bubbleTimer <= 0 && Math.random() < 0.001){
+            this.showBubble(npc, '"Keep walking, keep walking..."');
+          }
+        }
+      } else {
+        // Normal movement
+        npc.moveTimer -= delta;
+        if(npc.moveTimer <= 0){
+          if(npc.patrol && npc.patrolPath.length>0){
+            npc.patrolIndex = (npc.patrolIndex+1) % npc.patrolPath.length;
+            const pt = npc.patrolPath[npc.patrolIndex];
+            npc.targetX = pt.x; npc.targetY = pt.y;
+            npc.moveTimer = 3000 + Math.random()*2000;
+          } else {
+            const zone = ZONES[npc.zone];
+            npc.targetX = zone.x + 40 + Math.random()*(zone.w-80);
+            npc.targetY = zone.y + 30 + Math.random()*(zone.h-60);
+            npc.moveTimer = 4000 + Math.random()*4000;
+          }
         }
       }
 
@@ -1235,7 +1402,9 @@ class GameScene extends Phaser.Scene {
       const dy = npc.targetY - npc.sprite.y;
       const dist = Math.hypot(dx,dy);
       if(dist > 10){
-        const spd = npc.patrol ? 70 : 45;
+        // Lee runs faster when following so she doesn't fall behind
+        let spd = npc.patrol ? 70 : 45;
+        if(npc.id === 'lee' && STATE.leeFollowing) spd = 160;
         npc.sprite.setVelocity((dx/dist)*spd, (dy/dist)*spd);
       } else {
         npc.sprite.setVelocity(0,0);
