@@ -731,8 +731,20 @@ function buildWorld(){
 
 function buildDecos(map){
   const groundY=H*map.horizon;
+  // Dense cluster near start (first 3000 units) so you see stuff immediately
+  const nearCount = map.key==='city' ? 30 : 18;
+  for(let i=0;i<nearCount;i++){
+    const wx=rnd(150, 3000);
+    if(map.key==='backyard') worldDecos.push(...genBackyardDeco(wx,groundY));
+    else if(map.key==='city') worldDecos.push(...genCityDeco(wx,groundY));
+    else if(map.key==='desert') worldDecos.push(...genDesertDeco(wx,groundY));
+    else if(map.key==='arctic') worldDecos.push(...genArcticDeco(wx,groundY));
+    else if(map.key==='storm') worldDecos.push(...genStormDeco(wx,groundY));
+    else if(map.key==='moon') worldDecos.push(...genMoonDeco(wx,groundY));
+  }
+  // Spread the rest across the full world
   for(let i=0;i<65;i++){
-    const wx=rnd(0,WORLD_LEN);
+    const wx=rnd(3000, WORLD_LEN);
     if(map.key==='backyard') worldDecos.push(...genBackyardDeco(wx,groundY));
     else if(map.key==='city') worldDecos.push(...genCityDeco(wx,groundY));
     else if(map.key==='desert') worldDecos.push(...genDesertDeco(wx,groundY));
@@ -1389,26 +1401,45 @@ function drawHUD(){
 // ── LAUNCH SCREEN (aim) ──
 function drawAimScreen(){
   drawBg(); drawGround(); drawRings();
-  // rubber band visual
+  const px=plane.x-camX, py=plane.y;
+  // Aim arrow: from plane toward mouse
   if(isDragging){
-    const px=plane.x-camX, py=plane.y;
-    const stats=upgradeStats();
-    const bandColor=stats.bandLvl>=3?'#ff8800':stats.bandLvl>=2?'#cc6600':'#884422';
+    const dx=aimX-px, dy=aimY-py;
+    const dist2=Math.hypot(dx,dy);
+    launchPower=Math.min(1, dist2/150);
     ctx.save();
-    ctx.strokeStyle=bandColor; ctx.lineWidth=2+stats.bandLvl*0.5;
-    ctx.beginPath(); ctx.moveTo(px-5,py-4); ctx.lineTo(aimX,aimY); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(px-5,py+4); ctx.lineTo(aimX,aimY); ctx.stroke();
+    // Dotted direction line
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2; ctx.setLineDash([8,6]);
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(aimX,aimY); ctx.stroke();
+    ctx.setLineDash([]);
+    // Arrow head
+    if(dist2>20){
+      const ang2=Math.atan2(dy,dx);
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.beginPath();
+      ctx.moveTo(aimX,aimY);
+      ctx.lineTo(aimX-16*Math.cos(ang2-0.4),aimY-16*Math.sin(ang2-0.4));
+      ctx.lineTo(aimX-16*Math.cos(ang2+0.4),aimY-16*Math.sin(ang2+0.4));
+      ctx.fill();
+    }
+    // Power bar
+    const barX=W/2-80, barY=H-70;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.roundRect(barX,barY,160,20,8); ctx.fill();
+    ctx.fillStyle=launchPower>0.8?'#ff4444':launchPower>0.5?'#ffaa00':'#44cc88';
+    ctx.roundRect(barX+2,barY+2,156*launchPower,16,6); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 11px system-ui'; ctx.textAlign='center';
+    ctx.fillText('POWER', W/2, barY+14);
     ctx.restore();
   }
   drawPlane(); drawHUD();
   // Hint text
   if(!isDragging){
     ctx.save();
-    ctx.globalAlpha=0.85;
-    ctx.fillStyle='rgba(0,0,0,0.45)';
-    ctx.roundRect(W/2-145,H-110,290,38,10); ctx.fill();
+    ctx.globalAlpha=0.88;
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.roundRect(W/2-165,H-110,330,40,10); ctx.fill();
     ctx.fillStyle='#fff'; ctx.font='bold 15px system-ui'; ctx.textAlign='center';
-    ctx.fillText('🖱️  Click & drag anywhere → release to launch', W/2, H-86);
+    ctx.fillText('✈️  Click the plane, drag to aim, release to launch!', W/2, H-85);
     ctx.restore();
   }
 }
@@ -1706,21 +1737,22 @@ function onUp(e){
   if(isDragging && appState==='aim'){
     isDragging=false;
     const px=plane.x-camX, py=plane.y;
-    const dx=px-aimX, dy=py-aimY;
-    const power=Math.min(1, Math.hypot(dx,dy)/180);
-    if(power>0.05){
-      const stats=upgradeStats();
-      const spd=(5+power*14)*stats.speedMult;
-      const ang=Math.atan2(dy,dx);
-      plane.vx=Math.cos(ang)*spd;
-      plane.vy=Math.sin(ang)*spd;
-      plane.angle=ang;
-      if(power>0.9){ maxPowerLaunched=true; showMsg('Full power!'); }
-      appState='fly';
-      playWhoosh();
-      startWindSound();
-      updateMissionProgress('maxPower', power>0.9?1:0);
-    }
+    // Direction: from plane TOWARD where you aimed (intuitive — point where you want to go)
+    const dx=aimX-px, dy=aimY-py;
+    const rawPow=Math.min(1, Math.hypot(dx,dy)/150);
+    // Minimum power 0.55 so a simple click always launches forward-ish
+    const power=rawPow<0.1 ? 0.55 : rawPow;
+    const ang=rawPow<0.1 ? -0.18 : Math.atan2(dy,dx); // default: slight upward-right if no drag
+    const stats=upgradeStats();
+    const spd=(6+power*14)*stats.speedMult;
+    plane.vx=Math.cos(ang)*spd;
+    plane.vy=Math.sin(ang)*spd;
+    plane.angle=ang;
+    if(power>0.9){ maxPowerLaunched=true; showMsg('Full power!'); }
+    appState='fly';
+    playWhoosh();
+    startWindSound();
+    updateMissionProgress('maxPower', power>0.9?1:0);
   }
 }
 
