@@ -98,6 +98,8 @@ const STATE = {
   achievements: [],
   leeFollowing: false,
   leeGossipCount: 0,
+  leeDistractingJames: false,
+  leeDistractionTimer: 0,
   smokingNPCs: [],          // ids of NPCs currently following player to smoke
   jamesAnnoyance: 0,        // 0-100; high = James starts losing it
   jamesAnnoyanceTimer: 0,
@@ -127,18 +129,21 @@ const NPC_DEFS = [
   { id:'james', name:'James', title:'(Manager)', color:0x3a6abf, zone:'dock', patrol:true,
     appearance:{ shirt:0x2a5aaa, pants:0x334466, skin:0xd4956a, hair:0x4a3010, clipboard:true, badge:true },
     lines:[
-      "What now?!",
-      "I'm literally everywhere.",
-      "I work 7 days. SEVEN.",
-      "Someone call for James? Nobody? Good.",
-      "I see EVERYTHING that happens on this dock.",
-      "You think this is a game? This is MY dock.",
-      "I haven't taken a lunch break since 2019.",
-      "Eyes forward. Hands moving. Clock's ticking.",
-      "Don't test me today. I already failed my own test.",
-      "I've written up people for BREATHING wrong.",
+      '"What now?!"',
+      '"I\'m literally everywhere."',
+      '"I work 7 days. SEVEN."',
+      '"Nobody called for James. I showed up anyway."',
+      '"I see EVERYTHING that happens on this dock."',
+      '"You think this is a game? This is MY dock."',
+      '"I haven\'t taken a lunch break since 2019."',
+      '"Eyes forward. Hands moving. Clock\'s ticking."',
+      '"Don\'t test me today. I already failed my own test."',
+      '"I\'ve written up people for BREATHING wrong."',
+      '"My clipboard has more pages than your entire life plan."',
+      '"I was here before the building was."',
+      '"I have a system. You are not part of the system. Go."',
     ],
-    choices:["Nothing, just saying hi","Ask for easier truck","Invite to smoke outside 🚬"],
+    choices:["Say hi 👋","Ask for easier truck 😬","Go smoke 🚬","Ask what he does all day 🤔"],
   },
   { id:'chandler', name:'Chandler', title:'(Bread Boy)', color:0xc8a050, zone:'floor', patrol:false,
     appearance:{ shirt:0xc8a050, pants:0x4466aa, skin:0xf0c080, hair:0xd4aa30 },
@@ -1059,7 +1064,7 @@ class GameScene extends Phaser.Scene {
         response = Phaser.Math.RND.pick(noLines);
         suspChange = 5; STATE.jamesAnnoyance += 10;
       }
-      else { // Invite to smoke
+      else if(idx===2){ // Invite to smoke
         if(STATE.rapportJames >= 2){
           const smokeYes = [
             '"...yeah okay. Five minutes. Nobody saw this."',
@@ -1081,23 +1086,67 @@ class GameScene extends Phaser.Scene {
           suspChange = 15; STATE.jamesAnnoyance += 15;
         }
       }
+      else { // idx===3: Ask what he does all day
+        const whatLines = [
+          '"What do I— WHAT DO I— I do EVERYTHING. You want a LIST?!"',
+          '"I answer 400 emails a day. FOUR. HUNDRED. Do you know how many that is? I stopped counting!"',
+          '"I manage THIS. Whatever THIS is at any given moment. Which is apparently EVERYTHING."',
+          '"I do your job. And the job above your job. And frankly, your life decisions."',
+          '"I\'m in six meetings before you even clock in. SIX. About THIS PLACE. That YOU work at."',
+          '"What do I do?! I prevent this entire building from collapsing into chaos DAILY."',
+          '"I once handled a forklift fire, a vendor dispute, AND a HR complaint — before 8AM. On a Sunday."',
+          '"I have a spreadsheet. It has my name on it 47 times. Under \'responsible party.\' Forty. Seven."',
+        ];
+        response = Phaser.Math.RND.pick(whatLines);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 22);
+        suspChange = 8;
+        this.floatText(npc.sprite.x, npc.sprite.y, '😤 James is on the edge! Annoyance +22', '#ff6600');
+      }
     }
     else if(npc.id === 'lee'){
       STATE.leeAgreements++;
-      if(idx===0){ response = '"Yes! I\'ll cover it!"'; energyChange = 0; scoreChange = 30;
-        this.floatText(this.player.x, this.player.y, 'Lee covers your truck! +30', '#ff80c0'); }
-      else if(idx===1){ response = '"Yes! I\'ll totally distract him!"'; suspChange = -15;
-        this.floatText(this.player.x, this.player.y, 'James distracted!', '#ff80c0'); }
-      else { // Go smoke together
-        if(STATE.leeFollowing){
-          response = '"I know, I know! I\'m right behind you, slow down!"';
+      if(idx===0){
+        response = '"Yes! I\'ll cover it! You go do... whatever you do."';
+        energyChange = 0; scoreChange = 30;
+        this.floatText(this.player.x, this.player.y, 'Lee covers your truck! +30', '#ff80c0');
+      }
+      else if(idx===1){ // Distract James
+        if(STATE.leeDistractingJames){
+          response = '"I\'m already ON it — I told him I think the dock door sensor is broken. He\'s INVESTED."';
+        } else {
+          const distractLines = [
+            '"Oh I\'ve got him. Watch."',
+            '"Say less. I\'m about to walk over there and ask him about his fantasy football team. He\'ll be busy for twenty minutes."',
+            '"Done. I\'m going to tell him I heard corporate is doing surprise visits this week. He loves that."',
+          ];
+          response = Phaser.Math.RND.pick(distractLines);
+          STATE.leeDistractingJames = true;
+          STATE.leeDistractionTimer = 25000;
+          suspChange = -20; scoreChange = 20;
+          // Lee walks straight to James
+          const james = this.npcs.find(n=>n.id==='james');
+          if(james){
+            npc.targetX = james.sprite.x + 30;
+            npc.targetY = james.sprite.y;
+          }
+          this.floatText(this.player.x, this.player.y, '🎭 Lee is distracting James! Suspicion -20', '#ff80c0');
+        }
+      }
+      else { // Go smoke
+        if(STATE.leeDistractingJames){
+          response = '"I can\'t right now — I\'m literally keeping James busy! Go WITHOUT me and I\'ll catch you after!"';
+        } else if(STATE.leeFollowing){
+          response = '"I\'m already on my way! You don\'t have to walk with me — just MEET me there!"';
         } else {
           STATE.leeFollowing = true;
-          response = '"Oh my GOD yes. I have been WAITING for someone to ask me that. Let\'s go."';
+          response = '"Oh my GOD yes. I have been WAITING for someone to ask me that. I\'ll meet you there!"';
           scoreChange = 5;
-          this.floatText(this.player.x, this.player.y, '🚬 Lee is following you!', '#ff80c0');
+          // Lee goes DIRECTLY to smoke area — player doesn't need to lead her
+          npc.targetX = 150;
+          npc.targetY = 80;
+          this.floatText(this.player.x, this.player.y, '🚬 Lee is heading to the smoke spot!', '#ff80c0');
           this.time.delayedCall(400, ()=>{
-            this.showBubble(npc, '"Walk casual. Don\'t let Pam see us."');
+            this.showBubble(npc, '"I\'ll be out front. Don\'t make it weird."');
           });
         }
       }
@@ -1547,7 +1596,77 @@ class GameScene extends Phaser.Scene {
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
 
-      // Smoke follow mode — any NPC in smokingNPCs follows the player
+      // ── LEE DISTRACTION MODE ────────────────────────────────────────────
+      if(npc.id === 'lee' && STATE.leeDistractingJames){
+        STATE.leeDistractionTimer -= delta;
+        const james = this.npcs.find(n=>n.id==='james');
+        if(james){
+          // Walk toward James
+          npc.targetX = james.sprite.x + 34;
+          npc.targetY = james.sprite.y;
+          // When Lee is close enough, show distraction bubbles
+          const dist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, james.sprite.x, james.sprite.y);
+          if(dist < 80){
+            // Freeze James's patrol while distracted
+            james.moveTimer = 1500;
+            // Occasional chatter between Lee and James
+            if(npc.bubbleTimer <= 0 && Math.random() < 0.004){
+              const leeTalking = [
+                '"So I heard corporate is doing surprise audits..."',
+                '"James I have a question about the door sensor."',
+                '"Do you think the inventory counts are accurate? I\'m worried."',
+                '"You\'re doing SUCH a good job, honestly. How do you handle it all?"',
+                '"I heard Pam mentioned your name in a meeting! A good way, I think!"',
+                '"Between us — do you think the loading dock meets code?"',
+              ];
+              this.showBubble(npc, Phaser.Math.RND.pick(leeTalking));
+            }
+            if(james.bubbleTimer <= 0 && Math.random() < 0.004){
+              const jamesDistracted = [
+                '"...AUDITS?! When?! Who said that?!"',
+                '"The door sensor?! I\'ve been saying that for MONTHS."',
+                '"You know what, you\'re one of the few people here with any sense."',
+                '"If the dock doesn\'t meet code I will PERSONALLY—"',
+                '"Pam said WHAT?! Tell me everything. From the beginning."',
+                '"Inventory counts?! Don\'t get me started. FOURTEEN DISCREPANCIES last quarter."',
+              ];
+              this.showBubble(james, Phaser.Math.RND.pick(jamesDistracted));
+            }
+          }
+        }
+        // Timer expired — Lee returns to normal
+        if(STATE.leeDistractionTimer <= 0){
+          STATE.leeDistractingJames = false;
+          STATE.leeDistractionTimer = 0;
+          const endLines = [
+            '"Okay I think I bought you like 20 minutes. You\'re welcome."',
+            '"He\'s now writing a 4-page email about door sensors. Go."',
+            '"Mission accomplished. He thinks corporate is literally on their way."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(endLines));
+          this.floatText(this.player.x, this.player.y, '✅ Lee\'s distraction expired — nice window!', '#ff80c0');
+          // Lee drifts back toward her zone
+          const zone = ZONES['breakRoom'];
+          npc.targetX = zone.x + 60 + Math.random() * (zone.w - 120);
+          npc.targetY = zone.y + 40 + Math.random() * (zone.h - 80);
+        }
+        // Don't run normal movement when distracted
+        // (still falls through to velocity/bubble code below)
+        const dxL = npc.targetX - npc.sprite.x;
+        const dyL = npc.targetY - npc.sprite.y;
+        const dL = Math.hypot(dxL, dyL);
+        if(dL > 10) npc.sprite.setVelocity((dxL/dL)*160, (dyL/dL)*160);
+        else npc.sprite.setVelocity(0,0);
+        if(Math.abs(dxL) > 5) npc.sprite.scaleX = dxL < 0 ? -1 : 1;
+        npc.tag.setPosition(npc.sprite.x, npc.sprite.y - 58);
+        const bcyL = npc.sprite.y - 70;
+        npc.bubble.setPosition(npc.sprite.x, bcyL);
+        if(npc.bubble.visible) drawSpeechBubble(npc.bubbleGfx, npc.sprite.x, bcyL, npc.bubble.text, npc.bubble);
+        if(npc.bubbleTimer>0){ npc.bubbleTimer-=delta; if(npc.bubbleTimer<=0){ npc.bubble.setVisible(false); npc.bubbleGfx.clear().setVisible(false); } }
+        return; // skip normal AI loop for Lee while distracting
+      }
+
+      // ── SMOKE FOLLOW MODE ────────────────────────────────────────────────
       const isLeeFollow = npc.id === 'lee' && STATE.leeFollowing;
       const isSmokeFollow = STATE.smokingNPCs.includes(npc.id);
       if(isLeeFollow || isSmokeFollow){
