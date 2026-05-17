@@ -879,6 +879,10 @@ function physicsStep(){
   plane.vy += map.gravity;
   plane.vx += wind + stats.speedBonus*0.02;
 
+  // Move plane
+  plane.x += plane.vx;
+  plane.y += plane.vy;
+
   // Thermals
   plane.glowTimer=Math.max(0,plane.glowTimer-1);
   plane.thermalGlow=Math.max(0,plane.thermalGlow-1);
