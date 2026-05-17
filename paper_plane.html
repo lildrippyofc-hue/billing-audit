@@ -2,697 +2,1943 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Paper Plane</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Paper James</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: #1e3d6f;
-    overflow: hidden;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  canvas { display: block; cursor: crosshair; }
-  #tip {
-    position: fixed;
-    bottom: 8px; left: 0; right: 0;
-    text-align: center;
-    color: rgba(255,255,255,0.52);
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    pointer-events: none;
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a1628;
+  overflow: hidden;
+  font-family: 'Segoe UI', system-ui, Arial, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
+}
+canvas { display: block; cursor: crosshair; }
+
+/* ── Screens ── */
+.screen {
+  position: fixed; inset: 0; z-index: 20;
+  display: none; place-items: center;
+  background: rgba(5, 12, 30, 0.92);
+  padding: 16px;
+}
+.screen.active { display: grid; }
+
+/* ── Menu Card ── */
+.menu-card {
+  width: min(520px, 100%);
+  background: linear-gradient(160deg, rgba(20,40,80,0.98) 0%, rgba(8,18,45,0.99) 100%);
+  border: 1px solid rgba(100,160,255,0.22);
+  border-radius: 24px;
+  box-shadow: 0 32px 100px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08);
+  padding: 36px 32px 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+}
+.menu-title {
+  font-size: clamp(30px, 8vw, 48px);
+  font-weight: 900;
+  letter-spacing: -1px;
+  color: #fff;
+  text-shadow: 0 0 30px rgba(80,160,255,0.5);
+  display: flex; align-items: center; gap: 14px;
+}
+.menu-title svg { flex-shrink: 0; }
+.menu-stats {
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+}
+.stat-chip {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,0.85);
+}
+.stat-chip span { color: #7eb8ff; }
+.menu-btns {
+  display: flex; flex-direction: column; gap: 11px; width: 100%;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #1e5ccc, #3b8ef0);
+  color: #fff; font-weight: 900; font-size: 18px;
+  border: none; border-radius: 14px; padding: 16px;
+  cursor: pointer; letter-spacing: 0.5px;
+  box-shadow: 0 6px 24px rgba(30,90,200,0.45);
+  transition: transform 0.12s, box-shadow 0.12s;
+  font-family: inherit;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(30,90,200,0.55); }
+.btn-primary:active { transform: translateY(0); }
+.btn-secondary {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.9); font-weight: 800; font-size: 15px;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 13px;
+  cursor: pointer; font-family: inherit;
+  transition: background 0.12s;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.12); }
+
+/* ── Maps Screen ── */
+.big-card {
+  width: min(900px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(15,28,60,0.99) 0%, rgba(6,14,36,0.99) 100%);
+  border: 1px solid rgba(100,160,255,0.2);
+  border-radius: 24px;
+  box-shadow: 0 32px 100px rgba(0,0,0,0.75);
+}
+.big-card-head {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 26px 18px;
+  background: rgba(12,24,54,0.98);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px 24px 0 0;
+}
+.big-card-head h2 { font-size: 22px; color: #fff; font-weight: 900; }
+.head-sub { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 3px; }
+.btn-close {
+  background: rgba(255,255,255,0.1); color: #fff; border: none;
+  border-radius: 10px; padding: 10px 16px; font-weight: 800; cursor: pointer;
+  font-family: inherit; font-size: 14px;
+}
+.btn-close:hover { background: rgba(255,255,255,0.18); }
+.big-card-body { padding: 22px 26px 28px; }
+
+/* ── Map Grid ── */
+.maps-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;
+}
+.map-card {
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.04);
+  position: relative;
+}
+.map-banner {
+  height: 90px; position: relative; overflow: hidden;
+  display: flex; align-items: flex-end; padding: 10px 14px;
+}
+.map-banner-name {
+  font-size: 17px; font-weight: 900; color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6); z-index: 1;
+}
+.map-banner canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-body { padding: 14px; }
+.map-desc { color: rgba(255,255,255,0.6); font-size: 13px; line-height: 1.45; margin-bottom: 12px; }
+.map-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.tag {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 700;
+  color: rgba(255,255,255,0.7); letter-spacing: 0.05em;
+}
+.map-btn {
+  width: 100%; border: none; border-radius: 10px; padding: 12px;
+  font-weight: 900; font-size: 14px; font-family: inherit; cursor: pointer;
+  transition: opacity 0.12s;
+}
+.map-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.map-btn.play { background: linear-gradient(135deg,#1e5ccc,#3b8ef0); color:#fff; }
+.map-btn.unlock { background: linear-gradient(135deg,#b8860b,#daa520); color:#fff; }
+.map-btn.active { background: rgba(60,200,100,0.2); color: #4ade80; border: 1px solid rgba(74,222,128,0.3); }
+.map-lock-overlay {
+  position: absolute; inset: 0; border-radius: 16px;
+  background: rgba(0,0,0,0.55);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  pointer-events: none;
+}
+.lock-icon { font-size: 32px; }
+.lock-cost { font-size: 14px; font-weight: 900; color: #ffd700; }
+
+/* ── Upgrades Grid ── */
+.upgrades-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.upgrade-card {
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+}
+.upgrade-card h3 { font-size: 16px; color: #fff; font-weight: 800; }
+.upgrade-card p { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.4; }
+.upgrade-levels { display: flex; gap: 5px; }
+.level-dot {
+  width: 22px; height: 8px; border-radius: 4px;
+  background: rgba(255,255,255,0.12);
+  transition: background 0.2s;
+}
+.level-dot.filled { background: linear-gradient(90deg,#4488ff,#77aaff); }
+.level-dot.maxed { background: linear-gradient(90deg,#ffa500,#ffd700); }
+.upgrade-meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.55); }
+.upgrade-btn {
+  border: none; border-radius: 9px; padding: 11px; font-weight: 900; font-size: 13px;
+  font-family: inherit; cursor: pointer; transition: opacity 0.12s;
+}
+.upgrade-btn:disabled { opacity: 0.38; cursor: not-allowed; }
+.upgrade-btn.buy { background: linear-gradient(135deg,#1e5ccc,#3b8ef0); color: #fff; }
+.upgrade-btn.maxed { background: linear-gradient(135deg,#7b5e0a,#c49a0e); color:#fff; }
+
+/* ── HUD ── */
+#hud {
+  position: fixed; inset: 0; pointer-events: none; z-index: 5;
+}
+
+/* ── Result Overlay ── */
+#result-screen {
+  position: fixed; inset: 0; z-index: 18;
+  display: none; place-items: center; padding: 16px;
+  background: rgba(0,8,24,0.75);
+}
+#result-screen.active { display: grid; }
+.result-card {
+  width: min(480px, 100%);
+  background: linear-gradient(160deg, rgba(20,40,80,0.99) 0%, rgba(8,18,45,0.99) 100%);
+  border: 1px solid rgba(100,160,255,0.25);
+  border-radius: 24px;
+  box-shadow: 0 32px 100px rgba(0,0,0,0.7);
+  padding: 36px 30px 30px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  text-align: center;
+}
+.result-badge {
+  font-size: 12px; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase;
+  background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 999px; padding: 6px 14px; color: #ffd700;
+}
+.result-dist { font-size: clamp(50px, 12vw, 72px); font-weight: 900; color: #fff; line-height: 1; }
+.result-sub { font-size: 14px; color: rgba(255,255,255,0.55); }
+.result-coins {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,200,0,0.1); border: 1px solid rgba(255,200,0,0.25);
+  border-radius: 12px; padding: 10px 18px;
+}
+.coin-icon { font-size: 20px; }
+.result-coin-text { font-size: 15px; font-weight: 800; color: #ffd700; }
+.result-msg { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.5; max-width: 380px; }
+.result-btns { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+.result-btns .btn-primary { flex: 2; font-size: 16px; padding: 14px; }
+.result-btns .btn-secondary { flex: 1; font-size: 14px; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 3px; }
+
+@media (max-width: 500px) {
+  .big-card-head { padding: 16px 16px 14px; }
+  .big-card-body { padding: 16px; }
+  .maps-grid { grid-template-columns: 1fr; }
+  .menu-card { padding: 28px 20px 24px; }
+}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="tip">drag plane to aim &amp; launch &nbsp;·&nbsp; mouse / arrow keys to steer &nbsp;·&nbsp; fly through rings for bonus distance</div>
+
+<!-- ── HUD (always on top during flight) ── -->
+<div id="hud"></div>
+
+<!-- ── Main Menu ── -->
+<div class="screen active" id="menuScreen">
+  <div class="menu-card">
+    <div class="menu-title">
+      <svg width="46" height="38" viewBox="0 0 46 38" fill="none">
+        <polygon points="45,19 2,2 10,19 2,36" fill="#fff" opacity="0.95"/>
+        <polygon points="45,19 10,19 2,2" fill="#c8dcff" opacity="0.8"/>
+        <line x1="10" y1="19" x2="45" y2="19" stroke="rgba(180,200,255,0.6)" stroke-width="1"/>
+        <line x1="2" y1="2" x2="28" y2="13" stroke="rgba(200,220,255,0.4)" stroke-width="0.8"/>
+      </svg>
+      PAPER JAMES
+    </div>
+    <div class="menu-stats">
+      <div class="stat-chip">Best: <span id="menuBest">0</span> ft</div>
+      <div class="stat-chip">Coins: <span id="menuCoins">0</span></div>
+      <div class="stat-chip" id="menuMapChip">Map: Suburbs</div>
+    </div>
+    <div class="menu-btns">
+      <button class="btn-primary" id="menuPlayBtn">PLAY</button>
+      <button class="btn-secondary" id="menuMapsBtn">MAPS</button>
+      <button class="btn-secondary" id="menuUpgradesBtn">UPGRADES</button>
+    </div>
+    <div style="font-size:11px;color:rgba(255,255,255,0.28);letter-spacing:0.1em;text-transform:uppercase;">
+      Drag plane to aim · Move mouse / touch to steer
+    </div>
+  </div>
+</div>
+
+<!-- ── Maps Screen ── -->
+<div class="screen" id="mapsScreen">
+  <div class="big-card">
+    <div class="big-card-head">
+      <div>
+        <h2>Select Map</h2>
+        <div class="head-sub" id="mapsCoinsLabel">0 coins available</div>
+      </div>
+      <button class="btn-close" id="mapsCloseBtn">Close</button>
+    </div>
+    <div class="big-card-body">
+      <div class="maps-grid" id="mapsGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Upgrades Screen ── -->
+<div class="screen" id="upgradesScreen">
+  <div class="big-card">
+    <div class="big-card-head">
+      <div>
+        <h2>Upgrades Shop</h2>
+        <div class="head-sub" id="upgradesCoinsLabel">0 coins available</div>
+      </div>
+      <button class="btn-close" id="upgradesCloseBtn">Close</button>
+    </div>
+    <div class="big-card-body">
+      <div class="upgrades-grid" id="upgradesGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Result Screen ── -->
+<div id="result-screen">
+  <div class="result-card">
+    <div class="result-badge" id="resultBadge">Flight Complete</div>
+    <div class="result-dist" id="resultDist">0 ft</div>
+    <div class="result-sub" id="resultSub">Best: 0 ft · Rings: 0</div>
+    <div class="result-coins">
+      <div class="coin-icon">🪙</div>
+      <div class="result-coin-text" id="resultCoins">+0 coins this run · Total: 0</div>
+    </div>
+    <div class="result-msg" id="resultMsg">Here we go.</div>
+    <div class="result-btns">
+      <button class="btn-primary" id="resultFlyBtn">FLY AGAIN</button>
+      <button class="btn-secondary" id="resultMenuBtn">MENU</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
-// ── Canvas ────────────────────────────────────────────────────────────────────
-const canvas = document.getElementById('c');
-const ctx    = canvas.getContext('2d');
-let W, H;
-
-function resize() {
-  W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight;
-}
-resize();
-window.addEventListener('resize', () => {
-  resize();
-  if (state !== 'fly') { launchY = H * 0.42; plane.y = launchY; }
-});
-
-// roundRect polyfill (Safari / older Chromium)
+// ══════════════════════════════════════════════════════════════════
+//  POLYFILLS
+// ══════════════════════════════════════════════════════════════════
 if (!CanvasRenderingContext2D.prototype.roundRect) {
-  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
-    r = Math.min(r, w/2, h/2);
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+    r = Math.min(+r||0, w/2, h/2);
     this.beginPath();
-    this.moveTo(x+r, y);
-    this.arcTo(x+w, y,   x+w, y+h, r);
-    this.arcTo(x+w, y+h, x,   y+h, r);
-    this.arcTo(x,   y+h, x,   y,   r);
-    this.arcTo(x,   y,   x+w, y,   r);
+    this.moveTo(x+r,y);
+    this.arcTo(x+w,y,   x+w,y+h, r);
+    this.arcTo(x+w,y+h, x,  y+h, r);
+    this.arcTo(x,  y+h, x,  y,   r);
+    this.arcTo(x,  y,   x+w,y,   r);
     this.closePath();
     return this;
   };
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const GRAVITY   = 0.095;
-const LIFT_K    = 0.44;
-const DRAG_K    = 0.014;
-const AIR_RES   = 0.9994;
-const MIN_SPEED = 1.1;
-const LAUNCH_X  = 170;
-const WORLD_LEN = 14000;
+// ══════════════════════════════════════════════════════════════════
+//  CANVAS
+// ══════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H;
+function resize(){
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', ()=>{ resize(); if(appState!=='fly') resetPlanePos(); });
 
-// ── Game state ────────────────────────────────────────────────────────────────
-let state    = 'aim';   // aim | fly | crash | result
-let camX     = 0;
-let distance = 0;
+// ══════════════════════════════════════════════════════════════════
+//  DATA — MAPS
+// ══════════════════════════════════════════════════════════════════
+const MAP_DEFS = [
+  {
+    key: 'suburbs',
+    name: 'Suburbs',
+    desc: 'Blue sky, green grass, and the unmistakable smell of someone else\'s lawn care.',
+    unlockCoins: 0,
+    gravity: 0.095,
+    windBase: 0,
+    windGust: 0.012,
+    thermalStrength: 1.0,
+    thermalCount: 10,
+    ringCount: 14,
+    tailwind: 0,
+    tags: ['Normal Gravity','Gentle Wind','Good Thermals'],
+    skyColors: ['#1060b8','#2e84d4','#6bbce8','#a8d8f0'],
+    groundColor: '#3a7d44',
+    groundTopColor: '#4a9e55',
+    horizon: 0.78,
+  },
+  {
+    key: 'city',
+    name: 'City',
+    desc: 'Skyscrapers, wind tunnels, and pigeons judging your technique from above.',
+    unlockCoins: 500,
+    gravity: 0.095,
+    windBase: 0.018,
+    windGust: 0.035,
+    thermalStrength: 1.6,
+    thermalCount: 7,
+    ringCount: 18,
+    tailwind: 0,
+    tags: ['Strong Gusts','Updrafts','More Rings'],
+    skyColors: ['#1a2030','#3a5070','#7898b0','#bbc8d8'],
+    groundColor: '#3a3a3a',
+    groundTopColor: '#555',
+    horizon: 0.72,
+  },
+  {
+    key: 'moon',
+    name: 'Moon',
+    desc: 'Low gravity, no air resistance, no excuses. Also Earth is visible but unhelpful.',
+    unlockCoins: 1500,
+    gravity: 0.042,
+    windBase: 0,
+    windGust: 0,
+    thermalStrength: 0,
+    thermalCount: 0,
+    ringCount: 12,
+    tailwind: 0,
+    tags: ['Low Gravity (0.45x)','No Wind','No Thermals'],
+    skyColors: ['#000005','#05060f','#08091a','#0c0e22'],
+    groundColor: '#6a6a72',
+    groundTopColor: '#9090a0',
+    horizon: 0.82,
+  },
+  {
+    key: 'beach',
+    name: 'Sunset Beach',
+    desc: 'Warm thermals off the sand, tailwind from the sea. Perfect day to show off.',
+    unlockCoins: 3000,
+    gravity: 0.092,
+    windBase: 0.006,
+    windGust: 0.010,
+    thermalStrength: 1.5,
+    thermalCount: 12,
+    ringCount: 15,
+    tailwind: 0.08,
+    tags: ['Tailwind Boost','Strong Thermals','Scenic'],
+    skyColors: ['#1a0830','#7a2060','#d05028','#f0a060'],
+    groundColor: '#d4a85a',
+    groundTopColor: '#e8c06a',
+    horizon: 0.80,
+  }
+];
+
+// ══════════════════════════════════════════════════════════════════
+//  DATA — UPGRADES
+// ══════════════════════════════════════════════════════════════════
+const UPGRADE_DEFS = [
+  {
+    key: 'flaps',
+    name: 'Flaps',
+    icon: '🪁',
+    desc: 'Better wing folds for more lift and stall resistance.',
+    levels: [
+      { cost: 0,   label: 'Basic paper flaps',       liftMult: 1.00, stallBonus: 0 },
+      { cost: 50,  label: 'Better fold (+15% lift)',  liftMult: 1.15, stallBonus: 0.05 },
+      { cost: 150, label: 'Precision crease (+25%)',  liftMult: 1.25, stallBonus: 0.10 },
+      { cost: 400, label: 'Aerodynamic wing (+40%)',  liftMult: 1.40, stallBonus: 0.18 },
+    ]
+  },
+  {
+    key: 'weight',
+    name: 'Weight',
+    icon: '⚖️',
+    desc: 'Lighter materials for better glide ratio.',
+    levels: [
+      { cost: 0,   label: 'Standard paper',     glideMult: 1.00, fallMult: 1.00 },
+      { cost: 75,  label: 'Lightweight paper',  glideMult: 1.12, fallMult: 0.88 },
+      { cost: 200, label: 'Ultra-light',         glideMult: 1.28, fallMult: 0.74 },
+      { cost: 500, label: 'Carbon fiber fold',   glideMult: 1.45, fallMult: 0.62 },
+    ]
+  },
+  {
+    key: 'launch',
+    name: 'Launch',
+    icon: '🚀',
+    desc: 'More power and precision on release.',
+    levels: [
+      { cost: 0,   label: 'Basic throw',        speedMult: 1.00 },
+      { cost: 60,  label: 'Strong arm (+20%)',   speedMult: 1.20 },
+      { cost: 175, label: 'Perfect release (+35%)', speedMult: 1.35 },
+      { cost: 450, label: 'Rocket launch (+55%)', speedMult: 1.55 },
+    ]
+  },
+];
+
+// plane colors per flap upgrade level
+const PLANE_COLORS = [
+  { body:'#f8f6f0', wing2:'#eae6dc', crease:'#d8d0c8', nose:'#e84040' },
+  { body:'#d8eaff', wing2:'#c4daff', crease:'#a8c8f0', nose:'#3060e8' },
+  { body:'#c8d0d8', wing2:'#b8c0c8', crease:'#9098a8', nose:'#608090' },
+  { body:'#f0d870', wing2:'#e8c840', crease:'#c8a820', nose:'#a87010' },
+];
+
+// ══════════════════════════════════════════════════════════════════
+//  SAVE DATA
+// ══════════════════════════════════════════════════════════════════
+function defaultSave(){
+  return {
+    upgrades: { flaps:0, weight:0, launch:0 },
+    map: 'suburbs',
+    unlocked: ['suburbs'],
+  };
+}
+
 let best     = +localStorage.getItem('ppBest2') || 0;
-let tik      = 0;
-let launchY;
-let mouseX   = 0;
-let mouseY   = 0;
+let ppCoins  = +localStorage.getItem('pp_coins') || 0;
+let ppSave   = parseSave();
 
-// ── Plane ─────────────────────────────────────────────────────────────────────
+function parseSave(){
+  try {
+    const raw = JSON.parse(localStorage.getItem('pp_upgrades') || 'null');
+    const mapRaw = localStorage.getItem('pp_map') || 'suburbs';
+    const unlockedRaw = JSON.parse(localStorage.getItem('pp_unlocked') || '["suburbs"]');
+    if(!raw) return defaultSave();
+    return {
+      upgrades: { flaps: raw.flaps||0, weight: raw.weight||0, launch: raw.launch||0 },
+      map: MAP_DEFS.find(m=>m.key===mapRaw) ? mapRaw : 'suburbs',
+      unlocked: Array.isArray(unlockedRaw) ? unlockedRaw : ['suburbs'],
+    };
+  } catch(e){ return defaultSave(); }
+}
+
+function persistSave(){
+  localStorage.setItem('pp_upgrades', JSON.stringify(ppSave.upgrades));
+  localStorage.setItem('pp_map', ppSave.map);
+  localStorage.setItem('pp_unlocked', JSON.stringify(ppSave.unlocked));
+  localStorage.setItem('pp_coins', String(ppCoins));
+}
+
+function currentMapDef(){ return MAP_DEFS.find(m=>m.key===ppSave.map)||MAP_DEFS[0]; }
+
+function upgradeStats(){
+  const f = ppSave.upgrades.flaps;
+  const w = ppSave.upgrades.weight;
+  const l = ppSave.upgrades.launch;
+  const fd = UPGRADE_DEFS[0].levels[f];
+  const wd = UPGRADE_DEFS[1].levels[w];
+  const ld = UPGRADE_DEFS[2].levels[l];
+  return {
+    liftMult:  fd.liftMult,
+    stallBonus:fd.stallBonus,
+    glideMult: wd.glideMult,
+    fallMult:  wd.fallMult,
+    speedMult: ld.speedMult,
+    flapsLvl:  f, weightLvl: w, launchLvl: l
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  APP STATE MACHINE
+// ══════════════════════════════════════════════════════════════════
+// appState: 'menu' | 'aim' | 'fly' | 'crash' | 'result'
+let appState = 'menu';
+
+function showScreen(id){
+  ['menuScreen','mapsScreen','upgradesScreen'].forEach(s=>{
+    document.getElementById(s).classList.remove('active');
+  });
+  if(id) document.getElementById(id).classList.add('active');
+}
+
+function goMenu(){
+  appState = 'menu';
+  showScreen('menuScreen');
+  document.getElementById('result-screen').classList.remove('active');
+  updateMenuUI();
+}
+
+function startGame(){
+  showScreen(null);
+  document.getElementById('result-screen').classList.remove('active');
+  buildWorld();
+  resetPlanePos();
+  appState = 'aim';
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  WORLD GENERATION
+// ══════════════════════════════════════════════════════════════════
+const WORLD_LEN = 18000;
+const LAUNCH_X  = 180;
+
+let worldClouds   = [];
+let worldThermals = [];
+let worldRings    = [];
+let worldDecos    = [];  // decorations (trees, buildings, etc)
+let particles     = [];
+let crashPieces   = [];
+
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function rndInt(a,b){ return Math.floor(rnd(a,b+1)); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function buildWorld(){
+  const map = currentMapDef();
+  worldClouds   = [];
+  worldThermals = [];
+  worldRings    = [];
+  worldDecos    = [];
+  particles     = [];
+  crashPieces   = [];
+
+  // Clouds (skip moon)
+  if(map.key !== 'moon'){
+    const cloudCount = map.key==='city' ? 18 : map.key==='beach' ? 30 : 25;
+    for(let i=0;i<cloudCount;i++){
+      worldClouds.push({
+        wx: rnd(200, WORLD_LEN),
+        wy: rnd(30, H * 0.5),
+        r:  rnd(25, 85),
+        alpha: rnd(0.35, 0.72),
+        layer: i<12 ? 0 : 1,
+        bumps: Math.floor(rnd(2,5)),
+        grey: map.key==='city' ? 0.85 : 1.0,
+      });
+    }
+  }
+
+  // Thermals
+  for(let i=0;i<map.thermalCount;i++){
+    worldThermals.push({
+      wx: rnd(400 + i*(WORLD_LEN/Math.max(map.thermalCount,1)), 400 + (i+1)*(WORLD_LEN/Math.max(map.thermalCount,1))),
+      wy: H*0.25 + rnd(0, H*0.40),
+      r:  rnd(30,55),
+      strength: rnd(0.8,1.5) * map.thermalStrength,
+      phase: rnd(0, Math.PI*2),
+    });
+  }
+
+  // Rings
+  for(let i=0;i<map.ringCount;i++){
+    const seg = WORLD_LEN / map.ringCount;
+    worldRings.push({
+      wx: rnd(500 + i*seg, 500 + (i+1)*seg - 60),
+      wy: H*0.12 + rnd(0, H*0.58),
+      r:  rnd(20, 34),
+      hit: false, flash: 0,
+      coins: rndInt(1,3),
+    });
+  }
+
+  // Decorations
+  buildDecos(map);
+}
+
+function buildDecos(map){
+  const groundY = H * map.horizon;
+  const count = 60;
+  for(let i=0;i<count;i++){
+    const wx = rnd(0, WORLD_LEN);
+    if(map.key==='suburbs') worldDecos.push(...genSuburbDeco(wx, groundY));
+    else if(map.key==='city') worldDecos.push(...genCityDeco(wx, groundY));
+    else if(map.key==='moon') worldDecos.push(...genMoonDeco(wx, groundY));
+    else if(map.key==='beach') worldDecos.push(...genBeachDeco(wx, groundY));
+  }
+  // sort by layer then wx so painter order is right
+  worldDecos.sort((a,b)=> a.layer - b.layer || a.wx - b.wx);
+}
+
+function genSuburbDeco(wx, groundY){
+  const items = [];
+  const type = pick(['tree','house','tree','tree','fence']);
+  if(type==='tree'){
+    items.push({ type:'tree_suburb', wx, wy: groundY, layer: rnd(0,1)<0.3?1:2,
+      h: rnd(38,75), w: rnd(20,38), color: pick(['#3a8040','#2d7035','#4a9048','#2e5e2a']) });
+  } else if(type==='house'){
+    const houseW = rnd(50,80), houseH = rnd(35,55);
+    items.push({ type:'house', wx, wy: groundY, layer:2,
+      w: houseW, h: houseH,
+      wallColor: pick(['#e8cba8','#c8b4a0','#a8c4b8','#d4c0a0','#b8ccd8']),
+      roofColor: pick(['#8b4030','#604040','#405060','#703030','#506060']),
+      chimney: Math.random()<0.4,
+    });
+  } else if(type==='fence'){
+    items.push({ type:'fence', wx, wy: groundY, layer:2, w: rnd(50,100) });
+  }
+  return items;
+}
+
+function genCityDeco(wx, groundY){
+  const items = [];
+  const type = pick(['building','building','building','lamp']);
+  if(type==='building'){
+    const bw = rnd(40,80), bh = rnd(80,220);
+    items.push({ type:'building', wx, wy: groundY, layer: bh>160?1:2,
+      w: bw, h: bh,
+      color: pick(['#2a3040','#303848','#283040','#384050','#222a38']),
+      winRows: Math.floor(bh/16), winCols: Math.floor(bw/14),
+      waterTower: Math.random()<0.15,
+      billboard: Math.random()<0.12,
+    });
+  } else {
+    items.push({ type:'lamp', wx, wy: groundY, layer:2, h: rnd(36,50) });
+  }
+  return items;
+}
+
+function genMoonDeco(wx, groundY){
+  const items = [];
+  const type = pick(['crater','crater','rock','flag','earth']);
+  if(type==='crater'){
+    items.push({ type:'crater', wx, wy: groundY, layer:2, r: rnd(8,28) });
+  } else if(type==='rock'){
+    items.push({ type:'rock', wx, wy: groundY, layer:2, w:rnd(8,20), h:rnd(5,14) });
+  } else if(type==='flag'){
+    items.push({ type:'flag', wx, wy: groundY, layer:2 });
+  } else {
+    items.push({ type:'earth', wx: rnd(2000,WORLD_LEN-1000), wy: rnd(50,H*0.35), layer:0 });
+  }
+  return items;
+}
+
+function genBeachDeco(wx, groundY){
+  const items = [];
+  const type = pick(['palm','palm','umbrella','wave']);
+  if(type==='palm'){
+    items.push({ type:'palm', wx, wy: groundY, layer: rnd(0,1)<0.3?1:2,
+      h: rnd(55,95), lean: rnd(-0.15,0.25) });
+  } else if(type==='umbrella'){
+    items.push({ type:'umbrella', wx, wy: groundY, layer:2,
+      color: pick(['#e84040','#4070d0','#e0a020','#30a050','#9040c0']) });
+  } else {
+    items.push({ type:'wave', wx, wy: groundY + rnd(-4,4), layer:2 });
+  }
+  return items;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  PLANE STATE
+// ══════════════════════════════════════════════════════════════════
 let plane = {};
+let camX  = 0;
+let dist  = 0;
+let tik   = 0;
+let wind  = 0;
+let mouseX = 0, mouseY = 0;
+let isDragging = false, dragSX=0, dragSY=0, aimX=0, aimY=0;
+let coinsThisRun = 0;
+let ringsThisRun = 0;
 
-function initPlane() {
-  launchY     = H * 0.42;
-  plane       = { x: LAUNCH_X, y: launchY, vx: 0, vy: 0, angle: -0.12, trail: [], glowTimer: 0 };
-  camX        = 0;
-  distance    = 0;
-  state       = 'aim';
-  crashPieces = [];
-  particles   = [];
-  mouseY      = launchY;  // default steering near launch height
+function resetPlanePos(){
+  plane = {
+    x: LAUNCH_X, y: H*0.42,
+    vx: 0, vy: 0,
+    angle: -0.12,
+    trail: [],
+    glowTimer: 0,
+  };
+  camX = 0; dist = 0;
+  coinsThisRun = 0; ringsThisRun = 0;
+  isDragging = false;
+  mouseY = H*0.42;
+  wind = 0;
 }
 
-// ── World objects ─────────────────────────────────────────────────────────────
-let clouds = [], thermals = [], rings = [], particles = [], crashPieces = [];
+// ══════════════════════════════════════════════════════════════════
+//  PHYSICS
+// ══════════════════════════════════════════════════════════════════
+const LIFT_K  = 0.44;
+const DRAG_K  = 0.013;
+const AIR_RES = 0.9994;
+const MIN_SPD = 1.1;
 
-function buildWorld() {
-  clouds = []; thermals = []; rings = [];
+function physicsStep(){
+  const map   = currentMapDef();
+  const stats = upgradeStats();
+  const groundY = H * map.horizon;
 
-  for (let i = 0; i < 65; i++) {
-    clouds.push({
-      x:     200 + Math.random() * WORLD_LEN,
-      y:     35  + Math.random() * (H * 0.62),
-      r:     22  + Math.random() * 75,
-      extra: Math.random() > 0.4,
-      layer: i < 32 ? 0 : 1,
-      alpha: 0.32 + Math.random() * 0.48,
-    });
-  }
+  // Wind
+  wind += (Math.random()-0.5) * map.windGust;
+  wind = Math.max(-0.12, Math.min(0.12, wind * 0.98 + map.windBase * 0.02));
 
-  for (let i = 0; i < 38; i++) {
-    thermals.push({
-      x:        300 + i * (WORLD_LEN / 38) + Math.random() * 220,
-      y:        H * 0.22 + Math.random() * (H * 0.52),
-      r:        28 + Math.random() * 30,
-      strength: 0.85 + Math.random() * 1.5,
-      phase:    Math.random() * Math.PI * 2,
-    });
-  }
-
-  for (let i = 0; i < 45; i++) {
-    rings.push({
-      x:     480 + i * (WORLD_LEN / 45) + Math.random() * 130,
-      y:     H * 0.15 + Math.random() * (H * 0.58),
-      r:     20 + Math.random() * 20,
-      hit:   false,
-      flash: 0,
-      hue:   160 + Math.random() * 80,
-    });
-  }
-}
-
-// ── Physics ───────────────────────────────────────────────────────────────────
-const keys = {};
-document.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if ((e.code === 'Space') && state === 'result') { e.preventDefault(); initPlane(); buildWorld(); }
-});
-document.addEventListener('keyup', e => { keys[e.code] = false; });
-
-canvas.addEventListener('mousemove', e => {
-  const r = canvas.getBoundingClientRect();
-  mouseX = e.clientX - r.left;
-  mouseY = e.clientY - r.top;
-  if (isDragging) { aimX = mouseX; aimY = mouseY; }
-});
-
-function physicsStep() {
   // Steering
-  let targetAngle;
-  if (keys['ArrowUp'])        targetAngle = plane.angle - 0.055;
-  else if (keys['ArrowDown']) targetAngle = plane.angle + 0.055;
-  else {
-    let norm = (mouseY / H) * 2 - 1;   // -1 (top) to +1 (bottom)
-    targetAngle = norm * 0.50;
-  }
-  targetAngle = Math.max(-0.48, Math.min(0.65, targetAngle));
-  plane.angle += (targetAngle - plane.angle) * 0.058;
+  let norm = (mouseY/H)*2 - 1;  // -1 top, +1 bottom
+  let tgtAngle = norm * 0.52;
+  tgtAngle = Math.max(-0.52, Math.min(0.68, tgtAngle));
+  plane.angle += (tgtAngle - plane.angle) * 0.062;
 
-  // Speed & direction
-  let speed = Math.sqrt(plane.vx * plane.vx + plane.vy * plane.vy);
-  if (speed < 0.001) speed = 0.001;
+  let speed = Math.hypot(plane.vx, plane.vy) || 0.001;
   let velAng = Math.atan2(plane.vy, plane.vx);
   let aoa    = plane.angle - velAng;
-  let eff    = speed > MIN_SPEED ? 1 : speed / MIN_SPEED;
+  let eff    = speed > MIN_SPD ? 1 : speed / MIN_SPD;
 
-  // Lift (perpendicular to velocity)
-  let liftMag = speed * Math.sin(aoa) * LIFT_K * eff;
+  // Lift
+  const liftMag = speed * Math.sin(aoa) * LIFT_K * stats.liftMult * eff;
   plane.vx += -liftMag * Math.sin(velAng);
   plane.vy +=  liftMag * Math.cos(velAng);
 
   // Drag
-  let drag = speed * speed * DRAG_K;
-  plane.vx -= (plane.vx / speed) * drag;
-  plane.vy -= (plane.vy / speed) * drag;
+  const dragF = speed * speed * DRAG_K / stats.glideMult;
+  plane.vx -= (plane.vx/speed) * dragF;
+  plane.vy -= (plane.vy/speed) * dragF;
 
   // Air resistance
   plane.vx *= AIR_RES;
 
   // Gravity
-  plane.vy += GRAVITY;
+  plane.vy += map.gravity * stats.fallMult;
+
+  // Wind + tailwind
+  plane.vx += wind + map.tailwind * 0.012;
 
   // Thermals
-  for (let t of thermals) {
-    let dx = plane.x - t.x, dy = plane.y - t.y;
-    let d  = Math.sqrt(dx*dx + dy*dy);
-    if (d < t.r * 1.9) {
-      let fac = (1 - d / (t.r * 1.9)) * t.strength;
-      plane.vy      -= fac * 0.24;
-      plane.glowTimer = 14;
-      if (d < t.r * 0.65) burst(plane.x, plane.y, '#ffd700', 8);
+  for(const t of worldThermals){
+    const dx = plane.x - t.wx;
+    const dy = plane.y - t.wy;
+    const d  = Math.hypot(dx, dy);
+    if(d < t.r * 2){
+      const fac = (1 - d/(t.r*2)) * t.strength;
+      plane.vy  -= fac * 0.22;
+      plane.glowTimer = 18;
+      if(d < t.r * 0.7) burst(plane.x, plane.y, '#ffd700', 8);
     }
   }
 
   // Rings
-  for (let ring of rings) {
-    if (ring.hit) { if (ring.flash > 0) ring.flash -= 0.045; continue; }
-    let dx = plane.x - ring.x, dy = plane.y - ring.y;
-    if (Math.sqrt(dx*dx+dy*dy) < ring.r * 1.15) {
-      ring.hit   = true;
-      ring.flash = 1;
-      distance  += 35;
-      burst(ring.x, ring.y, 'hsl('+ring.hue+',100%,68%)', 16);
+  for(const ring of worldRings){
+    if(ring.hit){ if(ring.flash>0) ring.flash -= 0.04; continue; }
+    if(Math.hypot(plane.x-ring.wx, plane.y-ring.wy) < ring.r * 1.2){
+      ring.hit = true; ring.flash = 1;
+      dist += 35; ringsThisRun++;
+      ppCoins += ring.coins; coinsThisRun += ring.coins;
+      persistSave();
+      burst(ring.wx, ring.wy, map.key==='moon'?'#c0e0ff':'#ffd040', 18);
     }
   }
 
   // Trail
-  plane.trail.push({ x: plane.x, y: plane.y });
-  if (plane.trail.length > 55) plane.trail.shift();
+  plane.trail.push({x:plane.x, y:plane.y});
+  if(plane.trail.length > 65) plane.trail.shift();
 
   // Move
   plane.x += plane.vx;
   plane.y += plane.vy;
-  if (plane.glowTimer > 0) plane.glowTimer--;
+  if(plane.glowTimer>0) plane.glowTimer--;
 
-  // Camera — keep plane at ~22% from left with some lead
-  camX = plane.x - W * 0.22;
+  // Camera
+  camX = plane.x - W * 0.24;
 
-  // Distance
-  distance = Math.max(distance, Math.round((plane.x - LAUNCH_X) * 0.58));
+  // Distance (feet)
+  dist = Math.max(dist, Math.round((plane.x - LAUNCH_X) * 0.62));
 
-  // Ceiling bounce
-  if (plane.y < 4) { plane.y = 4; plane.vy = Math.abs(plane.vy) * 0.35; }
+  // Ceiling
+  if(plane.y < 5){ plane.y=5; plane.vy = Math.abs(plane.vy)*0.3; }
 
   // Ground crash
-  if (plane.y >= H - 44) { plane.y = H - 44; doCrash(); }
+  if(plane.y >= groundY - 10){ plane.y = groundY-10; doCrash(); }
 }
 
-function burst(x, y, color, n) {
-  for (let i = 0; i < n; i++) {
-    let a = Math.random() * Math.PI * 2;
-    let s = 1.5 + Math.random() * 4.5;
-    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s,
-      life: 1, decay: 0.032 + Math.random()*0.022, color, r: 2+Math.random()*3.5 });
+function burst(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a = Math.random()*Math.PI*2;
+    const s = rnd(1.5,5);
+    particles.push({ x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:1, decay:rnd(0.028,0.05), color, r:rnd(2,4.5) });
   }
 }
 
-function doCrash() {
-  if (state !== 'fly') return;
-  state = 'crash';
-  if (distance > best) { best = distance; localStorage.setItem('ppBest2', best); }
-  for (let i = 0; i < 10; i++) {
-    let a = -Math.PI * 0.85 + Math.random() * Math.PI * 0.45;
-    let s = 2 + Math.random() * 5.5;
+function doCrash(){
+  if(appState!=='fly') return;
+  appState = 'crash';
+
+  if(dist > best){ best = dist; localStorage.setItem('ppBest2', best); }
+
+  // Base coins from distance
+  const baseCoins = Math.max(5, Math.floor(dist / 30) + ringsThisRun * 8);
+  ppCoins += baseCoins; coinsThisRun += baseCoins;
+  persistSave();
+
+  // Crash pieces
+  for(let i=0;i<12;i++){
+    const a = -Math.PI*0.9 + Math.random()*Math.PI*0.5;
+    const s = rnd(2,6);
     crashPieces.push({
-      x: plane.x, y: plane.y,
-      vx: Math.cos(a)*s + plane.vx*0.28,
-      vy: Math.sin(a)*s + plane.vy*0.28,
-      angle: Math.random()*Math.PI*2,
-      spin:  (Math.random()-0.5)*0.28,
-      w: 9+Math.random()*14, h: 3+Math.random()*5,
-      life: 1, decay: 0.007+Math.random()*0.006,
+      x:plane.x, y:plane.y,
+      vx:Math.cos(a)*s + plane.vx*0.3,
+      vy:Math.sin(a)*s + plane.vy*0.3,
+      angle:Math.random()*Math.PI*2,
+      spin:(Math.random()-0.5)*0.3,
+      w:rnd(8,18), h:rnd(3,6),
+      life:1, decay:rnd(0.006,0.012),
     });
   }
-  setTimeout(() => { if (state === 'crash') state = 'result'; }, 2200);
+
+  setTimeout(()=>{ if(appState==='crash') showResult(); }, 1800);
 }
 
-// ── Drawing ───────────────────────────────────────────────────────────────────
-function drawSky() {
-  let g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0,    '#1a4e8a');
-  g.addColorStop(0.45, '#3d8cc4');
-  g.addColorStop(0.82, '#82c4e8');
-  g.addColorStop(1,    '#c2e4f6');
+function showResult(){
+  appState = 'result';
+  const isNew = dist >= best && dist > 0;
+
+  document.getElementById('resultBadge').textContent = isNew ? 'New Record! 🎉' : 'Flight Complete';
+  document.getElementById('resultDist').textContent  = dist + ' ft';
+  document.getElementById('resultSub').textContent   = 'Best: '+best+' ft  ·  Rings: '+ringsThisRun;
+  document.getElementById('resultCoins').textContent = '+'+coinsThisRun+' coins this run  ·  Total: '+ppCoins;
+  document.getElementById('resultMsg').textContent   = funnyMsg(dist);
+  document.getElementById('result-screen').classList.add('active');
+}
+
+function funnyMsg(ft){
+  if(ft < 50)  return pick(['Did you even try? The plane barely left your hand.',
+    'The ground received you almost immediately. Impressive in its own way.',
+    'A bold throw. A bolder failure. Respect.']);
+  if(ft < 150) return pick(['Decent toss. Nothing to write home about, but nothing to hide either.',
+    'You got it airborne. That counts for something. Barely.',
+    'Physics acknowledged your attempt and then overruled it.']);
+  if(ft < 350) return pick(['Solid flight. The paper is cautiously not embarrassed.',
+    'Now we\'re talking. A genuine attempt at aeronautics.',
+    'Good distance. The thermals liked you today.']);
+  if(ft < 700) return pick(['Strong throw. That plane had real intention.',
+    'Excellent glide. The air cooperated and so did you.',
+    'You\'re getting dangerous. In a paper airplane sense.']);
+  if(ft < 1500)return pick(['Remarkable. Somewhere an engineer is concerned.',
+    'That flight had style. And distance. Possibly too much of both.',
+    'That\'s a proper flight. The plane has earned its retirement.']);
+  return pick(['Absolutely ridiculous. File this under \'unreasonably good\'.',
+    'The paper has transcended its origins as office supply.',
+    'You just broke the laws of origami. No refunds.']);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — SKY & BACKGROUNDS
+// ══════════════════════════════════════════════════════════════════
+function drawSky(){
+  const map = currentMapDef();
+  const g = ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0, map.skyColors[0]);
+  g.addColorStop(0.4, map.skyColors[1]);
+  g.addColorStop(0.75, map.skyColors[2]);
+  g.addColorStop(1, map.skyColors[3]);
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(0,0,W,H);
+
+  if(map.key==='moon') drawStars();
+  if(map.key==='beach') drawOcean();
 }
 
-function drawMountains() {
-  // Distant blue-grey peaks
-  let off0 = camX * 0.07;
+function drawStars(){
+  // Static star field seeded by position
   ctx.save();
-  ctx.globalAlpha = 0.42;
-  ctx.fillStyle   = '#4878a8';
-  ctx.beginPath();
-  ctx.moveTo(0, H - 44);
-  for (let x = -80; x <= W + 80; x += 28) {
-    let wx = x + off0;
-    let my = H - 44 - 62 - 44*Math.sin(wx*0.005) - 22*Math.sin(wx*0.012+1.4);
-    if (x === -80) ctx.moveTo(x, my); else ctx.lineTo(x, my);
+  ctx.fillStyle = '#fff';
+  for(let i=0;i<180;i++){
+    const sx = (i*137.5 % W);
+    const sy = (i*79.3 % (H*0.65));
+    const r  = (i%5===0) ? 1.5 : 0.8;
+    const a  = 0.4 + (i%7)*0.08;
+    ctx.globalAlpha = a;
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
   }
-  ctx.lineTo(W, H-44); ctx.lineTo(0, H-44); ctx.closePath(); ctx.fill();
   ctx.restore();
-
-  // Nearer green hills
-  let off1 = camX * 0.18;
-  ctx.fillStyle = '#52985e';
-  ctx.beginPath();
-  ctx.moveTo(0, H-44);
-  for (let x = -60; x <= W+60; x += 18) {
-    let wx = x + off1;
-    let my = H - 44 - 22 - 16*Math.sin(wx*0.02) - 10*Math.sin(wx*0.035+2.2);
-    if (x === -60) ctx.moveTo(x, my); else ctx.lineTo(x, my);
-  }
-  ctx.lineTo(W, H-44); ctx.lineTo(0, H-44); ctx.closePath(); ctx.fill();
 }
 
-function drawGround() {
-  ctx.fillStyle = '#3a8844';
-  ctx.fillRect(0, H-44, W, 44);
-  ctx.fillStyle = '#4aaa55';
-  ctx.fillRect(0, H-44, W, 9);
-
-  // Distance tick marks
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.font      = '9px Arial';
-  let step  = 100;
-  let first = Math.ceil((camX + LAUNCH_X) / step) * step;
-  for (let wx = first; wx < camX + W + LAUNCH_X; wx += step) {
-    let sx = wx - LAUNCH_X - camX;
-    ctx.fillRect(sx - 0.5, H - 44, 1, 7);
-    if (wx > LAUNCH_X) ctx.fillText(Math.round((wx - LAUNCH_X) * 0.58) + 'ft', sx+2, H-38);
-  }
+function drawOcean(){
+  const groundY = H * currentMapDef().horizon;
+  // Ocean strip just above ground
+  const g = ctx.createLinearGradient(0, groundY-60, 0, groundY);
+  g.addColorStop(0,'rgba(20,80,180,0)');
+  g.addColorStop(1,'rgba(20,80,180,0.35)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, groundY-60, W, 60);
 }
 
-function drawClouds() {
-  for (let c of clouds) {
-    let sx = c.x - camX * (c.layer === 0 ? 0.22 : 0.58);
-    if (sx < -220 || sx > W + 220) continue;
+function drawFarBackground(){
+  const map = currentMapDef();
+  const off = camX * 0.05;
+  const groundY = H * map.horizon;
+
+  if(map.key==='suburbs'){
+    // Distant mountains
+    ctx.save(); ctx.globalAlpha=0.3;
+    ctx.fillStyle='#4060a0';
+    ctx.beginPath(); ctx.moveTo(0, groundY);
+    for(let x=-80;x<=W+80;x+=25){
+      const wx=x+off;
+      const my=groundY - 80 - 55*Math.sin(wx*0.0038) - 28*Math.sin(wx*0.009+1.3);
+      x===-80?ctx.moveTo(x,my):ctx.lineTo(x,my);
+    }
+    ctx.lineTo(W,groundY); ctx.lineTo(0,groundY); ctx.fill(); ctx.restore();
+  } else if(map.key==='city'){
+    // Far city skyline silhouette
+    ctx.save(); ctx.globalAlpha=0.25;
+    ctx.fillStyle='#1a2535';
+    ctx.beginPath(); ctx.moveTo(0,groundY);
+    for(let x=0;x<W;x+=2){
+      const wx=(x+off)*0.5;
+      const hh = 60 + 50*Math.abs(Math.sin(wx*0.04)) + 30*Math.abs(Math.sin(wx*0.11+2));
+      const my = groundY - hh;
+      x===0?ctx.moveTo(x,my):ctx.lineTo(x,my);
+    }
+    ctx.lineTo(W,groundY); ctx.fill(); ctx.restore();
+  } else if(map.key==='beach'){
+    // Distant islands/cliffs
+    ctx.save(); ctx.globalAlpha=0.18;
+    ctx.fillStyle='#6040a0';
+    ctx.beginPath(); ctx.moveTo(0,groundY);
+    for(let x=-80;x<=W+80;x+=30){
+      const wx=x+off;
+      const my=groundY - 40 - 35*Math.sin(wx*0.005+0.5);
+      x===-80?ctx.moveTo(x,my):ctx.lineTo(x,my);
+    }
+    ctx.lineTo(W,groundY); ctx.fill(); ctx.restore();
+  }
+  // moon earth is drawn as a deco object
+}
+
+function drawMidBackground(){
+  const map = currentMapDef();
+  const off = camX * 0.15;
+  const groundY = H * map.horizon;
+
+  if(map.key==='suburbs'){
+    // Rolling green hills
     ctx.save();
-    ctx.globalAlpha = c.alpha;
-    ctx.fillStyle   = '#ffffff';
-    ctx.shadowBlur  = 20;
-    ctx.shadowColor = 'rgba(255,255,255,0.4)';
+    ctx.fillStyle='#2e7032';
+    ctx.beginPath(); ctx.moveTo(0,groundY);
+    for(let x=-60;x<=W+60;x+=18){
+      const wx=x+off;
+      const my=groundY - 22 - 15*Math.sin(wx*0.018) - 9*Math.sin(wx*0.032+2.1);
+      x===-60?ctx.moveTo(x,my):ctx.lineTo(x,my);
+    }
+    ctx.lineTo(W,groundY); ctx.fill(); ctx.restore();
+  } else if(map.key==='city'){
+    // Mid-distance buildings
+    ctx.save(); ctx.fillStyle='#222c3c'; ctx.globalAlpha=0.7;
+    for(let i=0;i<14;i++){
+      const wx=(i*320 - off*0.3) % (W+100) - 50;
+      const bh=rnd(60,140); // deterministic via seed
+      const bw=rnd(30,65);
+      ctx.fillRect(wx, groundY-bh, bw, bh);
+    }
+    ctx.restore();
+  } else if(map.key==='beach'){
+    // Beach haze / horizon
+    const g=ctx.createLinearGradient(0,groundY-40,0,groundY);
+    g.addColorStop(0,'rgba(255,150,80,0)');
+    g.addColorStop(1,'rgba(255,120,60,0.15)');
+    ctx.fillStyle=g; ctx.fillRect(0,groundY-40,W,40);
+  }
+}
+
+function drawGround(){
+  const map = currentMapDef();
+  const groundY = H * map.horizon;
+  const groundH = H - groundY;
+
+  // Main ground
+  const gg = ctx.createLinearGradient(0,groundY,0,H);
+  gg.addColorStop(0, map.groundTopColor);
+  gg.addColorStop(0.15, map.groundColor);
+  gg.addColorStop(1, map.key==='moon'?'#404050':'#1a1a1a');
+  ctx.fillStyle=gg;
+  ctx.fillRect(0, groundY, W, groundH);
+
+  // Ground edge line
+  if(map.key!=='city'){
+    ctx.fillStyle = map.groundTopColor;
+    ctx.fillRect(0, groundY, W, 6);
+  }
+
+  // Moon: grid lines
+  if(map.key==='moon'){
+    ctx.save(); ctx.strokeStyle='rgba(150,150,180,0.18)'; ctx.lineWidth=1;
+    for(let x=0;x<W;x+=40){
+      ctx.beginPath(); ctx.moveTo(x,groundY); ctx.lineTo(x,H); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Distance markers
+  ctx.save();
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.font='9px Arial';
+  const step=100;
+  const first=Math.ceil((camX+LAUNCH_X)/step)*step;
+  for(let wx=first; wx<camX+W+LAUNCH_X; wx+=step){
+    const sx=wx-LAUNCH_X-camX;
+    ctx.fillRect(sx-0.5, groundY, 1, 7);
+    if(wx>LAUNCH_X) ctx.fillText(Math.round((wx-LAUNCH_X)*0.62)+'ft', sx+2, groundY+16);
+  }
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — DECORATIONS
+// ══════════════════════════════════════════════════════════════════
+// Parallax speeds by layer
+const LAYER_SPD = [0.05, 0.18, 0.82];
+
+function drawDecos(targetLayer){
+  for(const d of worldDecos){
+    if(d.layer!==targetLayer) continue;
+    const spd = LAYER_SPD[d.layer] || 0.5;
+    const sx  = d.wx - camX * spd;
+    if(sx < -300 || sx > W+300) continue;
+    drawSingleDeco(d, sx);
+  }
+}
+
+function drawSingleDeco(d, sx){
+  const groundY = H * currentMapDef().horizon;
+  ctx.save();
+  switch(d.type){
+    case 'tree_suburb': drawSuburbTree(sx, d.wy, d.w, d.h, d.color); break;
+    case 'house':       drawHouse(sx, d.wy, d.w, d.h, d.wallColor, d.roofColor, d.chimney); break;
+    case 'fence':       drawFence(sx, d.wy, d.w); break;
+    case 'building':    drawBuilding(sx, d.wy, d.w, d.h, d.color, d.winRows, d.winCols, d.waterTower, d.billboard); break;
+    case 'lamp':        drawLamp(sx, d.wy, d.h); break;
+    case 'crater':      drawCrater(sx, groundY, d.r); break;
+    case 'rock':        drawRock(sx, groundY, d.w, d.h); break;
+    case 'flag':        drawFlag(sx, d.wy); break;
+    case 'earth':       drawEarth(sx, d.wy); break;
+    case 'palm':        drawPalm(sx, d.wy, d.h, d.lean); break;
+    case 'umbrella':    drawUmbrella(sx, d.wy, d.color); break;
+    case 'wave':        drawWave(sx, d.wy); break;
+  }
+  ctx.restore();
+}
+
+function drawSuburbTree(sx, groundY, w, h, color){
+  // Trunk
+  ctx.fillStyle='#7a5230';
+  const tw=w*0.18, th=h*0.35;
+  ctx.fillRect(sx-tw/2, groundY-th, tw, th);
+  // Canopy layers (3 triangles)
+  ctx.fillStyle=color;
+  for(let i=0;i<3;i++){
+    const ly = groundY - th - (h-th)*(i/3) - (h-th)*0.18;
+    const lw = w*(1 - i*0.22);
     ctx.beginPath();
-    ctx.arc(sx,              c.y,             c.r,      0, Math.PI*2);
-    ctx.arc(sx + c.r*0.78,  c.y + c.r*0.1,   c.r*0.70, 0, Math.PI*2);
-    ctx.arc(sx - c.r*0.62,  c.y + c.r*0.14,  c.r*0.60, 0, Math.PI*2);
-    if (c.extra) ctx.arc(sx + c.r*0.18, c.y - c.r*0.52, c.r*0.50, 0, Math.PI*2);
-    ctx.fill();
+    ctx.moveTo(sx, ly - (h-th)*0.32*(1-i*0.1));
+    ctx.lineTo(sx - lw/2, ly + (h-th)*0.12);
+    ctx.lineTo(sx + lw/2, ly + (h-th)*0.12);
+    ctx.closePath(); ctx.fill();
+  }
+  // Darker shade on one side
+  ctx.globalAlpha=0.2; ctx.fillStyle='#000';
+  ctx.beginPath();
+  ctx.moveTo(sx, groundY-th-(h-th)*0.32);
+  ctx.lineTo(sx+w/2, groundY-th+(h-th)*0.12);
+  ctx.lineTo(sx, groundY-th+(h-th)*0.22);
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+function drawHouse(sx, groundY, w, h, wallColor, roofColor, chimney){
+  // Body
+  ctx.fillStyle=wallColor;
+  ctx.fillRect(sx - w/2, groundY - h, w, h);
+  // Door
+  ctx.fillStyle='#7a5030';
+  const dw=w*0.22, dh=h*0.36;
+  ctx.fillRect(sx - dw/2, groundY - dh, dw, dh);
+  // Windows
+  ctx.fillStyle='#d4eaff';
+  ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=1;
+  const wins=[[-0.3,-0.65],[0.3,-0.65]];
+  for(const [ox,oy] of wins){
+    const wx=sx+ox*w, wy=groundY+oy*h;
+    ctx.fillRect(wx-w*0.1, wy-h*0.1, w*0.2, h*0.18);
+    ctx.beginPath(); ctx.moveTo(wx,wy-h*0.1); ctx.lineTo(wx,wy+h*0.08); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(wx-w*0.1,wy); ctx.lineTo(wx+w*0.1,wy); ctx.stroke();
+  }
+  // Roof
+  ctx.fillStyle=roofColor;
+  ctx.beginPath();
+  ctx.moveTo(sx - w/2 - 3, groundY - h);
+  ctx.lineTo(sx, groundY - h - h*0.42);
+  ctx.lineTo(sx + w/2 + 3, groundY - h);
+  ctx.closePath(); ctx.fill();
+  // Chimney
+  if(chimney){
+    ctx.fillStyle='#8a6050';
+    ctx.fillRect(sx + w*0.2, groundY - h - h*0.28, 10, h*0.25);
+    // Smoke puffs
+    ctx.fillStyle='rgba(200,200,200,0.4)';
+    for(let i=0;i<3;i++){
+      ctx.beginPath();
+      ctx.arc(sx+w*0.2+5, groundY-h-h*0.28-8-i*9+((tik*0.5+i*30)%30)-15, 4+i*2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawFence(sx, groundY, w){
+  ctx.strokeStyle='#c8b080'; ctx.lineWidth=1.5;
+  const posts=Math.floor(w/12);
+  for(let i=0;i<posts;i++){
+    const px=sx - w/2 + i*(w/posts);
+    ctx.beginPath(); ctx.moveTo(px,groundY); ctx.lineTo(px,groundY-14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px,groundY-11); ctx.lineTo(px+8,groundY-9); ctx.stroke();
+  }
+}
+
+function drawBuilding(sx, groundY, w, h, color, winRows, winCols, waterTower, billboard){
+  ctx.fillStyle=color;
+  ctx.fillRect(sx-w/2, groundY-h, w, h);
+  // Windows
+  const ww=Math.max(5, w/winCols - 3);
+  const wh=Math.max(4, 13);
+  for(let r=0;r<winRows;r++){
+    for(let c=0;c<winCols;c++){
+      const lit=Math.random()<0.65;
+      ctx.fillStyle=lit?'rgba(255,240,120,0.85)':'rgba(20,30,50,0.6)';
+      const wx=sx-w/2+3+c*(w/winCols);
+      const wy=groundY-h+6+r*(wh+3);
+      if(wy+wh<groundY-2) ctx.fillRect(wx, wy, ww, wh);
+    }
+  }
+  // Water tower
+  if(waterTower){
+    ctx.fillStyle='#604030';
+    ctx.fillRect(sx-6, groundY-h-20, 12, 20);
+    ctx.fillStyle='#8a6040';
+    ctx.beginPath(); ctx.ellipse(sx,groundY-h-20,12,8,0,0,Math.PI*2); ctx.fill();
+  }
+  // Billboard
+  if(billboard){
+    const bw=w*0.8, bh=14;
+    ctx.fillStyle='#e8d890';
+    ctx.fillRect(sx-bw/2, groundY-h-bh-4, bw, bh);
+    ctx.fillStyle='#303040'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    ctx.fillText('FLY HIGHER', sx, groundY-h-4-3);
+  }
+}
+
+function drawLamp(sx, groundY, h){
+  ctx.strokeStyle='#8a9090'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY-h);
+  ctx.quadraticCurveTo(sx,groundY-h-10,sx+14,groundY-h-10); ctx.stroke();
+  ctx.fillStyle='#ffee80'; ctx.globalAlpha=0.9;
+  ctx.beginPath(); ctx.arc(sx+14,groundY-h-10,4,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=0.15; ctx.fillStyle='#ffee80';
+  ctx.beginPath(); ctx.arc(sx+14,groundY-h-10,12,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+}
+
+function drawCrater(sx, groundY, r){
+  ctx.strokeStyle='rgba(50,50,60,0.8)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(sx, groundY, r, r*0.4, 0, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.15)';
+  ctx.beginPath(); ctx.ellipse(sx, groundY+r*0.15, r*0.85, r*0.3, 0, 0, Math.PI*2); ctx.fill();
+}
+
+function drawRock(sx, groundY, w, h){
+  ctx.fillStyle='#808090';
+  ctx.beginPath(); ctx.ellipse(sx, groundY-h/2, w/2, h/2, -0.2, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.2)';
+  ctx.beginPath(); ctx.ellipse(sx-w*0.1, groundY-h*0.6, w*0.2, h*0.15, -0.3, 0, Math.PI*2); ctx.fill();
+}
+
+function drawFlag(sx, groundY){
+  ctx.strokeStyle='#c0c0c0'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY-40); ctx.stroke();
+  // US flag simplified — just red/white stripes
+  for(let i=0;i<5;i++){
+    ctx.fillStyle=i%2===0?'#cc2222':'#ffffff';
+    ctx.fillRect(sx, groundY-40+i*4, 22, 4);
+  }
+  ctx.fillStyle='rgba(0,30,100,0.85)';
+  ctx.fillRect(sx, groundY-40, 10, 10);
+  ctx.fillStyle='white'; ctx.font='5px Arial'; ctx.textAlign='left';
+  ctx.fillText('★★', sx+1, groundY-33);
+}
+
+function drawEarth(sx, wy){
+  const r=60;
+  ctx.save();
+  // Glow
+  const grd=ctx.createRadialGradient(sx,wy,r*0.5,sx,wy,r*1.6);
+  grd.addColorStop(0,'rgba(60,140,255,0.2)');
+  grd.addColorStop(1,'rgba(60,140,255,0)');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(sx,wy,r*1.6,0,Math.PI*2); ctx.fill();
+  // Body
+  const eg=ctx.createRadialGradient(sx-r*0.3,wy-r*0.3,r*0.1,sx,wy,r);
+  eg.addColorStop(0,'#2050c8'); eg.addColorStop(1,'#0a1870');
+  ctx.fillStyle=eg; ctx.beginPath(); ctx.arc(sx,wy,r,0,Math.PI*2); ctx.fill();
+  // Land masses
+  ctx.fillStyle='#2a8040'; ctx.globalAlpha=0.8;
+  ctx.beginPath(); ctx.ellipse(sx-12,wy-10,22,14,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(sx+18,wy+8,14,22,0.5,0,Math.PI*2); ctx.fill();
+  ctx.globalAlpha=1;
+  // Atmosphere
+  const atm=ctx.createRadialGradient(sx,wy,r-4,sx,wy,r+6);
+  atm.addColorStop(0,'rgba(100,180,255,0)');
+  atm.addColorStop(1,'rgba(100,180,255,0.35)');
+  ctx.fillStyle=atm; ctx.beginPath(); ctx.arc(sx,wy,r+6,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawPalm(sx, groundY, h, lean){
+  // Trunk (quadratic bezier for curve)
+  const tx=sx+lean*h;
+  ctx.strokeStyle='#a07040'; ctx.lineWidth=8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.quadraticCurveTo(sx+lean*h*0.5,groundY-h*0.5,tx,groundY-h); ctx.stroke();
+  ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.quadraticCurveTo(sx+lean*h*0.5,groundY-h*0.5,tx,groundY-h); ctx.stroke();
+  // Fronds
+  const fronds=[
+    [0,-h*0.4],[h*0.35,-h*0.25],[-h*0.35,-h*0.2],[h*0.2,0],[-h*0.15,h*0.05],
+  ];
+  ctx.strokeStyle='#3a7830'; ctx.lineWidth=3; ctx.lineCap='round';
+  for(const [fdx,fdy] of fronds){
+    ctx.save();
+    ctx.translate(tx,groundY-h);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(fdx*0.5,fdy*0.5,fdx,fdy); ctx.stroke();
+    // Leaves on each frond
+    ctx.strokeStyle='#4a9840'; ctx.lineWidth=1.5;
+    for(let t=0.3;t<=1;t+=0.2){
+      const bx=fdx*t, by=fdy*t;
+      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+fdy*0.2,by-fdx*0.2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-fdy*0.2,by+fdx*0.2); ctx.stroke();
+    }
     ctx.restore();
   }
 }
 
-function drawThermals() {
-  for (let t of thermals) {
-    let sx = t.x - camX;
-    if (sx < -130 || sx > W + 130) continue;
-    for (let k = 0; k < 4; k++) {
-      let phase = ((tik * 0.007 + k/4 + t.phase) % 1);
-      let alpha = Math.sin(phase * Math.PI) * 0.28;
-      let r     = t.r * (0.18 + phase * 0.9);
-      let y     = t.y  - phase * 150;
+function drawUmbrella(sx, groundY, color){
+  // Pole
+  ctx.strokeStyle='#c0a060'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY-50); ctx.stroke();
+  // Canopy
+  ctx.fillStyle=color;
+  ctx.beginPath(); ctx.ellipse(sx,groundY-50,32,12,0,Math.PI,0); ctx.fill();
+  // Stripes
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  for(let i=-3;i<=3;i++){
+    if(i%2===0) continue;
+    ctx.save(); ctx.translate(sx,groundY-50);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(i*10,12); ctx.lineTo(i*10-5,12); ctx.lineTo(0,0); ctx.fill();
+    ctx.restore();
+  }
+  // Handle
+  ctx.strokeStyle='#c0a060'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(sx+6,groundY-3,6,0,Math.PI); ctx.stroke();
+}
+
+function drawWave(sx, wy){
+  ctx.strokeStyle='rgba(100,180,255,0.5)'; ctx.lineWidth=2;
+  ctx.beginPath();
+  for(let x=0;x<40;x++){
+    const y=wy + Math.sin((x/40)*Math.PI*2 + tik*0.05)*4;
+    x===0?ctx.moveTo(sx+x,y):ctx.lineTo(sx+x,y);
+  }
+  ctx.stroke();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — CLOUDS
+// ══════════════════════════════════════════════════════════════════
+function drawClouds(){
+  const map = currentMapDef();
+  if(map.key==='moon') return;
+  for(const c of worldClouds){
+    const spd = c.layer===0 ? 0.12 : 0.35;
+    const sx  = c.wx - camX*spd;
+    if(sx < -200 || sx > W+200) continue;
+
+    ctx.save();
+    ctx.globalAlpha = c.alpha;
+    const grey=c.grey;
+    ctx.fillStyle=`rgb(${Math.round(255*grey)},${Math.round(255*grey)},${Math.round(255*grey)})`;
+    ctx.shadowBlur=18; ctx.shadowColor=`rgba(255,255,255,${c.alpha*0.3})`;
+
+    // Draw multiple overlapping circles
+    const bumps=c.bumps;
+    ctx.beginPath();
+    ctx.arc(sx,           c.wy,            c.r,     0, Math.PI*2);
+    ctx.arc(sx+c.r*0.75,  c.wy+c.r*0.12,   c.r*0.7, 0, Math.PI*2);
+    ctx.arc(sx-c.r*0.6,   c.wy+c.r*0.15,   c.r*0.6, 0, Math.PI*2);
+    if(bumps>3) ctx.arc(sx+c.r*0.2, c.wy-c.r*0.48, c.r*0.52, 0, Math.PI*2);
+    if(bumps>4) ctx.arc(sx-c.r*0.3, c.wy-c.r*0.35, c.r*0.44, 0, Math.PI*2);
+    ctx.fill();
+
+    // Shadow underneath
+    ctx.globalAlpha=c.alpha*0.18;
+    ctx.fillStyle='#8090a8';
+    ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.ellipse(sx, c.wy+c.r*0.6, c.r*1.1, c.r*0.28, 0, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — THERMALS & RINGS
+// ══════════════════════════════════════════════════════════════════
+function drawThermals(){
+  for(const t of worldThermals){
+    const sx=t.wx-camX;
+    if(sx<-140||sx>W+140) continue;
+    for(let k=0;k<4;k++){
+      const phase=((tik*0.007+k*0.25+t.phase)%1);
+      const alpha=Math.sin(phase*Math.PI)*0.25;
+      const r=t.r*(0.2+phase*0.85);
+      const y=t.wy - phase*160;
       ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = '#ffcc00';
-      ctx.lineWidth   = 2;
-      ctx.shadowBlur  = 10;
-      ctx.shadowColor = '#ffaa00';
-      ctx.beginPath();
-      ctx.ellipse(sx, y, r, r * 0.36, 0, 0, Math.PI*2);
-      ctx.stroke();
+      ctx.globalAlpha=alpha;
+      ctx.strokeStyle='#ffc040'; ctx.lineWidth=2;
+      ctx.shadowBlur=12; ctx.shadowColor='#ff9000';
+      ctx.beginPath(); ctx.ellipse(sx,y,r,r*0.35,0,0,Math.PI*2); ctx.stroke();
       ctx.restore();
     }
   }
 }
 
-function drawRings() {
-  for (let ring of rings) {
-    let sx = ring.x - camX;
-    if (sx < -90 || sx > W + 90) continue;
-    if (ring.hit && ring.flash <= 0.02) continue;
-    let alpha = ring.hit ? ring.flash : 0.85;
-    let color = ring.hit ? '#ffe444' : 'hsl('+ring.hue+',100%,70%)';
+function drawRings(){
+  const map=currentMapDef();
+  const moonMode=map.key==='moon';
+  for(const ring of worldRings){
+    const sx=ring.wx-camX;
+    if(sx<-100||sx>W+100) continue;
+    if(ring.hit && ring.flash<=0.02) continue;
+    const alpha=ring.hit?ring.flash:0.88;
+    const baseColor=moonMode?'#a0d0ff':'hsl(48,100%,68%)';
+    const hitColor=moonMode?'#e0f0ff':'#ffe040';
+    const color=ring.hit?hitColor:baseColor;
+
     ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth   = 4;
-    ctx.shadowBlur  = 18;
-    ctx.shadowColor = color;
-    ctx.beginPath(); ctx.arc(sx, ring.y, ring.r, 0, Math.PI*2); ctx.stroke();
-    if (!ring.hit) {
-      ctx.globalAlpha = alpha * 0.35;
-      ctx.fillStyle   = color;
-      ctx.beginPath(); ctx.arc(sx, ring.y, ring.r*0.16, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=color; ctx.lineWidth=5;
+    ctx.shadowBlur=22; ctx.shadowColor=color;
+    ctx.beginPath(); ctx.arc(sx,ring.wy,ring.r,0,Math.PI*2); ctx.stroke();
+
+    if(!ring.hit){
+      // Inner glow dot
+      ctx.globalAlpha=alpha*0.4;
+      ctx.fillStyle=color;
+      ctx.beginPath(); ctx.arc(sx,ring.wy,ring.r*0.18,0,Math.PI*2); ctx.fill();
+      // Coin count label
+      ctx.globalAlpha=alpha*0.8;
+      ctx.fillStyle='#fff'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+      ctx.fillText('+'+ring.coins+'🪙', sx, ring.wy-ring.r-6);
     }
     ctx.restore();
   }
 }
 
-function drawTrail() {
-  if (!plane.trail || plane.trail.length < 2) return;
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — PLANE
+// ══════════════════════════════════════════════════════════════════
+function drawTrail(){
+  if(!plane.trail||plane.trail.length<2) return;
   ctx.save();
-  for (let i = 1; i < plane.trail.length; i++) {
-    let t = i / plane.trail.length;
-    ctx.globalAlpha = t * 0.35;
-    ctx.strokeStyle = plane.glowTimer > 0 ? '#ffd060' : 'rgba(255,255,255,0.9)';
-    ctx.lineWidth   = 1.8 * t;
+  for(let i=1;i<plane.trail.length;i++){
+    const t=i/plane.trail.length;
+    ctx.globalAlpha=t*0.38;
+    ctx.strokeStyle=plane.glowTimer>0?'#ffc030':'rgba(255,255,255,0.9)';
+    ctx.lineWidth=2*t;
     ctx.beginPath();
-    ctx.moveTo(plane.trail[i-1].x - camX, plane.trail[i-1].y);
-    ctx.lineTo(plane.trail[i].x   - camX, plane.trail[i].y);
+    ctx.moveTo(plane.trail[i-1].x-camX, plane.trail[i-1].y);
+    ctx.lineTo(plane.trail[i].x-camX,   plane.trail[i].y);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawPlane(sx, sy, ang) {
+function drawPlane(sx,sy,ang){
+  const stats=upgradeStats();
+  const lvl=stats.flapsLvl;
+  const pal=PLANE_COLORS[Math.min(lvl, PLANE_COLORS.length-1)];
+
   ctx.save();
-  ctx.translate(sx, sy);
+  ctx.translate(sx,sy);
   ctx.rotate(ang);
 
-  if (plane.glowTimer > 0) {
-    ctx.shadowBlur  = 20;
-    ctx.shadowColor = '#ffc800';
+  // Glow aura when going fast or in thermal
+  if(plane.glowTimer>0){
+    ctx.shadowBlur=28; ctx.shadowColor='rgba(255,200,0,0.8)';
   }
 
+  // Speed glow check
+  const spd=Math.hypot(plane.vx||0,plane.vy||0);
+  if(spd>14){
+    ctx.shadowBlur=Math.min(40,(spd-14)*3);
+    ctx.shadowColor='rgba(180,220,255,0.7)';
+  }
+
+  // Bottom wing
+  ctx.fillStyle=pal.wing2; ctx.strokeStyle=pal.crease; ctx.lineWidth=0.9;
+  ctx.beginPath();
+  ctx.moveTo(28,0); ctx.lineTo(-10,17); ctx.lineTo(-24,0); ctx.lineTo(-10,2);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
   // Top wing
-  ctx.fillStyle   = '#f5f0e4';
-  ctx.strokeStyle = '#c4bcaa';
-  ctx.lineWidth   = 0.9;
+  ctx.fillStyle=pal.body;
   ctx.beginPath();
-  ctx.moveTo(26, 0);
-  ctx.lineTo(-10, -16);
-  ctx.lineTo(-22, 0);
-  ctx.lineTo(-10,  2);
-  ctx.closePath();
-  ctx.fill(); ctx.stroke();
+  ctx.moveTo(28,0); ctx.lineTo(-10,-17); ctx.lineTo(-24,0); ctx.lineTo(-10,2);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
 
-  // Bottom wing (slightly darker, shorter visible edge)
-  ctx.fillStyle = '#e6e0d0';
-  ctx.beginPath();
-  ctx.moveTo(26, 0);
-  ctx.lineTo(-10, 16);
-  ctx.lineTo(-22, 0);
-  ctx.lineTo(-10,  2);
-  ctx.closePath();
-  ctx.fill(); ctx.stroke();
-
-  // Center keel line
-  ctx.strokeStyle = '#b8b0a0';
-  ctx.lineWidth   = 0.7;
-  ctx.beginPath(); ctx.moveTo(26, 0); ctx.lineTo(-22, 0); ctx.stroke();
+  // Center keel
+  ctx.strokeStyle=pal.crease; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(28,0); ctx.lineTo(-24,0); ctx.stroke();
 
   // Crease lines — top wing
-  ctx.strokeStyle = '#d4ccba';
-  ctx.lineWidth   = 0.5;
-  ctx.beginPath(); ctx.moveTo(8,  0); ctx.lineTo(-10, -16); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-10, -16); ctx.stroke();
-  // Crease lines — bottom wing
-  ctx.beginPath(); ctx.moveTo(8,  0); ctx.lineTo(-10, 16); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-10, 16); ctx.stroke();
+  ctx.strokeStyle=pal.crease; ctx.lineWidth=0.6;
+  ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-8,-17); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(-10,-16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-8,17); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-2,0); ctx.lineTo(-10,16); ctx.stroke();
 
-  // Red nose tip
-  ctx.fillStyle  = '#e84040';
-  ctx.shadowBlur = 0;
-  ctx.beginPath(); ctx.arc(25, 0, 2.2, 0, Math.PI*2); ctx.fill();
+  // Flap tabs (level-dependent)
+  if(lvl>=1){
+    const fw=4+lvl*2.5;
+    ctx.fillStyle=pal.wing2; ctx.strokeStyle=pal.crease; ctx.lineWidth=0.7;
+    ctx.beginPath();
+    ctx.moveTo(-9,-16); ctx.lineTo(-20-fw,-23-fw*0.5); ctx.lineTo(-15,-7); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-9,16); ctx.lineTo(-20-fw,23+fw*0.5); ctx.lineTo(-15,7); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
+  // Tail fin (weight upgrade)
+  if(stats.weightLvl>=1){
+    ctx.fillStyle='rgba(180,220,255,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(-24,0); ctx.lineTo(-34-stats.weightLvl*2,-8); ctx.lineTo(-29,0);
+    ctx.lineTo(-34-stats.weightLvl*2,8); ctx.closePath(); ctx.fill();
+  }
+
+  // Nose tip
+  ctx.shadowBlur=0;
+  ctx.fillStyle=pal.nose;
+  ctx.beginPath(); ctx.arc(27,0,2.5,0,Math.PI*2); ctx.fill();
 
   ctx.restore();
 }
 
-function drawParticles() {
-  for (let p of particles) {
-    let sx = p.x - camX;
+function drawParticles(){
+  for(const p of particles){
+    const sx=p.x-camX;
     ctx.save();
-    ctx.globalAlpha = p.life * 0.88;
-    ctx.fillStyle   = p.color;
-    ctx.shadowBlur  = 7;
-    ctx.shadowColor = p.color;
-    ctx.beginPath(); ctx.arc(sx, p.y, p.r * p.life, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha=p.life*0.9;
+    ctx.fillStyle=p.color;
+    ctx.shadowBlur=8; ctx.shadowColor=p.color;
+    ctx.beginPath(); ctx.arc(sx,p.y,p.r*p.life,0,Math.PI*2); ctx.fill();
     ctx.restore();
-    p.x  += p.vx; p.y  += p.vy;
-    p.vy += 0.07;
-    p.vx *= 0.97; p.vy *= 0.97;
-    p.life -= p.decay;
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.07;
+    p.vx*=0.97; p.vy*=0.97;
+    p.life-=p.decay;
   }
-  particles = particles.filter(p => p.life > 0);
+  particles=particles.filter(p=>p.life>0);
 }
 
-function drawCrashPieces() {
-  for (let p of crashPieces) {
-    let sx = p.x - camX;
+function drawCrashPieces(){
+  for(const p of crashPieces){
+    const sx=p.x-camX;
     ctx.save();
-    ctx.globalAlpha = p.life;
-    ctx.translate(sx, p.y);
-    ctx.rotate(p.angle);
-    ctx.fillStyle   = '#f0e8d8';
-    ctx.strokeStyle = '#c0b4a0';
-    ctx.lineWidth   = 0.7;
+    ctx.globalAlpha=p.life;
+    ctx.translate(sx,p.y); ctx.rotate(p.angle);
+    ctx.fillStyle='#f0e8d4'; ctx.strokeStyle='#c0b49e'; ctx.lineWidth=0.8;
     ctx.beginPath();
-    ctx.moveTo(p.w/2, 0); ctx.lineTo(0, -p.h/2);
-    ctx.lineTo(-p.w/2, 0); ctx.lineTo(0, p.h/2);
+    ctx.moveTo(p.w/2,0); ctx.lineTo(0,-p.h/2);
+    ctx.lineTo(-p.w/2,0); ctx.lineTo(0,p.h/2);
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
-    p.x += p.vx; p.y += p.vy;
-    p.vy += 0.14; p.vx *= 0.99; p.vy *= 0.99;
-    p.angle += p.spin; p.life -= p.decay;
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.14;
+    p.vx*=0.99; p.vy*=0.99;
+    p.angle+=p.spin; p.life-=p.decay;
   }
-  crashPieces = crashPieces.filter(p => p.life > 0);
+  crashPieces=crashPieces.filter(p=>p.life>0);
 }
 
-// ── Aim & launch ──────────────────────────────────────────────────────────────
-let isDragging = false, dragSX = 0, dragSY = 0, aimX = 0, aimY = 0;
-
-function drawAim() {
-  if (state !== 'aim') return;
-  let px = plane.x - camX, py = plane.y;
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — AIM
+// ══════════════════════════════════════════════════════════════════
+function drawAim(){
+  if(appState!=='aim') return;
+  const px=plane.x-camX, py=plane.y;
   ctx.save();
-
-  if (isDragging) {
-    let dx   = dragSX - aimX, dy = dragSY - aimY;
-    let len  = Math.sqrt(dx*dx + dy*dy);
-    let pwr  = Math.min(len / 135, 1);
-    let ang  = Math.atan2(dy, dx);   // launch direction = opposite drag
-    let dist = Math.min(len, 135) * 1.45;
-    let ex   = px + Math.cos(ang) * dist;
-    let ey   = py + Math.sin(ang) * dist;
+  if(isDragging){
+    const dx=dragSX-aimX, dy=dragSY-aimY;
+    const len=Math.hypot(dx,dy);
+    const pwr=Math.min(len/130,1);
+    const ang=Math.atan2(dy,dx);
+    const dist=Math.min(len,130)*1.4;
+    const ex=px+Math.cos(ang)*dist, ey=py+Math.sin(ang)*dist;
 
     // Trajectory dashes
-    ctx.setLineDash([5, 6]);
-    ctx.strokeStyle = 'rgba(255,220,55,' + (0.4 + pwr*0.5) + ')';
-    ctx.lineWidth   = 2;
-    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.setLineDash([6,7]);
+    ctx.strokeStyle=`rgba(255,220,55,${0.4+pwr*0.5})`;
+    ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(ex,ey); ctx.stroke();
     ctx.setLineDash([]);
 
     // Arrow head
-    ctx.save();
-    ctx.translate(ex, ey); ctx.rotate(ang);
-    ctx.fillStyle = '#ffe044';
-    ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-5, -5); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.translate(ex,ey); ctx.rotate(ang);
+    ctx.fillStyle='#ffe040';
+    ctx.shadowBlur=12; ctx.shadowColor='#ffc000';
+    ctx.beginPath(); ctx.moveTo(16,0); ctx.lineTo(-6,-6); ctx.lineTo(-6,6); ctx.closePath(); ctx.fill();
     ctx.restore();
 
     // Power bar
-    let bx = 14, by = H - 34, bw = 155, bh = 14;
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.roundRect(bx-2, by-2, bw+4, bh+4, 6); ctx.fill();
-    let col = pwr < 0.38 ? '#55dd33' : pwr < 0.72 ? '#ffaa00' : '#ff3333';
-    ctx.fillStyle = col;
-    if (pwr > 0) { ctx.roundRect(bx, by, bw*pwr, bh, 4); ctx.fill(); }
-    ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 1;
-    ctx.roundRect(bx, by, bw, bh, 4); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'left';
-    ctx.fillText('POWER', bx+3, by+10);
+    const bx=14, by=H-38, bw=160, bh=16;
+    ctx.fillStyle='rgba(0,0,0,0.5)';
+    ctx.roundRect(bx-3,by-3,bw+6,bh+6,8); ctx.fill();
+    const col=pwr<0.35?'#44dd22':pwr<0.7?'#ffaa00':'#ff3322';
+    if(pwr>0){
+      const grad=ctx.createLinearGradient(bx,0,bx+bw*pwr,0);
+      grad.addColorStop(0,col); grad.addColorStop(1,'#fff');
+      ctx.fillStyle=grad;
+      ctx.roundRect(bx,by,bw*pwr,bh,5); ctx.fill();
+    }
+    ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1;
+    ctx.roundRect(bx,by,bw,bh,5); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.font='bold 10px Arial'; ctx.textAlign='left';
+    ctx.fillText('POWER  '+(Math.round(pwr*100))+'%', bx+5, by+11);
+
   } else {
-    // Idle pulse ring
-    let ph = (tik % 90) / 90;
-    ctx.strokeStyle = 'rgba(255,215,50,' + (0.65 - ph*0.4) + ')';
-    ctx.lineWidth   = 2;
-    ctx.beginPath(); ctx.arc(px, py, 22 + ph*15, 0, Math.PI*2); ctx.stroke();
-    ctx.fillStyle   = 'rgba(255,255,255,0.62)';
-    ctx.font        = '12px Segoe UI';
-    ctx.textAlign   = 'center';
-    ctx.fillText('drag to launch', px, py - 34);
+    // Idle pulse
+    const ph=(tik%80)/80;
+    ctx.strokeStyle=`rgba(255,215,50,${0.7-ph*0.45})`;
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(px,py,24+ph*18,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.font='bold 13px Segoe UI';
+    ctx.textAlign='center';
+    ctx.shadowBlur=8; ctx.shadowColor='rgba(0,0,0,0.5)';
+    ctx.fillText('drag to launch', px, py-38);
   }
   ctx.restore();
 }
 
-// ── HUD ───────────────────────────────────────────────────────────────────────
-function drawHUD() {
+// ══════════════════════════════════════════════════════════════════
+//  DRAWING — HUD
+// ══════════════════════════════════════════════════════════════════
+function drawHUD(){
+  if(appState!=='fly'&&appState!=='crash') return;
+  const map=currentMapDef();
+
+  // Distance pill — top left
   ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.38)';
-  ctx.roundRect(W - 152, 10, 142, 60, 12); ctx.fill();
-  ctx.fillStyle   = '#ffffff';
-  ctx.font        = 'bold 32px Segoe UI';
-  ctx.textAlign   = 'right';
-  ctx.fillText(distance + ' ft', W - 14, 50);
-  ctx.font      = '11px Segoe UI';
-  ctx.fillStyle = 'rgba(255,255,255,0.58)';
-  ctx.fillText('BEST  ' + best + ' ft', W - 14, 64);
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.roundRect(12,12,180,58,14); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 34px Segoe UI'; ctx.textAlign='left';
+  ctx.fillText(dist+' ft', 22, 50);
+  ctx.font='11px Segoe UI'; ctx.fillStyle='rgba(255,255,255,0.55)';
+  ctx.fillText('BEST  '+best+' ft', 22, 64);
   ctx.restore();
 
-  // Controls hint during flight
-  if (state === 'fly') {
+  // Coins — top right
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.roundRect(W-130,12,118,42,14); ctx.fill();
+  ctx.fillStyle='#ffd040'; ctx.font='bold 16px Segoe UI'; ctx.textAlign='right';
+  ctx.shadowBlur=8; ctx.shadowColor='rgba(255,200,0,0.5)';
+  ctx.fillText('🪙 '+coinsThisRun, W-16, 38);
+  ctx.restore();
+
+  // Map name — top center
+  ctx.save();
+  const mw=ctx.measureText(map.name).width+28;
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.roundRect(W/2-mw/2,12,mw,30,999); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font='bold 12px Segoe UI';
+  ctx.textAlign='center';
+  ctx.fillText(map.name.toUpperCase(), W/2, 31);
+  ctx.restore();
+
+  // Altitude bar — right side
+  const groundY=H*map.horizon;
+  const altH=Math.min(H*0.55, 200);
+  const altX=W-18, altY=(H-altH)/2;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  ctx.roundRect(altX-6,altY-2,14,altH+4,7); ctx.fill();
+  const altRatio=1-Math.max(0,Math.min(1,(plane.y)/(groundY)));
+  ctx.fillStyle='rgba(80,200,120,0.9)';
+  ctx.roundRect(altX-5,altY+altH*(1-altRatio),12,altH*altRatio,5); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='9px Arial'; ctx.textAlign='center';
+  ctx.fillText('ALT', altX+1, altY-6);
+  ctx.restore();
+
+  // Wind indicator
+  if(map.windGust>0||map.windBase>0){
     ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.font      = '10px Segoe UI';
-    ctx.textAlign = 'left';
-    ctx.fillText('MOUSE / ↑↓ to steer', 12, 22);
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.roundRect(12,80,90,30,10); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='10px Arial'; ctx.textAlign='left';
+    ctx.fillText('WIND', 20, 97);
+    const arrowLen=Math.abs(wind)*600;
+    const dir=wind<0?-1:1;
+    ctx.strokeStyle=Math.abs(wind)>0.05?'#ff8040':'#80d0ff';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(55,94); ctx.lineTo(55+dir*arrowLen,94); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(55+dir*arrowLen,94);
+    ctx.lineTo(55+dir*(arrowLen-5),90); ctx.lineTo(55+dir*(arrowLen-5),98); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
 }
 
-function drawResult() {
-  if (state !== 'result') return;
-  let isNew = distance >= best && distance > 0;
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,18,50,0.70)';
-  ctx.fillRect(0, 0, W, H);
-
-  let cw = 360, ch = 235, cx = (W-cw)/2, cy = (H-ch)/2;
-  ctx.fillStyle = 'rgba(236,248,255,0.97)';
-  ctx.roundRect(cx, cy, cw, ch, 22); ctx.fill();
-
-  ctx.textAlign = 'center';
-  ctx.font      = 'bold 21px Segoe UI';
-  ctx.fillStyle = isNew ? '#b87000' : '#1a3a6a';
-  ctx.fillText(isNew ? '🏆  New Best!  🏆' : '✈️  Nice Throw!', W/2, cy + 44);
-
-  ctx.font      = 'bold 62px Segoe UI';
-  ctx.fillStyle = '#0c2040';
-  ctx.fillText(distance + ' ft', W/2, cy + 120);
-
-  ctx.font      = '15px Segoe UI';
-  ctx.fillStyle = '#5588aa';
-  ctx.fillText('Best: ' + best + ' ft', W/2, cy + 148);
-
-  // Play again button
-  ctx.fillStyle = '#1a4ecc';
-  ctx.roundRect(W/2 - 95, cy + 168, 190, 44, 12); ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.font      = 'bold 16px Segoe UI';
-  ctx.fillText('Throw Again  ✈️', W/2, cy + 195);
-
-  ctx.restore();
-}
-
-// ── Input ─────────────────────────────────────────────────────────────────────
-function startDrag(mx, my) {
-  let px = plane.x - camX;
-  if (Math.sqrt((mx-px)**2 + (my-plane.y)**2) < 60) {
-    isDragging = true; dragSX = mx; dragSY = my; aimX = mx; aimY = my;
+// ══════════════════════════════════════════════════════════════════
+//  INPUT
+// ══════════════════════════════════════════════════════════════════
+function startDrag(mx,my){
+  const px=plane.x-camX;
+  if(Math.hypot(mx-px,my-plane.y)<70){
+    isDragging=true; dragSX=mx; dragSY=my; aimX=mx; aimY=my;
   }
 }
 
-function endDrag() {
-  if (!isDragging) return;
-  isDragging = false;
-  let dx  = dragSX - aimX, dy = dragSY - aimY;
-  let len = Math.sqrt(dx*dx + dy*dy);
-  let pwr = Math.min(len / 135, 1);
-  if (pwr < 0.07) return;
-  let ang   = Math.atan2(dy, dx);
-  let speed = 3.5 + pwr * 13;
-  plane.vx  = Math.cos(ang) * speed;
-  plane.vy  = Math.sin(ang) * speed;
-  plane.angle = ang;
-  plane.trail = [];
-  state = 'fly';
+function endDrag(){
+  if(!isDragging) return;
+  isDragging=false;
+  const dx=dragSX-aimX, dy=dragSY-aimY;
+  const len=Math.hypot(dx,dy);
+  const pwr=Math.min(len/130,1);
+  if(pwr<0.07) return;
+  const ang=Math.atan2(dy,dx);
+  const stats=upgradeStats();
+  const speed=(3.5+pwr*13)*stats.speedMult;
+  plane.vx=Math.cos(ang)*speed;
+  plane.vy=Math.sin(ang)*speed;
+  plane.angle=ang;
+  plane.trail=[];
+  appState='fly';
 }
 
-canvas.addEventListener('mousedown', e => {
-  const r = canvas.getBoundingClientRect();
-  let mx = e.clientX - r.left, my = e.clientY - r.top;
-  if (state === 'result') { initPlane(); buildWorld(); return; }
-  if (state === 'aim') startDrag(mx, my);
+canvas.addEventListener('mousedown',e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left, my=e.clientY-r.top;
+  if(appState==='aim') startDrag(mx,my);
 });
-canvas.addEventListener('mouseup', () => { if (state === 'aim') endDrag(); });
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  mouseX=e.clientX-r.left; mouseY=e.clientY-r.top;
+  if(isDragging){ aimX=mouseX; aimY=mouseY; }
+});
+canvas.addEventListener('mouseup',()=>{ if(appState==='aim') endDrag(); });
 
-canvas.addEventListener('touchstart', e => {
+canvas.addEventListener('touchstart',e=>{
   e.preventDefault();
-  const t = e.touches[0], r = canvas.getBoundingClientRect();
-  let mx = t.clientX - r.left, my = t.clientY - r.top;
-  mouseX = mx; mouseY = my;
-  if (state === 'result') { initPlane(); buildWorld(); return; }
-  if (state === 'aim') startDrag(mx, my);
-}, { passive: false });
-canvas.addEventListener('touchmove', e => {
+  const t=e.touches[0],r=canvas.getBoundingClientRect();
+  mouseX=t.clientX-r.left; mouseY=t.clientY-r.top;
+  if(appState==='aim') startDrag(mouseX,mouseY);
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
   e.preventDefault();
-  const t = e.touches[0], r = canvas.getBoundingClientRect();
-  mouseX = t.clientX - r.left; mouseY = t.clientY - r.top;
-  if (isDragging) { aimX = mouseX; aimY = mouseY; }
-}, { passive: false });
-canvas.addEventListener('touchend', e => {
+  const t=e.touches[0],r=canvas.getBoundingClientRect();
+  mouseX=t.clientX-r.left; mouseY=t.clientY-r.top;
+  if(isDragging){ aimX=mouseX; aimY=mouseY; }
+},{passive:false});
+canvas.addEventListener('touchend',e=>{
   e.preventDefault();
-  if (state === 'aim') endDrag();
-}, { passive: false });
+  if(appState==='aim') endDrag();
+},{passive:false});
 
-// ── Main loop ─────────────────────────────────────────────────────────────────
-function loop() {
+// Keyboard
+const keys={};
+document.addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Space'&&appState==='aim'){ e.preventDefault(); }
+});
+document.addEventListener('keyup',e=>{ keys[e.code]=false; });
+
+// Arrow key steering overlay (maps to virtual mouseY)
+function handleKeys(){
+  if(appState!=='fly') return;
+  if(keys['ArrowUp'])   mouseY=Math.max(0,mouseY-5);
+  if(keys['ArrowDown']) mouseY=Math.min(H,mouseY+5);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  UI SCREENS
+// ══════════════════════════════════════════════════════════════════
+function updateMenuUI(){
+  document.getElementById('menuBest').textContent=best;
+  document.getElementById('menuCoins').textContent=ppCoins;
+  document.getElementById('menuMapChip').textContent='Map: '+currentMapDef().name;
+}
+
+function renderMapsScreen(){
+  document.getElementById('mapsCoinsLabel').textContent=ppCoins+' coins available';
+  const grid=document.getElementById('mapsGrid');
+  grid.innerHTML='';
+  for(const map of MAP_DEFS){
+    const owned=ppSave.unlocked.includes(map.key);
+    const active=ppSave.map===map.key;
+    const canBuy=ppCoins>=map.unlockCoins;
+
+    const card=document.createElement('div');
+    card.className='map-card';
+
+    // Banner
+    const banner=document.createElement('div');
+    banner.className='map-banner';
+    // Draw sky preview using inline SVG
+    const skyC=map.skyColors;
+    banner.style.background=`linear-gradient(180deg,${skyC[0]} 0%,${skyC[1]} 40%,${skyC[2]} 75%,${skyC[3]} 100%)`;
+    const nameEl=document.createElement('div');
+    nameEl.className='map-banner-name'; nameEl.textContent=map.name;
+    banner.appendChild(nameEl);
+    card.appendChild(banner);
+
+    const body=document.createElement('div'); body.className='map-body';
+    body.innerHTML=`<div class="map-desc">${map.desc}</div>
+      <div class="map-meta">${map.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+
+    const btn=document.createElement('button');
+    btn.className='map-btn';
+    if(active){ btn.className+=' active'; btn.textContent='Currently Playing'; btn.disabled=true; }
+    else if(owned){ btn.className+=' play'; btn.textContent='PLAY'; btn.addEventListener('click',()=>selectAndPlay(map.key)); }
+    else if(canBuy){ btn.className+=' unlock'; btn.textContent='Unlock — '+map.unlockCoins+' coins'; btn.addEventListener('click',()=>unlockMap(map.key)); }
+    else { btn.className+=' play'; btn.textContent='🔒 Need '+map.unlockCoins+' coins'; btn.disabled=true; }
+    body.appendChild(btn); card.appendChild(body);
+
+    // Lock overlay for locked maps
+    if(!owned){
+      const ov=document.createElement('div'); ov.className='map-lock-overlay';
+      ov.innerHTML=`<div class="lock-icon">🔒</div><div class="lock-cost">${map.unlockCoins} coins to unlock</div>`;
+      ov.style.pointerEvents='none';
+      card.appendChild(ov);
+    }
+
+    grid.appendChild(card);
+  }
+}
+
+function renderUpgradesScreen(){
+  document.getElementById('upgradesCoinsLabel').textContent=ppCoins+' coins available';
+  const grid=document.getElementById('upgradesGrid');
+  grid.innerHTML='';
+  for(const upDef of UPGRADE_DEFS){
+    const curLvl=ppSave.upgrades[upDef.key]||0;
+    const maxLvl=upDef.levels.length-1;
+    const maxed=curLvl>=maxLvl;
+    const nextLvl=upDef.levels[curLvl+1];
+    const nextCost=nextLvl?nextLvl.cost:null;
+    const canBuy=!maxed&&ppCoins>=nextCost;
+
+    const card=document.createElement('div'); card.className='upgrade-card';
+
+    // Level dots
+    const dotsHTML=upDef.levels.slice(1).map((_,i)=>{
+      const filled=i<curLvl;
+      const m=i===maxLvl-1&&curLvl===maxLvl;
+      return `<div class="level-dot ${filled?(curLvl===maxLvl?'maxed':'filled'):''}"></div>`;
+    }).join('');
+
+    const curLabel=upDef.levels[curLvl].label;
+    const costLabel=maxed?'MAX':nextCost+' coins for Level '+(curLvl+1);
+
+    card.innerHTML=`
+      <h3>${upDef.icon} ${upDef.name}</h3>
+      <p>${upDef.desc}</p>
+      <div class="upgrade-levels">${dotsHTML}</div>
+      <div class="upgrade-meta">
+        <span>Level ${curLvl} / ${maxLvl}: ${curLabel}</span>
+        <span>${costLabel}</span>
+      </div>
+    `;
+    const btn=document.createElement('button');
+    btn.className='upgrade-btn '+(maxed?'maxed':'buy');
+    btn.textContent=maxed?'MAXED UP':canBuy?'Upgrade — '+nextCost+' coins':'Need '+nextCost+' coins';
+    btn.disabled=maxed||!canBuy;
+    if(!maxed&&canBuy) btn.addEventListener('click',()=>buyUpgrade(upDef.key));
+    card.appendChild(btn);
+    grid.appendChild(card);
+  }
+}
+
+function unlockMap(key){
+  const map=MAP_DEFS.find(m=>m.key===key);
+  if(!map||ppCoins<map.unlockCoins) return;
+  ppCoins-=map.unlockCoins;
+  ppSave.unlocked.push(key);
+  persistSave();
+  renderMapsScreen();
+}
+
+function selectAndPlay(key){
+  ppSave.map=key;
+  persistSave();
+  showScreen(null);
+  startGame();
+}
+
+function buyUpgrade(key){
+  const upDef=UPGRADE_DEFS.find(u=>u.key===key);
+  if(!upDef) return;
+  const curLvl=ppSave.upgrades[key]||0;
+  const maxLvl=upDef.levels.length-1;
+  if(curLvl>=maxLvl) return;
+  const cost=upDef.levels[curLvl+1].cost;
+  if(ppCoins<cost) return;
+  ppCoins-=cost;
+  ppSave.upgrades[key]=curLvl+1;
+  persistSave();
+  renderUpgradesScreen();
+  // update coin label
+  document.getElementById('upgradesCoinsLabel').textContent=ppCoins+' coins available';
+}
+
+// Button wiring
+document.getElementById('menuPlayBtn').addEventListener('click',()=>startGame());
+document.getElementById('menuMapsBtn').addEventListener('click',()=>{
+  showScreen('mapsScreen');
+  renderMapsScreen();
+});
+document.getElementById('menuUpgradesBtn').addEventListener('click',()=>{
+  showScreen('upgradesScreen');
+  renderUpgradesScreen();
+});
+document.getElementById('mapsCloseBtn').addEventListener('click',()=>{ showScreen('menuScreen'); updateMenuUI(); });
+document.getElementById('upgradesCloseBtn').addEventListener('click',()=>{ showScreen('menuScreen'); updateMenuUI(); });
+document.getElementById('resultFlyBtn').addEventListener('click',()=>{
+  document.getElementById('result-screen').classList.remove('active');
+  startGame();
+});
+document.getElementById('resultMenuBtn').addEventListener('click',()=>{
+  document.getElementById('result-screen').classList.remove('active');
+  goMenu();
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  MAIN LOOP
+// ══════════════════════════════════════════════════════════════════
+function loop(){
   tik++;
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(0,0,W,H);
 
   drawSky();
-  drawMountains();
+  drawFarBackground();
+  drawDecos(0);         // far bg layer
+  drawMidBackground();
+  drawDecos(1);         // mid layer
   drawClouds();
   drawThermals();
   drawGround();
+  drawDecos(2);         // near / ground layer
+
   drawRings();
 
-  if (state === 'fly') {
+  if(appState==='fly'||appState==='crash'){
     drawTrail();
-    physicsStep();
-    drawPlane(plane.x - camX, plane.y, plane.angle);
+    if(appState==='fly') physicsStep();
+    drawPlane(plane.x-camX, plane.y, plane.angle);
   }
-  if (state === 'crash') {
-    drawCrashPieces();
-  }
-  if (state === 'aim') {
-    drawPlane(plane.x - camX, plane.y, plane.angle);
+  if(appState==='aim'){
+    drawPlane(plane.x-camX, plane.y, plane.angle);
     drawAim();
+  }
+  if(appState==='crash'){
+    drawCrashPieces();
   }
 
   drawParticles();
+  handleKeys();
   drawHUD();
-  drawResult();
 
   requestAnimationFrame(loop);
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-buildWorld();
-initPlane();
+// ══════════════════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════════════════
+updateMenuUI();
 loop();
 </script>
 </body>

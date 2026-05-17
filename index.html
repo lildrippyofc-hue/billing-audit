@@ -2280,7 +2280,7 @@
       </div>
       <div class="toolbar">
         <input id="reportFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
-        <label class="file-button primary" for="reportFile">
+        <label class="file-button primary work-only-btn" for="reportFile">
           <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
             <path d="M12 3v12"></path>
             <path d="m7 8 5-5 5 5"></path>
@@ -2288,7 +2288,7 @@
           </svg>
           Attach truck report
         </label>
-        <button id="sampleButton" type="button">
+        <button id="sampleButton" type="button" class="work-only-btn">
           <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
             <path d="M4 19V5"></path>
             <path d="M4 19h16"></path>
@@ -4530,7 +4530,7 @@
 
       // Tab visibility by role
       var WORK_TABS  = ['overview','data','ddp','truckFinder','audit','clerkDoor','doorSuggestor','breakdownsAudit','truckChargeAudit','history','help'];
-      var GUEST_TABS = ['inOtherNews'];
+      var GUEST_TABS = ['inOtherNews','localWeather','flappyBird','paperPlane','jetpackJames'];
 
       function applyRole(role) {
         var allButtons = document.querySelectorAll('.tab-button[data-tab]');
@@ -4545,6 +4545,10 @@
             show = GUEST_TABS.indexOf(tab) !== -1;
           }
           btn.style.display = show ? '' : 'none';
+        });
+        // Hide work-only toolbar buttons from guest
+        document.querySelectorAll('.work-only-btn').forEach(function(el) {
+          el.style.display = (role === 'guest') ? 'none' : '';
         });
         // If current active tab is hidden, jump to first visible tab
         var activeBtn = document.querySelector('.tab-button[aria-selected="true"]');
