@@ -104,6 +104,9 @@ const STATE = {
   jamesAnnoyance: 0,        // 0-100; high = James starts losing it
   jamesAnnoyanceTimer: 0,
   _caught: false,           // suspicion-100 lose condition triggered
+  chanceRoastTarget: null,  // id of NPC Chance is currently walking toward to roast
+  chanceRoastTimer: 0,      // cooldown before next roast mission
+  chandlerRageLevel: 0,     // 0-5; how unhinged Chandler is getting from Chance's abuse
 };
 
 // Zone layout
@@ -198,7 +201,7 @@ const NPC_DEFS = [
       "Done. Already did it in my head.",
     ],
     choices:["Ask to cover your truck","Ask her to distract James","Go smoke together 🚬"],
-    gossipChoices:["Spill on Chandler 🍞","What's Drew's deal?","Real talk about James","Have you seen Pam lately?"],
+    gossipChoices:["Spill on Chandler 🍞","What's Drew's deal?","Real talk about James","What's Chance's deal? 🔥"],
   },
   { id:'todd', name:'Todd', title:'(Freezer Lead)', color:0x44cc44, zone:'freezer', patrol:false,
     appearance:{ shirt:0x1a6622, pants:0x223322, skin:0xd8b888, hair:0x222222, parka:true },
@@ -231,6 +234,49 @@ const NPC_DEFS = [
       "My card got declined but that's a whole other situation.",
     ],
     choices:["Lend $5","Refuse","Ask for last week's $5 back"],
+  },
+  { id:'chance', name:'Chance', title:'(The Instigator)', color:0xff6a00, zone:'floor', patrol:false,
+    appearance:{ shirt:0xff5500, pants:0x1a1a2e, skin:0xd49060, hair:0x111111, cap:true, capColor:0x111111 },
+    lines:[
+      // ── Chandler burns
+      '"Bread Boy. Love the dedication to the brand."',
+      '"Chandler\'s out here with a degree and still can\'t figure out a pallet jack. Legend."',
+      '"Bro really went to college just to become the mascot."',
+      '"I asked Chandler what his five-year plan was. He said \'not this.\' Respect."',
+      '"Chandler is literally the most qualified bread delivery specialist on the floor."',
+      '"The bread is load-bearing at this point. Take it away and Chandler has no identity."',
+      '"Chandler told me once he has a backup plan. The backup plan is also bread-related."',
+      '"Watch Chandler when James walks by. He does this thing where he pretends to be busy. It\'s cinema."',
+      // ── Drew burns
+      '"Drew asked me for $3 this morning. SPECIFICALLY $3. I need to know what $3 gets you."',
+      '"Drew\'s financial situation is genuinely one of my favorite ongoing stories."',
+      '"Bro Drew told me his card was declined for a CANDY BAR. A single candy bar."',
+      '"I told Drew I had $5. He perked up like a golden retriever. I kept walking."',
+      '"Drew has borrowed money from every single person in this building. Statistically impressive."',
+      '"Drew\'s wallet is just a decorative item at this point."',
+      '"I watched Drew try to negotiate with the vending machine. It declined. Twice."',
+      '"Drew told me he\'s \'between financial strategies\'. I said \'buddy that\'s called broke.\'"',
+      // ── James bromance
+      '"James and I have an understanding. I don\'t ask questions. He lets me exist."',
+      '"James respects me because I actually work. Revolutionary concept around here."',
+      '"Me and James had a whole conversation this morning. Nobody else talks to him like that."',
+      '"James told me I\'m \'one of the good ones.\' His words. On record."',
+      // ── Lee friendship
+      '"Lee and I are literally the only normal people here. We have accepted this."',
+      '"Lee texted me the most unhinged break room drama just now. I\'m invested."',
+      '"Me and Lee been holding this place together socially. The rest of y\'all are chaos."',
+      // ── General instigating
+      '"I\'m not starting drama. I\'m just pointing out what\'s already there."',
+      '"I don\'t cause problems. I just narrate them in real time."',
+      '"I\'m like a sports commentator but for workplace dysfunction."',
+      '"I love this job. Not for the pay. For the content."',
+      '"Every day I come in thinking \'what\'s gonna happen today\' and every day this place delivers."',
+      '"The bar here is so low it\'s a tripping hazard."',
+      '"I have never in my life worked somewhere with this much free entertainment."',
+      '"If this place were a show it\'d have 6 seasons and a movie."',
+      '"Honestly? I could leave. Better offers exist. But then who would watch all this?"',
+    ],
+    choices:["Laugh along 😂","Defend Chandler 🛡️","Sic him on Drew 💸","Tell him to chill 🙄"],
   },
   { id:'pam', name:'Pam', title:'(The Manager)', color:0xcc3333, zone:'dock', patrol:true,
     appearance:{ shirt:0xcc2222, pants:0x221122, skin:0xf0c890, hair:0xddcc88, blazer:true, clipboard:true },
@@ -443,6 +489,22 @@ function makePersonTexture(scene, key, app){
     g.fillCircle(31, 18, 4);
   }
 
+  // ── BACKWARDS CAP (Chance) ──
+  if(app.cap){
+    const capColor = app.capColor || 0x111111;
+    // Cap body (sits on top of hair)
+    g.fillStyle(capColor, 1);
+    g.fillRoundedRect(7, -3, 28, 10, 4);
+    // Brim sticking out the BACK (backwards)
+    g.fillRoundedRect(-2, -1, 12, 5, 2);
+    // Cap button on top
+    g.fillStyle(0xffffff, 0.5);
+    g.fillCircle(21, -3, 2);
+    // Sweatband stripe
+    g.fillStyle(0xffffff, 0.20);
+    g.fillRect(7, 5, 28, 2);
+  }
+
   // ── EYES ──
   // Whites
   g.fillStyle(0xffffff, 1);
@@ -473,9 +535,24 @@ function makePersonTexture(scene, key, app){
     g.fillTriangle(30,6, 22,5, 30,7);
   }
 
+  // ── EYEBROW raise for cocky characters ──
+  if(app.cap){
+    // One eyebrow raised — classic smug look
+    g.fillStyle(hair, 1);
+    g.fillRoundedRect(12, 4, 8, 2, 1);   // left normal
+    g.fillRoundedRect(22, 3, 8, 2, 1);   // right raised
+  }
+
   // ── MOUTH / EXPRESSION ──
-  g.fillStyle(0xaa5544, 0.7);
-  g.fillRoundedRect(17, 14, 8, 3, 2);
+  if(app.cap){
+    // Smirk — corner of mouth up on one side
+    g.fillStyle(0xaa5544, 0.8);
+    g.fillRoundedRect(18, 14, 7, 2, 1);  // base
+    g.fillRoundedRect(24, 13, 3, 2, 1);  // right corner raised
+  } else {
+    g.fillStyle(0xaa5544, 0.7);
+    g.fillRoundedRect(17, 14, 8, 3, 2);
+  }
 
   // ── NAME BADGE ──
   if(app.badge){
@@ -1298,6 +1375,95 @@ class GameScene extends Phaser.Scene {
         }
       }
     }
+    else if(npc.id === 'chance'){
+      if(idx===0){ // Laugh along
+        const laughLines = [
+          '"RIGHT?! I\'m glad someone else sees it."',
+          '"Okay I KNEW you\'d get it. Most people here are not ready for this level of observation."',
+          '"Finally. A person with taste."',
+          '"See THIS is why I like you. You appreciate the craft."',
+          '"We should do a full debrief later. I have takes. Many takes."',
+          '"You and me? We\'re the same. We see things clearly."',
+          '"You get it. Not everyone does. It\'s a gift honestly."',
+        ];
+        response = Phaser.Math.RND.pick(laughLines);
+        scoreChange = 20; energyChange = 5;
+        STATE.chandlerRageLevel = Math.min(5, STATE.chandlerRageLevel + 1);
+        this.floatText(this.player.x, this.player.y, '😂 +20 pts — Chance approved!', '#ff6a00');
+        // Chandler hears you laughing and loses it
+        const chand = this.npcs.find(n=>n.id==='chandler');
+        if(chand){
+          this.time.delayedCall(800, ()=>{
+            const chandlerSnap = [
+              '"I CAN HEAR YOU OVER THERE!"',
+              '"Real mature. REAL MATURE."',
+              '"You\'re both going to regret this."',
+              '"I have a DEGREE. Laugh it up."',
+              '"You know what?! I\'m filing something. I don\'t know what yet. But SOMETHING."',
+            ];
+            this.showBubble(chand, Phaser.Math.RND.pick(chandlerSnap));
+          });
+        }
+      }
+      else if(idx===1){ // Defend Chandler
+        const clapsback = [
+          '"Defend him?! What are you, his LAWYER? Is he paying you? Because he doesn\'t have money for that."',
+          '"Oh you\'re standing up for Bread Boy? That\'s sweet. Bread Boy would NEVER do the same for you."',
+          '"Okay defender of the bread. Noble. Truly. Doesn\'t change facts though."',
+          '"You know what, respect for the loyalty. Misplaced, but respect."',
+          '"Interesting choice. I\'m adding YOU to the bit now. Hope that\'s okay."',
+          '"Look at you. White knight energy. In a WAREHOUSE. Remarkable."',
+        ];
+        response = Phaser.Math.RND.pick(clapsback);
+        suspChange = 5; scoreChange = 5;
+        // Chance roasts the player, Chandler actually appreciates it
+        const chand = this.npcs.find(n=>n.id==='chandler');
+        if(chand) this.time.delayedCall(1000, ()=>{ this.showBubble(chand, '"...I mean. Thank you. I think."'); });
+        this.floatText(this.player.x, this.player.y, '🛡️ Chance just roasted YOU now', '#ff6a00');
+      }
+      else if(idx===2){ // Sic him on Drew
+        const drewHunt = [
+          '"Oh you want me to go talk to Drew? Yeah I\'ve been WAITING for a reason."',
+          '"Drew? Say less. I have a specific line I\'ve been saving for this moment."',
+          '"On my way. This is going to be beautiful. I\'ll give you a full report."',
+          '"Drew is about to have a really introspective afternoon. You\'re welcome."',
+          '"Consider it done. Drew\'s about to rethink his entire financial strategy."',
+        ];
+        response = Phaser.Math.RND.pick(drewHunt);
+        scoreChange = 25;
+        STATE.chanceRoastTarget = 'drew';
+        // Chance walks to Drew immediately
+        const drew = this.npcs.find(n=>n.id==='drew');
+        if(drew){ npc.targetX = drew.sprite.x + 35; npc.targetY = drew.sprite.y; }
+        this.floatText(this.player.x, this.player.y, '💸 Chance is locked on Drew!', '#ff6a00');
+        this.time.delayedCall(3000, ()=>{
+          const drew2 = this.npcs.find(n=>n.id==='drew');
+          if(drew2 && drew2.bubbleTimer<=0){
+            const drewReacts = [
+              '"BRO WHY IS CHANCE LOOKING AT ME LIKE THAT."',
+              '"Whatever he said it\'s NOT TRUE."',
+              '"I\'M JUST TRYING TO EAT SOMETHING TODAY LEAVE ME ALONE."',
+              '"I HAVE A SYSTEM. A SYSTEM."',
+            ];
+            this.showBubble(drew2, Phaser.Math.RND.pick(drewReacts));
+          }
+        });
+      }
+      else { // Tell him to chill
+        const noChill = [
+          '"Chill? I AM chilling. This is my chill face. This is as chill as I get."',
+          '"You want me to chill. In HERE. With ALL of this happening. Respectfully, no."',
+          '"I\'ll chill when Chandler stops being Bread Boy. So... never."',
+          '"Chill is a concept I respect but cannot currently implement."',
+          '"I\'m very calm. I\'m calm and I\'m observing and I\'m narrating. That\'s not not-chill."',
+          '"Nah. But I appreciate the suggestion. Genuinely."',
+          '"Have you MET this place? \'Chill\' is not a survival strategy here."',
+        ];
+        response = Phaser.Math.RND.pick(noChill);
+        scoreChange = 10;
+        this.floatText(this.player.x, this.player.y, '🙄 Chance has zero chill. None.', '#ff6a00');
+      }
+    }
     else if(npc.id === 'pam'){
       if(idx===0){ // Pretend to work
         response = '"I\'m watching you. Very carefully."'; suspChange = -5;
@@ -1374,24 +1540,21 @@ class GameScene extends Phaser.Scene {
       if(james) this.showBubble(james, '"Why do I feel like I\'m being discussed."');
       this.floatText(this.player.x, this.player.y, '👔 James roasted! +30', '#ffa01e');
     }
-    else if(idx === 3){ // Pam
+    else if(idx === 3){ // Chance
       const lines = [
-        '"She wrote HERSELF up once. By accident. She shredded it before anyone saw but Todd told me and Todd doesn\'t lie."',
-        '"I heard there\'s a camera hidden IN the break room microwave. Like inside it. I\'ve been heating my food in my car for two weeks."',
-        '"She has a whole binder labeled INCIDENTS. Mine has seventeen pages. I don\'t know what I did for most of them."',
-        '"One time she caught someone sleeping on a pallet and instead of waking them up she just... watched. For twenty minutes. And took notes."',
+        '"Okay so Chance. Where do I even START. He roasted Chandler so hard this morning that Chandler ate his BREAD in the bathroom. The BATHROOM."',
+        '"He and James have this whole thing where James pretends not to like him but he absolutely does. James LAUGHED at one of Chance\'s jokes. I have witnesses."',
+        '"Chance keeps a mental scoreboard of every person he\'s talked to. He told me he\'s winning. I asked against who. He said \'everyone.\'"',
+        '"He said — and I quote — \'I don\'t gossip. I just make accurate observations out loud.\' I have never felt more seen."',
+        '"Chance once made Drew cry by asking him one single question. He won\'t tell me what the question was. I respect it."',
+        '"He told James he\'s the most efficient manager he\'s ever worked for. James literally walked taller for the rest of the day. It was incredible."',
+        '"Chance asked Chandler \'where do you see yourself in five years\' and Chandler just stared at the wall for like 30 seconds and walked away."',
       ];
       response = Phaser.Math.RND.pick(lines);
-      scoreChange = 35;
-      if(pamNearby){
-        suspChange += 30;
-        response += ' 😱';
-        this.cameras.main.shake(150, 0.008);
-        this.floatText(this.player.x, this.player.y, '😱 PAM IS NEARBY! +suspicion!', '#ff2222');
-        if(pam) this.showBubble(pam, '"...interesting."');
-      } else {
-        this.floatText(this.player.x, this.player.y, '📋 Pam exposed! +35', '#cc3333');
-      }
+      scoreChange = 30; energyChange += 5;
+      const chance = this.npcs.find(n=>n.id==='chance');
+      if(chance) this.time.delayedCall(1000, ()=>{ this.showBubble(chance, '"...you\'re talking about me. I can tell. You\'re smiling."'); });
+      this.floatText(this.player.x, this.player.y, '🔥 Chance tea! +30', '#ff6a00');
     }
 
     // Apply effects
@@ -1946,6 +2109,123 @@ class GameScene extends Phaser.Scene {
         }
       }
 
+      // ── CHANCE: active instigator AI ───────────────────────────────────────
+      if(npc.id==='chance'){
+        STATE.chanceRoastTimer = (STATE.chanceRoastTimer||0) + delta;
+
+        // Chance autonomously picks a target every ~18s and walks up to roast them
+        if(STATE.chanceRoastTimer > 18000 && !STATE.chanceRoastTarget){
+          STATE.chanceRoastTimer = 0;
+          // Weighted target selection: Chandler 50%, Drew 30%, Lee (friendly) 20%
+          const roll = Math.random();
+          STATE.chanceRoastTarget = roll < 0.50 ? 'chandler' : roll < 0.80 ? 'drew' : 'lee';
+        }
+
+        if(STATE.chanceRoastTarget){
+          const target = this.npcs.find(n=>n.id===STATE.chanceRoastTarget);
+          if(target){
+            npc.targetX = target.sprite.x + 38;
+            npc.targetY = target.sprite.y;
+            const dist = Phaser.Math.Distance.Between(npc.sprite.x,npc.sprite.y,target.sprite.x,target.sprite.y);
+            if(dist < 75 && npc.bubbleTimer <= 0){
+              // Arrived — deliver the roast or friendly chat
+              if(STATE.chanceRoastTarget === 'chandler'){
+                const chandlerRoasts = [
+                  '"Hey Bread Boy. How\'s the sourdough business?"',
+                  '"Chandler, real quick — do you put the bread on your resume or nah?"',
+                  '"I was telling someone about you. I called you \'the bread guy.\' They knew immediately."',
+                  '"Bro I saw you almost drop a pallet. That was CINEMA. Slow-motion and everything."',
+                  '"How\'s the degree treating you? Be honest."',
+                  '"Chandler I respect the fit. Very \'reluctant warehouse employee.\' You nail it every time."',
+                  '"I bet your LinkedIn still says \'open to opportunities.\' Keep hoping king."',
+                  '"Hey so quick question — do you like bread? No reason."',
+                ];
+                this.showBubble(npc, Phaser.Math.RND.pick(chandlerRoasts));
+                STATE.chandlerRageLevel = Math.min(5, STATE.chandlerRageLevel + 1);
+                // Chandler reacts based on rage level
+                this.time.delayedCall(1200, ()=>{
+                  const chandRages = [
+                    ['"...please stop."','"My name is Chandler."','"I have a DEGREE."'],
+                    ['"I swear to God, Chance."','"EVERY TIME."','"You know what?! Fine. FINE."'],
+                    ['"I\'M GOING TO HR."','"That\'s IT. I\'ve had ENOUGH."','"You\'re DONE. You hear me?! DONE."'],
+                  ];
+                  const tier = Math.min(2, Math.floor(STATE.chandlerRageLevel / 2));
+                  this.showBubble(target, Phaser.Math.RND.pick(chandRages[tier]));
+                  if(STATE.chandlerRageLevel >= 4){
+                    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance+10);
+                    this.floatText(target.sprite.x, target.sprite.y-50, '😤 Chandler is LOSING IT', '#ffd700');
+                  }
+                });
+              }
+              else if(STATE.chanceRoastTarget === 'drew'){
+                const drewRoasts = [
+                  '"Drew. Genuinely. How much money do you owe total? Ballpark."',
+                  '"Saw you staring at the vending machine for like 4 minutes. You good?"',
+                  '"Drew you\'ve borrowed from like 8 people. Is there a spreadsheet? There should be."',
+                  '"What happened to that $5 you borrowed from me in February? I\'m not even mad. I\'m curious."',
+                  '"Drew I genuinely cannot tell if you\'re broke or if this is a lifestyle choice."',
+                  '"Bro your card got declined at the vending machine. THE VENDING MACHINE."',
+                  '"You should start a podcast. \'Broke But Surviving.\' I\'d listen."',
+                  '"Drew I believe in you. Financially I do not. But as a person. Mostly."',
+                ];
+                this.showBubble(npc, Phaser.Math.RND.pick(drewRoasts));
+                this.time.delayedCall(1400, ()=>{
+                  const drewResponds = [
+                    '"Chance please. I\'m having a hard enough day."',
+                    '"BRO. NOT NOW."',
+                    '"I\'m WORKING ON IT okay?! It\'s a PROCESS."',
+                    '"You know what? Fair. But rude."',
+                    '"I\'m going to pay everyone back. Next week probably."',
+                    '"I\'m not listening. La la la la la."',
+                  ];
+                  this.showBubble(target, Phaser.Math.RND.pick(drewResponds));
+                });
+              }
+              else if(STATE.chanceRoastTarget === 'lee'){ // Friendly chat
+                const leeChatChance = [
+                  '"Lee. Tell me everything. What did I miss."',
+                  '"Okay so — and I need you to confirm — did Chandler actually cry earlier?"',
+                  '"You see what happened with Drew and the vending machine? INCREDIBLE."',
+                  '"Me and you need a debrief. Right now. What is going on with James today."',
+                  '"Lee I have a new bit and I need a second opinion."',
+                ];
+                this.showBubble(npc, Phaser.Math.RND.pick(leeChatChance));
+                this.time.delayedCall(1200, ()=>{
+                  const leeToChance = [
+                    '"OKAY so you missed SO much. Sit down—"',
+                    '"I was WAITING for you to come over here."',
+                    '"Okay I NEED to tell you about the break room situation."',
+                    '"Finally. Nobody else here appreciates good drama."',
+                    '"I have been DYING to tell someone this."',
+                  ];
+                  this.showBubble(target, Phaser.Math.RND.pick(leeToChance));
+                });
+              }
+              // Reset so he picks a new target next time
+              this.time.delayedCall(5000, ()=>{ STATE.chanceRoastTarget = null; });
+            }
+          } else {
+            STATE.chanceRoastTarget = null; // target not found
+          }
+        }
+
+        // Chance general idle commentary
+        if(npc.bubbleTimer<=0 && !STATE.chanceRoastTarget && Math.random()<0.0008){
+          this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
+        }
+
+        // Chance reacts when James annoyance is high — he loves it
+        if(STATE.jamesAnnoyance >= 70 && npc.bubbleTimer<=0 && Math.random()<0.003){
+          const chanceJamesReacts = [
+            '"This is the BEST SHIFT I\'ve ever worked."',
+            '"James is at like a 9 out of 10 right now. Phenomenal energy."',
+            '"I\'m taking notes. This is content."',
+            '"When James gets like this I just... watch. And learn."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(chanceJamesReacts));
+        }
+      }
+
       // ── LEE: idle chatter in break room when not on a mission ──
       if(npc.id==='lee' && !STATE.leeDistractingJames && !STATE.leeFollowing){
         if(npc.bubbleTimer<=0 && Math.random()<0.0010){
@@ -2060,6 +2340,70 @@ class GameScene extends Phaser.Scene {
         this.floatText(WW/2,460,'(It\'s fake. James scheduled it on accident.)','#ffaa66');
         const james=this.npcs.find(n=>n.id==='james');
         if(james) this.showBubble(james,'"This is NOT a drill. ...it might be a drill. Everyone act natural."');
+      },
+      ()=>{ // Chance starts a public roast session
+        const chance=this.npcs.find(n=>n.id==='chance');
+        const chandler=this.npcs.find(n=>n.id==='chandler');
+        const drew=this.npcs.find(n=>n.id==='drew');
+        if(chance){
+          const roastOpeners=[
+            '"Okay can I just say something real quick — and I want everyone to hear this—"',
+            '"Alright I\'m calling an informal meeting. Nobody leave."',
+            '"I just need to make one observation. Out loud. For everyone."',
+          ];
+          this.showBubble(chance, Phaser.Math.RND.pick(roastOpeners));
+          this.floatText(WW/2,500,'🔥 Chance is calling an INFORMAL MEETING','#ff6a00');
+          this.time.delayedCall(2000,()=>{
+            if(chance) this.showBubble(chance, '"Drew still owes SEVEN people money. Collectively that\'s like $47. That\'s a car payment, bro."');
+          });
+          this.time.delayedCall(4000,()=>{
+            if(chandler) this.showBubble(chandler, '"CAN WE PLEASE NOT DO THIS RIGHT NOW?!"');
+          });
+          this.time.delayedCall(6000,()=>{
+            if(drew) this.showBubble(drew, '"For the RECORD I am paying everyone back. This month. Probably."');
+          });
+          this.time.delayedCall(8000,()=>{
+            if(chance) this.showBubble(chance, '"This is why I love it here. Genuinely."');
+          });
+          STATE.jamesAnnoyance=Math.min(100,STATE.jamesAnnoyance+12);
+          scoreChange=40;
+          STATE.score=Math.max(0,STATE.score+40);
+        }
+      },
+      ()=>{ // Chance and James have an unexpectedly wholesome moment
+        const chance=this.npcs.find(n=>n.id==='chance');
+        const james=this.npcs.find(n=>n.id==='james');
+        if(chance&&james){
+          chance.targetX=james.sprite.x+40; chance.targetY=james.sprite.y;
+          this.time.delayedCall(2000,()=>{
+            if(chance) this.showBubble(chance,'"Real talk James — you run a tight ship. I respect it."');
+          });
+          this.time.delayedCall(4000,()=>{
+            if(james) this.showBubble(james,'"...you\'re one of the few people here who actually gets it. Don\'t tell anyone I said that."');
+            STATE.jamesAnnoyance=Math.max(0,STATE.jamesAnnoyance-15);
+          });
+          this.time.delayedCall(6000,()=>{
+            if(chance) this.showBubble(chance,'"Already forgotten. Now let me go bother Chandler."');
+          });
+          this.floatText(WW/2,520,'🤝 Chance and James: an unexpected friendship','#ff6a00');
+        }
+      },
+      ()=>{ // Chance makes Drew question his entire life
+        const chance=this.npcs.find(n=>n.id==='chance');
+        const drew=this.npcs.find(n=>n.id==='drew');
+        if(chance&&drew){
+          chance.targetX=drew.sprite.x+35; chance.targetY=drew.sprite.y;
+          this.time.delayedCall(2000,()=>{
+            if(chance) this.showBubble(chance,'"Drew. What\'s your five-year plan? Not finances — just. Life."');
+          });
+          this.time.delayedCall(4500,()=>{
+            if(drew) this.showBubble(drew,'"...I don\'t... I mean eventually I want to... hm."');
+          });
+          this.time.delayedCall(7000,()=>{
+            if(chance) this.showBubble(chance,'"Yeah. That\'s what I thought. It\'s okay bro. Same."');
+          });
+          this.floatText(WW/2,530,'😶 Chance just made Drew have an existential crisis','#9955cc');
+        }
       },
     ];
     const evt = Phaser.Math.RND.pick(events);
