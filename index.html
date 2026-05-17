@@ -442,10 +442,8 @@
     :root.retro #paperPlanePanel  { --section-accent: #ffb000; --section-accent-2: #00f5ff; --section-glow: rgba(255,176,0,0.24); --section-soft: rgba(255,176,0,0.10); }
     :root.retro #jetpackJamesPanel { --section-accent: #00f5ff; --section-accent-2: #ff4fd8; --section-glow: rgba(0,245,255,0.24); --section-soft: rgba(0,245,255,0.10); }
     :root.retro #localWeatherPanel  { --section-accent: #2dff88; --section-accent-2: #00f5ff; --section-glow: rgba(45,255,136,0.22); --section-soft: rgba(45,255,136,0.09); }
-    :root.retro #warehouseRushPanel { --section-accent: #ffb000; --section-accent-2: #ff4fd8; --section-glow: rgba(255,176,0,0.24); --section-soft: rgba(255,176,0,0.10); }
-    :root.retro #forkliftPuzzlePanel{ --section-accent: #2dff88; --section-accent-2: #ffb000; --section-glow: rgba(45,255,136,0.24); --section-soft: rgba(45,255,136,0.10); }
-    :root.retro #jetpackJames2Panel { --section-accent: #ff4fd8; --section-accent-2: #00f5ff; --section-glow: rgba(255,79,216,0.24); --section-soft: rgba(255,79,216,0.10); }
     :root.retro #truckTycoonPanel   { --section-accent: #7eb8ff; --section-accent-2: #2dff88; --section-glow: rgba(126,184,255,0.24); --section-soft: rgba(126,184,255,0.10); }
+    :root.retro #warehouseLifePanel { --section-accent: #ffa01e; --section-accent-2: #2dff88; --section-glow: rgba(255,160,30,0.28); --section-soft: rgba(255,160,30,0.12); }
 
     :root.retro .tab-panel.active .panel,
     :root.retro .tab-panel.active .table-wrap,
@@ -2043,10 +2041,8 @@
     #flappyBirdPanel    { padding: 0; }
     #paperPlanePanel    { padding: 0; }
     #jetpackJamesPanel  { padding: 0; }
-    #warehouseRushPanel { padding: 0; }
-    #forkliftPuzzlePanel{ padding: 0; }
-    #jetpackJames2Panel { padding: 0; }
     #truckTycoonPanel   { padding: 0; }
+    #warehouseLifePanel { padding: 0; }
     .game-frame-wrap {
       width: 100%;
       height: calc(100vh - 82px);
@@ -2323,6 +2319,7 @@
           </div>
           <span id="darkModeLabel">Light</span>
         </button>
+        <span id="dailyVisitorBadge" style="display:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:999px;padding:4px 11px;font-size:0.75rem;font-weight:700;color:#fff;letter-spacing:0.03em;" title="Unique logins in the last 24 hours">👥 <span id="dailyVisitorCount">—</span> today</span>
         <button class="sign-out-btn" id="signOutBtn" type="button" style="display:none" title="Sign out">Sign out</button>
       </div>
     </header>
@@ -2371,10 +2368,8 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="flappyBird" data-menu-label="Flappy Bird">Flappy Bird</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="paperPlane" data-menu-label="Paper Plane">Paper Plane</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="jetpackJames" data-menu-label="Jetpack James">Jetpack James</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseRush" data-menu-label="Warehouse Rush">Warehouse Rush</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="forkliftPuzzle" data-menu-label="Forklift Puzzle">Forklift Puzzle</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="jetpackJames2" data-menu-label="Jetpack James 2">Jetpack James 2</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="truckTycoon" data-menu-label="Truck Tycoon">Truck Tycoon</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseLife" data-menu-label="Eclipse Shift">⭐ Eclipse Shift</button>
         </div>
       </div>
     </nav>
@@ -3815,35 +3810,19 @@
         </div>
       </section>
 
-      <!-- WAREHOUSE RUSH PANEL -->
-      <section id="warehouseRushPanel" class="tab-panel" aria-label="Warehouse Rush">
-        <div class="motivation-bar" id="motivBar_warehouseRush"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="warehouseRushFrame" src="" title="Warehouse Rush" allowfullscreen></iframe>
-        </div>
-      </section>
-
-      <!-- FORKLIFT PUZZLE PANEL -->
-      <section id="forkliftPuzzlePanel" class="tab-panel" aria-label="Forklift Puzzle">
-        <div class="motivation-bar" id="motivBar_forkliftPuzzle"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="forkliftFrame" src="" title="Forklift Puzzle" allowfullscreen></iframe>
-        </div>
-      </section>
-
-      <!-- JETPACK JAMES 2 PANEL -->
-      <section id="jetpackJames2Panel" class="tab-panel" aria-label="Jetpack James 2">
-        <div class="motivation-bar" id="motivBar_jetpackJames2"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="jetpack2Frame" src="" title="Jetpack James 2" allowfullscreen></iframe>
-        </div>
-      </section>
-
       <!-- TRUCK TYCOON PANEL -->
       <section id="truckTycoonPanel" class="tab-panel" aria-label="Truck Tycoon">
         <div class="motivation-bar" id="motivBar_truckTycoon"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="game-frame-wrap">
           <iframe id="truckTycoonFrame" src="" title="Truck Tycoon" allowfullscreen></iframe>
+        </div>
+      </section>
+
+      <!-- ECLIPSE SHIFT PANEL -->
+      <section id="warehouseLifePanel" class="tab-panel" aria-label="Eclipse Shift">
+        <div class="motivation-bar" id="motivBar_warehouseLife"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="game-frame-wrap">
+          <iframe id="warehouseLifeFrame" src="" title="Eclipse Shift" allowfullscreen></iframe>
         </div>
       </section>
 
@@ -4457,10 +4436,8 @@
         paperPlane:       [["✈️","Let it fly, cowboy."],["🌬️","Find the thermals. Ride them."],["📄","Someone folded that with love."],["🏆","Beat your best. Always."]],
         jetpackJames:     [["🚀","Hold to fly. Let go to fall."],["💰","Grab every coin."],["⚡","Dodge the zappers."],["🏃","Run. Fly. Repeat."]],
         localWeather:     [["🌤️","Check before you head out."],["🌧️","Better to know than to get soaked."],["🌡️","Weather checked. Day planned."],["💨","Stay one step ahead of the forecast."]],
-        warehouseRush:    [["🚛","Trucks don't wait. Neither should you."],["📦","Unload fast, bill faster."],["⏱️","Every second counts on the dock."],["💪","Move those pallets!"]],
-        forkliftPuzzle:   [["🔧","Push pallets, not your luck."],["🧩","Every move matters."],["🏆","Par or bust."],["🤔","Think before you push — you can't pull."]],
-        jetpackJames2:    [["🚀","The sequel nobody asked for. Here it is."],["🔋","Watch that fuel gauge."],["🎮","10 levels. No mercy."],["💀","Die less. Win more."]],
-        truckTycoon:      [["🏢","Your dock, your rules, your chaos."],["📋","Assign, unload, bill. Repeat."],["💰","Late billing hurts. Stay sharp."],["🚛","The trucks never stop coming."]]
+        truckTycoon:      [["🏢","Your dock, your rules, your chaos."],["📋","Assign, unload, bill. Repeat."],["💰","Late billing hurts. Stay sharp."],["🚛","The trucks never stop coming."]],
+        warehouseLife:    [["🏭","Clock in. Do the work. Go home."],["📦","Every pallet counts."],["🧾","Bill it right the first time."],["☕","Break time is earned. Go earn it."]]
       };
       var timers = {};
       function showMotiv(tab) {
@@ -4578,7 +4555,7 @@
 
       // Tab visibility by role
       var WORK_TABS  = ['overview','data','ddp','truckFinder','audit','clerkDoor','doorSuggestor','breakdownsAudit','truckChargeAudit','history','help'];
-      var GUEST_TABS = ['inOtherNews','localWeather','flappyBird','paperPlane','jetpackJames','warehouseRush','forkliftPuzzle','jetpackJames2','truckTycoon'];
+      var GUEST_TABS = ['inOtherNews','localWeather','flappyBird','paperPlane','jetpackJames','truckTycoon','warehouseLife'];
 
       function applyRole(role) {
         var allButtons = document.querySelectorAll('.tab-button[data-tab]');
@@ -4614,6 +4591,24 @@
         overlay.classList.add('hidden');
         if (signOut) signOut.style.display = 'inline-block';
         applyRole(role || 'guest');
+        fetchDailyVisitors();
+      }
+
+      function fetchDailyVisitors() {
+        fetch('/api/daily-visitors', { credentials: 'include' })
+          .then(function(r) { return r.ok ? r.json() : null; })
+          .then(function(d) {
+            if (d && d.count !== undefined) {
+              var badge = document.getElementById('dailyVisitorBadge');
+              var countEl = document.getElementById('dailyVisitorCount');
+              if (badge && countEl) {
+                countEl.textContent = d.count;
+                badge.style.display = 'inline-flex';
+                badge.style.alignItems = 'center';
+                badge.style.gap = '4px';
+              }
+            }
+          }).catch(function() {});
       }
 
       // Check if already logged in
@@ -9320,21 +9315,13 @@
         var jf = document.getElementById("jetpackFrame");
         if (jf && !jf.getAttribute("data-loaded")) { jf.src = "/games/jetpack"; jf.setAttribute("data-loaded","1"); }
       }
-      if (name === "warehouseRush") {
-        var wf = document.getElementById("warehouseRushFrame");
-        if (wf && !wf.getAttribute("data-loaded")) { wf.src = "/games/warehouse-rush"; wf.setAttribute("data-loaded","1"); }
-      }
-      if (name === "forkliftPuzzle") {
-        var ff2 = document.getElementById("forkliftFrame");
-        if (ff2 && !ff2.getAttribute("data-loaded")) { ff2.src = "/games/forklift"; ff2.setAttribute("data-loaded","1"); }
-      }
-      if (name === "jetpackJames2") {
-        var jf2 = document.getElementById("jetpack2Frame");
-        if (jf2 && !jf2.getAttribute("data-loaded")) { jf2.src = "/games/jetpack2"; jf2.setAttribute("data-loaded","1"); }
-      }
       if (name === "truckTycoon") {
         var tf = document.getElementById("truckTycoonFrame");
         if (tf && !tf.getAttribute("data-loaded")) { tf.src = "/games/truck-tycoon"; tf.setAttribute("data-loaded","1"); }
+      }
+      if (name === "warehouseLife") {
+        var wlf = document.getElementById("warehouseLifeFrame");
+        if (wlf && !wlf.getAttribute("data-loaded")) { wlf.src = "/games/warehouse-life"; wlf.setAttribute("data-loaded","1"); }
       }
       if (name === "localWeather") { initWeatherTab(); }
       document.dispatchEvent(new CustomEvent("tabSelected", { detail: name }));

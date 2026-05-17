@@ -105,6 +105,12 @@ def init_db():
             UNIQUE(truck_key),
             FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE SET NULL
         );
+
+        CREATE TABLE IF NOT EXISTS visits (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            username   TEXT    NOT NULL,
+            visited_at TEXT    NOT NULL
+        );
     """)
     conn.commit()
     conn.close()
@@ -161,6 +167,15 @@ def login(creds: LoginIn, response: Response):
         max_age=60 * 60 * 24 * 7,   # 7 days
         secure=os.environ.get("RAILWAY_ENVIRONMENT") is not None,
     )
+    # Record visit for daily counter
+    try:
+        conn = get_db()
+        now = datetime.now(timezone.utc).isoformat()
+        conn.execute("INSERT INTO visits (username, visited_at) VALUES (?, ?)", (uname, now))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
     return {"ok": True, "username": uname, "role": _ROLES.get(uname, "guest")}
 
 
@@ -175,6 +190,21 @@ def logout(response: Response, session: Optional[str] = Cookie(default=None)):
 @app.get("/api/me")
 def me(username: str = Depends(require_auth)):
     return {"username": username, "role": _ROLES.get(username, "guest")}
+
+
+@app.get("/api/daily-visitors")
+def daily_visitors(username: str = Depends(require_auth)):
+    """Return count of logins in the last 24 hours."""
+    try:
+        conn = get_db()
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM visits WHERE visited_at >= ?", (cutoff,)
+        ).fetchone()
+        conn.close()
+        return {"count": row["cnt"] if row else 0}
+    except Exception:
+        return {"count": 0}
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
@@ -614,6 +644,11 @@ def serve_jetpack2():
 @app.get("/games/truck-tycoon")
 def serve_truck_tycoon():
     return FileResponse(str(BASE_DIR / "truck_tycoon.html"))
+
+
+@app.get("/games/warehouse-life")
+def serve_warehouse_life():
+    return FileResponse(str(BASE_DIR / "warehouse_life.html"))
 
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
