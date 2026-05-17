@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flappy Bird (You Will Lose)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+  }
+  canvas {
+    border: 3px solid #e94560;
+    border-radius: 4px;
+    box-shadow: 0 0 30px rgba(233, 69, 96, 0.4);
+  }
+  #ui {
+    margin-top: 12px;
+    color: #e94560;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="400" height="600"></canvas>
+<div id="ui">space / tap to flap</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// ── Sarcastic death messages ──────────────────────────────────────────────────
+const roasts = [
+  "imagine thinking you'd make it",
+  "bro really said 'I got this'",
+  "skill issue, bestie",
+  "that was embarrassing for all of us",
+  "not even close, lmao",
+  "maybe try a different hobby",
+  "certified fumble of the century",
+  "the pipe was stationary... how",
+  "I've seen better play from a potato",
+  "your ancestors are weeping rn",
+  "thanks for making the pipe feel good about itself",
+  "at least you're consistent at losing",
+  "boldly going nowhere",
+  "the floor is literally a floor and yet",
+  "a noble attempt. laughable, but noble",
+  "touch grass and try again",
+  "even gravity is judging you",
+  "new record for sorriest run",
+  "the bird had one job. YOU had one job.",
+  "did you even want to win?",
+];
+
+// ── Game state ────────────────────────────────────────────────────────────────
+const W = canvas.width, H = canvas.height;
+const GRAVITY    = 0.45;
+const FLAP_VEL   = -9;
+const PIPE_W     = 60;
+const PIPE_GAP   = 155;
+const PIPE_SPEED = 3;
+const PIPE_INTERVAL = 90; // frames
+
+let bird, pipes, score, best, frame, state, deathMsg, particles;
+
+function initGame() {
+  bird = { x: 80, y: H / 2, vy: 0, w: 34, h: 26, rot: 0 };
+  pipes = [];
+  score = 0;
+  frame = 0;
+  state = 'idle'; // idle | playing | dead
+  deathMsg = '';
+  particles = [];
+}
+
+function flap() {
+  if (state === 'dead') { initGame(); return; }
+  if (state === 'idle') state = 'playing';
+  bird.vy = FLAP_VEL;
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); flap(); } });
+canvas.addEventListener('click', flap);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); flap(); }, { passive: false });
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function randInt(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+
+function spawnPipe() {
+  const topH = randInt(60, H - PIPE_GAP - 80);
+  pipes.push({ x: W + PIPE_W, topH, passed: false });
+}
+
+function emit(x, y, color) {
+  for (let i = 0; i < 14; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      color,
+      r: randInt(3, 7),
+    });
+  }
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function drawBg() {
+  // sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#16213e');
+  sky.addColorStop(1, '#0f3460');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // ground
+  ctx.fillStyle = '#1b4332';
+  ctx.fillRect(0, H - 40, W, 40);
+  ctx.fillStyle = '#2d6a4f';
+  ctx.fillRect(0, H - 40, W, 8);
+}
+
+function drawPipes() {
+  pipes.forEach(p => {
+    const botY = p.topH + PIPE_GAP;
+
+    // top pipe
+    ctx.fillStyle = '#52b788';
+    ctx.fillRect(p.x, 0, PIPE_W, p.topH);
+    ctx.fillStyle = '#74c69d';
+    ctx.fillRect(p.x - 5, p.topH - 24, PIPE_W + 10, 24);
+
+    // bottom pipe
+    ctx.fillStyle = '#52b788';
+    ctx.fillRect(p.x, botY, PIPE_W, H - botY - 40);
+    ctx.fillStyle = '#74c69d';
+    ctx.fillRect(p.x - 5, botY, PIPE_W + 10, 24);
+  });
+}
+
+function drawBird() {
+  ctx.save();
+  ctx.translate(bird.x + bird.w / 2, bird.y + bird.h / 2);
+  ctx.rotate(bird.rot);
+
+  // body
+  ctx.fillStyle = '#ffd166';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, bird.w / 2, bird.h / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // wing
+  ctx.fillStyle = '#f4a261';
+  ctx.beginPath();
+  ctx.ellipse(-4, 4, 10, 6, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // eye
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(8, -5, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.arc(10, -5, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // pupil shine
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(11, -6, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  // beak
+  ctx.fillStyle = '#e76f51';
+  ctx.beginPath();
+  ctx.moveTo(14, -2);
+  ctx.lineTo(22, 0);
+  ctx.lineTo(14, 3);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawScore() {
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 42px Courier New';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#e94560';
+  ctx.shadowBlur = 10;
+  ctx.fillText(score, W / 2, 70);
+  ctx.shadowBlur = 0;
+}
+
+function drawIdle() {
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#ffd166';
+  ctx.font = 'bold 44px Courier New';
+  ctx.fillText('FLAPPY', W / 2, H / 2 - 60);
+  ctx.fillStyle = '#e94560';
+  ctx.fillText('BIRD', W / 2, H / 2 - 10);
+
+  ctx.fillStyle = '#fff';
+  ctx.font = '18px Courier New';
+  ctx.fillText('press space or tap', W / 2, H / 2 + 50);
+
+  if (best !== undefined) {
+    ctx.fillStyle = '#adb5bd';
+    ctx.font = '14px Courier New';
+    ctx.fillText(`best: ${best}`, W / 2, H / 2 + 80);
+  }
+}
+
+function drawDead() {
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  // panel
+  ctx.fillStyle = '#16213e';
+  ctx.strokeStyle = '#e94560';
+  ctx.lineWidth = 3;
+  roundRect(ctx, W / 2 - 160, H / 2 - 130, 320, 260, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = '#e94560';
+  ctx.font = 'bold 32px Courier New';
+  ctx.fillText('DEAD LOL', W / 2, H / 2 - 80);
+
+  // score
+  ctx.fillStyle = '#ffd166';
+  ctx.font = 'bold 52px Courier New';
+  ctx.fillText(score, W / 2, H / 2 - 20);
+
+  ctx.fillStyle = '#adb5bd';
+  ctx.font = '13px Courier New';
+  ctx.fillText(`best: ${best}`, W / 2, H / 2 + 20);
+
+  // roast — word-wrap across 2 lines if needed
+  ctx.fillStyle = '#fff';
+  ctx.font = 'italic 15px Courier New';
+  wrapText(ctx, `"${deathMsg}"`, W / 2, H / 2 + 60, 280, 22);
+
+  ctx.fillStyle = '#52b788';
+  ctx.font = '14px Courier New';
+  ctx.fillText('[ space / tap to retry ]', W / 2, H / 2 + 115);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, cx, y, maxW, lineH) {
+  const words = text.split(' ');
+  let line = '';
+  const lines = [];
+  words.forEach(w => {
+    const test = line + w + ' ';
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line.trim()); line = w + ' '; }
+    else line = test;
+  });
+  if (line) lines.push(line.trim());
+  const startY = y - ((lines.length - 1) * lineH) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineH));
+}
+
+// ── Collision ─────────────────────────────────────────────────────────────────
+function hitsPipe(p) {
+  const bx = bird.x + 4, by = bird.y + 4, bw = bird.w - 8, bh = bird.h - 8;
+  const inX = bx < p.x + PIPE_W && bx + bw > p.x;
+  if (!inX) return false;
+  return by < p.topH || by + bh > p.topH + PIPE_GAP;
+}
+
+// ── Update ────────────────────────────────────────────────────────────────────
+function update() {
+  if (state !== 'playing') return;
+
+  frame++;
+
+  // spawn pipes
+  if (frame % PIPE_INTERVAL === 0) spawnPipe();
+
+  // bird physics
+  bird.vy += GRAVITY;
+  bird.y += bird.vy;
+  bird.rot = Math.min(Math.max(bird.vy * 0.06, -0.5), 1.2);
+
+  // pipes
+  pipes.forEach(p => { p.x -= PIPE_SPEED; });
+  pipes = pipes.filter(p => p.x > -PIPE_W - 20);
+
+  // score
+  pipes.forEach(p => {
+    if (!p.passed && p.x + PIPE_W < bird.x) { p.passed = true; score++; }
+  });
+
+  // collision: pipes
+  if (pipes.some(hitsPipe)) { die(); return; }
+
+  // collision: floor / ceiling
+  if (bird.y + bird.h >= H - 40 || bird.y <= 0) { die(); return; }
+
+  // particles
+  updateParticles();
+}
+
+function die() {
+  state = 'dead';
+  deathMsg = roasts[Math.floor(Math.random() * roasts.length)];
+  best = best === undefined ? score : Math.max(best, score);
+  emit(bird.x + bird.w / 2, bird.y + bird.h / 2, '#ffd166');
+  emit(bird.x + bird.w / 2, bird.y + bird.h / 2, '#e94560');
+}
+
+function updateParticles() {
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.15;
+    p.life -= 0.03;
+  });
+  particles = particles.filter(p => p.life > 0);
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────────
+function loop() {
+  update();
+  drawBg();
+  drawPipes();
+  drawBird();
+  drawParticles();
+  if (state === 'playing' || state === 'dead') drawScore();
+  if (state === 'idle') drawIdle();
+  if (state === 'dead') drawDead();
+  requestAnimationFrame(loop);
+}
+
+initGame();
+loop();
+</script>
+</body>
+</html>

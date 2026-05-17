@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paper Plane</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1e3d6f;
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; cursor: crosshair; }
+  #tip {
+    position: fixed;
+    bottom: 8px; left: 0; right: 0;
+    text-align: center;
+    color: rgba(255,255,255,0.52);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="tip">drag plane to aim &amp; launch &nbsp;·&nbsp; mouse / arrow keys to steer &nbsp;·&nbsp; fly through rings for bonus distance</div>
+<script>
+'use strict';
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', () => {
+  resize();
+  if (state !== 'fly') { launchY = H * 0.42; plane.y = launchY; }
+});
+
+// roundRect polyfill (Safari / older Chromium)
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
+    r = Math.min(r, w/2, h/2);
+    this.beginPath();
+    this.moveTo(x+r, y);
+    this.arcTo(x+w, y,   x+w, y+h, r);
+    this.arcTo(x+w, y+h, x,   y+h, r);
+    this.arcTo(x,   y+h, x,   y,   r);
+    this.arcTo(x,   y,   x+w, y,   r);
+    this.closePath();
+    return this;
+  };
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const GRAVITY   = 0.095;
+const LIFT_K    = 0.44;
+const DRAG_K    = 0.014;
+const AIR_RES   = 0.9994;
+const MIN_SPEED = 1.1;
+const LAUNCH_X  = 170;
+const WORLD_LEN = 14000;
+
+// ── Game state ────────────────────────────────────────────────────────────────
+let state    = 'aim';   // aim | fly | crash | result
+let camX     = 0;
+let distance = 0;
+let best     = +localStorage.getItem('ppBest2') || 0;
+let tik      = 0;
+let launchY;
+let mouseX   = 0;
+let mouseY   = 0;
+
+// ── Plane ─────────────────────────────────────────────────────────────────────
+let plane = {};
+
+function initPlane() {
+  launchY     = H * 0.42;
+  plane       = { x: LAUNCH_X, y: launchY, vx: 0, vy: 0, angle: -0.12, trail: [], glowTimer: 0 };
+  camX        = 0;
+  distance    = 0;
+  state       = 'aim';
+  crashPieces = [];
+  particles   = [];
+  mouseY      = launchY;  // default steering near launch height
+}
+
+// ── World objects ─────────────────────────────────────────────────────────────
+let clouds = [], thermals = [], rings = [], particles = [], crashPieces = [];
+
+function buildWorld() {
+  clouds = []; thermals = []; rings = [];
+
+  for (let i = 0; i < 65; i++) {
+    clouds.push({
+      x:     200 + Math.random() * WORLD_LEN,
+      y:     35  + Math.random() * (H * 0.62),
+      r:     22  + Math.random() * 75,
+      extra: Math.random() > 0.4,
+      layer: i < 32 ? 0 : 1,
+      alpha: 0.32 + Math.random() * 0.48,
+    });
+  }
+
+  for (let i = 0; i < 38; i++) {
+    thermals.push({
+      x:        300 + i * (WORLD_LEN / 38) + Math.random() * 220,
+      y:        H * 0.22 + Math.random() * (H * 0.52),
+      r:        28 + Math.random() * 30,
+      strength: 0.85 + Math.random() * 1.5,
+      phase:    Math.random() * Math.PI * 2,
+    });
+  }
+
+  for (let i = 0; i < 45; i++) {
+    rings.push({
+      x:     480 + i * (WORLD_LEN / 45) + Math.random() * 130,
+      y:     H * 0.15 + Math.random() * (H * 0.58),
+      r:     20 + Math.random() * 20,
+      hit:   false,
+      flash: 0,
+      hue:   160 + Math.random() * 80,
+    });
+  }
+}
+
+// ── Physics ───────────────────────────────────────────────────────────────────
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if ((e.code === 'Space') && state === 'result') { e.preventDefault(); initPlane(); buildWorld(); }
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+  if (isDragging) { aimX = mouseX; aimY = mouseY; }
+});
+
+function physicsStep() {
+  // Steering
+  let targetAngle;
+  if (keys['ArrowUp'])        targetAngle = plane.angle - 0.055;
+  else if (keys['ArrowDown']) targetAngle = plane.angle + 0.055;
+  else {
+    let norm = (mouseY / H) * 2 - 1;   // -1 (top) to +1 (bottom)
+    targetAngle = norm * 0.50;
+  }
+  targetAngle = Math.max(-0.48, Math.min(0.65, targetAngle));
+  plane.angle += (targetAngle - plane.angle) * 0.058;
+
+  // Speed & direction
+  let speed = Math.sqrt(plane.vx * plane.vx + plane.vy * plane.vy);
+  if (speed < 0.001) speed = 0.001;
+  let velAng = Math.atan2(plane.vy, plane.vx);
+  let aoa    = plane.angle - velAng;
+  let eff    = speed > MIN_SPEED ? 1 : speed / MIN_SPEED;
+
+  // Lift (perpendicular to velocity)
+  let liftMag = speed * Math.sin(aoa) * LIFT_K * eff;
+  plane.vx += -liftMag * Math.sin(velAng);
+  plane.vy +=  liftMag * Math.cos(velAng);
+
+  // Drag
+  let drag = speed * speed * DRAG_K;
+  plane.vx -= (plane.vx / speed) * drag;
+  plane.vy -= (plane.vy / speed) * drag;
+
+  // Air resistance
+  plane.vx *= AIR_RES;
+
+  // Gravity
+  plane.vy += GRAVITY;
+
+  // Thermals
+  for (let t of thermals) {
+    let dx = plane.x - t.x, dy = plane.y - t.y;
+    let d  = Math.sqrt(dx*dx + dy*dy);
+    if (d < t.r * 1.9) {
+      let fac = (1 - d / (t.r * 1.9)) * t.strength;
+      plane.vy      -= fac * 0.24;
+      plane.glowTimer = 14;
+      if (d < t.r * 0.65) burst(plane.x, plane.y, '#ffd700', 8);
+    }
+  }
+
+  // Rings
+  for (let ring of rings) {
+    if (ring.hit) { if (ring.flash > 0) ring.flash -= 0.045; continue; }
+    let dx = plane.x - ring.x, dy = plane.y - ring.y;
+    if (Math.sqrt(dx*dx+dy*dy) < ring.r * 1.15) {
+      ring.hit   = true;
+      ring.flash = 1;
+      distance  += 35;
+      burst(ring.x, ring.y, 'hsl('+ring.hue+',100%,68%)', 16);
+    }
+  }
+
+  // Trail
+  plane.trail.push({ x: plane.x, y: plane.y });
+  if (plane.trail.length > 55) plane.trail.shift();
+
+  // Move
+  plane.x += plane.vx;
+  plane.y += plane.vy;
+  if (plane.glowTimer > 0) plane.glowTimer--;
+
+  // Camera — keep plane at ~22% from left with some lead
+  camX = plane.x - W * 0.22;
+
+  // Distance
+  distance = Math.max(distance, Math.round((plane.x - LAUNCH_X) * 0.58));
+
+  // Ceiling bounce
+  if (plane.y < 4) { plane.y = 4; plane.vy = Math.abs(plane.vy) * 0.35; }
+
+  // Ground crash
+  if (plane.y >= H - 44) { plane.y = H - 44; doCrash(); }
+}
+
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    let a = Math.random() * Math.PI * 2;
+    let s = 1.5 + Math.random() * 4.5;
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s,
+      life: 1, decay: 0.032 + Math.random()*0.022, color, r: 2+Math.random()*3.5 });
+  }
+}
+
+function doCrash() {
+  if (state !== 'fly') return;
+  state = 'crash';
+  if (distance > best) { best = distance; localStorage.setItem('ppBest2', best); }
+  for (let i = 0; i < 10; i++) {
+    let a = -Math.PI * 0.85 + Math.random() * Math.PI * 0.45;
+    let s = 2 + Math.random() * 5.5;
+    crashPieces.push({
+      x: plane.x, y: plane.y,
+      vx: Math.cos(a)*s + plane.vx*0.28,
+      vy: Math.sin(a)*s + plane.vy*0.28,
+      angle: Math.random()*Math.PI*2,
+      spin:  (Math.random()-0.5)*0.28,
+      w: 9+Math.random()*14, h: 3+Math.random()*5,
+      life: 1, decay: 0.007+Math.random()*0.006,
+    });
+  }
+  setTimeout(() => { if (state === 'crash') state = 'result'; }, 2200);
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function drawSky() {
+  let g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0,    '#1a4e8a');
+  g.addColorStop(0.45, '#3d8cc4');
+  g.addColorStop(0.82, '#82c4e8');
+  g.addColorStop(1,    '#c2e4f6');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function drawMountains() {
+  // Distant blue-grey peaks
+  let off0 = camX * 0.07;
+  ctx.save();
+  ctx.globalAlpha = 0.42;
+  ctx.fillStyle   = '#4878a8';
+  ctx.beginPath();
+  ctx.moveTo(0, H - 44);
+  for (let x = -80; x <= W + 80; x += 28) {
+    let wx = x + off0;
+    let my = H - 44 - 62 - 44*Math.sin(wx*0.005) - 22*Math.sin(wx*0.012+1.4);
+    if (x === -80) ctx.moveTo(x, my); else ctx.lineTo(x, my);
+  }
+  ctx.lineTo(W, H-44); ctx.lineTo(0, H-44); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Nearer green hills
+  let off1 = camX * 0.18;
+  ctx.fillStyle = '#52985e';
+  ctx.beginPath();
+  ctx.moveTo(0, H-44);
+  for (let x = -60; x <= W+60; x += 18) {
+    let wx = x + off1;
+    let my = H - 44 - 22 - 16*Math.sin(wx*0.02) - 10*Math.sin(wx*0.035+2.2);
+    if (x === -60) ctx.moveTo(x, my); else ctx.lineTo(x, my);
+  }
+  ctx.lineTo(W, H-44); ctx.lineTo(0, H-44); ctx.closePath(); ctx.fill();
+}
+
+function drawGround() {
+  ctx.fillStyle = '#3a8844';
+  ctx.fillRect(0, H-44, W, 44);
+  ctx.fillStyle = '#4aaa55';
+  ctx.fillRect(0, H-44, W, 9);
+
+  // Distance tick marks
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.font      = '9px Arial';
+  let step  = 100;
+  let first = Math.ceil((camX + LAUNCH_X) / step) * step;
+  for (let wx = first; wx < camX + W + LAUNCH_X; wx += step) {
+    let sx = wx - LAUNCH_X - camX;
+    ctx.fillRect(sx - 0.5, H - 44, 1, 7);
+    if (wx > LAUNCH_X) ctx.fillText(Math.round((wx - LAUNCH_X) * 0.58) + 'ft', sx+2, H-38);
+  }
+}
+
+function drawClouds() {
+  for (let c of clouds) {
+    let sx = c.x - camX * (c.layer === 0 ? 0.22 : 0.58);
+    if (sx < -220 || sx > W + 220) continue;
+    ctx.save();
+    ctx.globalAlpha = c.alpha;
+    ctx.fillStyle   = '#ffffff';
+    ctx.shadowBlur  = 20;
+    ctx.shadowColor = 'rgba(255,255,255,0.4)';
+    ctx.beginPath();
+    ctx.arc(sx,              c.y,             c.r,      0, Math.PI*2);
+    ctx.arc(sx + c.r*0.78,  c.y + c.r*0.1,   c.r*0.70, 0, Math.PI*2);
+    ctx.arc(sx - c.r*0.62,  c.y + c.r*0.14,  c.r*0.60, 0, Math.PI*2);
+    if (c.extra) ctx.arc(sx + c.r*0.18, c.y - c.r*0.52, c.r*0.50, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawThermals() {
+  for (let t of thermals) {
+    let sx = t.x - camX;
+    if (sx < -130 || sx > W + 130) continue;
+    for (let k = 0; k < 4; k++) {
+      let phase = ((tik * 0.007 + k/4 + t.phase) % 1);
+      let alpha = Math.sin(phase * Math.PI) * 0.28;
+      let r     = t.r * (0.18 + phase * 0.9);
+      let y     = t.y  - phase * 150;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffcc00';
+      ctx.lineWidth   = 2;
+      ctx.shadowBlur  = 10;
+      ctx.shadowColor = '#ffaa00';
+      ctx.beginPath();
+      ctx.ellipse(sx, y, r, r * 0.36, 0, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+function drawRings() {
+  for (let ring of rings) {
+    let sx = ring.x - camX;
+    if (sx < -90 || sx > W + 90) continue;
+    if (ring.hit && ring.flash <= 0.02) continue;
+    let alpha = ring.hit ? ring.flash : 0.85;
+    let color = ring.hit ? '#ffe444' : 'hsl('+ring.hue+',100%,70%)';
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 4;
+    ctx.shadowBlur  = 18;
+    ctx.shadowColor = color;
+    ctx.beginPath(); ctx.arc(sx, ring.y, ring.r, 0, Math.PI*2); ctx.stroke();
+    if (!ring.hit) {
+      ctx.globalAlpha = alpha * 0.35;
+      ctx.fillStyle   = color;
+      ctx.beginPath(); ctx.arc(sx, ring.y, ring.r*0.16, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawTrail() {
+  if (!plane.trail || plane.trail.length < 2) return;
+  ctx.save();
+  for (let i = 1; i < plane.trail.length; i++) {
+    let t = i / plane.trail.length;
+    ctx.globalAlpha = t * 0.35;
+    ctx.strokeStyle = plane.glowTimer > 0 ? '#ffd060' : 'rgba(255,255,255,0.9)';
+    ctx.lineWidth   = 1.8 * t;
+    ctx.beginPath();
+    ctx.moveTo(plane.trail[i-1].x - camX, plane.trail[i-1].y);
+    ctx.lineTo(plane.trail[i].x   - camX, plane.trail[i].y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawPlane(sx, sy, ang) {
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.rotate(ang);
+
+  if (plane.glowTimer > 0) {
+    ctx.shadowBlur  = 20;
+    ctx.shadowColor = '#ffc800';
+  }
+
+  // Top wing
+  ctx.fillStyle   = '#f5f0e4';
+  ctx.strokeStyle = '#c4bcaa';
+  ctx.lineWidth   = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(26, 0);
+  ctx.lineTo(-10, -16);
+  ctx.lineTo(-22, 0);
+  ctx.lineTo(-10,  2);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // Bottom wing (slightly darker, shorter visible edge)
+  ctx.fillStyle = '#e6e0d0';
+  ctx.beginPath();
+  ctx.moveTo(26, 0);
+  ctx.lineTo(-10, 16);
+  ctx.lineTo(-22, 0);
+  ctx.lineTo(-10,  2);
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+
+  // Center keel line
+  ctx.strokeStyle = '#b8b0a0';
+  ctx.lineWidth   = 0.7;
+  ctx.beginPath(); ctx.moveTo(26, 0); ctx.lineTo(-22, 0); ctx.stroke();
+
+  // Crease lines — top wing
+  ctx.strokeStyle = '#d4ccba';
+  ctx.lineWidth   = 0.5;
+  ctx.beginPath(); ctx.moveTo(8,  0); ctx.lineTo(-10, -16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-10, -16); ctx.stroke();
+  // Crease lines — bottom wing
+  ctx.beginPath(); ctx.moveTo(8,  0); ctx.lineTo(-10, 16); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-10, 16); ctx.stroke();
+
+  // Red nose tip
+  ctx.fillStyle  = '#e84040';
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.arc(25, 0, 2.2, 0, Math.PI*2); ctx.fill();
+
+  ctx.restore();
+}
+
+function drawParticles() {
+  for (let p of particles) {
+    let sx = p.x - camX;
+    ctx.save();
+    ctx.globalAlpha = p.life * 0.88;
+    ctx.fillStyle   = p.color;
+    ctx.shadowBlur  = 7;
+    ctx.shadowColor = p.color;
+    ctx.beginPath(); ctx.arc(sx, p.y, p.r * p.life, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    p.x  += p.vx; p.y  += p.vy;
+    p.vy += 0.07;
+    p.vx *= 0.97; p.vy *= 0.97;
+    p.life -= p.decay;
+  }
+  particles = particles.filter(p => p.life > 0);
+}
+
+function drawCrashPieces() {
+  for (let p of crashPieces) {
+    let sx = p.x - camX;
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.translate(sx, p.y);
+    ctx.rotate(p.angle);
+    ctx.fillStyle   = '#f0e8d8';
+    ctx.strokeStyle = '#c0b4a0';
+    ctx.lineWidth   = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(p.w/2, 0); ctx.lineTo(0, -p.h/2);
+    ctx.lineTo(-p.w/2, 0); ctx.lineTo(0, p.h/2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.14; p.vx *= 0.99; p.vy *= 0.99;
+    p.angle += p.spin; p.life -= p.decay;
+  }
+  crashPieces = crashPieces.filter(p => p.life > 0);
+}
+
+// ── Aim & launch ──────────────────────────────────────────────────────────────
+let isDragging = false, dragSX = 0, dragSY = 0, aimX = 0, aimY = 0;
+
+function drawAim() {
+  if (state !== 'aim') return;
+  let px = plane.x - camX, py = plane.y;
+  ctx.save();
+
+  if (isDragging) {
+    let dx   = dragSX - aimX, dy = dragSY - aimY;
+    let len  = Math.sqrt(dx*dx + dy*dy);
+    let pwr  = Math.min(len / 135, 1);
+    let ang  = Math.atan2(dy, dx);   // launch direction = opposite drag
+    let dist = Math.min(len, 135) * 1.45;
+    let ex   = px + Math.cos(ang) * dist;
+    let ey   = py + Math.sin(ang) * dist;
+
+    // Trajectory dashes
+    ctx.setLineDash([5, 6]);
+    ctx.strokeStyle = 'rgba(255,220,55,' + (0.4 + pwr*0.5) + ')';
+    ctx.lineWidth   = 2;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Arrow head
+    ctx.save();
+    ctx.translate(ex, ey); ctx.rotate(ang);
+    ctx.fillStyle = '#ffe044';
+    ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(-5, -5); ctx.lineTo(-5, 5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // Power bar
+    let bx = 14, by = H - 34, bw = 155, bh = 14;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.roundRect(bx-2, by-2, bw+4, bh+4, 6); ctx.fill();
+    let col = pwr < 0.38 ? '#55dd33' : pwr < 0.72 ? '#ffaa00' : '#ff3333';
+    ctx.fillStyle = col;
+    if (pwr > 0) { ctx.roundRect(bx, by, bw*pwr, bh, 4); ctx.fill(); }
+    ctx.strokeStyle = 'rgba(255,255,255,0.38)'; ctx.lineWidth = 1;
+    ctx.roundRect(bx, by, bw, bh, 4); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Arial'; ctx.textAlign = 'left';
+    ctx.fillText('POWER', bx+3, by+10);
+  } else {
+    // Idle pulse ring
+    let ph = (tik % 90) / 90;
+    ctx.strokeStyle = 'rgba(255,215,50,' + (0.65 - ph*0.4) + ')';
+    ctx.lineWidth   = 2;
+    ctx.beginPath(); ctx.arc(px, py, 22 + ph*15, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle   = 'rgba(255,255,255,0.62)';
+    ctx.font        = '12px Segoe UI';
+    ctx.textAlign   = 'center';
+    ctx.fillText('drag to launch', px, py - 34);
+  }
+  ctx.restore();
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD() {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.38)';
+  ctx.roundRect(W - 152, 10, 142, 60, 12); ctx.fill();
+  ctx.fillStyle   = '#ffffff';
+  ctx.font        = 'bold 32px Segoe UI';
+  ctx.textAlign   = 'right';
+  ctx.fillText(distance + ' ft', W - 14, 50);
+  ctx.font      = '11px Segoe UI';
+  ctx.fillStyle = 'rgba(255,255,255,0.58)';
+  ctx.fillText('BEST  ' + best + ' ft', W - 14, 64);
+  ctx.restore();
+
+  // Controls hint during flight
+  if (state === 'fly') {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.font      = '10px Segoe UI';
+    ctx.textAlign = 'left';
+    ctx.fillText('MOUSE / ↑↓ to steer', 12, 22);
+    ctx.restore();
+  }
+}
+
+function drawResult() {
+  if (state !== 'result') return;
+  let isNew = distance >= best && distance > 0;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,18,50,0.70)';
+  ctx.fillRect(0, 0, W, H);
+
+  let cw = 360, ch = 235, cx = (W-cw)/2, cy = (H-ch)/2;
+  ctx.fillStyle = 'rgba(236,248,255,0.97)';
+  ctx.roundRect(cx, cy, cw, ch, 22); ctx.fill();
+
+  ctx.textAlign = 'center';
+  ctx.font      = 'bold 21px Segoe UI';
+  ctx.fillStyle = isNew ? '#b87000' : '#1a3a6a';
+  ctx.fillText(isNew ? '🏆  New Best!  🏆' : '✈️  Nice Throw!', W/2, cy + 44);
+
+  ctx.font      = 'bold 62px Segoe UI';
+  ctx.fillStyle = '#0c2040';
+  ctx.fillText(distance + ' ft', W/2, cy + 120);
+
+  ctx.font      = '15px Segoe UI';
+  ctx.fillStyle = '#5588aa';
+  ctx.fillText('Best: ' + best + ' ft', W/2, cy + 148);
+
+  // Play again button
+  ctx.fillStyle = '#1a4ecc';
+  ctx.roundRect(W/2 - 95, cy + 168, 190, 44, 12); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font      = 'bold 16px Segoe UI';
+  ctx.fillText('Throw Again  ✈️', W/2, cy + 195);
+
+  ctx.restore();
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+function startDrag(mx, my) {
+  let px = plane.x - camX;
+  if (Math.sqrt((mx-px)**2 + (my-plane.y)**2) < 60) {
+    isDragging = true; dragSX = mx; dragSY = my; aimX = mx; aimY = my;
+  }
+}
+
+function endDrag() {
+  if (!isDragging) return;
+  isDragging = false;
+  let dx  = dragSX - aimX, dy = dragSY - aimY;
+  let len = Math.sqrt(dx*dx + dy*dy);
+  let pwr = Math.min(len / 135, 1);
+  if (pwr < 0.07) return;
+  let ang   = Math.atan2(dy, dx);
+  let speed = 3.5 + pwr * 13;
+  plane.vx  = Math.cos(ang) * speed;
+  plane.vy  = Math.sin(ang) * speed;
+  plane.angle = ang;
+  plane.trail = [];
+  state = 'fly';
+}
+
+canvas.addEventListener('mousedown', e => {
+  const r = canvas.getBoundingClientRect();
+  let mx = e.clientX - r.left, my = e.clientY - r.top;
+  if (state === 'result') { initPlane(); buildWorld(); return; }
+  if (state === 'aim') startDrag(mx, my);
+});
+canvas.addEventListener('mouseup', () => { if (state === 'aim') endDrag(); });
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0], r = canvas.getBoundingClientRect();
+  let mx = t.clientX - r.left, my = t.clientY - r.top;
+  mouseX = mx; mouseY = my;
+  if (state === 'result') { initPlane(); buildWorld(); return; }
+  if (state === 'aim') startDrag(mx, my);
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0], r = canvas.getBoundingClientRect();
+  mouseX = t.clientX - r.left; mouseY = t.clientY - r.top;
+  if (isDragging) { aimX = mouseX; aimY = mouseY; }
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (state === 'aim') endDrag();
+}, { passive: false });
+
+// ── Main loop ─────────────────────────────────────────────────────────────────
+function loop() {
+  tik++;
+  ctx.clearRect(0, 0, W, H);
+
+  drawSky();
+  drawMountains();
+  drawClouds();
+  drawThermals();
+  drawGround();
+  drawRings();
+
+  if (state === 'fly') {
+    drawTrail();
+    physicsStep();
+    drawPlane(plane.x - camX, plane.y, plane.angle);
+  }
+  if (state === 'crash') {
+    drawCrashPieces();
+  }
+  if (state === 'aim') {
+    drawPlane(plane.x - camX, plane.y, plane.angle);
+    drawAim();
+  }
+
+  drawParticles();
+  drawHUD();
+  drawResult();
+
+  requestAnimationFrame(loop);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildWorld();
+initPlane();
+loop();
+</script>
+</body>
+</html>
