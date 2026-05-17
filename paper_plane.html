@@ -1401,6 +1401,16 @@ function drawAimScreen(){
     ctx.restore();
   }
   drawPlane(); drawHUD();
+  // Hint text
+  if(!isDragging){
+    ctx.save();
+    ctx.globalAlpha=0.85;
+    ctx.fillStyle='rgba(0,0,0,0.45)';
+    ctx.roundRect(W/2-145,H-110,290,38,10); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 15px system-ui'; ctx.textAlign='center';
+    ctx.fillText('🖱️  Click & drag anywhere → release to launch', W/2, H-86);
+    ctx.restore();
+  }
 }
 
 // ── MAIN GAME LOOP ──
@@ -1676,8 +1686,8 @@ canvas.addEventListener('touchend', e=>{ e.preventDefault(); onUp(e); }, {passiv
 function onDown(e){
   const {x,y}=getXY(e);
   if(appState==='aim'){
-    const px=plane.x-camX, py=plane.y;
-    if(Math.hypot(x-px,y-py)<40){ isDragging=true; dragSX=x; dragSY=y; aimX=x; aimY=y; }
+    // Click anywhere to start aiming — no tiny hitbox required
+    isDragging=true; dragSX=x; dragSY=y; aimX=x; aimY=y;
   }
   if(appState==='fly'){
     // Check sound toggle
