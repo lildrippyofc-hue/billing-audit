@@ -129,19 +129,44 @@ const NPC_DEFS = [
   { id:'james', name:'James', title:'(Manager)', color:0x3a6abf, zone:'dock', patrol:true,
     appearance:{ shirt:0x2a5aaa, pants:0x334466, skin:0xd4956a, hair:0x4a3010, clipboard:true, badge:true },
     lines:[
+      // ── Sarcastic classics
       '"What now?!"',
-      '"I\'m literally everywhere."',
-      '"I work 7 days. SEVEN."',
-      '"Nobody called for James. I showed up anyway."',
-      '"I see EVERYTHING that happens on this dock."',
-      '"You think this is a game? This is MY dock."',
-      '"I haven\'t taken a lunch break since 2019."',
-      '"Eyes forward. Hands moving. Clock\'s ticking."',
-      '"Don\'t test me today. I already failed my own test."',
-      '"I\'ve written up people for BREATHING wrong."',
-      '"My clipboard has more pages than your entire life plan."',
-      '"I was here before the building was."',
-      '"I have a system. You are not part of the system. Go."',
+      '"Oh good, you\'re standing still. That\'s exactly what I needed to see."',
+      '"I work 7 days. SEVEN. You work... what, four? Four and a half?"',
+      '"Nobody called for James. I showed up anyway. Story of my life."',
+      '"I see EVERYTHING on this dock. EVERYTHING."',
+      '"You think this is a game? This is MY dock. I\'m the final boss."',
+      '"I haven\'t taken a lunch break since 2019. Look at me. LOOK AT ME."',
+      '"Eyes forward. Hands moving. Brain... optional, apparently."',
+      '"Don\'t test me today. I already failed my own test this morning."',
+      '"I\'ve written people up for BREATHING too loud. Don\'t think I won\'t."',
+      '"My clipboard has more pages than your entire career plan."',
+      '"I was here before the building was. That\'s not a joke."',
+      '"I have a system. A very good system. You are a variable I didn\'t account for."',
+      // ── Passive-aggressive gold
+      '"Wow. You\'re... really just standing there. Incredible."',
+      '"I\'m not saying you\'re the problem. I\'m implying it very loudly though."',
+      '"Is this your version of working? Because it\'s very... creative."',
+      '"You know what I love? When people make MORE work for me. Love it."',
+      '"Great job today. Really. Top tier mediocrity."',
+      '"Keep it up and you\'ll make assistant loader by 2037."',
+      '"That\'s a really interesting choice you made there. Wrong, but interesting."',
+      '"Oh don\'t mind me. I\'m just the guy who keeps this whole operation from imploding. Daily."',
+      '"You took a break 20 minutes ago. I have you on camera."',
+      '"I\'m not your babysitter. Yet here I am. Babysitting."',
+      // ── Self-aware James
+      '"I had a real job offer in 2014. I turned it down. Look how that worked out."',
+      '"Sometimes I stand here and think — was this the plan? And then I just... go back to work."',
+      '"I get here at 4AM. Nobody asks me to. I just show up. That\'s who I am now."',
+      '"My therapist says I have \'boundary issues\' with this dock. She\'s right."',
+      '"I\'ve seen things on this loading dock that would make you cry. I did. I\'m fine now."',
+      '"They gave me a title. Manager. Like a title makes the chaos make sense."',
+      // ── Random blunt honesty
+      '"Honestly? This job aged me about 15 years. In 3 years."',
+      '"I know everything about everyone here. It\'s exhausting."',
+      '"You think I want to be here? ...Actually yes. This is all I have."',
+      '"The dock IS my personality at this point. I\'ve accepted it."',
+      '"One day I\'m just going to walk into the freezer and Todd\'s going to be there. Just waiting."',
     ],
     choices:["Say hi 👋","Ask for easier truck 😬","Go smoke 🚬","Ask what he does all day 🤔"],
   },
@@ -226,27 +251,74 @@ const NPC_DEFS = [
   },
 ];
 
-// James annoyance escalated lines (50-79 annoyance)
+// James annoyance escalated lines (30-79 annoyance: salty, passive-aggressive, sarcastic)
 const JAMES_SALTY = [
-  "I am THIS close to losing it today.",
-  "Do I look like I'm in the mood? Do I?!",
-  "You know what your problem is? Pick one.",
-  "I didn't come in at 4AM for THIS.",
-  "Every single day. EVERY. SINGLE. DAY.",
-  "I have been patient. The patience is GONE.",
-  "You think I don't see you slacking? I see EVERYTHING.",
-  "My eye has been twitching since Tuesday because of people like you.",
+  // Classic salty
+  "I am THIS close. THIS. CLOSE.",
+  "Do I look like I'm in the mood? Study my face. Do I?!",
+  "You know what your problem is? I have a LIST. It's long.",
+  "I didn't come in at 4AM for THIS level of performance.",
+  "Every. Single. Day. I have to do this. Every. Single. Day.",
+  "I have been patient. I have been SO patient. The patience is gone now.",
+  "You think I don't see you slacking? I don't miss ANYTHING.",
+  "My left eye has been twitching since Tuesday because of this dock.",
+  // Passive-aggressive masterclass
+  "Oh don't worry about me. I'm FINE. Everything is FINE.",
+  "No no, take your time. It's not like there's 4 trucks waiting. Oh wait.",
+  "Oh I see what's happening here. I SEE IT.",
+  "Wow. Okay. Cool. Great. This is fine.",
+  "You know what? Sure. Why not. Let's just do it this way. Perfect.",
+  "I'm not going to say what I'm thinking right now. For legal reasons.",
+  "That's really something. That is truly something.",
+  "Interesting move. Really. Bold strategy. Let's see how it plays out.",
+  // Sarcastic observations
+  "Oh good, you've discovered standing. Advanced skill.",
+  "Amazing work rate today. Truly. Phenomenal stuff.",
+  "Is this speed on purpose or is this your baseline? I need to know.",
+  "I love how you make it look so... effortless. Especially the not-working part.",
+  "Ten years from now you're going to look back at this moment and cringe. I already am.",
+  // Borderline threatening
+  "I don't write people up for fun. Actually, sometimes I do.",
+  "Keep this up and your name is going on a very specific part of my clipboard.",
+  "I have HR's number memorized. Just so you know.",
+  "You are walking a LINE today. A very thin line.",
+  "I'm watching. I'm always watching. Even when you think I'm not here.",
+  "I will rearrange this entire shift roster and nobody will be happy. Don't test me.",
+  "One more thing. Just ONE more thing and we're having a conversation in my office.",
 ];
-// James cussing-out lines (80+ annoyance)
+// James cussing-out lines (80+ annoyance: full meltdown mode)
 const JAMES_NUCLEAR = [
-  "What in the HELL is going on over here?!",
-  "I swear to GOD if I have to say this one more time—",
-  "Are you KIDDING me right now?! Are you KIDDING?!",
-  "I don't get PAID enough for this NONSENSE.",
-  "EVERYONE on this dock is on my LAST nerve!",
-  "You know what?! FINE. FINE! We're all staying late!",
-  "I have never in my LIFE seen such spectacular nonsense.",
-  "I am about thirty seconds from calling corporate on ALL of you.",
+  // Full rage
+  "What in the HELL is going on over here RIGHT NOW?!",
+  "I swear to GOD — I SWEAR — if I have to say this one more time—",
+  "Are you KIDDING me?! ARE. YOU. KIDDING. ME?!",
+  "I do not get PAID nearly enough for this level of NONSENSE.",
+  "EVERYBODY on this dock is on my ABSOLUTE last nerve TODAY!",
+  "You know what?! FINE! FINE! We are ALL staying LATE!",
+  "I have never in my LIFE — in THIRTY YEARS — seen this level of spectacular nonsense.",
+  "I am about TWENTY seconds from calling corporate and losing my MIND on that call.",
+  // Unhinged but specific
+  "WHO approved this?! WHO?! Point at them. I want to look at them.",
+  "I came in at FOUR IN THE MORNING. FOUR! For THIS?! FOR THIS?!",
+  "Do you see this clipboard? This clipboard has more write-ups than PAGES NOW.",
+  "I have a headache that started on Monday. It is your fault. Collectively.",
+  "My BLOOD PRESSURE. I can feel it from here.",
+  "You know what I did at 3AM? I stress-dreamed about THIS DOCK. And then I CAME IN.",
+  "Every time I think it can't get worse — EVERY TIME — it finds a way.",
+  "I don't yell. I'm not a yeller. BUT TODAY I AM A YELLER.",
+  // Existential rage
+  "I went to SCHOOL. I have a CERTIFICATE. And I am HERE. Dealing with THIS.",
+  "You know what the wild part is?! I CHOSE this! I ACCEPTED this position WILLINGLY!",
+  "I could be literally anywhere else right now. A beach. A hammock. Instead: THIS.",
+  "Do you know how many times I've told myself 'tomorrow will be better'?! DO YOU?!",
+  "I used to have hobbies. A social life. People I liked. Then I took this job.",
+  "They're going to put on my grave: 'He managed the dock.' THAT IS IT. THAT IS ALL.",
+  // Last-resort threats
+  "I will reassign every single person on this dock. WATCH ME. I have the authority.",
+  "Corporate is getting a VERY interesting email tonight. From me. About all of this.",
+  "I am THIS close to locking the break room. FOR A WEEK. SEE HOW THAT FEELS.",
+  "You think I don't know about the things you do?! I have NOTES. DETAILED NOTES.",
+  "I am going to write an incident report so detailed it will become a CASE STUDY.",
 ];
 
 // ── PERSON SPRITE GENERATOR ────────────────────────────────────────────────
@@ -1043,64 +1115,91 @@ class GameScene extends Phaser.Scene {
       }
     }
     else if(npc.id === 'james'){
-      if(idx===0){
+      if(idx===0){ // Say hi
         const hiLines = [
-          '"Hi. Now please go do something."',
-          '"...hi. Why are you just standing here."',
-          '"Hi yourself. Back to work."',
-          '"Oh good, you\'re upright. Go do something with that."',
+          '"Hi. Now go do literally anything productive."',
+          '"...Hi. Why are you still standing here after saying hi."',
+          '"Hi yourself. Back to work. That\'s it. That\'s the whole conversation."',
+          '"Oh good, you\'re upright. Use that. Go be upright somewhere useful."',
+          '"Hello. I see you. You see me. Moment\'s over. Move."',
+          '"Hi. Cool. Great chat. See you never. Go."',
+          '"...was that it? Was that the whole thing? Go."',
+          '"Oh you\'re being friendly now. Interesting timing."',
+          '"Mmhm. Hi. Noted. Don\'t let me keep you from working."',
+          '"You know what I love? People who say hi and then ALSO work. Try both."',
         ];
         response = Phaser.Math.RND.pick(hiLines);
         suspChange = -10; STATE.rapportJames++;
-        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 5);
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 8);
       }
-      else if(idx===1){
+      else if(idx===1){ // Ask for easier truck
         const noLines = [
-          '"No. Next."',
-          '"That\'s not how any of this works."',
-          '"I don\'t negotiate with... whatever this is."',
-          '"No no no no no. Go. Now."',
+          '"No. Next question."',
+          '"That\'s not how any of this works. None of it. Any of it."',
+          '"I don\'t negotiate with... whatever this is. Go."',
+          '"No no no no no. No. Go. Now."',
+          '"Easier truck?! They\'re BOXES. They\'re ALL BOXES."',
+          '"Oh you want EASIER? You think I have an Easy Truck? Is that what you think?"',
+          '"I\'m going to pretend you didn\'t ask me that. For both our sakes."',
+          '"The truck is the truck. The dock is the dock. You are the worker. Go."',
+          '"I\'m sorry did you just ask me to FIND you a lighter load? On MY dock?"',
+          '"You know what makes a truck easier? Going and unloading it. Try that."',
+          '"Ha. HA. Good one. No. Go."',
         ];
         response = Phaser.Math.RND.pick(noLines);
-        suspChange = 5; STATE.jamesAnnoyance += 10;
+        suspChange = 8; STATE.jamesAnnoyance += 15;
+        this.floatText(npc.sprite.x, npc.sprite.y-40, '😠 +15 annoyance', '#ff6600');
       }
-      else if(idx===2){ // Invite to smoke
-        if(STATE.rapportJames >= 2){
+      else if(idx===2){ // Go smoke
+        if(STATE.smokingNPCs.includes('james')){
+          response = '"I\'m already out there! What are you doing still in here?! GO."';
+        } else if(STATE.rapportJames >= 2){
           const smokeYes = [
-            '"...yeah okay. Five minutes. Nobody saw this."',
-            '"You know what? Fine. Five minutes. I never said this."',
-            '"I swear if Pam sees us I will deny everything. Let\'s go."',
+            '"...yeah okay. Five minutes. Nobody saw this. This never happened."',
+            '"You know what? Fine. FIVE minutes. I never agreed to this. Let\'s go."',
+            '"I swear if Pam sees us I will deny everything. Including knowing you. Let\'s go."',
+            '"Off the record — yes. On the record — I am doing a perimeter check. Got it?"',
+            '"Don\'t tell anyone. I mean it. I will know if you told anyone."',
           ];
           response = Phaser.Math.RND.pick(smokeYes);
           energyChange = 20; scoreChange = 50; STATE.rapportJames++;
-          STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 20);
+          STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 25);
           STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'james'])];
-          this.floatText(this.player.x, this.player.y, '+50 pts! James is rolling with you! 🚬', '#ffa01e');
+          this.floatText(this.player.x, this.player.y, '🔥 +50 pts! James is actually rolling! 🚬', '#ffa01e');
         } else {
           const smokeNo = [
-            '"Excuse me?! Back to work."',
-            '"I don\'t smoke. I also don\'t joke. Back to the dock."',
-            '"Do you know what I was doing at YOUR age? Working. Go do that."',
+            '"Excuse me?! EXCUSE ME?! Back to work."',
+            '"I don\'t smoke. I also don\'t take unauthorized breaks. Weird how both apply here."',
+            '"Do you know what I was doing at YOUR age? Working. Working so hard. Go do that."',
+            '"You\'re asking ME — the MANAGER — to leave the dock? Right now? No."',
+            '"Build some rapport first. Or just go do your job. Either works."',
+            '"I don\'t even know how to respond to that. Back to work."',
           ];
           response = Phaser.Math.RND.pick(smokeNo);
-          suspChange = 15; STATE.jamesAnnoyance += 15;
+          suspChange = 15; STATE.jamesAnnoyance += 18;
+          this.floatText(npc.sprite.x, npc.sprite.y-40, '😠 James is NOT amused', '#ff4400');
         }
       }
       else { // idx===3: Ask what he does all day
         const whatLines = [
-          '"What do I— WHAT DO I— I do EVERYTHING. You want a LIST?!"',
-          '"I answer 400 emails a day. FOUR. HUNDRED. Do you know how many that is? I stopped counting!"',
-          '"I manage THIS. Whatever THIS is at any given moment. Which is apparently EVERYTHING."',
-          '"I do your job. And the job above your job. And frankly, your life decisions."',
-          '"I\'m in six meetings before you even clock in. SIX. About THIS PLACE. That YOU work at."',
-          '"What do I do?! I prevent this entire building from collapsing into chaos DAILY."',
-          '"I once handled a forklift fire, a vendor dispute, AND a HR complaint — before 8AM. On a Sunday."',
-          '"I have a spreadsheet. It has my name on it 47 times. Under \'responsible party.\' Forty. Seven."',
+          '"What do I— WHAT DO I— I do EVERYTHING. You want a LIST? Sit down. It\'s long."',
+          '"I answer 400 emails a day. FOUR HUNDRED. Do you know how many that is? I stopped counting in 2021."',
+          '"I manage THIS. Whatever THIS is at any given moment. Which is apparently EVERYTHING and ALSO your problem."',
+          '"I do your job. And the job above your job. And frankly some decisions about your life you haven\'t made yet."',
+          '"I\'m in SIX MEETINGS before you even clock in. Six. About THIS PLACE. That YOU work at."',
+          '"I prevent this entire building from becoming a crime scene. DAILY. You\'re welcome."',
+          '"I once handled a forklift fire, a vendor dispute, three HR complaints, AND a missing pallet. Before 8AM. On a Sunday."',
+          '"I have a spreadsheet. My name is on it 47 times under \'responsible party.\' I counted. It made me sad."',
+          '"What do I do?! I keep YOU employed! That\'s what I do! You\'re welcome AGAIN!"',
+          '"I schedule. I report. I supervise. I document. I beg corporate. I survive. DAILY. That\'s my day."',
+          '"I was here when the PREVIOUS manager had a breakdown. I WATCHED. And then I TOOK THE JOB. That\'s what I do."',
+          '"My day starts at 4AM and ends when I stop thinking about this dock. Which is never. So it never ends."',
         ];
         response = Phaser.Math.RND.pick(whatLines);
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 22);
-        suspChange = 8;
-        this.floatText(npc.sprite.x, npc.sprite.y, '😤 James is on the edge! Annoyance +22', '#ff6600');
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 25);
+        suspChange = 10;
+        this.floatText(npc.sprite.x, npc.sprite.y-40, '🤯 James PISSED OFF +25', '#ff2200');
+        this.cameras.main.shake(200, 0.006);
       }
     }
     else if(npc.id === 'lee'){
@@ -1749,19 +1848,116 @@ class GameScene extends Phaser.Scene {
         }
       }
 
-      // Pam suspicion check
+      // ── PAM: suspicion pressure + inspection speeches ──
       if(npc.id==='pam'){
         const d = Phaser.Math.Distance.Between(this.player.x,this.player.y,npc.sprite.x,npc.sprite.y);
         if(d<120 && STATE.suspicion>30){
           STATE.suspicion = Math.min(100, STATE.suspicion+0.05*delta/16);
           if(STATE.suspicion>80 && !this._pamWarned){
             this._pamWarned=true;
-            this.showBubble(npc, '"I\'m writing you up."');
+            this.showBubble(npc, '"I\'m writing you up. Don\'t make it worse."');
             STATE.score = Math.max(0, STATE.score-50);
             this.floatText(this.player.x,this.player.y,'😱 PAM CAUGHT YOU! -50 pts','#ff2222');
             this.cameras.main.shake(400,0.015);
             this.time.delayedCall(5000,()=>{ this._pamWarned=false; });
           }
+        }
+        // Pam occasionally announces herself
+        if(npc.bubbleTimer<=0 && Math.random()<0.0008){
+          const pamRoam = [
+            '"I am doing a walkthrough. Everyone act normal."',
+            '"Productivity review. Carry on."',
+            '"I can see everything from here. Just so you know."',
+            '"Nothing to see here. Keep moving. Both of you."',
+            '"I\'ve updated the write-up form. It has more fields now."',
+            '"This is an informal check. Informal but official."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(pamRoam));
+        }
+      }
+
+      // ── CHANDLER: mutters to himself, reacts to stress ──
+      if(npc.id==='chandler'){
+        if(npc.bubbleTimer<=0 && Math.random()<0.0012){
+          const chandlerMutters = [
+            '"I have a degree. A real one. From a real school."',
+            '"...Bread Boy. I can\'t believe this is my life."',
+            '"I used to have ambitions. Big ones. Now I\'m here."',
+            '"Just three more hours. Three more hours."',
+            '"Nobody here respects the bread. Nobody."',
+            '"I\'m going to update my resume tonight. For real this time."',
+            '"I can feel James staring at me from over there."',
+            '"...sourdough. It\'s SOURDOUGH. Why is that so hard."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(chandlerMutters));
+        }
+        // Chandler reacts to high James annoyance
+        if(STATE.jamesAnnoyance >= 70 && npc.bubbleTimer<=0 && Math.random()<0.004){
+          this.showBubble(npc, '"...when James gets like this I just stare at my shoes and pretend I\'m somewhere else."');
+        }
+      }
+
+      // ── DREW: wanders toward player occasionally to ask for money ──
+      if(npc.id==='drew' && !STATE.dialogueActive){
+        if(!this._drewStalking && Math.random()<0.0004){
+          this._drewStalking = true;
+          npc.targetX = this.player.x + 40;
+          npc.targetY = this.player.y;
+          const d2 = Phaser.Math.Distance.Between(npc.sprite.x,npc.sprite.y,this.player.x,this.player.y);
+          if(d2 < 80 && npc.bubbleTimer<=0){
+            const drewHustle = [
+              '"Hey... hey you. Psst. You got like $3?"',
+              '"Bro real quick — vending machine. $1.50. I have $0.48."',
+              '"Okay don\'t make it weird but do you have cash on you right now."',
+              '"I\'m not gonna lie I was looking for you specifically."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(drewHustle));
+            this._drewStalking = false;
+          }
+          this.time.delayedCall(5000, ()=>{ this._drewStalking = false; });
+        }
+        if(npc.bubbleTimer<=0 && Math.random()<0.0010){
+          const drewIdle = [
+            '"I\'m so hungry bro."',
+            '"You know what sounds good right now? Literally anything."',
+            '"I think the vending machine owes ME money at this point."',
+            '"My card is... it\'s a whole situation. Don\'t worry about it."',
+            '"I was going to bring lunch. I forgot the lunch. And my wallet."',
+            '"Drew\'s Law: if there\'s free pizza anywhere in this building, I will find it."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(drewIdle));
+        }
+      }
+
+      // ── TODD: freezer zone behavior, occasionally emerges ──
+      if(npc.id==='todd'){
+        if(npc.bubbleTimer<=0 && Math.random()<0.0010){
+          const toddCreepy = [
+            '"...the temperature dropped two degrees. The freezer is happy today."',
+            '"I started talking to the compressor. It listens."',
+            '"It\'s been 11 hours. Or 3. Time is different here."',
+            '"I found a pallet from 2009. I\'m protecting it now."',
+            '"The mystery box hummed a different note today. Lower. Meaningful."',
+            '"Someone moved one of my pallets. I know who did it. I\'m not saying."',
+            '"I haven\'t blinked in like 20 minutes. I should blink."',
+            '"Cold is just warmth that gave up. Think about it."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(toddCreepy));
+        }
+      }
+
+      // ── LEE: idle chatter in break room when not on a mission ──
+      if(npc.id==='lee' && !STATE.leeDistractingJames && !STATE.leeFollowing){
+        if(npc.bubbleTimer<=0 && Math.random()<0.0010){
+          const leeIdle = [
+            '"Okay but has anyone actually READ the break room rules? Hilarious."',
+            '"I told James I was on break. He said \'you\'re always on break.\' RUDE."',
+            '"Someone needs to restock the coffee. Not me. But someone."',
+            '"I have been here for 6 hours and have done maybe 40 minutes of work. Allegedly."',
+            '"Group chat is popping off right now. Don\'t ask."',
+            '"I could be doing something important right now. I choose not to."',
+          ];
+          this.showBubble(npc, Phaser.Math.RND.pick(leeIdle));
         }
       }
     });
@@ -2170,18 +2366,64 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // James starts yelling when annoyance is high
+    // James annoyance milestone events (fire once per threshold crossing)
+    if(!this._jamesMilestone30 && STATE.jamesAnnoyance >= 30){
+      this._jamesMilestone30 = true;
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james){ this.showBubble(james, '"I am starting to lose patience. Just... noting that."'); }
+      this.floatText(WW/2, 500, '😤 James is getting annoyed...', '#ffaa00');
+    }
+    if(!this._jamesMilestone50 && STATE.jamesAnnoyance >= 50){
+      this._jamesMilestone50 = true;
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james){ this.showBubble(james, '"THAT\'S IT. EVERYONE BETTER LOOK BUSY RIGHT NOW."'); }
+      this.cameras.main.shake(300, 0.010);
+      this.floatText(WW/2, 500, '😠 JAMES IS PISSED OFF — Watch out!', '#ff6600');
+    }
+    if(!this._jamesMilestone80 && STATE.jamesAnnoyance >= 80){
+      this._jamesMilestone80 = true;
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james){ this.showBubble(james, '"I AM DONE. I AM SO DONE. EVERYONE IS GETTING AN EMAIL TONIGHT!"'); }
+      this.cameras.main.shake(500, 0.020);
+      STATE.suspicion = Math.min(99, STATE.suspicion + 20);
+      this.floatText(WW/2, 480, '🤬 JAMES NUCLEAR MODE — Suspicion +20!', '#ff2200');
+    }
+    // Reset milestones if James calms back down
+    if(STATE.jamesAnnoyance < 30){ this._jamesMilestone30=false; this._jamesMilestone50=false; this._jamesMilestone80=false; }
+    else if(STATE.jamesAnnoyance < 50){ this._jamesMilestone50=false; this._jamesMilestone80=false; }
+    else if(STATE.jamesAnnoyance < 80){ this._jamesMilestone80=false; }
+
+    // James proximity snap — sarcastic snaps when player walks near him
+    if(!STATE.dialogueActive && !this._jamesProxCooldown){
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james){
+        const proxDist = Phaser.Math.Distance.Between(this.player.x,this.player.y,james.sprite.x,james.sprite.y);
+        if(proxDist < 90 && james.bubbleTimer <= 0 && Math.random() < 0.015){
+          const annoy = STATE.jamesAnnoyance;
+          let snapPool;
+          if(annoy >= 80) snapPool = JAMES_NUCLEAR;
+          else if(annoy >= 50) snapPool = JAMES_SALTY;
+          else snapPool = james.lines;
+          this.showBubble(james, '"'+Phaser.Math.RND.pick(snapPool)+'"');
+          this._jamesProxCooldown = true;
+          this.time.delayedCall(6000, ()=>{ this._jamesProxCooldown = false; });
+        }
+      }
+    }
+
+    // James active outbursts when pissed off
     if(STATE.jamesAnnoyance >= 50 && !STATE.dialogueActive){
       const james = this.npcs.find(n=>n.id==='james');
-      if(james && james.bubbleTimer <= 0){
+      if(james && james.bubbleTimer <= 0 && Math.random() < 0.003){
         const line = STATE.jamesAnnoyance >= 80
           ? Phaser.Math.RND.pick(JAMES_NUCLEAR)
           : Phaser.Math.RND.pick(JAMES_SALTY);
         this.showBubble(james, '"'+line+'"');
         if(STATE.jamesAnnoyance >= 80){
-          // His yelling raises everyone's suspicion
           STATE.suspicion = Math.min(99, STATE.suspicion + 8);
-          this.floatText(james.sprite.x, james.sprite.y-40, '😤 JAMES IS LOSING IT!', '#ff4400');
+          this.floatText(james.sprite.x, james.sprite.y-40, '🤬 JAMES IS LOSING IT!', '#ff2200');
+        } else {
+          this.floatText(james.sprite.x, james.sprite.y-40, '😠 James is pissed...', '#ff6600');
         }
       }
     }
@@ -2225,37 +2467,51 @@ class UIScene extends Phaser.Scene {
   }
 
   createHUD(){
-    const pad=10;
+    // ── TOP BAR (taller to fit 3 stat rows) ──────────────────────────────────
+    this.add.rectangle(GW/2, 0, GW, 58, 0x000000, 0.82).setOrigin(0.5,0).setDepth(40);
 
-    // Background bar top
-    this.add.rectangle(GW/2, 0, GW, 46, 0x000000, 0.75).setOrigin(0.5,0).setDepth(40);
-
-    // Clock
-    this.clockTxt = this.add.text(GW/2, 24, '7:00 AM', {
-      fontSize:'16px', fill:'#ffa01e', fontFamily:'monospace', fontStyle:'bold'
+    // Clock (centre)
+    this.clockTxt = this.add.text(GW/2, 18, '7:00 AM', {
+      fontSize:'15px', fill:'#ffa01e', fontFamily:'monospace', fontStyle:'bold'
     }).setOrigin(0.5).setDepth(41);
-    this.dayTxt = this.add.text(GW/2, 40, '☀ SHIFT IN PROGRESS', {
-      fontSize:'10px', fill:'rgba(255,160,30,0.5)', fontFamily:'monospace'
+    this.dayTxt = this.add.text(GW/2, 34, '☀ SHIFT IN PROGRESS', {
+      fontSize:'9px', fill:'rgba(255,160,30,0.5)', fontFamily:'monospace'
     }).setOrigin(0.5).setDepth(41);
 
-    // Score
-    this.scoreTxt = this.add.text(10, 24, 'Score: 0', {
-      fontSize:'14px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold'
+    // Score (top-left)
+    this.scoreTxt = this.add.text(10, 18, '⭐ 0', {
+      fontSize:'13px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold'
     }).setOrigin(0,0.5).setDepth(41);
 
-    // Energy bar
-    this.add.text(GW-130, 10, 'ENERGY', {fontSize:'9px',fill:'#44cc44',fontFamily:'monospace'}).setDepth(41);
-    this.energyBg  = this.add.rectangle(GW-130+45, 10, 110, 10, 0x222222).setOrigin(0,0).setDepth(41);
-    this.energyBar = this.add.rectangle(GW-130+45, 10, 110, 10, 0x44cc44).setOrigin(0,0).setDepth(42);
-    this.energyTxt = this.add.text(GW-130+45+115, 14, '100%', {fontSize:'9px',fill:'#44cc44',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(42);
+    // ── RIGHT SIDE: Energy + Suspicion rows ──────────────────────────────────
+    const RX = GW - 170; // label start x
+    const BW = 100;      // bar width
 
-    // Suspicion bar
-    this.add.text(GW-130, 24, 'SUSPICION', {fontSize:'9px',fill:'#ff6644',fontFamily:'monospace'}).setDepth(41);
-    this.suspBg  = this.add.rectangle(GW-130+60, 24, 95, 10, 0x222222).setOrigin(0,0).setDepth(41);
-    this.suspBar = this.add.rectangle(GW-130+60, 24, 95, 10, 0xcc2200).setOrigin(0,0).setDepth(42);
-    this.suspTxt = this.add.text(GW-130+60+100, 28, '0%', {fontSize:'9px',fill:'#ff6644',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(42);
+    // Energy (row 1)
+    this.add.text(RX, 8, 'ENERGY', {fontSize:'8px',fill:'#44cc44',fontFamily:'monospace',fontStyle:'bold'}).setDepth(41);
+    this.energyBg  = this.add.rectangle(RX+48, 8, BW, 9, 0x1a1a1a).setOrigin(0,0).setDepth(41);
+    this.energyBar = this.add.rectangle(RX+48, 8, BW, 9, 0x44cc44).setOrigin(0,0).setDepth(42);
+    this.energyTxt = this.add.text(RX+48+BW+4, 12, '100%', {fontSize:'8px',fill:'#44cc44',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(42);
 
-    // Zone label bottom
+    // Suspicion (row 2)
+    this.add.text(RX, 21, 'SUSPICION', {fontSize:'8px',fill:'#ff6644',fontFamily:'monospace',fontStyle:'bold'}).setDepth(41);
+    this.suspBg  = this.add.rectangle(RX+58, 21, BW-10, 9, 0x1a1a1a).setOrigin(0,0).setDepth(41);
+    this.suspBar = this.add.rectangle(RX+58, 21, BW-10, 9, 0xcc2200).setOrigin(0,0).setDepth(42);
+    this.suspTxt = this.add.text(RX+58+BW-6, 25, '0%', {fontSize:'8px',fill:'#ff6644',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(42);
+
+    // ── JAMES PISSED OFF METER (row 3, right side) ───────────────────────────
+    this.add.text(RX, 34, 'JAMES', {fontSize:'8px',fill:'#ffaa44',fontFamily:'monospace',fontStyle:'bold'}).setDepth(41);
+    this.jamesEmoji = this.add.text(RX+36, 34, '😐', {fontSize:'10px',fontFamily:'monospace'}).setDepth(43);
+    this.jamesBg  = this.add.rectangle(RX+58, 34, BW-10, 9, 0x1a1a1a).setOrigin(0,0).setDepth(41);
+    this.jamesBar = this.add.rectangle(RX+58, 34, BW-10, 9, 0x44cc44).setOrigin(0,0).setDepth(42);
+    this.jamesTxt = this.add.text(RX+58+BW-6, 38, 'CALM', {fontSize:'7px',fill:'#44cc44',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0,0.5).setDepth(43);
+
+    // ── JAMES RAGE FLASH (fullscreen pulse when nuclear) ─────────────────────
+    this.jamesRageFlash = this.add.rectangle(GW/2, GH/2, GW, GH, 0xff0000, 0)
+      .setDepth(39).setScrollFactor(0);
+
+    // ── BOTTOM ───────────────────────────────────────────────────────────────
+    // Zone label
     this.zoneTxt = this.add.text(GW/2, GH-5, '', {
       fontSize:'11px', fill:'rgba(255,160,30,0.55)', fontFamily:'monospace'
     }).setOrigin(0.5,1).setDepth(41);
@@ -2272,6 +2528,7 @@ class UIScene extends Phaser.Scene {
 
     this.lastAch = '';
     this.lastAchLen = 0;
+    this._jamesFlashTimer = 0;
   }
 
   update(){
@@ -2289,16 +2546,46 @@ class UIScene extends Phaser.Scene {
 
     // Energy bar
     const epct = STATE.energy/100;
-    this.energyBar.setSize(110*epct, 10);
+    this.energyBar.setSize(100*epct, 9);
     this.energyBar.setFillStyle(epct>0.5?0x44cc44:epct>0.25?0xffaa00:0xff3333);
     this.energyTxt.setText(Math.round(STATE.energy)+'%');
 
     // Suspicion bar
     const spct = STATE.suspicion/100;
-    this.suspBar.setSize(95*spct, 10);
+    this.suspBar.setSize(90*spct, 9);
     this.suspBar.setFillStyle(spct>0.7?0xff2200:spct>0.4?0xff6600:0xcc4400);
     this.suspTxt.setText(Math.round(STATE.suspicion)+'%');
-    if(STATE.suspicion>80) this.suspTxt.setStyle({fill:'#ff2200'});
+    this.suspTxt.setStyle({fill: spct>0.8?'#ff2200':spct>0.5?'#ff6600':'#ff6644'});
+
+    // ── JAMES PISSED OFF METER ──────────────────────────────────────────────
+    const ja = STATE.jamesAnnoyance;
+    const jpct = ja / 100;
+    // Bar color: green → yellow → orange → red → pulsing red
+    let jColor, jEmoji, jLabel, jLabelColor;
+    if(ja < 30){
+      jColor=0x44cc44; jEmoji='😐'; jLabel='CALM'; jLabelColor='#44cc44';
+    } else if(ja < 50){
+      jColor=0xddcc00; jEmoji='😒'; jLabel='ANNOYED'; jLabelColor='#ddcc00';
+    } else if(ja < 70){
+      jColor=0xff8800; jEmoji='😠'; jLabel='PISSED OFF'; jLabelColor='#ff8800';
+    } else if(ja < 85){
+      jColor=0xff3300; jEmoji='🤬'; jLabel='LOSING IT'; jLabelColor='#ff4400';
+    } else {
+      // 85+ — pulsing nuclear
+      const pulse = Math.sin(Date.now() * 0.008) > 0;
+      jColor = pulse ? 0xff0000 : 0xff6600;
+      jEmoji='🤬'; jLabel='☢ NUCLEAR ☢'; jLabelColor='#ff0000';
+      // Rage flash overlay
+      this._jamesFlashTimer = (this._jamesFlashTimer||0) + 16;
+      const flashAlpha = Math.max(0, Math.sin(this._jamesFlashTimer*0.004)*0.08);
+      this.jamesRageFlash.setAlpha(flashAlpha);
+    }
+    if(ja < 85) this.jamesRageFlash.setAlpha(0);
+
+    this.jamesBar.setSize(90*jpct, 9);
+    this.jamesBar.setFillStyle(jColor);
+    this.jamesEmoji.setText(jEmoji);
+    this.jamesTxt.setText(jLabel).setStyle({fill:jLabelColor, fontSize:'7px', fontFamily:'monospace', fontStyle:'bold'});
 
     // Zone
     const zoneName = ZONES[STATE.currentZone]?.name || '';
