@@ -107,6 +107,9 @@ const STATE = {
   chanceRoastTarget: null,  // id of NPC Chance is currently walking toward to roast
   chanceRoastTimer: 0,      // cooldown before next roast mission
   chandlerRageLevel: 0,     // 0-5; how unhinged Chandler is getting from Chance's abuse
+  smokeCalledNPCs: [],      // NPCs called to smoke area this session
+  groupRoastDone: false,    // group roast already fired this shift
+  groupRoastActive: false,  // mid-roast right now
 };
 
 // Zone layout
@@ -732,10 +735,77 @@ class GameScene extends Phaser.Scene {
       g.fillRect(x,y,50,50);
     }
 
-    // Smoking area
-    g.fillStyle(0xaaff88, 0.08);
-    g.fillRect(50, 20, 200, 130);
-    this.add.text(150, 85, '🚬 Smokers Corner', {fontSize:'12px', fill:'#aaff88', fontFamily:'monospace'}).setOrigin(0.5);
+    // ── SMOKING AREA (proper defined zone) ──────────────────────────────────
+    // Ground fill — slightly different green
+    g.fillStyle(0x1a4a18, 1);
+    g.fillRect(30, 8, 260, 148);
+    // Inner area highlight
+    g.fillStyle(0x22ff66, 0.06);
+    g.fillRect(30, 8, 260, 148);
+
+    // Fence — top, left, right sides (open toward dock entrance)
+    g.lineStyle(4, 0x885533, 0.9);
+    g.lineBetween(30, 8, 290, 8);      // top
+    g.lineBetween(30, 8, 30, 156);     // left
+    g.lineBetween(290, 8, 290, 156);   // right
+    // Fence posts
+    g.lineStyle(5, 0x664422, 1);
+    for(let fx=30; fx<=290; fx+=40){ g.lineBetween(fx, 4, fx, 14); }
+    for(let fy=30; fy<=150; fy+=40){
+      g.lineBetween(28, fy, 34, fy);
+      g.lineBetween(288, fy, 294, fy);
+    }
+
+    // SMOKING AREA sign
+    g.fillStyle(0x116611, 1);
+    g.fillRoundedRect(80, 12, 130, 24, 4);
+    g.lineStyle(2, 0x44ff44, 0.8);
+    g.strokeRoundedRect(80, 12, 130, 24, 4);
+    this.add.text(145, 24, '🚬 SMOKE AREA 🚬', {
+      fontSize:'10px', fill:'#aaffaa', fontFamily:'monospace', fontStyle:'bold',
+      stroke:'#003300', strokeThickness:2
+    }).setOrigin(0.5, 0.5);
+
+    // Picnic table 1 (left bench area)
+    g.fillStyle(0x8b5e3c, 1);
+    g.fillRoundedRect(50, 75, 80, 10, 3);   // table top
+    g.fillStyle(0x6b4a2e, 1);
+    g.fillRect(60, 85, 8, 18);              // left leg
+    g.fillRect(112, 85, 8, 18);             // right leg
+    g.fillStyle(0x7a5234, 1);
+    g.fillRoundedRect(45, 92, 90, 7, 2);    // bench left
+    g.fillRoundedRect(45, 103, 90, 7, 2);   // bench right (other side)
+
+    // Picnic table 2 (right)
+    g.fillStyle(0x8b5e3c, 1);
+    g.fillRoundedRect(160, 75, 80, 10, 3);
+    g.fillStyle(0x6b4a2e, 1);
+    g.fillRect(170, 85, 8, 18);
+    g.fillRect(222, 85, 8, 18);
+    g.fillStyle(0x7a5234, 1);
+    g.fillRoundedRect(155, 92, 90, 7, 2);
+    g.fillRoundedRect(155, 103, 90, 7, 2);
+
+    // Ashtray / standing can between tables
+    g.fillStyle(0x888888, 1);
+    g.fillRect(143, 78, 14, 20);
+    g.fillStyle(0x555555, 1);
+    g.fillRect(141, 76, 18, 6);
+    g.fillStyle(0x333333, 1);
+    g.fillRect(143, 76, 14, 4);
+
+    // Cigarette butts on ground
+    g.fillStyle(0xffd080, 0.5);
+    for(let i=0;i<8;i++){
+      g.fillRect(50+i*25, 140+Math.sin(i)*4, 10, 3);
+    }
+
+    // "NO SMOKING INSIDE →" sign on fence opening
+    g.fillStyle(0xcc2222, 1);
+    g.fillRoundedRect(32, 155, 140, 16, 3);
+    this.add.text(102, 163, '⛔ NO SMOKING INSIDE', {
+      fontSize:'7px', fill:'#fff', fontFamily:'monospace', fontStyle:'bold'
+    }).setOrigin(0.5, 0.5);
 
     // Door openings on bottom zone walls (yellow highlight so player can see them)
     const doorColor = 0xffd700;
@@ -836,10 +906,16 @@ class GameScene extends Phaser.Scene {
     // Mystery box in freezer
     this.mysteryBox = this.createInteractable(1400, 900, 60, 60, 0x224466, '❓ BOX', 'mysterybox');
 
+    // Smoke area hangout hotspot (centre of bench area)
+    this.smokeAreaSpot = this.createInteractable(160, 90, 70, 60, 0x116611, '🚬 HANG\nOUT', 'smokearea');
+    // Override the label color to green
+    if(this.smokeAreaSpot.label) this.smokeAreaSpot.label.setStyle({fill:'#aaffaa'});
+
     // Label all interactive objects
     this.interactables = [
       this.timeClock, this.tlDesk, this.vending, this.coffee,
-      this.fridge, this.bench, this.extinguisher, this.mysteryBox
+      this.fridge, this.bench, this.extinguisher, this.mysteryBox,
+      this.smokeAreaSpot,
     ];
   }
 
@@ -1792,6 +1868,7 @@ class GameScene extends Phaser.Scene {
       coffee:    ()=>{ STATE.energy=Math.min(100,STATE.energy+25); this.floatText(this.player.x,this.player.y,'☕ Coffee! Energy +25!','#cc8844'); STATE.score+=3; },
       fridge:    ()=>{ STATE.energy=Math.min(100,STATE.energy+20); this.floatText(this.player.x,this.player.y,'🧊 Snack! Energy +20','#44ddff'); STATE.score+=3; },
       smoke:     ()=>{ STATE.energy=Math.min(100,STATE.energy+30); STATE.suspicion=Math.max(0,STATE.suspicion-10); this.floatText(this.player.x,this.player.y,'🚬 Smoke break! Suspicion -10','#aaff88'); STATE.score+=5; },
+      smokearea: ()=>{ this.showSmokeAreaMenu(); },
       extinguisher:()=>{ this.fireExtinguisher(); },
       mysterybox:()=>{ this.openMysteryBox(); },
     };
@@ -1827,6 +1904,216 @@ class GameScene extends Phaser.Scene {
       STATE.achievements.push('mystery_winner');
       this.time.delayedCall(1000,()=>this.floatText(this.player.x,this.player.y-50,'🏆 ACHIEVEMENT: Mystery Winner!','#ffd700'));
     }
+  }
+
+  // ── SMOKE AREA MENU ───────────────────────────────────────────────────────
+  showSmokeAreaMenu(){
+    if(STATE.dialogueActive || STATE.miniGameActive || STATE.groupRoastActive) return;
+
+    const SMOKE_X = 160, SMOKE_Y = 90; // centre of smoke area
+
+    // Helper: is an NPC currently in the outside zone (smoke area)?
+    const atSmoke = (id) => {
+      const npc = this.npcs.find(n=>n.id===id);
+      if(!npc) return false;
+      const z = ZONES.outside;
+      return npc.sprite.x >= z.x && npc.sprite.x <= z.x+z.w &&
+             npc.sprite.y >= z.y && npc.sprite.y <= z.y+z.h;
+    };
+
+    const chandlerHere = atSmoke('chandler');
+    const jamesHere    = atSmoke('james');
+    const chanceHere   = atSmoke('chance');
+    const leeHere      = atSmoke('lee') || STATE.leeFollowing;
+
+    // Build dynamic choices
+    const choices = [];
+    if(!chandlerHere) choices.push({ label:'📞 Call Chandler out here', id:'callChandler' });
+    if(!jamesHere)    choices.push({ label:'📞 Call James out here',    id:'callJames'    });
+    if(!chanceHere)   choices.push({ label:'📞 Call Chance out here',   id:'callChance'   });
+    if(!leeHere)      choices.push({ label:'📞 Call Lee out here',      id:'callLee'      });
+
+    // Group roast unlocked when Chandler is here + at least 1 other person
+    const others = [jamesHere, chanceHere, leeHere].filter(Boolean).length;
+    const roastReady = chandlerHere && others >= 1 && !STATE.groupRoastDone;
+    const roastAlmostReady = !chandlerHere && (jamesHere || chanceHere || leeHere);
+
+    if(roastReady){
+      choices.unshift({ label:'🔥 GROUP ROAST Chandler — DO IT', id:'groupRoast', hot:true });
+    }
+    choices.push({ label:'💨 Just chill here (+energy)', id:'chill' });
+
+    // ── BUILD THE DIALOGUE UI ──
+    STATE.dialogueActive = true;
+
+    // Draw dialogue box
+    const boxY = GH - 145;
+    this.dlgBg.setVisible(true);
+    this.dlgBg.clear()
+      .fillStyle(0x0a0f18, 0.93).fillRoundedRect(5, boxY-5, GW-10, 145, 10)
+      .lineStyle(2, 0x44ff88, 0.8).strokeRoundedRect(5, boxY-5, GW-10, 145, 10);
+
+    // Header
+    let headerTxt = '🚬 Smoke Area';
+    if(roastReady) headerTxt = '🔥🔥 SMOKE AREA — ROAST TIME 🔥🔥';
+    else if(roastAlmostReady) headerTxt = '🚬 Smoke Area — (call Chandler to start roast)';
+    this.dlgNpcName.setText(headerTxt).setStyle({fill: roastReady ? '#ff6a00':'#aaffaa'}).setVisible(true);
+
+    // Who's here
+    const hereList = [];
+    if(chandlerHere) hereList.push('Chandler 🍞');
+    if(jamesHere)    hereList.push('James 📋');
+    if(chanceHere)   hereList.push('Chance 🧢');
+    if(leeHere)      hereList.push('Lee 💕');
+    const hereTxt = hereList.length ? 'Here now: '+hereList.join(', ') : 'Just you out here.';
+    this.dlgText.setText(hereTxt).setStyle({fill:'#aaffaa'}).setVisible(true);
+
+    // Hide unused buttons first
+    this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+
+    choices.slice(0,4).forEach((ch, i)=>{
+      const btn = this.dlgChoiceBtns[i];
+      const col = ch.hot ? '#ff4400' : '#aaffaa';
+      btn.setText(`${i+1}. ${ch.label}`).setPosition(130, boxY+30+i*26)
+         .setStyle({fill:col}).setVisible(true);
+      btn.removeAllListeners('pointerdown');
+      btn.on('pointerdown', ()=> this.handleSmokeAreaChoice(ch.id, SMOKE_X, SMOKE_Y));
+      const k = this.input.keyboard.addKey(49+i);
+      k.once('down', ()=>{ if(STATE.dialogueActive) this.handleSmokeAreaChoice(ch.id, SMOKE_X, SMOKE_Y); });
+      this.choiceKeys.push(k);
+    });
+
+    this.dlgCloseTxt.setText('[ESC] Leave area').setVisible(true);
+  }
+
+  handleSmokeAreaChoice(choiceId, sx, sy){
+    this.closeDialogue();
+
+    const sendToSmoke = (id, line) => {
+      const npc = this.npcs.find(n=>n.id===id);
+      if(!npc) return;
+      npc.targetX = sx + (Math.random()-0.5)*80;
+      npc.targetY = sy + (Math.random()-0.5)*40;
+      if(!STATE.smokeCalledNPCs.includes(id)) STATE.smokeCalledNPCs.push(id);
+      this.time.delayedCall(300, ()=>{ this.showBubble(npc, line); });
+      this.floatText(this.player.x, this.player.y, `📞 ${npc.name} is heading out!`, '#aaffaa');
+    };
+
+    if(choiceId === 'callChandler'){
+      const lines = [
+        '"...why? Why do you need me outside specifically."',
+        '"I\'m not going outside just because you asked. ...Fine."',
+        '"This feels like a trap. I\'m coming anyway because I need air."',
+        '"If Chance is out there I\'m turning around immediately."',
+      ];
+      sendToSmoke('chandler', Phaser.Math.RND.pick(lines));
+      // Add to follow state so he walks there
+      if(!STATE.smokingNPCs.includes('chandler')) STATE.smokingNPCs.push('chandler');
+    }
+    else if(choiceId === 'callJames'){
+      const lines = [
+        '"...five minutes. Off the record."',
+        '"I\'m not \'coming outside.\' I\'m doing a perimeter check. That happens to be outside."',
+        '"Nobody else knows about this. We clear?"',
+        '"I\'ll be right there. Professionally."',
+      ];
+      sendToSmoke('james', Phaser.Math.RND.pick(lines));
+      if(!STATE.smokingNPCs.includes('james')) STATE.smokingNPCs.push('james');
+    }
+    else if(choiceId === 'callChance'){
+      const lines = [
+        '"Say LESS. I\'m already walking."',
+        '"Oh this is gonna be good. I\'m on my way."',
+        '"Who else is out there? Actually it doesn\'t matter. I\'m coming."',
+        '"The outside? With PEOPLE? Perfect."',
+      ];
+      sendToSmoke('chance', Phaser.Math.RND.pick(lines));
+      if(!STATE.smokingNPCs.includes('chance')) STATE.smokingNPCs.push('chance');
+    }
+    else if(choiceId === 'callLee'){
+      const lines = [
+        '"ON MY WAY. I\'ll be out front. I have TEA."',
+        '"YES. Oh my god yes. I was literally just thinking about going outside."',
+        '"Give me thirty seconds. I\'m coming."',
+        '"ABSOLUTELY. I need out of this building."',
+      ];
+      sendToSmoke('lee', Phaser.Math.RND.pick(lines));
+      STATE.leeFollowing = true;
+      const lee = this.npcs.find(n=>n.id==='lee');
+      if(lee){ lee.targetX = sx; lee.targetY = sy; }
+    }
+    else if(choiceId === 'groupRoast'){
+      this.triggerGroupRoast();
+    }
+    else if(choiceId === 'chill'){
+      STATE.energy = Math.min(100, STATE.energy + 20);
+      STATE.suspicion = Math.max(0, STATE.suspicion - 8);
+      this.floatText(this.player.x, this.player.y, '💨 Chilled out. Energy +20, Suspicion -8', '#aaffaa');
+    }
+  }
+
+  triggerGroupRoast(){
+    if(STATE.groupRoastDone || STATE.groupRoastActive) return;
+    STATE.groupRoastActive = true;
+    STATE.groupRoastDone   = true;
+    STATE.miniGameActive   = true; // freeze player movement during roast
+
+    const james   = this.npcs.find(n=>n.id==='james');
+    const chance  = this.npcs.find(n=>n.id==='chance');
+    const lee     = this.npcs.find(n=>n.id==='lee');
+    const chandler= this.npcs.find(n=>n.id==='chandler');
+
+    // Move everyone into smoking corner cluster
+    const positions = [{x:100,y:80},{x:145,y:95},{x:195,y:80},{x:240,y:95},{x:160,y:115}];
+    const cast = [chandler, james, chance, lee].filter(Boolean);
+    cast.forEach((npc,i)=>{ if(positions[i]){ npc.targetX=positions[i].x; npc.targetY=positions[i].y; } });
+
+    this.floatText(160, 50, '🔥 GROUP ROAST INITIATED 🔥', '#ff4400');
+    this.cameras.main.shake(250, 0.008);
+
+    // ── THE ROAST SEQUENCE ─────────────────────────────────────────────────
+    const beat = (ms, npc, text, floatTxt='', floatCol='#ff6a00') => {
+      this.time.delayedCall(ms, ()=>{
+        if(npc) this.showBubble(npc, text);
+        if(floatTxt) this.floatText(160, 50, floatTxt, floatCol);
+      });
+    };
+
+    beat(1200,  chance,   '"Alright Chandler. We called you out here specifically. Sit down."');
+    beat(3000,  chandler, '"...why do I feel like I\'m about to be tried for a crime."');
+    beat(4800,  james,    '"Not a crime. A conversation. About the bread."');
+    beat(6400,  lee,      '"Chandler — the briefcase. We need you to walk us through it."', '🍞 HERE WE GO', '#ffd700');
+    beat(8000,  chandler, '"I don\'t want to talk about the bread."');
+    beat(9400,  chance,   '"The briefcase though—"');
+    beat(10600, chandler, '"IT\'S SOURDOUGH. IT HAS SENTIMENTAL VALUE. END OF CONVERSATION."');
+    beat(12200, james,    '"...who gave you bread with sentimental value."');
+    beat(14000, chandler, '"..."', '😮 CHANDLER GOES SILENT', '#ffd700');
+    beat(15800, lee,      '"Oh my GOD. There\'s a PERSON."');
+    beat(17000, chance,   '"THERE\'S A BREAD PERSON. HE CARRIES BREAD FOR SOMEONE. THIS IS THE GREATEST DAY."', '🤯 THE BREAD HAS A STORY', '#ff6a00');
+    beat(19500, james,    '"For what it\'s worth. I had a slice last Tuesday from your lunchbox. It was outstanding."');
+    beat(21500, chandler, '"...YOU ATE MY BREAD?! JAMES?! YOU ATE IT?!"', '😤 CHANDLER LOSES IT', '#ff2200');
+    beat(23000, james,    '"Security incident. We\'re getting off topic."');
+    beat(24500, chance,   '"James ate the bread. The SENTIMENTAL bread. This place is EVERYTHING."');
+    beat(26000, lee,      '"Chandler I love you. This is one of the greatest things I\'ve ever witnessed."');
+    beat(27500, chandler, '"I\'m going back inside. I\'m updating my resume tonight. I mean it this time."');
+    beat(29000, chance,   '"He says that every week."');
+    beat(30000, james,    '"...it WAS good bread though. Genuinely."');
+
+    // Score + end
+    this.time.delayedCall(32000, ()=>{
+      STATE.miniGameActive   = false;
+      STATE.groupRoastActive = false;
+      STATE.score += 200;
+      STATE.suspicion = Math.max(0, STATE.suspicion - 15);
+      STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 20);
+      this.floatText(160, 60, '🔥 GROUP ROAST COMPLETE! +200 pts!', '#ffd700');
+      this.cameras.main.flash(300, 255, 200, 0);
+      if(!STATE.achievements.includes('roast_master')){
+        STATE.achievements.push('roast_master');
+        this.time.delayedCall(1000, ()=>
+          this.floatText(160, 100, '🏆 ACHIEVEMENT: Roast Master!', '#ffd700'));
+      }
+    });
   }
 
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
@@ -2493,7 +2780,8 @@ class GameScene extends Phaser.Scene {
     });
     this.interactables.forEach(o=>{
       const d=Phaser.Math.Distance.Between(px,py,o.x,o.y);
-      if(d<nearestD){ nearestD=d; nearest={x:o.x, y:o.y-40, label:'[E] Use'}; }
+      const lbl = o.interactId==='smokearea' ? '[E] 🚬 Smoke Area Menu' : '[E] Use';
+      if(d<nearestD){ nearestD=d; nearest={x:o.x, y:o.y-40, label:lbl}; }
     });
     if(STATE.currentTruckObj && !STATE.currentTruckObj.done){
       const t=STATE.currentTruckObj;
