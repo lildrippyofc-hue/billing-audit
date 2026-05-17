@@ -580,6 +580,25 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0xaaff88, 0.08);
     g.fillRect(50, 20, 200, 130);
     this.add.text(150, 85, '🚬 Smokers Corner', {fontSize:'12px', fill:'#aaff88', fontFamily:'monospace'}).setOrigin(0.5);
+
+    // Door openings on bottom zone walls (yellow highlight so player can see them)
+    const doorColor = 0xffd700;
+    const doors = [
+      { x:140, y:762, w:120, label:'🚪 Break\nRoom' },
+      { x:490, y:762, w:95,  label:'🚪 Rest\nroom' },
+      { x:830, y:762, w:120, label:'🚪 Dry\nStorage' },
+      { x:1220,y:762, w:200, label:'🚪 Freezer' },
+    ];
+    doors.forEach(d=>{
+      g.fillStyle(doorColor, 0.18);
+      g.fillRect(d.x, d.y, d.w, 14);
+      g.lineStyle(1.5, doorColor, 0.5);
+      g.strokeRect(d.x, d.y, d.w, 14);
+      this.add.text(d.x + d.w/2, d.y - 2, d.label, {
+        fontSize:'9px', fill:'#ffd700', fontFamily:'monospace',
+        stroke:'#000', strokeThickness:2, align:'center'
+      }).setOrigin(0.5, 1);
+    });
   }
 
   createWalls(){
@@ -603,16 +622,30 @@ class GameScene extends Phaser.Scene {
     addWall(800,  165, 1000, 10);
     // Door opening at x=200-800
 
-    // Walls separating break room / restroom / dry storage / freezer from floor
-    addWall(0,   765, 420, 10);  // break room top
-    addWall(420, 765, 280, 10);  // restroom top
-    addWall(700, 765, 400, 10);  // dry storage top
-    addWall(1100,765, 700, 10);  // freezer top
+    // Walls separating bottom zones from floor — each has an 80px doorway opening
+    // Break room: door at x=180
+    addWall(0,   765, 140, 10);
+    addWall(260, 765, 160, 10);
+    // Restroom: door at x=505
+    addWall(420, 765,  65, 10);
+    addWall(585, 765, 115, 10);
+    // Dry storage: door at x=870
+    addWall(700, 765, 130, 10);
+    addWall(950, 765, 150, 10);
+    // Freezer: door at x=1300
+    addWall(1100,765, 160, 10);
+    addWall(1420,765, 380, 10);
 
-    // Inner walls between sub-zones at bottom
-    addWall(415, 770, 10, 330);  // break|restroom
-    addWall(695, 770, 10, 330);  // rest|dry
-    addWall(1095,770, 10, 330);  // dry|freezer
+    // Inner walls between sub-zones — each has a doorway opening at mid-height
+    // break|restroom at x=415, gap y=880-960
+    addWall(415, 770, 10, 110);
+    addWall(415, 960, 10, 140);
+    // rest|dry at x=695, gap y=880-960
+    addWall(695, 770, 10, 110);
+    addWall(695, 960, 10, 140);
+    // dry|freezer at x=1095, gap y=880-960
+    addWall(1095,770, 10, 110);
+    addWall(1095,960, 10, 140);
 
     // Dry storage shelves (solid but player can go around)
     for(let i=0;i<3;i++){
@@ -1669,10 +1702,52 @@ class GameScene extends Phaser.Scene {
         if(pam){ pam.targetX=this.player.x; pam.targetY=this.player.y+80; pam.moveTimer=0; }
         this.cameras.main.shake(200,0.008);
       },
+      ()=>{ // Angry truck driver
+        this.spawnAngryTrucker();
+      },
+      ()=>{ // Angry truck driver again (more likely)
+        this.spawnAngryTrucker();
+      },
+      ()=>{ // Drew tries to sell something
+        const drew=this.npcs.find(n=>n.id==='drew');
+        if(drew){
+          const drewScams=[
+            '"Okay so hear me out — I\'m selling raffle tickets. The prize is my respect. $3 each."',
+            '"I found a wallet in the parking lot. It has $2 in it. Auction starts now."',
+            '"I started a GoFundMe for my lunch. The link is on the break room fridge."',
+          ];
+          this.showBubble(drew, Phaser.Math.RND.pick(drewScams));
+        }
+        this.floatText(WW/2,600,'💸 Drew is running some kind of scheme back there','#9955cc');
+      },
+      ()=>{ // Todd leaves the freezer confused
+        const todd=this.npcs.find(n=>n.id==='todd');
+        if(todd){
+          todd.targetX=600; todd.targetY=550;
+          this.showBubble(todd,'"I was told there\'s a fire. There is no fire. I\'m staying out here anyway."');
+        }
+        this.floatText(WW/2,500,'❄️ Todd has left the freezer. Something is wrong.','#44ccff');
+      },
+      ()=>{ // Vending machine eats money
+        this.floatText(WW/2,600,'🤖 VENDING MACHINE ATE SOMEONE\'S MONEY. CHAOS IN THE BREAK ROOM.','#ffaa00');
+        STATE.suspicion=Math.min(99,STATE.suspicion+8);
+        STATE.jamesAnnoyance=Math.min(100,STATE.jamesAnnoyance+15);
+        const james=this.npcs.find(n=>n.id==='james');
+        if(james) this.showBubble(james,'"I am not replacing that dollar. That machine has been here longer than me."');
+      },
+      ()=>{ // Fire drill (fake)
+        this.floatText(WW/2,400,'🚨 FIRE DRILL! EVERYONE OUTSIDE!','#ff4400');
+        this.cameras.main.shake(150,0.008);
+        STATE.energy=Math.min(100,STATE.energy+15); // it's basically a break
+        STATE.suspicion=Math.max(0,STATE.suspicion-20);
+        this.floatText(WW/2,460,'(It\'s fake. James scheduled it on accident.)','#ffaa66');
+        const james=this.npcs.find(n=>n.id==='james');
+        if(james) this.showBubble(james,'"This is NOT a drill. ...it might be a drill. Everyone act natural."');
+      },
     ];
     const evt = Phaser.Math.RND.pick(events);
     evt();
-    this.nextEventAt = this.gameTimer + 45000 + Math.random()*60000;
+    this.nextEventAt = this.gameTimer + 30000 + Math.random()*45000; // events more frequent
   }
 
   // ── FLOATING TEXT ──────────────────────────────────────────────────────────
@@ -1795,12 +1870,115 @@ class GameScene extends Phaser.Scene {
     this.time.delayedCall(3500, ()=>{
       STATE.miniGameActive = false;
       STATE.score = Math.floor(STATE.score * 0.5); // half your score
-      this.endShift();
+      this.endShift('caught');
+    });
+  }
+
+  // ── PASSED OUT (energy = 0) ───────────────────────────────────────────────
+  triggerPassedOut(){
+    STATE.miniGameActive = true;
+    this.cameras.main.shake(300, 0.01);
+    this.cameras.main.flash(500, 0, 0, 0);
+    const james = this.npcs.find(n=>n.id==='james');
+    const lee   = this.npcs.find(n=>n.id==='lee');
+    this.floatText(this.player.x, this.player.y, '💤 YOU PASSED OUT', '#aaaaff');
+    this.time.delayedCall(600, ()=>{
+      if(james) this.showBubble(james, '"I found them face-down by the dock. We\'re short-staffed now. Great."');
+      if(lee)   this.showBubble(lee,   '"Oh no oh no oh no — someone get water!"');
+    });
+    this.time.delayedCall(3500, ()=>{
+      STATE.miniGameActive = false;
+      this.endShift('passedout');
+    });
+  }
+
+  // ── ANGRY TRUCKER EVENT ───────────────────────────────────────────────────
+  spawnAngryTrucker(){
+    if(this._truckerActive) return;
+    this._truckerActive = true;
+
+    // Make a trucker texture (gruff look)
+    if(!this.textures.exists('trucker')){
+      makePersonTexture(this, 'trucker', {
+        shirt:0x884422, pants:0x442211, skin:0xd49060, hair:0x220000,
+      });
+    }
+
+    // Enter from the top-left dock entrance
+    const tx = 400 + Math.random()*600;
+    const trucker = this.physics.add.image(tx, 170, 'trucker')
+      .setOrigin(0.5, 0.85).setDepth(9).setMaxVelocity(140).setDrag(600);
+    this.physics.add.collider(trucker, this.walls);
+
+    const TRUCKER_RANTS = [
+      '"SOMEBODY better explain why my truck has been sitting at Door 3 for TWO HOURS!"',
+      '"I got a SCHEDULE. Y\'all got NONE. Where is MY paperwork?!"',
+      '"The lumpers said they\'d be RIGHT BACK. That was FORTY-FIVE MINUTES AGO."',
+      '"I don\'t care who\'s in charge — GET ME IN CHARGE."',
+      '"My dispatcher is LOSING HER MIND and so am I!"',
+      '"I drove 800 miles. EIGHT HUNDRED. You better unload me NOW."',
+      '"Someone told me \'just a few more minutes\' three times. IT\'S BEEN AN HOUR."',
+      '"I\'ve been in that cab since 4AM. I am NOT in the mood."',
+      '"WHICH ONE OF YOU is responsible for DOOR ASSIGNMENTS?! I\'ll wait."',
+      '"I told y\'all I had a LIVE load. Do you know what LIVE means?! IT BREATHES."',
+    ];
+    const rant = Phaser.Math.RND.pick(TRUCKER_RANTS);
+
+    // Trucker name bubble
+    const tBubbleTxt = this.add.text(tx, 160, rant, {
+      fontSize:'12px', fill:'#111', fontFamily:'monospace',
+      wordWrap:{width:200}, align:'center', resolution:2
+    }).setOrigin(0.5,1).setDepth(20);
+    const tBubbleGfx = this.add.graphics().setDepth(19);
+
+    // Name tag
+    const tTag = this.add.text(tx, 145, '🚛 Truck Driver', {
+      fontSize:'10px', fill:'#ff8844', fontFamily:'monospace',
+      stroke:'#000', strokeThickness:3, backgroundColor:'rgba(0,0,0,0.7)',
+      padding:{x:4,y:2}
+    }).setOrigin(0.5,1).setDepth(20);
+
+    // Make trucker walk toward James or the center dock
+    const james = this.npcs.find(n=>n.id==='james');
+    let destX = james ? james.sprite.x : 600;
+    let destY = james ? james.sprite.y : 350;
+
+    // Update trucker each frame via a timer
+    const updateTrucker = this.time.addEvent({ delay:16, loop:true, callback:()=>{
+      const dx = destX - trucker.x, dy = destY - trucker.y;
+      const d = Math.hypot(dx,dy);
+      if(d > 15){
+        trucker.setVelocity((dx/d)*110, (dy/d)*110);
+        trucker.scaleX = dx < 0 ? -1 : 1;
+      } else {
+        trucker.setVelocity(0,0);
+      }
+      tTag.setPosition(trucker.x, trucker.y - 58);
+      tBubbleTxt.setPosition(trucker.x, trucker.y - 70);
+      drawSpeechBubble(tBubbleGfx, trucker.x, trucker.y-70, rant, tBubbleTxt);
+    }});
+
+    // Raise suspicion + James annoyance
+    STATE.suspicion = Math.min(99, STATE.suspicion + 12);
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 25);
+    this.floatText(WW/2, 280, '🚛 ANGRY TRUCK DRIVER ON THE DOCK!', '#ff6622');
+    if(james) this.showBubble(james, '"Sir. SIR. Please lower your voice. Or don\'t. I\'m used to it."');
+
+    // Trucker leaves after 12 seconds
+    this.time.delayedCall(12000, ()=>{
+      updateTrucker.remove();
+      trucker.setVelocity(-120, -60);
+      // Fade and destroy
+      this.tweens.add({ targets:[trucker, tBubbleTxt, tTag], alpha:0, duration:1200,
+        onComplete:()=>{ trucker.destroy(); tBubbleTxt.destroy(); tTag.destroy(); tBubbleGfx.destroy(); }
+      });
+      this._truckerActive = false;
+      this.floatText(WW/2, 280, '🚛 Trucker left (still angry, probably)', '#ff8844');
     });
   }
 
   // ── SHIFT END ──────────────────────────────────────────────────────────────
-  endShift(){
+  endShift(reason='normal'){
     STATE.miniGameActive = false; STATE.dialogueActive = false;
     const final = STATE.score;
     const isNew = final > SAVE.highScore;
@@ -1809,7 +1987,7 @@ class GameScene extends Phaser.Scene {
     savePersist();
 
     // Show end screen via UI scene
-    this.scene.get('UI').showEndScreen(final, isNew);
+    this.scene.get('UI').showEndScreen(final, isNew, reason);
   }
 
   // ── UPDATE ─────────────────────────────────────────────────────────────────
@@ -1819,11 +1997,16 @@ class GameScene extends Phaser.Scene {
     this.movePlayer(delta);
     this.updateNPCs(delta);
 
-    // Tick game clock
+    // Tick game clock (display only — no time limit, game ends on lose conditions)
     this.gameTimer += delta;
-    STATE.gameMinutes += (delta/1000) * (60/120); // 2 real minutes per game hour → full shift = ~16 real minutes
-    if(STATE.gameMinutes >= STATE.shiftEnd){
-      this.endShift(); return;
+    STATE.gameMinutes += (delta/1000) * (60/120);
+    if(STATE.gameMinutes >= 24*60) STATE.gameMinutes = 7*60; // clock wraps around (endless)
+
+    // LOSE: Energy hits 0 → you passed out / got sent home
+    if(STATE.energy <= 0 && !STATE._caught && !STATE.dialogueActive){
+      STATE._caught = true;
+      this.triggerPassedOut();
+      return;
     }
 
     // Zone detection
@@ -2008,16 +2191,24 @@ class UIScene extends Phaser.Scene {
     this.achTxt.setText(this.lastAch);
   }
 
-  showEndScreen(score, isNew){
+  showEndScreen(score, isNew, reason='normal'){
     if(this.endShown) return;
     this.endShown = true;
 
-    const bg = this.add.rectangle(GW/2, GH/2, GW, GH, 0x000000, 0.92).setDepth(200);
-    this.add.text(GW/2, 80, isNew ? '🏆 NEW HIGH SCORE! 🏆' : '🏁 SHIFT COMPLETE!', {
-      fontSize:'28px', fill:isNew?'#ffd700':'#ffa01e', fontFamily:'monospace', fontStyle:'bold', stroke:'#000', strokeThickness:4
+    const reasonData = {
+      caught:     { title:'🚨 YOU GOT FIRED 🚨',       sub:'Pam has your personal items in a box.',         color:0xff2222 },
+      passedout:  { title:'💤 YOU PASSED OUT',          sub:'James had to call your emergency contact.',      color:0x4444cc },
+      normal:     { title:'🏁 SHIFT SURVIVED!',         sub:STATE.playerName+"'s shift is done.",            color:0xffa01e },
+    };
+    const rd = reasonData[reason] || reasonData.normal;
+    const headColor = isNew ? '#ffd700' : ('#'+rd.color.toString(16).padStart(6,'0'));
+
+    const bg = this.add.rectangle(GW/2, GH/2, GW, GH, 0x000000, 0.93).setDepth(200);
+    this.add.text(GW/2, 60, isNew && reason==='normal' ? '🏆 NEW HIGH SCORE! 🏆' : rd.title, {
+      fontSize:'26px', fill:headColor, fontFamily:'monospace', fontStyle:'bold', stroke:'#000', strokeThickness:4
     }).setOrigin(0.5).setDepth(201);
-    this.add.text(GW/2, 140, STATE.playerName+"'s shift is over.", {
-      fontSize:'16px', fill:'#aaa', fontFamily:'monospace'
+    this.add.text(GW/2, 108, rd.sub, {
+      fontSize:'13px', fill:'#aaa', fontFamily:'monospace'
     }).setOrigin(0.5).setDepth(201);
 
     // Stats
