@@ -116,33 +116,244 @@ for(let i=0;i<6;i++){
     label:`Bay ${i+1}`, done:false, pallets: 20+Math.floor(Math.random()*30) });
 }
 
-// NPC definitions
+// NPC definitions — appearance: { shirt, pants, skin, hair, extras }
 const NPC_DEFS = [
   { id:'james',   name:'James',   title:'(Manager)',     color:0x3a6abf, zone:'dock',    patrol:true,
+    appearance:{ shirt:0x2a5aaa, pants:0x334466, skin:0xd4956a, hair:0x4a3010, clipboard:true, badge:true },
     lines:["What now?!","I'm literally everywhere.","I work 7 days. SEVEN.","Someone call for James? Nobody? Good."],
     choices:["Nothing, just saying hi","Ask for easier truck","Invite to smoke outside"],
   },
-  { id:'chandler', name:'Chandler', title:'(Bread Boy)',   color:0xc8a050, zone:'floor',   patrol:false,
+  { id:'chandler', name:'Chandler', title:'(Bread Boy)',  color:0xc8a050, zone:'floor',   patrol:false,
+    appearance:{ shirt:0xc8a050, pants:0x4466aa, skin:0xf0c080, hair:0xd4aa30 },
     lines:["I'm not Bread Boy.","Why does everyone call me that?","I swear to God...","Loafing? Really?"],
     choices:["Call him Bread Boy 🍞","Ignore him","Ask where he's been"],
   },
   { id:'lee',     name:'Lee',     title:'(Says Yes)',    color:0xff80c0, zone:'breakRoom',patrol:false,
+    appearance:{ shirt:0xee6699, pants:0xddbbcc, skin:0xe8a878, hair:0x2a1808, ponytail:true },
     lines:["Yes!","Of course!","Sure, why not?","Absolutely!","Yeah yeah yeah!"],
     choices:["Ask to cover your truck","Ask her to distract James","Ask if she wants your trash"],
   },
   { id:'todd',    name:'Todd',    title:'(Freezer Lead)',color:0x44cc44, zone:'freezer',  patrol:false,
+    appearance:{ shirt:0x1a6622, pants:0x223322, skin:0xd8b888, hair:0x222222, parka:true },
     lines:["...did you hear that?","The freezer talks to me.","I've been here since Tuesday.","Is it warm in here?"],
     choices:["Ask if he's okay","Ask what's in the mystery box","Challenge him to a race"],
   },
   { id:'drew',    name:'Drew',    title:'(Hungry Drew)', color:0x9955cc, zone:'floor',    patrol:false,
+    appearance:{ shirt:0x7733aa, pants:0x111122, skin:0xc87848, hair:0x111111, hoodie:true },
     lines:["Hey, you got $5?","Bro I'll pay you back.","I forgot my wallet again.","Come on man it's just $5."],
     choices:["Lend $5","Refuse","Ask for last week's $5 back"],
   },
   { id:'pam',     name:'Pam',     title:'(The Manager)', color:0xcc3333, zone:'dock',     patrol:true,
+    appearance:{ shirt:0xcc2222, pants:0x221122, skin:0xf0c890, hair:0xddcc88, blazer:true, clipboard:true },
     lines:["Why aren't you working?","I'm watching everyone.","That's a write-up.","Interesting choice."],
     choices:["Pretend to work","Run","Blame Chandler"],
   },
 ];
+
+// ── PERSON SPRITE GENERATOR ────────────────────────────────────────────────
+function makePersonTexture(scene, key, app){
+  const W=42, H=60;
+  const g = scene.make.graphics({add:false});
+  const skin = app.skin  || 0xe8a87a;
+  const hair  = app.hair  || 0x3a2010;
+  const shirt = app.shirt || 0x4488cc;
+  const pants = app.pants || 0x334466;
+
+  // Drop shadow
+  g.fillStyle(0x000000, 0.14);
+  g.fillEllipse(21, 59, 28, 8);
+
+  // ── LEGS / PANTS ──
+  g.fillStyle(pants, 1);
+  g.fillRoundedRect(8,  40, 11, 16, 2);
+  g.fillRoundedRect(23, 40, 11, 16, 2);
+  // Pant crease shading
+  g.fillStyle(0x000000, 0.12);
+  g.fillRect(18, 40, 4, 16);
+  // Shoes
+  g.fillStyle(0x1a1208, 1);
+  g.fillRoundedRect(6,  52, 14, 6, 3);
+  g.fillRoundedRect(22, 52, 14, 6, 3);
+
+  // ── BODY / SHIRT ──
+  g.fillStyle(shirt, 1);
+  g.fillRoundedRect(6, 20, 30, 22, 5);
+  // Shirt bottom shading
+  g.fillStyle(0x000000, 0.10);
+  g.fillRoundedRect(6, 35, 30, 7, 5);
+
+  // ── PARKA (Todd) ──
+  if(app.parka){
+    g.fillStyle(0x1a4422, 1);
+    g.fillRoundedRect(4, 19, 34, 24, 5);
+    g.fillStyle(0xffffff, 0.15);
+    g.fillRoundedRect(4, 19, 34, 8, 5);
+    // Fur trim
+    g.fillStyle(0xcccccc, 0.7);
+    g.fillRoundedRect(4, 18, 34, 5, 4);
+  }
+
+  // ── HI-VIS VEST ──
+  if(app.hivis){
+    g.fillStyle(0xffcc00, 0.93);
+    g.fillRoundedRect(8, 21, 26, 19, 3);
+    // Reflective stripes
+    g.fillStyle(0xffffff, 0.65);
+    g.fillRect(8, 30, 26, 3);
+    g.fillRect(0, 22, 8, 3);
+    g.fillRect(34, 22, 8, 3);
+  }
+
+  // ── BLAZER LAPELS (Pam) ──
+  if(app.blazer){
+    g.fillStyle(0x000000, 0.18);
+    g.fillTriangle(14,20, 21,28, 14,38);
+    g.fillTriangle(28,20, 21,28, 28,38);
+    g.fillStyle(0xffffff, 0.55);
+    g.fillTriangle(14,20, 21,26, 18,20);
+    g.fillTriangle(28,20, 21,26, 24,20);
+  }
+
+  // ── HOODIE DETAILS (Drew) ──
+  if(app.hoodie){
+    g.fillStyle(0x000000, 0.20);
+    g.fillRoundedRect(14, 20, 14, 8, 4);
+    g.fillStyle(0x888888, 0.55);
+    g.fillRect(19, 26, 2, 12);
+    g.fillRect(22, 26, 2, 12);
+  }
+
+  // ── ARMS ──
+  g.fillStyle(skin, 1);
+  g.fillRoundedRect(0,  22, 8, 18, 4);
+  g.fillRoundedRect(34, 22, 8, 18, 4);
+  // Hands
+  g.fillCircle(4,  40, 4);
+  g.fillCircle(38, 40, 4);
+
+  // ── CLIPBOARD (managers) ──
+  if(app.clipboard){
+    g.fillStyle(0xb08040, 1);
+    g.fillRoundedRect(33, 24, 10, 13, 2);
+    g.fillStyle(0xf0f0f0, 1);
+    g.fillRect(34, 25, 8, 10);
+    g.fillStyle(0xaaaaaa, 0.7);
+    g.fillRect(35, 27, 6, 1);
+    g.fillRect(35, 29, 6, 1);
+    g.fillRect(35, 31, 4, 1);
+    g.fillStyle(0x888888, 1);
+    g.fillRect(37, 24, 4, 2);
+  }
+
+  // ── NECK ──
+  g.fillStyle(skin, 1);
+  g.fillRect(16, 16, 10, 6);
+
+  // ── HEAD ──
+  g.fillStyle(skin, 1);
+  g.fillCircle(21, 10, 12);
+  // Cheek blush
+  g.fillStyle(0xff9999, 0.15);
+  g.fillCircle(14, 12, 5);
+  g.fillCircle(28, 12, 5);
+
+  // ── HAIR ──
+  g.fillStyle(hair, 1);
+  g.fillCircle(21, 3, 11);
+  g.fillRect(10, 3, 22, 8);
+  // Sideburns
+  g.fillRect(9, 8, 5, 6);
+  g.fillRect(28, 8, 5, 6);
+
+  // Ponytail (Lee)
+  if(app.ponytail){
+    g.fillStyle(hair, 1);
+    g.fillRoundedRect(28, 0, 7, 18, 4);
+    g.fillCircle(31, 18, 4);
+  }
+
+  // ── EYES ──
+  // Whites
+  g.fillStyle(0xffffff, 1);
+  g.fillEllipse(16, 10, 7, 6);
+  g.fillEllipse(26, 10, 7, 6);
+  // Irises
+  g.fillStyle(0x334488, 1);
+  g.fillCircle(17, 11, 2.5);
+  g.fillCircle(27, 11, 2.5);
+  // Pupils
+  g.fillStyle(0x111111, 1);
+  g.fillCircle(17, 11, 1.5);
+  g.fillCircle(27, 11, 1.5);
+  // Highlight
+  g.fillStyle(0xffffff, 0.9);
+  g.fillCircle(18, 10, 1);
+  g.fillCircle(28, 10, 1);
+
+  // ── EYEBROWS ──
+  g.fillStyle(hair, 0.85);
+  g.fillRoundedRect(12, 5, 8, 2, 1);
+  g.fillRoundedRect(22, 5, 8, 2, 1);
+
+  // Stern brows for Pam
+  if(app.blazer){
+    g.fillStyle(hair, 1);
+    g.fillTriangle(12,6, 20,5, 12,7);
+    g.fillTriangle(30,6, 22,5, 30,7);
+  }
+
+  // ── MOUTH / EXPRESSION ──
+  g.fillStyle(0xaa5544, 0.7);
+  g.fillRoundedRect(17, 14, 8, 3, 2);
+
+  // ── NAME BADGE ──
+  if(app.badge){
+    g.fillStyle(0xffffff, 0.95);
+    g.fillRoundedRect(8, 24, 13, 7, 2);
+    g.fillStyle(0x0044cc, 1);
+    g.fillRect(9, 25, 11, 2);
+    g.fillStyle(0x888888, 0.7);
+    g.fillRect(9, 28, 8, 1);
+  }
+
+  g.generateTexture(key, W, H);
+  g.destroy();
+}
+
+// Speech bubble helper — draws a proper rounded-rect bubble with tail
+function drawSpeechBubble(gfx, cx, cy, text, textObj){
+  gfx.clear();
+  const bounds = textObj.getBounds();
+  const pad = 9;
+  const bx = bounds.x - pad;
+  const by = bounds.y - pad;
+  const bw = Math.max(bounds.width + pad*2, 60);
+  const bh = bounds.height + pad*2;
+  const br = 8; // border radius
+
+  // Shadow
+  gfx.fillStyle(0x000000, 0.18);
+  gfx.fillRoundedRect(bx+3, by+3, bw, bh, br);
+
+  // Bubble fill
+  gfx.fillStyle(0xffffff, 0.97);
+  gfx.fillRoundedRect(bx, by, bw, bh, br);
+
+  // Border
+  gfx.lineStyle(1.5, 0x444444, 0.7);
+  gfx.strokeRoundedRect(bx, by, bw, bh, br);
+
+  // Tail pointing down toward character
+  const tailX = cx;
+  const tailTop = by + bh;
+  gfx.fillStyle(0xffffff, 0.97);
+  gfx.fillTriangle(tailX-7, tailTop, tailX+7, tailTop, tailX, tailTop+11);
+  gfx.lineStyle(1.5, 0x444444, 0.7);
+  gfx.strokeTriangle(tailX-7, tailTop, tailX+7, tailTop, tailX, tailTop+11);
+  // Cover the border where tail meets bubble
+  gfx.lineStyle(2, 0xffffff, 1);
+  gfx.lineBetween(tailX-6, tailTop, tailX+6, tailTop);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 //  GAME SCENE
@@ -368,26 +579,29 @@ class GameScene extends Phaser.Scene {
   }
 
   createPlayer(){
-    // Player: circle sprite via graphics texture
-    const gfx = this.make.graphics({add:false});
-    gfx.fillStyle(0xffa01e, 1);
-    gfx.fillCircle(20, 20, 18);
-    gfx.lineStyle(3, 0xffcc44, 1);
-    gfx.strokeCircle(20, 20, 18);
-    gfx.generateTexture('player_tex', 40, 40);
-    gfx.destroy();
+    // Player: hi-vis warehouse worker sprite
+    makePersonTexture(this, 'player_tex', {
+      shirt: 0x224488, pants: 0x222244,
+      skin:  0xe8a87a, hair:  0x3a2010,
+      hivis: true
+    });
 
     this.player = this.physics.add.image(900, 580, 'player_tex');
     this.player.setCollideWorldBounds(true);
     this.player.setDrag(800);
     this.player.setMaxVelocity(180);
     this.player.setDepth(10);
+    this.player.setOrigin(0.5, 0.85); // anchor near feet
 
-    // Name tag above player
-    this.playerTag = this.add.text(0, 0, STATE.playerName+'\n(You)', {
+    // Walk animation counter
+    this._walkTick = 0;
+
+    // Name badge above player
+    this.playerTag = this.add.text(0, 0, '👤 '+STATE.playerName, {
       fontSize:'11px', fill:'#ffd700', fontFamily:'monospace',
-      stroke:'#000', strokeThickness:3, align:'center'
-    }).setOrigin(0.5, 1).setDepth(11);
+      stroke:'#000', strokeThickness:3, align:'center',
+      backgroundColor:'rgba(0,0,0,0.55)', padding:{x:4,y:2}
+    }).setOrigin(0.5, 1).setDepth(15);
 
     // Collide with walls
     this.physics.add.collider(this.player, this.walls);
@@ -408,42 +622,42 @@ class GameScene extends Phaser.Scene {
       const sx = zone.x + zone.w * 0.35 + Math.random()*zone.w*0.3;
       const sy = zone.y + zone.h * 0.3 + Math.random()*zone.h*0.4;
 
-      // NPC texture
-      const gfx = this.make.graphics({add:false});
-      gfx.fillStyle(def.color, 1);
-      gfx.fillCircle(18,18,16);
-      gfx.lineStyle(2.5, 0xffffff, 0.5);
-      gfx.strokeCircle(18,18,16);
-      gfx.generateTexture('npc_'+def.id, 36, 36);
-      gfx.destroy();
+      // NPC person sprite
+      makePersonTexture(this, 'npc_'+def.id, def.appearance || {});
 
       const sprite = this.physics.add.image(sx, sy, 'npc_'+def.id);
       sprite.setCollideWorldBounds(true);
       sprite.setDrag(600);
       sprite.setMaxVelocity(def.patrol ? 120 : 80);
       sprite.setDepth(9);
+      sprite.setOrigin(0.5, 0.85);
 
-      // Name tag
-      const tag = this.add.text(sx, sy-22, def.name+'\n'+def.title, {
+      // Name tag (styled chip above head)
+      const tag = this.add.text(sx, sy-50, def.name+' '+def.title, {
         fontSize:'10px', fill:'#fff', fontFamily:'monospace',
-        stroke:'#000', strokeThickness:3, align:'center'
-      }).setOrigin(0.5, 1).setDepth(11);
+        stroke:'#000', strokeThickness:3, align:'center',
+        backgroundColor:'rgba(0,0,0,0.65)', padding:{x:5,y:2}
+      }).setOrigin(0.5, 1).setDepth(14);
 
-      // Speech bubble
-      const bubble = this.add.text(sx, sy-50, '', {
-        fontSize:'11px', fill:'#111', fontFamily:'monospace',
-        backgroundColor:'#fff', padding:{x:5,y:3}, borderRadius:6,
-        wordWrap:{width:160}
-      }).setOrigin(0.5,1).setDepth(12).setVisible(false);
+      // Speech bubble: text object (world space)
+      const bubble = this.add.text(sx, sy-90, '', {
+        fontSize:'12px', fill:'#111111', fontFamily:'monospace',
+        wordWrap:{width:175}, align:'center',
+        resolution: 2
+      }).setOrigin(0.5, 1).setDepth(16).setVisible(false);
+
+      // Speech bubble: graphics (drawn behind text)
+      const bubbleGfx = this.add.graphics().setDepth(15).setVisible(false);
 
       const npc = {
-        ...def, sprite, tag, bubble,
+        ...def, sprite, tag, bubble, bubbleGfx,
         targetX: sx, targetY: sy,
         moveTimer: 0,
         patrolIndex: 0,
         patrolPath: def.patrol ? this.genPatrolPath(def.zone) : [],
         bubbleTimer: 0,
         interacting: false,
+        bubbleDirty: false,
       };
 
       this.physics.add.collider(sprite, this.walls);
@@ -510,6 +724,12 @@ class GameScene extends Phaser.Scene {
 
     if(vx||vy){
       this.player.setVelocity(vx, vy);
+      // Flip sprite to face movement direction
+      if(vx < 0) this.player.scaleX = -1;
+      else if(vx > 0) this.player.scaleX = 1;
+      // Subtle walk bob
+      this._walkTick = (this._walkTick||0) + 1;
+      this.player.y += Math.sin(this._walkTick * 0.3) * 0.4;
     } else {
       this.player.setVelocity(0,0);
     }
@@ -1021,12 +1241,28 @@ class GameScene extends Phaser.Scene {
         npc.sprite.setVelocity(0,0);
       }
 
-      // Update tag position
-      npc.tag.setPosition(npc.sprite.x, npc.sprite.y-22);
-      npc.bubble.setPosition(npc.sprite.x, npc.sprite.y-50);
+      // Face direction (flip sprite when moving left)
+      const mvx = npc.targetX - npc.sprite.x;
+      if(Math.abs(mvx) > 5) npc.sprite.scaleX = mvx < 0 ? -1 : 1;
+
+      // Update tag position (above head)
+      npc.tag.setPosition(npc.sprite.x, npc.sprite.y - 58);
+
+      // Update speech bubble position + redraw graphics
+      const bcy = npc.sprite.y - 70;
+      npc.bubble.setPosition(npc.sprite.x, bcy);
+      if(npc.bubble.visible){
+        drawSpeechBubble(npc.bubbleGfx, npc.sprite.x, bcy, npc.bubble.text, npc.bubble);
+      }
 
       // Bubble timer
-      if(npc.bubbleTimer>0){ npc.bubbleTimer-=delta; if(npc.bubbleTimer<=0) npc.bubble.setVisible(false); }
+      if(npc.bubbleTimer>0){
+        npc.bubbleTimer -= delta;
+        if(npc.bubbleTimer <= 0){
+          npc.bubble.setVisible(false);
+          npc.bubbleGfx.clear().setVisible(false);
+        }
+      }
 
       // Pam suspicion check
       if(npc.id==='pam'){
@@ -1047,8 +1283,10 @@ class GameScene extends Phaser.Scene {
   }
 
   showBubble(npc, text){
+    if(!npc) return;
     npc.bubble.setText(text).setVisible(true);
-    npc.bubbleTimer = 3000;
+    npc.bubbleGfx.setVisible(true);
+    npc.bubbleTimer = 3500;
   }
 
   // ── RANDOM EVENTS ──────────────────────────────────────────────────────────
@@ -1254,8 +1492,8 @@ class GameScene extends Phaser.Scene {
       this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
     }
 
-    // Player name tag
-    this.playerTag.setPosition(this.player.x, this.player.y-26);
+    // Player name tag (above head — origin is at feet so offset by full height)
+    this.playerTag.setPosition(this.player.x, this.player.y-66);
 
     // E prompt
     this.updateEPrompt();
