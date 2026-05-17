@@ -1838,11 +1838,13 @@ class GameScene extends Phaser.Scene {
     const range = 90;
     const px = this.player.x, py = this.player.y;
 
-    // Check NPCs
+    // Check NPCs — pick the NEAREST one, not the first in array order
+    let nearestNPC = null, nearestNPCD = range;
     for(const npc of this.npcs){
       const d = Phaser.Math.Distance.Between(px,py,npc.sprite.x,npc.sprite.y);
-      if(d < range){ this.openDialogue(npc); return; }
+      if(d < nearestNPCD){ nearestNPCD = d; nearestNPC = npc; }
     }
+    if(nearestNPC){ this.openDialogue(nearestNPC); return; }
 
     // Check trucks
     for(let i=0;i<this.trucks.length;i++){
@@ -1953,11 +1955,13 @@ class GameScene extends Phaser.Scene {
       .fillStyle(0x0a0f18, 0.93).fillRoundedRect(5, boxY-5, GW-10, 145, 10)
       .lineStyle(2, 0x44ff88, 0.8).strokeRoundedRect(5, boxY-5, GW-10, 145, 10);
 
-    // Header
-    let headerTxt = '🚬 Smoke Area';
-    if(roastReady) headerTxt = '🔥🔥 SMOKE AREA — ROAST TIME 🔥🔥';
-    else if(roastAlmostReady) headerTxt = '🚬 Smoke Area — (call Chandler to start roast)';
-    this.dlgNpcName.setText(headerTxt).setStyle({fill: roastReady ? '#ff6a00':'#aaffaa'}).setVisible(true);
+    // Header — use the portrait area for the title
+    let headerTxt = '🚬 Smoke\nArea';
+    if(roastReady) headerTxt = '🔥 ROAST\nTIME 🔥';
+    else if(roastAlmostReady) headerTxt = '🚬 Call\nChandler!';
+    this.dlgPortrait.setFillStyle(roastReady ? 0xff3300 : 0x116611).setVisible(true);
+    this.dlgPortraitTxt.setText(headerTxt)
+      .setStyle({fill: roastReady ? '#ff6a00':'#aaffaa', fontSize:'11px'}).setVisible(true);
 
     // Who's here
     const hereList = [];
