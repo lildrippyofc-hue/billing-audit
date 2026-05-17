@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Warehouse Simulator</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#111;overflow:hidden;display:flex;align-items:center;justify-content:center;height:100vh;font-family:'Segoe UI',monospace;}
+  canvas{display:block;}
+  #menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:100;display:flex;align-items:center;justify-content:center;}
+  .menu-card{background:linear-gradient(160deg,#1a1f2e,#0e1018);border:2px solid rgba(255,160,30,0.4);border-radius:20px;padding:36px 32px;width:min(480px,95vw);display:flex;flex-direction:column;align-items:center;gap:16px;box-shadow:0 0 60px rgba(255,120,0,0.2);}
+  .menu-card h1{font-size:clamp(28px,5vw,42px);font-weight:900;color:#ffa01e;text-shadow:0 0 20px rgba(255,160,30,0.5);letter-spacing:-1px;}
+  .menu-card p{color:rgba(255,255,255,0.6);font-size:14px;text-align:center;line-height:1.6;}
+  .menu-input{background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,160,30,0.4);border-radius:10px;padding:12px 16px;color:#fff;font-size:16px;font-weight:700;font-family:inherit;width:100%;outline:none;text-align:center;}
+  .menu-input:focus{border-color:#ffa01e;box-shadow:0 0 0 3px rgba(255,160,30,0.2);}
+  .menu-btn{background:linear-gradient(135deg,#cc6800,#ff9a00);color:#fff;border:none;border-radius:12px;padding:14px;font-size:18px;font-weight:900;cursor:pointer;width:100%;font-family:inherit;letter-spacing:0.5px;box-shadow:0 6px 20px rgba(200,100,0,0.4);transition:transform .1s;}
+  .menu-btn:active{transform:scale(0.97);}
+  .stat-chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  .chip{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:5px 13px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.8);}
+  .chip em{color:#ffa01e;font-style:normal;}
+</style>
+</head>
+<body>
+
+<!-- MENU OVERLAY (HTML for easy name input) -->
+<div id="menu-overlay">
+  <div class="menu-card">
+    <div style="font-size:56px">🏭</div>
+    <h1>WAREHOUSE<br>SIMULATOR</h1>
+    <p>Clock in. Unload trucks. Avoid managers.<br>
+    Annoy Chandler. Survive the shift.<br>
+    <em style="color:#ffa01e">Your choices define your legend.</em></p>
+    <div class="stat-chips">
+      <div class="chip">Best Score: <em id="hsBadge">0</em></div>
+      <div class="chip">Shifts Survived: <em id="shiftsBadge">0</em></div>
+    </div>
+    <div style="width:100%">
+      <p style="color:rgba(255,255,255,0.45);font-size:12px;margin-bottom:8px;text-align:center;">YOUR NAME ON THE BADGE:</p>
+      <input class="menu-input" id="playerNameInput" placeholder="First name" maxlength="12" value="">
+    </div>
+    <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button class="menu-btn" id="goodWorkerBtn" style="font-size:15px;">😇 Good Worker<br><span style="font-size:11px;opacity:0.8">High score path</span></button>
+      <button class="menu-btn" id="chaosBtn" style="background:linear-gradient(135deg,#440088,#8800cc);font-size:15px;">😈 Chaos Mode<br><span style="font-size:11px;opacity:0.8">Slacker legend</span></button>
+    </div>
+    <p style="color:rgba(255,255,255,0.3);font-size:11px;">WASD/Arrows to move · E to interact · M for map</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+//  WAREHOUSE SIMULATOR  —  Phaser 3 + Arcade Physics
+//  Top-down workplace comedy simulator
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── SAVE DATA ───────────────────────────────────────────────────────────────
+const SAVE = (() => {
+  try { return JSON.parse(localStorage.getItem('wh_sim') || '{}'); } catch(e) { return {}; }
+})();
+function savePersist() { localStorage.setItem('wh_sim', JSON.stringify(SAVE)); }
+SAVE.highScore = SAVE.highScore || 0;
+SAVE.shifts    = SAVE.shifts    || 0;
+document.getElementById('hsBadge').textContent    = SAVE.highScore;
+document.getElementById('shiftsBadge').textContent = SAVE.shifts;
+
+// ── GAME CONFIG ─────────────────────────────────────────────────────────────
+const GW = Math.min(window.innerWidth, 900);
+const GH = Math.min(window.innerHeight, 650);
+
+// World dimensions
+const WW = 1800, WH = 1100;
+
+// Real→Game time: 1 real second = 8 game minutes
+const SEC_PER_GAME_MIN = 1/8;
+
+// Shared game state (passed between scenes)
+const STATE = {
+  playerName: 'Worker',
+  mode: 'good',       // 'good' or 'chaos'
+  energy: 100,        // 0-100
+  suspicion: 0,       // 0-100
+  score: 0,
+  gameMinutes: 7*60,  // 7:00 AM
+  shiftEnd: 15*60,    // 3:00 PM
+  currentZone: 'floor',
+  trucksUnloaded: 0,
+  currentTruck: null, // index 0-5
+  dialogueActive: false,
+  miniGameActive: false,
+  day: 1,
+  drawerDebt: 0,
+  chandlerCallCount: 0,
+  rapportJames: 0,
+  leeAgreements: 0,
+  drewLends: 0,
+  events: [],
+  achievements: [],
+};
+
+// Zone layout
+const ZONES = {
+  outside:    { x:0,    y:0,    w:WW,   h:170,  color:0x1e3a10, name:'Outside / Smoking Area' },
+  dock:       { x:0,    y:170,  w:WW,   h:300,  color:0x2a2a2a, name:'Dock Area' },
+  floor:      { x:0,    y:470,  w:WW,   h:300,  color:0x383838, name:'Warehouse Floor' },
+  breakRoom:  { x:0,    y:770,  w:420,  h:330,  color:0x2a1a1a, name:'Break Room' },
+  restroom:   { x:420,  y:770,  w:280,  h:330,  color:0x1a2a2a, name:'Restroom' },
+  dryStorage: { x:700,  y:770,  w:400,  h:330,  color:0x2a2a1a, name:'Dry Storage' },
+  freezer:    { x:1100, y:770,  w:700,  h:330,  color:0x0d1a2a, name:'Freezer Area ❄️' },
+};
+
+// Truck bays (6 bays along dock top)
+const BAYS = [];
+for(let i=0;i<6;i++){
+  BAYS.push({ x: 120 + i*270, y: 200, w:220, h:130, id:i,
+    label:`Bay ${i+1}`, done:false, pallets: 20+Math.floor(Math.random()*30) });
+}
+
+// NPC definitions
+const NPC_DEFS = [
+  { id:'james',   name:'James',   title:'(Manager)',     color:0x3a6abf, zone:'dock',    patrol:true,
+    lines:["What now?!","I'm literally everywhere.","I work 7 days. SEVEN.","Someone call for James? Nobody? Good."],
+    choices:["Nothing, just saying hi","Ask for easier truck","Invite to smoke outside"],
+  },
+  { id:'chandler', name:'Chandler', title:'(Bread Boy)',   color:0xc8a050, zone:'floor',   patrol:false,
+    lines:["I'm not Bread Boy.","Why does everyone call me that?","I swear to God...","Loafing? Really?"],
+    choices:["Call him Bread Boy 🍞","Ignore him","Ask where he's been"],
+  },
+  { id:'lee',     name:'Lee',     title:'(Says Yes)',    color:0xff80c0, zone:'breakRoom',patrol:false,
+    lines:["Yes!","Of course!","Sure, why not?","Absolutely!","Yeah yeah yeah!"],
+    choices:["Ask to cover your truck","Ask her to distract James","Ask if she wants your trash"],
+  },
+  { id:'todd',    name:'Todd',    title:'(Freezer Lead)',color:0x44cc44, zone:'freezer',  patrol:false,
+    lines:["...did you hear that?","The freezer talks to me.","I've been here since Tuesday.","Is it warm in here?"],
+    choices:["Ask if he's okay","Ask what's in the mystery box","Challenge him to a race"],
+  },
+  { id:'drew',    name:'Drew',    title:'(Hungry Drew)', color:0x9955cc, zone:'floor',    patrol:false,
+    lines:["Hey, you got $5?","Bro I'll pay you back.","I forgot my wallet again.","Come on man it's just $5."],
+    choices:["Lend $5","Refuse","Ask for last week's $5 back"],
+  },
+  { id:'pam',     name:'Pam',     title:'(The Manager)', color:0xcc3333, zone:'dock',     patrol:true,
+    lines:["Why aren't you working?","I'm watching everyone.","That's a write-up.","Interesting choice."],
+    choices:["Pretend to work","Run","Blame Chandler"],
+  },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GAME SCENE
+// ═══════════════════════════════════════════════════════════════════════════
+class GameScene extends Phaser.Scene {
+  constructor(){ super('Game'); }
+
+  create(){
+    this.cameras.main.setBackgroundColor('#111111');
+
+    // Build the world
+    this.createMap();
+    this.createWalls();
+    this.createObjects();
+    this.createPlayer();
+    this.createNPCs();
+    this.createTrucks();
+
+    // Camera
+    this.cameras.main.setBounds(0, 0, WW, WH);
+    this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(GW < 600 ? 0.7 : 0.85);
+
+    // Input
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.wasd = this.input.keyboard.addKeys({ up:'W', left:'A', down:'S', right:'D', interact:'E', map:'M' });
+    this.input.keyboard.on('keydown-E', ()=> this.tryInteract());
+    this.input.keyboard.on('keydown-M', ()=> this.toggleMiniMap());
+
+    // Mobile touch joystick
+    this.createTouchControls();
+
+    // Timers & events
+    this.gameTimer = 0; // elapsed real ms
+    this.nextEventAt = 60000 + Math.random()*60000; // first random event
+    this.energyDrainTimer = 0;
+    this.suspicionDecayTimer = 0;
+    this.npcChatterTimer = 0;
+    this.patrolTimer = 0;
+
+    // Dialogue state
+    this.dialogue = null;
+    this.createDialogueBox();
+
+    // Mini-game state
+    this.miniGame = null;
+    this.createMiniGameUI();
+
+    // Message log
+    this.msgLog = [];
+    this.createMessageLog();
+
+    // Floating text pool
+    this.floatTexts = [];
+
+    // Minimap
+    this.miniMapVisible = false;
+    this.createMiniMap();
+
+    // Start UI scene
+    this.scene.launch('UI');
+    this.scene.bringToTop('UI');
+
+    // Assign first truck after short delay
+    this.time.delayedCall(2000, ()=>{
+      if(!STATE.dialogueActive) this.showAssignment();
+    });
+
+    console.log('GameScene created');
+  }
+
+  // ── MAP ────────────────────────────────────────────────────────────────────
+  createMap(){
+    const g = this.add.graphics();
+
+    // Draw each zone
+    for(const [key, z] of Object.entries(ZONES)){
+      g.fillStyle(z.color, 1);
+      g.fillRect(z.x, z.y, z.w, z.h);
+      // Zone border
+      g.lineStyle(2, 0xffa01e, 0.3);
+      g.strokeRect(z.x, z.y, z.w, z.h);
+      // Zone label
+      this.add.text(z.x + z.w/2, z.y + 16, z.name, {
+        fontSize:'13px', fill:'#ffa01e', fontFamily:'monospace',
+        stroke:'#000', strokeThickness:3, alpha:0.6
+      }).setOrigin(0.5, 0);
+    }
+
+    // Floor grid lines (just dock and floor)
+    g.lineStyle(1, 0xffffff, 0.05);
+    for(let x=0; x<WW; x+=60){ g.lineBetween(x, 170, x, 770); }
+    for(let y=170; y<770; y+=60){ g.lineBetween(0, y, WW, y); }
+
+    // Bay dividers in dock
+    g.lineStyle(3, 0xffa01e, 0.4);
+    for(let i=0;i<=6;i++){
+      const bx = 0 + i * 300;
+      g.lineBetween(bx, 170, bx, 470);
+    }
+
+    // Outside detail (parking lot lines)
+    g.lineStyle(1, 0xffffff, 0.08);
+    for(let x=0; x<WW; x+=80){ g.lineBetween(x, 0, x, 170); }
+
+    // Break room detail (tables)
+    g.fillStyle(0x3a2010, 1);
+    for(let i=0;i<3;i++){
+      g.fillRoundedRect(40 + i*130, 820, 100, 50, 8);
+    }
+
+    // Restroom stalls
+    g.fillStyle(0x1a3a4a, 1);
+    for(let i=0;i<3;i++){
+      g.fillRect(430+i*80, 820, 70, 120);
+    }
+    g.lineStyle(2, 0x2a6a8a, 0.5);
+    for(let i=0;i<3;i++){
+      g.strokeRect(430+i*80, 820, 70, 120);
+      this.add.text(465+i*80, 880, `Stall\n${i+1}`, {fontSize:'10px', fill:'#4aa', fontFamily:'monospace'}).setOrigin(0.5);
+    }
+
+    // Freezer ice detail
+    g.fillStyle(0x88ccff, 0.05);
+    for(let x=1110;x<WW-10;x+=60) for(let y=790;y<1090;y+=60){
+      g.fillRect(x,y,50,50);
+    }
+
+    // Smoking area
+    g.fillStyle(0xaaff88, 0.08);
+    g.fillRect(50, 20, 200, 130);
+    this.add.text(150, 85, '🚬 Smokers Corner', {fontSize:'12px', fill:'#aaff88', fontFamily:'monospace'}).setOrigin(0.5);
+  }
+
+  createWalls(){
+    this.walls = this.physics.add.staticGroup();
+
+    const addWall = (x,y,w,h)=>{
+      const r = this.add.rectangle(x+w/2, y+h/2, w, h, 0x000000, 0);
+      this.physics.add.existing(r, true);
+      this.walls.add(r);
+      return r;
+    };
+
+    // World boundary walls
+    addWall(0,   -10, WW,  10);  // top
+    addWall(0,   WH,  WW,  10);  // bottom
+    addWall(-10,  0,  10,  WH);  // left
+    addWall(WW,   0,  10,  WH);  // right
+
+    // Wall between outside and dock (with openings for doors)
+    addWall(0,    165, 200, 10);
+    addWall(800,  165, 1000, 10);
+    // Door opening at x=200-800
+
+    // Walls separating break room / restroom / dry storage / freezer from floor
+    addWall(0,   765, 420, 10);  // break room top
+    addWall(420, 765, 280, 10);  // restroom top
+    addWall(700, 765, 400, 10);  // dry storage top
+    addWall(1100,765, 700, 10);  // freezer top
+
+    // Inner walls between sub-zones at bottom
+    addWall(415, 770, 10, 330);  // break|restroom
+    addWall(695, 770, 10, 330);  // rest|dry
+    addWall(1095,770, 10, 330);  // dry|freezer
+
+    // Dry storage shelves (solid but player can go around)
+    for(let i=0;i<3;i++){
+      addWall(720+i*120, 800, 90, 20);
+      addWall(720+i*120, 870, 90, 20);
+      addWall(720+i*120, 940, 90, 20);
+    }
+  }
+
+  createObjects(){
+    // Time clock
+    this.timeClock = this.createInteractable(160, 620, 60, 70, 0x226622, '⏱ TIME\nCLOCK', 'timeclock');
+
+    // Team lead desk
+    this.tlDesk = this.createInteractable(600, 600, 80, 60, 0x446688, '📋 TEAM\nLEAD', 'tldesk');
+
+    // Vending machine in break room
+    this.vending = this.createInteractable(60, 870, 50, 80, 0x885522, '🥤 VEND', 'vending');
+
+    // Coffee machine
+    this.coffee = this.createInteractable(200, 870, 50, 50, 0x664422, '☕ COFFEE', 'coffee');
+
+    // Fridge in break room
+    this.fridge = this.createInteractable(340, 870, 50, 80, 0x224488, '🧊 FRIDGE', 'fridge');
+
+    // Smoking bench
+    this.bench = this.createInteractable(150, 100, 100, 30, 0x3a5a2a, '🚬 SMOKE', 'smoke');
+
+    // Fire extinguisher (chaos use)
+    this.extinguisher = this.createInteractable(1400, 560, 30, 50, 0xcc2222, '🧯 EXT.', 'extinguisher');
+
+    // Mystery box in freezer
+    this.mysteryBox = this.createInteractable(1400, 900, 60, 60, 0x224466, '❓ BOX', 'mysterybox');
+
+    // Label all interactive objects
+    this.interactables = [
+      this.timeClock, this.tlDesk, this.vending, this.coffee,
+      this.fridge, this.bench, this.extinguisher, this.mysteryBox
+    ];
+  }
+
+  createInteractable(x, y, w, h, color, label, id){
+    const g = this.add.graphics();
+    g.fillStyle(color, 1);
+    g.fillRoundedRect(x-w/2, y-h/2, w, h, 6);
+    g.lineStyle(2, 0xffa01e, 0.6);
+    g.strokeRoundedRect(x-w/2, y-h/2, w, h, 6);
+    const txt = this.add.text(x, y, label, {
+      fontSize:'10px', fill:'#fff', fontFamily:'monospace',
+      align:'center', stroke:'#000', strokeThickness:2
+    }).setOrigin(0.5);
+    // Invisible physics body for collision
+    const body = this.add.rectangle(x, y, w, h, 0, 0);
+    this.physics.add.existing(body, true);
+    body.interactId = id;
+    body.interactLabel = label;
+    return body;
+  }
+
+  createPlayer(){
+    // Player: circle sprite via graphics texture
+    const gfx = this.make.graphics({add:false});
+    gfx.fillStyle(0xffa01e, 1);
+    gfx.fillCircle(20, 20, 18);
+    gfx.lineStyle(3, 0xffcc44, 1);
+    gfx.strokeCircle(20, 20, 18);
+    gfx.generateTexture('player_tex', 40, 40);
+    gfx.destroy();
+
+    this.player = this.physics.add.image(900, 580, 'player_tex');
+    this.player.setCollideWorldBounds(true);
+    this.player.setDrag(800);
+    this.player.setMaxVelocity(180);
+    this.player.setDepth(10);
+
+    // Name tag above player
+    this.playerTag = this.add.text(0, 0, STATE.playerName+'\n(You)', {
+      fontSize:'11px', fill:'#ffd700', fontFamily:'monospace',
+      stroke:'#000', strokeThickness:3, align:'center'
+    }).setOrigin(0.5, 1).setDepth(11);
+
+    // Collide with walls
+    this.physics.add.collider(this.player, this.walls);
+
+    // "E to interact" prompt
+    this.ePrompt = this.add.text(0, 0, '[E] Interact', {
+      fontSize:'11px', fill:'#ffd700', fontFamily:'monospace',
+      stroke:'#000', strokeThickness:3, backgroundColor:'rgba(0,0,0,0.6)',
+      padding:{x:5,y:3}
+    }).setOrigin(0.5, 1).setDepth(20).setVisible(false);
+  }
+
+  createNPCs(){
+    this.npcs = [];
+
+    NPC_DEFS.forEach(def => {
+      const zone = ZONES[def.zone];
+      const sx = zone.x + zone.w * 0.35 + Math.random()*zone.w*0.3;
+      const sy = zone.y + zone.h * 0.3 + Math.random()*zone.h*0.4;
+
+      // NPC texture
+      const gfx = this.make.graphics({add:false});
+      gfx.fillStyle(def.color, 1);
+      gfx.fillCircle(18,18,16);
+      gfx.lineStyle(2.5, 0xffffff, 0.5);
+      gfx.strokeCircle(18,18,16);
+      gfx.generateTexture('npc_'+def.id, 36, 36);
+      gfx.destroy();
+
+      const sprite = this.physics.add.image(sx, sy, 'npc_'+def.id);
+      sprite.setCollideWorldBounds(true);
+      sprite.setDrag(600);
+      sprite.setMaxVelocity(def.patrol ? 120 : 80);
+      sprite.setDepth(9);
+
+      // Name tag
+      const tag = this.add.text(sx, sy-22, def.name+'\n'+def.title, {
+        fontSize:'10px', fill:'#fff', fontFamily:'monospace',
+        stroke:'#000', strokeThickness:3, align:'center'
+      }).setOrigin(0.5, 1).setDepth(11);
+
+      // Speech bubble
+      const bubble = this.add.text(sx, sy-50, '', {
+        fontSize:'11px', fill:'#111', fontFamily:'monospace',
+        backgroundColor:'#fff', padding:{x:5,y:3}, borderRadius:6,
+        wordWrap:{width:160}
+      }).setOrigin(0.5,1).setDepth(12).setVisible(false);
+
+      const npc = {
+        ...def, sprite, tag, bubble,
+        targetX: sx, targetY: sy,
+        moveTimer: 0,
+        patrolIndex: 0,
+        patrolPath: def.patrol ? this.genPatrolPath(def.zone) : [],
+        bubbleTimer: 0,
+        interacting: false,
+      };
+
+      this.physics.add.collider(sprite, this.walls);
+      this.npcs.push(npc);
+    });
+  }
+
+  genPatrolPath(zone){
+    const z = ZONES[zone];
+    const pts = [];
+    const steps = 4 + Math.floor(Math.random()*3);
+    for(let i=0;i<steps;i++){
+      pts.push({
+        x: z.x + 40 + Math.random()*(z.w-80),
+        y: z.y + 30 + Math.random()*(z.h-60)
+      });
+    }
+    return pts;
+  }
+
+  createTrucks(){
+    this.trucks = [];
+    const g = this.add.graphics();
+    BAYS.forEach((bay, i) => {
+      // Truck body
+      g.fillStyle(Phaser.Math.Between(0x446688, 0x886644), 1);
+      g.fillRect(bay.x - bay.w/2, bay.y - bay.h/2, bay.w, bay.h);
+      g.lineStyle(2, 0xffa01e, 0.5);
+      g.strokeRect(bay.x - bay.w/2, bay.y - bay.h/2, bay.w, bay.h);
+
+      // Truck label
+      const lbl = this.add.text(bay.x, bay.y, `🚛 Truck ${i+1}\n${bay.pallets} pallets`, {
+        fontSize:'11px', fill:'#fff', fontFamily:'monospace',
+        stroke:'#000', strokeThickness:2, align:'center'
+      }).setOrigin(0.5);
+
+      // Invisible interactive body
+      const body = this.add.rectangle(bay.x, bay.y, bay.w, bay.h, 0, 0);
+      this.physics.add.existing(body, true);
+      body.interactId = 'truck_'+i;
+
+      this.trucks.push({ ...bay, label:lbl, body, bodyRect:body, done:false });
+    });
+  }
+
+  // ── PLAYER MOVEMENT ────────────────────────────────────────────────────────
+  movePlayer(delta){
+    const speed = 180 * (STATE.energy>0 ? 1 : 0.4);
+    const cur = this.cursors;
+    const w = this.wasd;
+    let vx=0, vy=0;
+
+    const left  = cur.left.isDown  || w.left.isDown  || this.joyDir.left;
+    const right = cur.right.isDown || w.right.isDown || this.joyDir.right;
+    const up    = cur.up.isDown    || w.up.isDown    || this.joyDir.up;
+    const down  = cur.down.isDown  || w.down.isDown  || this.joyDir.down;
+
+    if(left)  vx -= speed;
+    if(right) vx += speed;
+    if(up)    vy -= speed;
+    if(down)  vy += speed;
+
+    if(vx!==0 && vy!==0){ vx*=0.707; vy*=0.707; }
+
+    if(vx||vy){
+      this.player.setVelocity(vx, vy);
+    } else {
+      this.player.setVelocity(0,0);
+    }
+  }
+
+  // ── TOUCH CONTROLS ─────────────────────────────────────────────────────────
+  createTouchControls(){
+    this.joyDir = {left:false, right:false, up:false, down:false};
+    if(!this.sys.game.device.input.touch && window.innerWidth>600) return;
+
+    const joyZone = this.add.rectangle(80, GH-80, 140, 140, 0x000000, 0)
+      .setScrollFactor(0).setInteractive().setDepth(50);
+
+    const joyBase = this.add.circle(80, GH-80, 55, 0xffffff, 0.1)
+      .setScrollFactor(0).setDepth(50);
+    const joyKnob = this.add.circle(80, GH-80, 22, 0xffa01e, 0.7)
+      .setScrollFactor(0).setDepth(51);
+
+    // Interact button
+    const intBtn = this.add.circle(GW-70, GH-80, 32, 0xffa01e, 0.7)
+      .setScrollFactor(0).setInteractive().setDepth(50);
+    this.add.text(GW-70, GH-80, 'E', {fontSize:'18px',fill:'#fff',fontFamily:'monospace'})
+      .setScrollFactor(0).setDepth(51).setOrigin(0.5);
+    intBtn.on('pointerdown', ()=> this.tryInteract());
+
+    const baseX=80, baseY=GH-80, deadzone=10;
+    this.input.on('pointermove', ptr=>{
+      const dx=ptr.x-baseX, dy=ptr.y-baseY, d=Math.hypot(dx,dy);
+      if(ptr.isDown && d>deadzone && ptr.x<160){
+        const max=50;
+        const kx=baseX+Phaser.Math.Clamp(dx,-max,max);
+        const ky=baseY+Phaser.Math.Clamp(dy,-max,max);
+        joyKnob.setPosition(kx,ky);
+        this.joyDir.left  = dx < -deadzone;
+        this.joyDir.right = dx > deadzone;
+        this.joyDir.up    = dy < -deadzone;
+        this.joyDir.down  = dy > deadzone;
+      }
+    });
+    this.input.on('pointerup', ()=>{
+      joyKnob.setPosition(baseX,baseY);
+      this.joyDir = {left:false,right:false,up:false,down:false};
+    });
+  }
+
+  // ── DIALOGUE SYSTEM ────────────────────────────────────────────────────────
+  createDialogueBox(){
+    // Semi-transparent panel at bottom
+    this.dlgBg = this.add.graphics().setScrollFactor(0).setDepth(80).setVisible(false);
+    this.dlgPortrait = this.add.rectangle(70, GH-80, 80, 100, 0x334455)
+      .setScrollFactor(0).setDepth(81).setVisible(false);
+    this.dlgPortraitTxt = this.add.text(70, GH-80, '', {
+      fontSize:'11px', fill:'#ffa01e', fontFamily:'monospace', align:'center'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(82).setVisible(false);
+    this.dlgText = this.add.text(130, GH-135, '', {
+      fontSize:'14px', fill:'#fff', fontFamily:'monospace',
+      wordWrap:{width:GW-160}, lineSpacing:4
+    }).setScrollFactor(0).setDepth(82).setVisible(false);
+    this.dlgChoiceBtns = [];
+    for(let i=0;i<4;i++){
+      const btn = this.add.text(130, GH-80+i*24, '', {
+        fontSize:'12px', fill:'#ffd700', fontFamily:'monospace',
+        backgroundColor:'rgba(50,50,50,0.9)', padding:{x:6,y:3}
+      }).setScrollFactor(0).setDepth(82).setVisible(false).setInteractive();
+      btn.on('pointerover',()=>btn.setStyle({fill:'#fff'}));
+      btn.on('pointerout', ()=>btn.setStyle({fill:'#ffd700'}));
+      this.dlgChoiceBtns.push(btn);
+    }
+    this.dlgCloseTxt = this.add.text(GW-20, GH-20, '[ESC] Close', {
+      fontSize:'10px', fill:'rgba(255,255,255,0.4)', fontFamily:'monospace'
+    }).setOrigin(1,1).setScrollFactor(0).setDepth(82).setVisible(false);
+    this.input.keyboard.on('keydown-ESC', ()=> this.closeDialogue());
+  }
+
+  openDialogue(npc){
+    if(STATE.dialogueActive || STATE.miniGameActive) return;
+    STATE.dialogueActive = true;
+    this.dialogue = npc;
+    this.player.setVelocity(0,0);
+
+    const line = Phaser.Math.RND.pick(npc.lines);
+
+    // Draw background
+    this.dlgBg.clear().setVisible(true);
+    this.dlgBg.fillStyle(0x000000, 0.85);
+    this.dlgBg.fillRect(0, GH-155, GW, 155);
+    this.dlgBg.lineStyle(2, 0xffa01e, 0.5);
+    this.dlgBg.strokeRect(0, GH-155, GW, 155);
+
+    // Portrait
+    this.dlgPortrait.setFillStyle(npc.color).setVisible(true);
+    this.dlgPortraitTxt.setText(npc.name+'\n'+npc.title).setVisible(true);
+
+    // Text
+    this.dlgText.setText(npc.name+': "'+line+'"').setVisible(true);
+    this.dlgCloseTxt.setVisible(true);
+
+    // Choices
+    npc.choices.forEach((choice, i)=>{
+      const btn = this.dlgChoiceBtns[i];
+      btn.setText(`${i+1}. ${choice}`).setPosition(130, GH-100+i*26).setVisible(true);
+      btn.removeAllListeners('pointerdown');
+      btn.on('pointerdown', ()=> this.handleChoice(npc, i));
+    });
+
+    // Keyboard shortcuts 1/2/3
+    this.choiceKeys = [];
+    npc.choices.forEach((_, i) => {
+      const k = this.input.keyboard.addKey(49+i); // 1, 2, 3
+      k.once('down', ()=>{ if(STATE.dialogueActive) this.handleChoice(npc,i); });
+      this.choiceKeys.push(k);
+    });
+  }
+
+  handleChoice(npc, idx){
+    let response = '';
+    let scoreChange = 0;
+    let energyChange = 0;
+    let suspChange = 0;
+
+    if(npc.id === 'chandler'){
+      if(idx===0){ // Call Bread Boy
+        STATE.chandlerCallCount++;
+        const escalation = [
+          '"I am NOT Bread Boy!"',
+          '"WHY DO YOU KEEP DOING THIS?!"',
+          '"I will find where you park."',
+          '"BREAD BOY?! I QUIT. I\'M CALLING HR."',
+          '"Okay... okay fine. I\'m Bread Boy. Happy?!"',
+        ];
+        response = escalation[Math.min(STATE.chandlerCallCount-1, escalation.length-1)];
+        scoreChange = 10 * STATE.chandlerCallCount;
+        suspChange = STATE.chandlerCallCount > 2 ? 5 : 0;
+        this.floatText(npc.sprite.x, npc.sprite.y, '+'+scoreChange+' pts 🍞', '#ffd700');
+      } else if(idx===1){
+        response = '"..."'; suspChange = -5;
+      } else {
+        response = '"I\'ve been... around."'; energyChange = 5;
+      }
+    }
+    else if(npc.id === 'james'){
+      if(idx===0){ response = '"Hi. Now please go do something."'; suspChange = -10; STATE.rapportJames++; }
+      else if(idx===1){ response = '"No. Next."'; suspChange = 5; }
+      else { // Invite to smoke
+        if(STATE.rapportJames >= 2){
+          response = '"...yeah okay. Five minutes. Nobody saw this."';
+          energyChange = 20; scoreChange = 50; STATE.rapportJames++;
+          this.floatText(this.player.x, this.player.y, '+50 pts! James is cool!', '#ffa01e');
+        } else {
+          response = '"Excuse me?! Back to work."'; suspChange = 15;
+        }
+      }
+    }
+    else if(npc.id === 'lee'){
+      STATE.leeAgreements++;
+      if(idx===0){ response = '"Yes! I\'ll cover it!"'; energyChange = 0; scoreChange = 30;
+        this.floatText(this.player.x, this.player.y, 'Lee covers your truck! +30', '#ff80c0'); }
+      else if(idx===1){ response = '"Yes! I\'ll totally distract him!"'; suspChange = -15;
+        this.floatText(this.player.x, this.player.y, 'James distracted!', '#ff80c0'); }
+      else { response = '"Yes! I love trash!"'; scoreChange = 5;
+        this.floatText(this.player.x, this.player.y, 'Lee agrees to anything.', '#ff80c0'); }
+    }
+    else if(npc.id === 'todd'){
+      if(idx===0){ response = '"I\'m GREAT. The freezer just... speaks to me."'; scoreChange = 5; }
+      else if(idx===1){ response = '"The mystery box? We don\'t talk about the mystery box."'; scoreChange = 25;
+        this.floatText(npc.sprite.x, npc.sprite.y, '🧊 +25 pts Freezer Secret', '#44ccff'); }
+      else { response = '"You can\'t race me. I\'m already everywhere."'; energyChange = 10; scoreChange = 15; }
+    }
+    else if(npc.id === 'drew'){
+      if(idx===0){ // Lend $5
+        STATE.drewLends++;
+        response = '"BRO you\'re a lifesaver. I\'ll get you back tomorrow."';
+        energyChange = -5; scoreChange = -10; STATE.drawerDebt += 5;
+        this.floatText(this.player.x, this.player.y, '-$5 (never seeing that again)', '#ff6666');
+      } else if(idx===1){
+        response = '"Man... okay fine. Respect."'; scoreChange = 5;
+      } else { // Ask for last week's $5
+        if(STATE.drewLends > 0){
+          response = `"Last week's $5?! Bro I... look I'll get you back... eventually."`;
+          scoreChange = 20;
+          this.floatText(this.player.x, this.player.y, 'He owes you $'+(STATE.drewLends*5)+'!', '#ffd700');
+        } else {
+          response = '"What $5? We never did that."';
+        }
+      }
+    }
+    else if(npc.id === 'pam'){
+      if(idx===0){ // Pretend to work
+        response = '"I\'m watching you. Very carefully."'; suspChange = -5;
+      } else if(idx===1){ // Run
+        this.player.setVelocity(300, 300); response = '"HEY! GET BACK HERE!"'; suspChange = 20;
+        scoreChange = 15; this.floatText(this.player.x, this.player.y, 'RAN FROM PAM! +15', '#ff4444');
+      } else { // Blame Chandler
+        response = '"Chandler? CHANDLER! My office, now."'; suspChange = -20; scoreChange = 30;
+        this.floatText(this.player.x, this.player.y, 'Chandler takes the fall! +30', '#ffd700');
+        const chandler = this.npcs.find(n=>n.id==='chandler');
+        if(chandler) this.showBubble(chandler, '"WHY ME?! EVERY TIME!!"');
+      }
+    }
+
+    STATE.score = Math.max(0, STATE.score + scoreChange);
+    STATE.energy = Math.max(0, Math.min(100, STATE.energy + energyChange));
+    STATE.suspicion = Math.max(0, Math.min(100, STATE.suspicion + suspChange));
+
+    // Show response
+    this.dlgText.setText(npc.name+': '+response);
+    this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+    this.dlgCloseTxt.setText('[E/ESC] Close');
+
+    this.time.delayedCall(2500, ()=>this.closeDialogue());
+  }
+
+  closeDialogue(){
+    STATE.dialogueActive = false;
+    this.dialogue = null;
+    this.dlgBg.setVisible(false);
+    this.dlgPortrait.setVisible(false);
+    this.dlgPortraitTxt.setVisible(false);
+    this.dlgText.setVisible(false);
+    this.dlgCloseTxt.setVisible(false);
+    this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+    if(this.choiceKeys) this.choiceKeys.forEach(k=>this.input.keyboard.removeKey(k));
+  }
+
+  // ── UNLOADING MINI-GAME ────────────────────────────────────────────────────
+  createMiniGameUI(){
+    this.mgBg   = this.add.graphics().setScrollFactor(0).setDepth(90).setVisible(false);
+    this.mgTitle= this.add.text(GW/2, 60, '', {fontSize:'20px',fill:'#ffa01e',fontFamily:'monospace',stroke:'#000',strokeThickness:4})
+      .setOrigin(0.5).setScrollFactor(0).setDepth(91).setVisible(false);
+    this.mgPrompt=this.add.text(GW/2, GH/2-20, '', {fontSize:'48px',fill:'#fff',fontFamily:'monospace',stroke:'#000',strokeThickness:4})
+      .setOrigin(0.5).setScrollFactor(0).setDepth(91).setVisible(false);
+    this.mgStatus=this.add.text(GW/2, GH/2+50, '', {fontSize:'16px',fill:'#aaa',fontFamily:'monospace'})
+      .setOrigin(0.5).setScrollFactor(0).setDepth(91).setVisible(false);
+    this.mgBar  = this.add.graphics().setScrollFactor(0).setDepth(91).setVisible(false);
+    this.mgScore=this.add.text(GW/2, GH-80, '', {fontSize:'18px',fill:'#ffd700',fontFamily:'monospace'})
+      .setOrigin(0.5).setScrollFactor(0).setDepth(91).setVisible(false);
+    this.mgQuit = this.add.text(GW-20, GH-20, '[Q] Stop Unloading', {fontSize:'11px',fill:'rgba(255,255,255,0.5)',fontFamily:'monospace'})
+      .setOrigin(1,1).setScrollFactor(0).setDepth(91).setVisible(false).setInteractive();
+    this.mgQuit.on('pointerdown',()=>this.endMiniGame(false));
+    this.input.keyboard.on('keydown-Q', ()=>{ if(STATE.miniGameActive) this.endMiniGame(false); });
+  }
+
+  startMiniGame(truckIdx){
+    if(STATE.dialogueActive || STATE.miniGameActive) return;
+    if(truckIdx < 0 || truckIdx >= this.trucks.length || this.trucks[truckIdx].done) return;
+
+    STATE.miniGameActive = true;
+    STATE.currentTruck = truckIdx;
+    this.mgTruck = this.trucks[truckIdx];
+    this.mgPalletsTotal = this.mgTruck.pallets;
+    this.mgPalletsLeft = this.mgPalletsTotal;
+    this.mgHits = 0; this.mgMisses = 0;
+    this.mgCombo = 0; this.mgPts = 0;
+    this.mgTimeLeft = 45000; // 45 seconds
+    this.mgKeys = ['←','→','↑','↓','SPACE'];
+    this.mgKeyMap = { 'ArrowLeft':'←','ArrowRight':'→','ArrowUp':'↑','ArrowDown':'↓',' ':'SPACE' };
+    this.mgCurrentKey = '';
+    this.mgWindowLeft = 0;
+    this.mgShowNext();
+
+    // Show UI
+    this.mgBg.clear().setVisible(true);
+    this.mgBg.fillStyle(0x000000, 0.9);
+    this.mgBg.fillRect(0,0,GW,GH);
+    this.mgBg.fillStyle(0x1a2a1a,1);
+    this.mgBg.fillRoundedRect(GW/2-300, 40, 600, GH-80, 16);
+    this.mgBg.lineStyle(2,0x44cc44,0.8);
+    this.mgBg.strokeRoundedRect(GW/2-300, 40, 600, GH-80, 16);
+
+    [this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit].forEach(o=>o.setVisible(true));
+    this.mgTitle.setText(`🚛 UNLOADING TRUCK ${truckIdx+1}  —  ${this.mgPalletsTotal} PALLETS`);
+
+    // Key listener for mini-game
+    this.mgKeyListener = (event)=>{
+      if(!STATE.miniGameActive) return;
+      const pressed = this.mgKeyMap[event.key];
+      if(!pressed) return;
+      this.mgCheckPress(pressed);
+    };
+    window.addEventListener('keydown', this.mgKeyListener);
+
+    // Tap for mobile
+    this.mgTapArea = this.add.rectangle(GW/2, GH/2, 400, 200, 0, 0)
+      .setScrollFactor(0).setDepth(95).setInteractive();
+    this.mgTapArea.on('pointerdown', ()=> this.mgCheckPress(this.mgCurrentKey));
+
+    this.mgLoop = this.time.addEvent({
+      delay: 100, loop: true,
+      callback: ()=>{
+        if(!STATE.miniGameActive) return;
+        this.mgTimeLeft -= 100;
+        this.mgWindowLeft -= 100;
+        if(this.mgWindowLeft <= 0 && this.mgPalletsLeft > 0){
+          this.mgMisses++; this.mgCombo=0;
+          this.mgStatus.setText('❌ Missed! Combo reset.').setStyle({fill:'#ff6666'});
+          this.mgShowNext();
+        }
+        if(this.mgTimeLeft<=0 || this.mgPalletsLeft<=0) this.endMiniGame(this.mgPalletsLeft<=0);
+        this.mgUpdateBar();
+      }
+    });
+  }
+
+  mgShowNext(){
+    if(this.mgPalletsLeft <= 0){ this.endMiniGame(true); return; }
+    const opts = ['←','→','↑','↓'];
+    this.mgCurrentKey = opts[Math.floor(Math.random()*opts.length)];
+    this.mgWindowLeft = 2000 - this.mgHits * 8; // gets harder
+    this.mgWindowLeft = Math.max(700, this.mgWindowLeft);
+    this.mgPrompt.setText(this.mgCurrentKey);
+    // Flash animation
+    this.tweens.add({ targets:this.mgPrompt, scaleX:[1.4,1], scaleY:[1.4,1], duration:200 });
+    this.mgScore.setText(`✅ ${this.mgHits} pallets  |  Combo ×${this.mgCombo+1}  |  +${this.mgPts} pts`);
+  }
+
+  mgCheckPress(key){
+    if(key === this.mgCurrentKey){
+      this.mgHits++; this.mgCombo++; this.mgPalletsLeft--;
+      const pts = 10 * this.mgCombo;
+      this.mgPts += pts;
+      STATE.score += pts;
+      STATE.energy = Math.max(0, STATE.energy - 1.5);
+      this.mgStatus.setText(`✅ PALLET! Combo ×${this.mgCombo} (+${pts} pts)`).setStyle({fill:'#44ff44'});
+      this.tweens.add({ targets:this.mgPrompt, y:GH/2-40, yoyo:true, duration:100 });
+      this.mgShowNext();
+    } else {
+      this.mgMisses++; this.mgCombo=0;
+      this.mgStatus.setText('❌ Wrong key! Pallet dropped.').setStyle({fill:'#ff4444'});
+      this.tweens.add({ targets:this.mgPrompt, x:GW/2+10, yoyo:true, duration:80, repeat:2,
+        onComplete:()=>this.mgPrompt.setX(GW/2) });
+    }
+  }
+
+  mgUpdateBar(){
+    this.mgBar.clear();
+    const pct = this.mgTimeLeft/45000;
+    const bw = 500, bh = 16, bx = GW/2-250, by = 100;
+    this.mgBar.fillStyle(0x333333,1); this.mgBar.fillRect(bx,by,bw,bh);
+    const col = pct>0.5?0x44cc44:pct>0.25?0xffaa00:0xff3333;
+    this.mgBar.fillStyle(col,1); this.mgBar.fillRect(bx,by,bw*pct,bh);
+    this.mgBar.lineStyle(1,0xffffff,0.3); this.mgBar.strokeRect(bx,by,bw,bh);
+    // Pallets remaining bar
+    const pp = 1 - (this.mgPalletsLeft/this.mgPalletsTotal);
+    this.mgBar.fillStyle(0x225522,1); this.mgBar.fillRect(bx,by+24,bw,8);
+    this.mgBar.fillStyle(0x44ff44,1); this.mgBar.fillRect(bx,by+24,bw*pp,8);
+  }
+
+  endMiniGame(success){
+    if(!STATE.miniGameActive) return;
+    STATE.miniGameActive = false;
+    if(this.mgLoop){ this.mgLoop.remove(); this.mgLoop=null; }
+    if(this.mgKeyListener){ window.removeEventListener('keydown',this.mgKeyListener); this.mgKeyListener=null; }
+    if(this.mgTapArea){ this.mgTapArea.destroy(); this.mgTapArea=null; }
+
+    const truck = this.trucks[STATE.currentTruck];
+    if(truck){
+      const ratio = this.mgHits / this.mgPalletsTotal;
+      const bonus = Math.floor(ratio * 100);
+      STATE.score += bonus;
+      STATE.trucksUnloaded++;
+      STATE.suspicion = Math.max(0, STATE.suspicion - 20);
+
+      if(ratio >= 0.5){ truck.done = true; truck.label.setText('✅ Done!').setStyle({fill:'#44cc44'}); }
+      const msg = ratio >= 0.8 ? '💪 Great unload! +'+bonus+' pts' :
+                  ratio >= 0.5 ? '👍 Decent work. +'+bonus+' pts' :
+                  '😬 Sloppy. +'+bonus+' pts';
+      this.floatText(this.player.x, this.player.y, msg, '#ffd700');
+
+      if(STATE.trucksUnloaded >= 3 && !STATE.achievements.includes('3_trucks')){
+        STATE.achievements.push('3_trucks');
+        this.floatText(this.player.x, this.player.y-40, '🏆 ACHIEVEMENT: Workhorse!', '#ffa01e');
+      }
+    }
+
+    [this.mgBg,this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit].forEach(o=>o.setVisible(false));
+    STATE.currentTruck = null;
+
+    // Check next assignment
+    this.time.delayedCall(1500, ()=>{ if(!STATE.dialogueActive) this.showAssignment(); });
+  }
+
+  // ── INTERACTION ────────────────────────────────────────────────────────────
+  tryInteract(){
+    if(STATE.dialogueActive || STATE.miniGameActive) return;
+
+    const range = 90;
+    const px = this.player.x, py = this.player.y;
+
+    // Check NPCs
+    for(const npc of this.npcs){
+      const d = Phaser.Math.Distance.Between(px,py,npc.sprite.x,npc.sprite.y);
+      if(d < range){ this.openDialogue(npc); return; }
+    }
+
+    // Check trucks
+    for(let i=0;i<this.trucks.length;i++){
+      const t = this.trucks[i];
+      if(!t.done && t === STATE.currentTruckObj){
+        const d = Phaser.Math.Distance.Between(px,py,t.x,t.y);
+        if(d < range+50){ this.startMiniGame(i); return; }
+      }
+    }
+
+    // Check interactables
+    for(const obj of this.interactables){
+      const d = Phaser.Math.Distance.Between(px,py,obj.x,obj.y);
+      if(d < range){ this.useObject(obj.interactId); return; }
+    }
+  }
+
+  useObject(id){
+    const responses = {
+      timeclock: ()=>{ this.floatText(this.player.x,this.player.y,'⏱ Clocked in!',  '#44ff44'); STATE.score+=5; },
+      tldesk:    ()=>{ this.showAssignment(); },
+      vending:   ()=>{ STATE.energy=Math.min(100,STATE.energy+15); this.floatText(this.player.x,this.player.y,'🥤 Energy +15!','#44aaff'); STATE.score+=2; },
+      coffee:    ()=>{ STATE.energy=Math.min(100,STATE.energy+25); this.floatText(this.player.x,this.player.y,'☕ Coffee! Energy +25!','#cc8844'); STATE.score+=3; },
+      fridge:    ()=>{ STATE.energy=Math.min(100,STATE.energy+20); this.floatText(this.player.x,this.player.y,'🧊 Snack! Energy +20','#44ddff'); STATE.score+=3; },
+      smoke:     ()=>{ STATE.energy=Math.min(100,STATE.energy+30); STATE.suspicion=Math.max(0,STATE.suspicion-10); this.floatText(this.player.x,this.player.y,'🚬 Smoke break! Suspicion -10','#aaff88'); STATE.score+=5; },
+      extinguisher:()=>{ this.fireExtinguisher(); },
+      mysterybox:()=>{ this.openMysteryBox(); },
+    };
+    if(responses[id]) responses[id]();
+  }
+
+  fireExtinguisher(){
+    const pam = this.npcs.find(n=>n.id==='pam');
+    STATE.score += 50;
+    STATE.suspicion = Math.min(100, STATE.suspicion+40);
+    this.floatText(this.player.x, this.player.y, '🧯 FIRE EXTINGUISHER! Chaos +50pts', '#ff4444');
+    if(pam){ this.showBubble(pam, '"WHAT ARE YOU DOING?!"'); }
+    this.cameras.main.shake(500, 0.02);
+    if(!STATE.achievements.includes('chaos_agent')){
+      STATE.achievements.push('chaos_agent');
+      this.time.delayedCall(1000, ()=>
+        this.floatText(this.player.x,this.player.y-50,'🏆 ACHIEVEMENT: Chaos Agent!','#ff4444'));
+    }
+  }
+
+  openMysteryBox(){
+    const outcomes = [
+      ['Extra Large Pizza (Todd\'s)', 80, '🍕 +80 pts!'],
+      ['A single fry', 1, '🍟 ...just one fry. +1 pt.'],
+      ['Chandler\'s lunch', 40, '🥪 You ate Chandler\'s lunch! +40'],
+      ['Todd\'s secret stash', 100, '🧊 Todd\'s STASH! +100 pts!!'],
+      ['A letter from HR', -20, '📋 HR letter... -20 pts.'],
+    ];
+    const [msg, pts, txt] = Phaser.Math.RND.pick(outcomes);
+    STATE.score = Math.max(0, STATE.score+pts);
+    this.floatText(this.player.x, this.player.y, txt, '#44ccff');
+    if(pts>=100 && !STATE.achievements.includes('mystery_winner')){
+      STATE.achievements.push('mystery_winner');
+      this.time.delayedCall(1000,()=>this.floatText(this.player.x,this.player.y-50,'🏆 ACHIEVEMENT: Mystery Winner!','#ffd700'));
+    }
+  }
+
+  // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
+  showAssignment(){
+    if(STATE.dialogueActive || STATE.miniGameActive) return;
+    const available = this.trucks.filter(t=>!t.done);
+    if(available.length === 0){
+      this.floatText(this.player.x, this.player.y, '🎉 All trucks done! Bonus!', '#ffd700');
+      STATE.score += 100;
+      return;
+    }
+    const truck = Phaser.Math.RND.pick(available);
+    STATE.currentTruckObj = truck;
+    const idx = this.trucks.indexOf(truck);
+
+    const james = this.npcs.find(n=>n.id==='james');
+    if(james) this.showBubble(james, `Go to Bay ${idx+1}!\n${truck.pallets} pallets!`);
+    this.floatText(this.player.x, this.player.y, `📋 Assigned: Bay ${idx+1} (${truck.pallets} pallets)\nWalk to the truck & press E`, '#ffa01e');
+
+    // Highlight the bay
+    const gfx = this.add.graphics().setDepth(5);
+    gfx.lineStyle(3, 0x44ff44, 1);
+    gfx.strokeRect(truck.x-truck.w/2, truck.y-truck.h/2, truck.w, truck.h);
+    this.tweens.add({ targets:gfx, alpha:0, duration:3000, onComplete:()=>gfx.destroy() });
+  }
+
+  // ── NPC AI ─────────────────────────────────────────────────────────────────
+  updateNPCs(delta){
+    this.npcs.forEach(npc=>{
+      if(npc.interacting) return;
+
+      // Movement
+      npc.moveTimer -= delta;
+      if(npc.moveTimer <= 0){
+        if(npc.patrol && npc.patrolPath.length>0){
+          npc.patrolIndex = (npc.patrolIndex+1) % npc.patrolPath.length;
+          const pt = npc.patrolPath[npc.patrolIndex];
+          npc.targetX = pt.x; npc.targetY = pt.y;
+          npc.moveTimer = 3000 + Math.random()*2000;
+        } else {
+          const zone = ZONES[npc.zone];
+          npc.targetX = zone.x + 40 + Math.random()*(zone.w-80);
+          npc.targetY = zone.y + 30 + Math.random()*(zone.h-60);
+          npc.moveTimer = 4000 + Math.random()*4000;
+        }
+      }
+
+      // Move toward target
+      const dx = npc.targetX - npc.sprite.x;
+      const dy = npc.targetY - npc.sprite.y;
+      const dist = Math.hypot(dx,dy);
+      if(dist > 10){
+        const spd = npc.patrol ? 70 : 45;
+        npc.sprite.setVelocity((dx/dist)*spd, (dy/dist)*spd);
+      } else {
+        npc.sprite.setVelocity(0,0);
+      }
+
+      // Update tag position
+      npc.tag.setPosition(npc.sprite.x, npc.sprite.y-22);
+      npc.bubble.setPosition(npc.sprite.x, npc.sprite.y-50);
+
+      // Bubble timer
+      if(npc.bubbleTimer>0){ npc.bubbleTimer-=delta; if(npc.bubbleTimer<=0) npc.bubble.setVisible(false); }
+
+      // Pam suspicion check
+      if(npc.id==='pam'){
+        const d = Phaser.Math.Distance.Between(this.player.x,this.player.y,npc.sprite.x,npc.sprite.y);
+        if(d<120 && STATE.suspicion>30){
+          STATE.suspicion = Math.min(100, STATE.suspicion+0.05*delta/16);
+          if(STATE.suspicion>80 && !this._pamWarned){
+            this._pamWarned=true;
+            this.showBubble(npc, '"I\'m writing you up."');
+            STATE.score = Math.max(0, STATE.score-50);
+            this.floatText(this.player.x,this.player.y,'😱 PAM CAUGHT YOU! -50 pts','#ff2222');
+            this.cameras.main.shake(400,0.015);
+            this.time.delayedCall(5000,()=>{ this._pamWarned=false; });
+          }
+        }
+      }
+    });
+  }
+
+  showBubble(npc, text){
+    npc.bubble.setText(text).setVisible(true);
+    npc.bubbleTimer = 3000;
+  }
+
+  // ── RANDOM EVENTS ──────────────────────────────────────────────────────────
+  triggerRandomEvent(){
+    const events = [
+      ()=>{ // Peak rush
+        this.floatText(WW/2,WH/2,'🔥 PEAK RUSH! Double points for 30s!','#ff4400');
+        this._peakRush=true; STATE.suspicion=Math.min(100,STATE.suspicion+5);
+        this.time.delayedCall(30000,()=>{ this._peakRush=false; });
+        this.showBubble(this.npcs.find(n=>n.id==='james'),'EVERYONE ON DECK!');
+      },
+      ()=>{ // Sent to freezer
+        this.floatText(this.player.x,this.player.y,'❄️ You\'ve been sent to the Freezer!','#44ccff');
+        this.player.setPosition(1300, 900);
+        this.showBubble(this.npcs.find(n=>n.id==='todd'),'Welcome to my domain...');
+      },
+      ()=>{ // Drew starts a rumor
+        this.floatText(this.player.x,this.player.y,'💬 Drew started a rumor about you! Suspicion +10','#9955cc');
+        STATE.suspicion=Math.min(100,STATE.suspicion+10);
+        const drew=this.npcs.find(n=>n.id==='drew');
+        if(drew) this.showBubble(drew,'"I heard they sleep here..."');
+      },
+      ()=>{ // Free pizza
+        this.floatText(WW/2,600,'🍕 FREE PIZZA IN THE BREAK ROOM! Energy boost!','#ffd700');
+        STATE.energy=Math.min(100,STATE.energy+40); STATE.score+=20;
+      },
+      ()=>{ // Chandler breakdown
+        const c=this.npcs.find(n=>n.id==='chandler');
+        if(c){ this.showBubble(c,'"I WENT TO COLLEGE FOR THIS?!"'); STATE.score+=15; }
+        this.floatText(this.player.x,this.player.y,'😂 Chandler is having a moment. +15','#ffd700');
+      },
+      ()=>{ // Health inspector
+        this.floatText(WW/2,580,'🏥 HEALTH INSPECTOR INCOMING! Look busy!','#ff6600');
+        STATE.suspicion=Math.max(0,STATE.suspicion-30);
+        this.cameras.main.shake(200,0.01);
+      },
+    ];
+    const evt = Phaser.Math.RND.pick(events);
+    evt();
+    this.nextEventAt = this.gameTimer + 45000 + Math.random()*60000;
+  }
+
+  // ── FLOATING TEXT ──────────────────────────────────────────────────────────
+  floatText(x, y, text, color='#ffd700'){
+    const cam = this.cameras.main;
+    const sx = x - cam.scrollX;
+    const sy = y - cam.scrollY;
+    const t = this.add.text(sx, sy-20, text, {
+      fontSize:'14px', fill:color, fontFamily:'monospace',
+      stroke:'#000', strokeThickness:3, align:'center',
+      wordWrap:{width:320}
+    }).setOrigin(0.5,1).setScrollFactor(0).setDepth(100);
+    this.tweens.add({ targets:t, y:sy-80, alpha:0, duration:2200,
+      onComplete:()=>t.destroy() });
+  }
+
+  // ── ZONE DETECTION ─────────────────────────────────────────────────────────
+  getCurrentZone(){
+    const px=this.player.x, py=this.player.y;
+    for(const [key, z] of Object.entries(ZONES)){
+      if(px>=z.x && px<z.x+z.w && py>=z.y && py<z.y+z.h) return key;
+    }
+    return 'floor';
+  }
+
+  // ── MINI MAP ───────────────────────────────────────────────────────────────
+  createMiniMap(){
+    this.mmGfx = this.add.graphics().setScrollFactor(0).setDepth(60).setVisible(false);
+    this.mmPlayerDot = this.add.circle(0,0,4,0xffa01e).setScrollFactor(0).setDepth(61).setVisible(false);
+  }
+
+  toggleMiniMap(){
+    this.miniMapVisible = !this.miniMapVisible;
+    this.mmGfx.setVisible(this.miniMapVisible);
+    this.mmPlayerDot.setVisible(this.miniMapVisible);
+    if(this.miniMapVisible) this.drawMiniMap();
+  }
+
+  drawMiniMap(){
+    const scale=0.1, ox=GW-210, oy=GH-120;
+    this.mmGfx.clear();
+    this.mmGfx.fillStyle(0x000000,0.8); this.mmGfx.fillRect(ox-5,oy-5,WW*scale+10,WH*scale+10);
+    for(const [k,z] of Object.entries(ZONES)){
+      this.mmGfx.fillStyle(z.color,1);
+      this.mmGfx.fillRect(ox+z.x*scale, oy+z.y*scale, z.w*scale, z.h*scale);
+    }
+    this.mmGfx.lineStyle(1,0xffa01e,0.4); this.mmGfx.strokeRect(ox-5,oy-5,WW*scale+10,WH*scale+10);
+    this.mmPlayerDot.setPosition(ox+this.player.x*scale, oy+this.player.y*scale);
+    // NPC dots
+    this.npcs.forEach(n=>{
+      this.mmGfx.fillStyle(n.color,0.9);
+      this.mmGfx.fillCircle(ox+n.sprite.x*scale, oy+n.sprite.y*scale, 3);
+    });
+  }
+
+  // ── MESSAGE LOG ────────────────────────────────────────────────────────────
+  createMessageLog(){
+    this.msgLogBg = this.add.rectangle(GW-2,2,200,90,0x000000,0.5)
+      .setOrigin(1,0).setScrollFactor(0).setDepth(50);
+    this.msgLogTexts = [];
+    for(let i=0;i<4;i++){
+      this.msgLogTexts.push(this.add.text(GW-10, 8+i*20, '', {
+        fontSize:'10px', fill:'rgba(255,255,255,0.6)', fontFamily:'monospace', align:'right'
+      }).setOrigin(1,0).setScrollFactor(0).setDepth(51));
+    }
+  }
+
+  logMsg(msg){
+    this.msgLog.unshift(msg);
+    if(this.msgLog.length>4) this.msgLog.pop();
+    this.msgLogTexts.forEach((t,i)=>t.setText(this.msgLog[i]||''));
+  }
+
+  // ── E PROMPT ──────────────────────────────────────────────────────────────
+  updateEPrompt(){
+    const range=90, px=this.player.x, py=this.player.y;
+    let nearest=null, nearestD=range;
+
+    this.npcs.forEach(n=>{
+      const d=Phaser.Math.Distance.Between(px,py,n.sprite.x,n.sprite.y);
+      if(d<nearestD){ nearestD=d; nearest={x:n.sprite.x, y:n.sprite.y-40, label:'[E] Talk to '+n.name}; }
+    });
+    this.interactables.forEach(o=>{
+      const d=Phaser.Math.Distance.Between(px,py,o.x,o.y);
+      if(d<nearestD){ nearestD=d; nearest={x:o.x, y:o.y-40, label:'[E] Use'}; }
+    });
+    if(STATE.currentTruckObj && !STATE.currentTruckObj.done){
+      const t=STATE.currentTruckObj;
+      const d=Phaser.Math.Distance.Between(px,py,t.x,t.y);
+      if(d<range+50 && d<nearestD){ nearest={x:t.x, y:t.y-80, label:'[E] Unload Truck'}; }
+    }
+
+    if(nearest && !STATE.dialogueActive && !STATE.miniGameActive){
+      const cam=this.cameras.main;
+      this.ePrompt.setPosition(nearest.x-cam.scrollX, nearest.y-cam.scrollY-10)
+        .setText(nearest.label).setVisible(true);
+    } else {
+      this.ePrompt.setVisible(false);
+    }
+  }
+
+  // ── SHIFT END ──────────────────────────────────────────────────────────────
+  endShift(){
+    STATE.miniGameActive = false; STATE.dialogueActive = false;
+    const final = STATE.score;
+    const isNew = final > SAVE.highScore;
+    if(isNew) SAVE.highScore = final;
+    SAVE.shifts++;
+    savePersist();
+
+    // Show end screen via UI scene
+    this.scene.get('UI').showEndScreen(final, isNew);
+  }
+
+  // ── UPDATE ─────────────────────────────────────────────────────────────────
+  update(time, delta){
+    if(STATE.miniGameActive){ return; }
+
+    this.movePlayer(delta);
+    this.updateNPCs(delta);
+
+    // Tick game clock
+    this.gameTimer += delta;
+    STATE.gameMinutes += (delta/1000) * (60/7.5); // 7.5 real sec per game hour
+    if(STATE.gameMinutes >= STATE.shiftEnd){
+      this.endShift(); return;
+    }
+
+    // Zone detection
+    STATE.currentZone = this.getCurrentZone();
+
+    // Energy drain
+    this.energyDrainTimer += delta;
+    if(this.energyDrainTimer > 8000){ // drain every 8 real seconds
+      const moving = this.player.body.speed > 10;
+      if(moving) STATE.energy = Math.max(0, STATE.energy - 3);
+      // Regen in break room / restroom / outside
+      if(['breakRoom','restroom','outside'].includes(STATE.currentZone)){
+        STATE.energy = Math.min(100, STATE.energy + 5);
+      }
+      this.energyDrainTimer = 0;
+    }
+
+    // Suspicion decay when in break zone or working
+    this.suspicionDecayTimer += delta;
+    if(this.suspicionDecayTimer > 5000){
+      if(['breakRoom','restroom','outside'].includes(STATE.currentZone)){
+        STATE.suspicion = Math.max(0, STATE.suspicion - 2);
+      }
+      this.suspicionDecayTimer = 0;
+    }
+
+    // Random event
+    if(this.gameTimer >= this.nextEventAt && !STATE.dialogueActive){
+      this.triggerRandomEvent();
+    }
+
+    // NPC chatter
+    this.npcChatterTimer += delta;
+    if(this.npcChatterTimer > 12000){
+      this.npcChatterTimer = 0;
+      const npc = Phaser.Math.RND.pick(this.npcs);
+      this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
+    }
+
+    // Player name tag
+    this.playerTag.setPosition(this.player.x, this.player.y-26);
+
+    // E prompt
+    this.updateEPrompt();
+
+    // Mini map (update if visible)
+    if(this.miniMapVisible) this.drawMiniMap();
+
+    // Peak rush score bonus
+    if(this._peakRush && this.player.body.speed > 50) STATE.score++;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  UI SCENE  —  HUD overlay (runs in parallel)
+// ═══════════════════════════════════════════════════════════════════════════
+class UIScene extends Phaser.Scene {
+  constructor(){ super('UI'); }
+
+  create(){
+    this.createHUD();
+    this.endShown = false;
+  }
+
+  createHUD(){
+    const pad=10;
+
+    // Background bar top
+    this.add.rectangle(GW/2, 0, GW, 46, 0x000000, 0.75).setOrigin(0.5,0).setDepth(40);
+
+    // Clock
+    this.clockTxt = this.add.text(GW/2, 24, '7:00 AM', {
+      fontSize:'16px', fill:'#ffa01e', fontFamily:'monospace', fontStyle:'bold'
+    }).setOrigin(0.5).setDepth(41);
+    this.dayTxt = this.add.text(GW/2, 40, '☀ SHIFT IN PROGRESS', {
+      fontSize:'10px', fill:'rgba(255,160,30,0.5)', fontFamily:'monospace'
+    }).setOrigin(0.5).setDepth(41);
+
+    // Score
+    this.scoreTxt = this.add.text(10, 24, 'Score: 0', {
+      fontSize:'14px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold'
+    }).setOrigin(0,0.5).setDepth(41);
+
+    // Energy bar
+    this.add.text(GW-130, 10, 'ENERGY', {fontSize:'9px',fill:'#44cc44',fontFamily:'monospace'}).setDepth(41);
+    this.energyBg  = this.add.rectangle(GW-130+45, 10, 110, 10, 0x222222).setOrigin(0,0).setDepth(41);
+    this.energyBar = this.add.rectangle(GW-130+45, 10, 110, 10, 0x44cc44).setOrigin(0,0).setDepth(42);
+    this.energyTxt = this.add.text(GW-130+45+115, 14, '100%', {fontSize:'9px',fill:'#44cc44',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(42);
+
+    // Suspicion bar
+    this.add.text(GW-130, 24, 'SUSPICION', {fontSize:'9px',fill:'#ff6644',fontFamily:'monospace'}).setDepth(41);
+    this.suspBg  = this.add.rectangle(GW-130+60, 24, 95, 10, 0x222222).setOrigin(0,0).setDepth(41);
+    this.suspBar = this.add.rectangle(GW-130+60, 24, 95, 10, 0xcc2200).setOrigin(0,0).setDepth(42);
+    this.suspTxt = this.add.text(GW-130+60+100, 28, '0%', {fontSize:'9px',fill:'#ff6644',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(42);
+
+    // Zone label bottom
+    this.zoneTxt = this.add.text(GW/2, GH-5, '', {
+      fontSize:'11px', fill:'rgba(255,160,30,0.55)', fontFamily:'monospace'
+    }).setOrigin(0.5,1).setDepth(41);
+
+    // Achievements ticker
+    this.achTxt = this.add.text(10, GH-5, '', {
+      fontSize:'10px', fill:'#ffd700', fontFamily:'monospace'
+    }).setOrigin(0,1).setDepth(41);
+
+    // Controls hint
+    this.add.text(10, GH-18, 'WASD: Move  |  E: Interact  |  M: Map  |  Q: Stop unloading', {
+      fontSize:'9px', fill:'rgba(255,255,255,0.25)', fontFamily:'monospace'
+    }).setOrigin(0,1).setDepth(41);
+
+    this.lastAch = '';
+    this.lastAchLen = 0;
+  }
+
+  update(){
+    // Clock
+    const h = Math.floor(STATE.gameMinutes/60);
+    const m = Math.floor(STATE.gameMinutes%60);
+    const ap = h>=12?'PM':'AM';
+    const h12 = h>12?h-12:h===0?12:h;
+    this.clockTxt.setText(`${h12}:${m<10?'0'+m:m} ${ap}`);
+    const pctShift = (STATE.gameMinutes - 7*60) / (STATE.shiftEnd - 7*60);
+    this.clockTxt.setStyle({ fill: pctShift>0.85?'#ff4444':pctShift>0.6?'#ffaa00':'#ffa01e' });
+
+    // Score
+    this.scoreTxt.setText('⭐ '+STATE.score);
+
+    // Energy bar
+    const epct = STATE.energy/100;
+    this.energyBar.setSize(110*epct, 10);
+    this.energyBar.setFillStyle(epct>0.5?0x44cc44:epct>0.25?0xffaa00:0xff3333);
+    this.energyTxt.setText(Math.round(STATE.energy)+'%');
+
+    // Suspicion bar
+    const spct = STATE.suspicion/100;
+    this.suspBar.setSize(95*spct, 10);
+    this.suspBar.setFillStyle(spct>0.7?0xff2200:spct>0.4?0xff6600:0xcc4400);
+    this.suspTxt.setText(Math.round(STATE.suspicion)+'%');
+    if(STATE.suspicion>80) this.suspTxt.setStyle({fill:'#ff2200'});
+
+    // Zone
+    const zoneName = ZONES[STATE.currentZone]?.name || '';
+    this.zoneTxt.setText('📍 '+zoneName);
+
+    // Achievements
+    if(STATE.achievements.length > this.lastAchLen){
+      this.lastAchLen = STATE.achievements.length;
+      this.lastAch = '🏆 '+STATE.achievements[STATE.achievements.length-1];
+    }
+    this.achTxt.setText(this.lastAch);
+  }
+
+  showEndScreen(score, isNew){
+    if(this.endShown) return;
+    this.endShown = true;
+
+    const bg = this.add.rectangle(GW/2, GH/2, GW, GH, 0x000000, 0.92).setDepth(200);
+    this.add.text(GW/2, 80, isNew ? '🏆 NEW HIGH SCORE! 🏆' : '🏁 SHIFT COMPLETE!', {
+      fontSize:'28px', fill:isNew?'#ffd700':'#ffa01e', fontFamily:'monospace', fontStyle:'bold', stroke:'#000', strokeThickness:4
+    }).setOrigin(0.5).setDepth(201);
+    this.add.text(GW/2, 140, STATE.playerName+"'s shift is over.", {
+      fontSize:'16px', fill:'#aaa', fontFamily:'monospace'
+    }).setOrigin(0.5).setDepth(201);
+
+    // Stats
+    const stats = [
+      ['Final Score', score + ' pts'],
+      ['Trucks Unloaded', STATE.trucksUnloaded],
+      ['Suspicion Level', Math.round(STATE.suspicion)+'%'],
+      ['Energy Remaining', Math.round(STATE.energy)+'%'],
+      ['Achievements', STATE.achievements.length],
+      ['Drew owes you', '$'+(STATE.drewLends*5)],
+      ['Chandler provocations', STATE.chandlerCallCount+' times'],
+      ['All-time High Score', SAVE.highScore + ' pts'],
+      ['Shifts Survived', SAVE.shifts],
+    ];
+    stats.forEach(([label, val], i)=>{
+      this.add.text(GW/2-160, 200+i*34, label+':', {fontSize:'14px',fill:'#888',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(201);
+      this.add.text(GW/2+160, 200+i*34, String(val), {fontSize:'14px',fill:'#ffd700',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(1,0.5).setDepth(201);
+    });
+
+    // Rank
+    const rank = score >= 2000 ? 'LEGEND 🌟' : score >= 1000 ? 'PRO WORKER 💪' : score >= 500 ? 'DECENT EMPLOYEE 🙂' : score >= 200 ? 'TRYING 😅' : 'CHANDLER TIER 🍞';
+    this.add.text(GW/2, GH-130, 'RANK: '+rank, {
+      fontSize:'20px', fill:'#ffa01e', fontFamily:'monospace', fontStyle:'bold', stroke:'#000', strokeThickness:3
+    }).setOrigin(0.5).setDepth(201);
+
+    // Play again button
+    const btn = this.add.rectangle(GW/2, GH-60, 220, 46, 0xcc6800)
+      .setInteractive().setDepth(201);
+    this.add.text(GW/2, GH-60, '▶ PLAY AGAIN', {fontSize:'16px',fill:'#fff',fontFamily:'monospace',fontStyle:'bold'})
+      .setOrigin(0.5).setDepth(202);
+    btn.on('pointerdown',()=>{ location.reload(); });
+    btn.on('pointerover',()=>btn.setFillStyle(0xff8800));
+    btn.on('pointerout',()=>btn.setFillStyle(0xcc6800));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  GAME BOOTSTRAP
+// ═══════════════════════════════════════════════════════════════════════════
+let game = null;
+
+function startGame(mode){
+  const nameEl = document.getElementById('playerNameInput');
+  STATE.playerName = (nameEl.value.trim() || 'Worker').substring(0,12);
+  STATE.mode = mode;
+  STATE.energy = mode === 'chaos' ? 80 : 100;
+  STATE.suspicion = mode === 'chaos' ? 20 : 0;
+  STATE.score = mode === 'chaos' ? 0 : 0;
+
+  document.getElementById('menu-overlay').style.display = 'none';
+
+  if(game){ game.destroy(true); }
+  game = new Phaser.Game({
+    type: Phaser.AUTO,
+    width: GW, height: GH,
+    parent: document.body,
+    backgroundColor: '#111111',
+    physics: { default:'arcade', arcade:{ gravity:{y:0}, debug:false } },
+    scene: [GameScene, UIScene],
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+    }
+  });
+}
+
+document.getElementById('goodWorkerBtn').onclick = ()=> startGame('good');
+document.getElementById('chaosBtn').onclick       = ()=> startGame('chaos');
+document.getElementById('playerNameInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') startGame('good');
+});
+</script>
+</body>
+</html>

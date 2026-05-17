@@ -444,6 +444,7 @@
     :root.retro #localWeatherPanel  { --section-accent: #2dff88; --section-accent-2: #00f5ff; --section-glow: rgba(45,255,136,0.22); --section-soft: rgba(45,255,136,0.09); }
     :root.retro #truckTycoonPanel   { --section-accent: #7eb8ff; --section-accent-2: #2dff88; --section-glow: rgba(126,184,255,0.24); --section-soft: rgba(126,184,255,0.10); }
     :root.retro #warehouseLifePanel { --section-accent: #ffa01e; --section-accent-2: #2dff88; --section-glow: rgba(255,160,30,0.28); --section-soft: rgba(255,160,30,0.12); }
+    :root.retro #warehouseSimPanel  { --section-accent: #ff4fd8; --section-accent-2: #00f5ff; --section-glow: rgba(255,79,216,0.28);  --section-soft: rgba(255,79,216,0.12); }
 
     :root.retro .tab-panel.active .panel,
     :root.retro .tab-panel.active .table-wrap,
@@ -2043,6 +2044,7 @@
     #jetpackJamesPanel  { padding: 0; }
     #truckTycoonPanel   { padding: 0; }
     #warehouseLifePanel { padding: 0; }
+    #warehouseSimPanel  { padding: 0; }
     .game-frame-wrap {
       width: 100%;
       height: calc(100vh - 82px);
@@ -2370,6 +2372,7 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="jetpackJames" data-menu-label="Jetpack James">Jetpack James</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="truckTycoon" data-menu-label="Truck Tycoon">Truck Tycoon</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseLife" data-menu-label="Eclipse Shift">⭐ Eclipse Shift</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseSim" data-menu-label="Warehouse Sim">🎮 Warehouse Sim</button>
         </div>
       </div>
     </nav>
@@ -3826,6 +3829,14 @@
         </div>
       </section>
 
+      <!-- WAREHOUSE SIM PANEL -->
+      <section id="warehouseSimPanel" class="tab-panel" aria-label="Warehouse Sim">
+        <div class="motivation-bar" id="motivBar_warehouseSim"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="game-frame-wrap">
+          <iframe id="warehouseSimFrame" src="" title="Warehouse Sim" allowfullscreen></iframe>
+        </div>
+      </section>
+
       <!-- LOCAL WEATHER PANEL -->
       <section id="localWeatherPanel" class="tab-panel" aria-label="Local Weather">
         <div class="motivation-bar" id="motivBar_localWeather"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
@@ -4437,7 +4448,8 @@
         jetpackJames:     [["🚀","Hold to fly. Let go to fall."],["💰","Grab every coin."],["⚡","Dodge the zappers."],["🏃","Run. Fly. Repeat."]],
         localWeather:     [["🌤️","Check before you head out."],["🌧️","Better to know than to get soaked."],["🌡️","Weather checked. Day planned."],["💨","Stay one step ahead of the forecast."]],
         truckTycoon:      [["🏢","Your dock, your rules, your chaos."],["📋","Assign, unload, bill. Repeat."],["💰","Late billing hurts. Stay sharp."],["🚛","The trucks never stop coming."]],
-        warehouseLife:    [["🏭","Clock in. Do the work. Go home."],["📦","Every pallet counts."],["🧾","Bill it right the first time."],["☕","Break time is earned. Go earn it."]]
+        warehouseLife:    [["🏭","Clock in. Do the work. Go home."],["📦","Every pallet counts."],["🧾","Bill it right the first time."],["☕","Break time is earned. Go earn it."]],
+        warehouseSim:     [["🎮","Chandler is watching. Act natural."],["👀","Don't let Pam catch you slacking."],["📦","Unload fast. Bill accurately. Survive."],["😂","Lee will say yes. Always ask Lee."]]
       };
       var timers = {};
       function showMotiv(tab) {
@@ -4555,7 +4567,7 @@
 
       // Tab visibility by role
       var WORK_TABS  = ['overview','data','ddp','truckFinder','audit','clerkDoor','doorSuggestor','breakdownsAudit','truckChargeAudit','history','help'];
-      var GUEST_TABS = ['inOtherNews','localWeather','flappyBird','paperPlane','jetpackJames','truckTycoon','warehouseLife'];
+      var GUEST_TABS = ['inOtherNews','localWeather','flappyBird','paperPlane','jetpackJames','truckTycoon','warehouseLife','warehouseSim'];
 
       function applyRole(role) {
         var allButtons = document.querySelectorAll('.tab-button[data-tab]');
@@ -4622,8 +4634,7 @@
           showLogin();
         }
       }).catch(function() {
-        hideLogin('admin');
-        loadDecisionsFromBackend();
+        showLogin();
       });
 
       // Login form submit
@@ -9322,6 +9333,10 @@
       if (name === "warehouseLife") {
         var wlf = document.getElementById("warehouseLifeFrame");
         if (wlf && !wlf.getAttribute("data-loaded")) { wlf.src = "/games/warehouse-life"; wlf.setAttribute("data-loaded","1"); }
+      }
+      if (name === "warehouseSim") {
+        var wsf = document.getElementById("warehouseSimFrame");
+        if (wsf && !wsf.getAttribute("data-loaded")) { wsf.src = "/games/warehouse-sim"; wsf.setAttribute("data-loaded","1"); }
       }
       if (name === "localWeather") { initWeatherTab(); }
       document.dispatchEvent(new CustomEvent("tabSelected", { detail: name }));

@@ -651,6 +651,11 @@ def serve_warehouse_life():
     return FileResponse(str(BASE_DIR / "warehouse_life.html"))
 
 
+@app.get("/games/warehouse-sim")
+def serve_warehouse_sim():
+    return FileResponse(str(BASE_DIR / "warehouse_sim.html"))
+
+
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 @app.get("/")

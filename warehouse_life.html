@@ -49,7 +49,7 @@ input[type=text]:focus{border-color:#ffa01e;box-shadow:0 0 0 3px rgba(255,160,30
 </div>
 
 <!-- EVENT BANNER -->
-<div id="event-banner" id="evtBanner"></div>
+<div id="event-banner"></div>
 
 <!-- DIALOGUE -->
 <div id="dialogue">
@@ -122,7 +122,7 @@ input[type=text]:focus{border-color:#ffa01e;box-shadow:0 0 0 3px rgba(255,160,30
       <div id="bTimerBar" style="height:8px;border-radius:6px;background:#44cc88;transition:width .1s;width:100%;"></div>
     </div>
     <p style="color:rgba(255,255,255,0.5);font-size:13px;">How many pallets did you deliver?</p>
-    <input type="text" id="bInput" placeholder="Enter pallet count" inputmode="numeric">
+    <input type="number" id="bInput" placeholder="Enter pallet count" inputmode="numeric" min="0" step="1">
     <p id="bHint" style="font-size:13px;color:rgba(255,255,255,0.4);text-align:center;min-height:20px;"></p>
     <button class="btn btn-orange" id="bSubmit">Submit Bill 🧾</button>
   </div>
@@ -597,7 +597,8 @@ function billTick(){
 
 function submitBill(timeout=false){
   clearInterval(bTimerInterval2); bTimerInterval2=null;
-  const entered=parseInt(el('bInput').value)||0;
+  const raw=el('bInput').value.trim();
+  const entered=(raw==='')?-1:parseInt(raw,10);
   const correct=bTruck.staged;
   const isCorrect=entered===correct;
   bTruck.billCorrect=isCorrect;
