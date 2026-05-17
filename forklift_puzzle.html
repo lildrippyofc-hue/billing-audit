@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>FORKLIFT PUZZLE</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #1a1a1a;
+    font-family: 'Courier New', monospace;
+    color: #f0e8d0;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+  #game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; flex-direction: column; align-items: center; justify-content: center; }
+  .screen.active { display: flex; }
+
+  /* ===== TITLE SCREEN ===== */
+  #title-screen {
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  }
+  #title-screen h1 {
+    font-size: clamp(2rem, 6vw, 4rem);
+    color: #f5c542;
+    text-shadow: 0 0 30px #f5c54288, 4px 4px 0 #8b6914;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.3em;
+    text-align: center;
+  }
+  #title-screen .subtitle {
+    color: #aaa;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    margin-bottom: 2em;
+    letter-spacing: 0.2em;
+  }
+  #title-forklift-canvas { margin-bottom: 2em; }
+  .big-btn {
+    background: #f5c542;
+    color: #1a1a1a;
+    border: none;
+    padding: 0.8em 2.5em;
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+    box-shadow: 0 4px 0 #8b6914, 0 6px 20px #00000088;
+    transition: transform 0.08s, box-shadow 0.08s;
+    text-transform: uppercase;
+  }
+  .big-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8b6914; }
+  .big-btn:hover { background: #ffe066; }
+  .big-btn.secondary {
+    background: transparent;
+    color: #f5c542;
+    border: 2px solid #f5c542;
+    box-shadow: 0 4px 0 #8b691488;
+    margin-top: 0.8em;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+  }
+  .big-btn.secondary:hover { background: #f5c54220; }
+
+  /* ===== LEVEL SELECT ===== */
+  #level-select {
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 100%);
+    padding: 1em;
+    overflow-y: auto;
+  }
+  #level-select h2 {
+    color: #f5c542;
+    font-size: clamp(1.2rem, 4vw, 2rem);
+    text-align: center;
+    margin-bottom: 0.5em;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  #level-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    max-width: 700px;
+    width: 100%;
+    padding: 0.5em;
+  }
+  .level-tile {
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 8px;
+    padding: 0.8em 0.5em;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    position: relative;
+  }
+  .level-tile:hover { border-color: #f5c542; background: #2a2a1a; transform: scale(1.04); }
+  .level-tile .lnum { font-size: 1.4rem; font-weight: bold; color: #f5c542; }
+  .level-tile .lname { font-size: 0.6rem; color: #999; margin-top: 0.2em; letter-spacing: 0.05em; text-transform: uppercase; }
+  .level-tile .stars { font-size: 1.1rem; margin-top: 0.4em; letter-spacing: 0.1em; }
+  .level-tile .best-moves { font-size: 0.6rem; color: #777; margin-top: 0.2em; }
+  .level-tile.locked { opacity: 0.4; cursor: not-allowed; }
+  .level-tile.locked:hover { transform: none; }
+  #back-from-select {
+    margin-top: 1em;
+    background: transparent;
+    border: 1px solid #666;
+    color: #999;
+    padding: 0.5em 1.5em;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+  }
+  #back-from-select:hover { border-color: #f5c542; color: #f5c542; }
+
+  /* ===== GAME SCREEN ===== */
+  #game-screen { flex-direction: column; background: #1a1a1a; }
+  #hud {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 700px;
+    padding: 0.4em 0.8em;
+    background: #111;
+    border-bottom: 2px solid #333;
+    flex-shrink: 0;
+  }
+  #hud-left { display: flex; flex-direction: column; }
+  #level-label { font-size: 0.65rem; color: #888; letter-spacing: 0.1em; text-transform: uppercase; }
+  #level-name-display { font-size: clamp(0.8rem, 2.5vw, 1rem); color: #f5c542; font-weight: bold; }
+  #hud-center { text-align: center; }
+  #move-display { font-size: clamp(1.2rem, 4vw, 1.8rem); color: #fff; font-weight: bold; }
+  #par-display { font-size: 0.65rem; color: #888; }
+  #hud-right { display: flex; gap: 6px; }
+  .hud-btn {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    color: #ccc;
+    padding: 0.4em 0.7em;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    transition: background 0.1s, color 0.1s;
+  }
+  .hud-btn:hover { background: #3a3a2a; color: #f5c542; border-color: #f5c542; }
+  #canvas-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+  #game-canvas { display: block; image-rendering: pixelated; }
+  #message-bar {
+    height: 2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #f5c542;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transition: opacity 0.4s;
+    flex-shrink: 0;
+    padding: 0 1em;
+    text-align: center;
+  }
+  #message-bar.visible { opacity: 1; }
+  #touch-controls {
+    display: none;
+    flex-shrink: 0;
+    padding: 0.5em;
+    gap: 6px;
+    flex-direction: column;
+    align-items: center;
+  }
+  #touch-controls .touch-row { display: flex; gap: 6px; }
+  .touch-btn {
+    width: 52px; height: 52px;
+    background: #2a2a2a;
+    border: 2px solid #444;
+    border-radius: 8px;
+    font-size: 1.4rem;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #ccc;
+    transition: background 0.08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-btn:active { background: #f5c54240; border-color: #f5c542; }
+
+  /* ===== OVERLAY ===== */
+  #overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #000000cc;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  #overlay.active { display: flex; }
+  #overlay-box {
+    background: #1e1e1e;
+    border: 3px solid #f5c542;
+    border-radius: 12px;
+    padding: 2em 2.5em;
+    text-align: center;
+    max-width: 340px;
+    width: 90%;
+    box-shadow: 0 0 40px #f5c54244;
+  }
+  #overlay-title { font-size: 1.8rem; color: #f5c542; font-weight: bold; letter-spacing: 0.1em; margin-bottom: 0.3em; }
+  #overlay-stars { font-size: 2.5rem; margin: 0.3em 0; letter-spacing: 0.2em; }
+  #overlay-msg { color: #ccc; font-size: 0.85rem; font-style: italic; margin-bottom: 0.5em; }
+  #overlay-moves { color: #aaa; font-size: 0.8rem; margin-bottom: 1.2em; }
+  #overlay-moves span { color: #fff; font-weight: bold; }
+  .overlay-btns { display: flex; flex-direction: column; gap: 0.6em; }
+  .overlay-btns button {
+    padding: 0.7em 1.5em;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    font-weight: bold;
+  }
+  #btn-next { background: #f5c542; color: #111; border: none; }
+  #btn-next:hover { background: #ffe066; }
+  #btn-replay { background: transparent; border: 1px solid #666; color: #ccc; }
+  #btn-replay:hover { border-color: #f5c542; color: #f5c542; }
+  #btn-menu { background: transparent; border: 1px solid #444; color: #888; font-size: 0.75rem; }
+  #btn-menu:hover { color: #ccc; border-color: #888; }
+</style>
+</head>
+<body>
+<div id="game-container">
+
+  <!-- TITLE SCREEN -->
+  <div id="title-screen" class="screen active">
+    <h1>FORKLIFT PUZZLE</h1>
+    <div class="subtitle">WAREHOUSE MANAGEMENT SIMULATOR</div>
+    <canvas id="title-forklift-canvas" width="160" height="100"></canvas>
+    <button class="big-btn" id="btn-play">PLAY</button>
+    <button class="big-btn secondary" id="btn-levels">SELECT LEVEL</button>
+  </div>
+
+  <!-- LEVEL SELECT SCREEN -->
+  <div id="level-select" class="screen">
+    <h2>SELECT LEVEL</h2>
+    <div id="level-grid"></div>
+    <button id="back-from-select">BACK</button>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div id="hud">
+      <div id="hud-left">
+        <div id="level-label">LEVEL 1</div>
+        <div id="level-name-display">Loading Bay</div>
+      </div>
+      <div id="hud-center">
+        <div id="move-display">0</div>
+        <div id="par-display">PAR: 0</div>
+      </div>
+      <div id="hud-right">
+        <button class="hud-btn" id="btn-undo">↩ UNDO</button>
+        <button class="hud-btn" id="btn-restart">⟳ RESET</button>
+        <button class="hud-btn" id="btn-to-menu">≡</button>
+      </div>
+    </div>
+    <div id="canvas-wrap">
+      <canvas id="game-canvas"></canvas>
+    </div>
+    <div id="message-bar"></div>
+    <div id="touch-controls">
+      <div class="touch-row">
+        <div class="touch-btn" id="tc-up">↑</div>
+      </div>
+      <div class="touch-row">
+        <div class="touch-btn" id="tc-left">←</div>
+        <div class="touch-btn" id="tc-down">↓</div>
+        <div class="touch-btn" id="tc-right">→</div>
+      </div>
+    </div>
+
+    <!-- Level complete overlay -->
+    <div id="overlay">
+      <div id="overlay-box">
+        <div id="overlay-title">LEVEL COMPLETE</div>
+        <div id="overlay-stars">⭐⭐⭐</div>
+        <div id="overlay-msg">"PERFECT. How?"</div>
+        <div id="overlay-moves">Moves: <span id="om-moves">0</span> / Par: <span id="om-par">0</span></div>
+        <div class="overlay-btns">
+          <button id="btn-next">NEXT LEVEL →</button>
+          <button id="btn-replay">REPLAY</button>
+          <button id="btn-menu">LEVEL SELECT</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+// LEVELS
+// ============================================================
+// Legend: # wall, . floor, P pallet, T target, F forklift
+// Note: some levels have D for dock door (visual only, treated as wall)
+
+const LEVELS = [
+  {
+    name: "Loading Bay",
+    par: 8,
+    grid: [
+      "#######",
+      "#F....#",
+      "#.P.T.#",
+      "#.....#",
+      "#######"
+    ]
+  },
+  {
+    name: "Two for One",
+    par: 14,
+    grid: [
+      "########",
+      "#F.....#",
+      "#.PP...#",
+      "#..TT..#",
+      "#......#",
+      "########"
+    ]
+  },
+  {
+    name: "The Shuffle",
+    par: 16,
+    grid: [
+      "#########",
+      "#...F...#",
+      "#.P...P.#",
+      "#.......#",
+      "#.T...T.#",
+      "#.......#",
+      "#########"
+    ]
+  },
+  {
+    name: "Tight Squeeze",
+    par: 12,
+    grid: [
+      "######",
+      "#F...#",
+      "#.P..#",
+      "###..#",
+      "#T...#",
+      "#....#",
+      "######"
+    ]
+  },
+  {
+    name: "Corner Office",
+    par: 18,
+    grid: [
+      "#########",
+      "#F......#",
+      "#.##.##.#",
+      "#.#.P.#.#",
+      "#..P.P..#",
+      "#.......#",
+      "#.T.T.T.#",
+      "#########"
+    ]
+  },
+  {
+    name: "The Long Haul",
+    par: 20,
+    grid: [
+      "##########",
+      "#F.......#",
+      "#.P......#",
+      "#........#",
+      "#........#",
+      "#........#",
+      "#.......T#",
+      "##########"
+    ]
+  },
+  {
+    name: "Bottleneck",
+    par: 22,
+    grid: [
+      "#########",
+      "#.......#",
+      "#.PP..F.#",
+      "####.####",
+      "#...T...#",
+      "#...T...#",
+      "#########"
+    ]
+  },
+  {
+    name: "The Maze",
+    par: 28,
+    grid: [
+      "##########",
+      "#F.#....T#",
+      "#..#.###.#",
+      "#P.....#.#",
+      "#.#.##...#",
+      "#.#..P...#",
+      "#.###..#.#",
+      "#.......T#",
+      "##########"
+    ]
+  },
+  {
+    name: "Warehouse Rush",
+    par: 30,
+    grid: [
+      "##########",
+      "#F..P....#",
+      "#.##..##.#",
+      "#......P.#",
+      "#.##..##.#",
+      "#....P...#",
+      "#.T.T.T..#",
+      "##########"
+    ]
+  },
+  {
+    name: "Zigzag",
+    par: 26,
+    grid: [
+      "#########",
+      "#F......#",
+      "#.#####.#",
+      "#.P.....#",
+      "#####.###",
+      "#.....P.#",
+      "#.#####.#",
+      "#.T...T.#",
+      "#########"
+    ]
+  },
+  {
+    name: "The Crucible",
+    par: 35,
+    grid: [
+      "###########",
+      "#F........#",
+      "#.#######.#",
+      "#.#.....#.#",
+      "#.#.PPP.#.#",
+      "#.#.....#.#",
+      "#.#.TTT.#.#",
+      "#.#.....#.#",
+      "#.#######.#",
+      "#.........#",
+      "###########"
+    ]
+  },
+  {
+    name: "Crossroads",
+    par: 32,
+    grid: [
+      "###########",
+      "#.....F...#",
+      "#.#.#.#.#.#",
+      "#.P.P.P.P.#",
+      "#.#.#.#.#.#",
+      "#.........#",
+      "#.#.#.#.#.#",
+      "#.T.T.T.T.#",
+      "#.#.#.#.#.#",
+      "#.........#",
+      "###########"
+    ]
+  },
+  {
+    name: "Gridlock",
+    par: 38,
+    grid: [
+      "############",
+      "#F.........#",
+      "#.##..##...#",
+      "#..P....P..#",
+      "#.##..##...#",
+      "#...PP.....#",
+      "#.##..##...#",
+      "#..T....T..#",
+      "#.##..##...#",
+      "#...TT.....#",
+      "############"
+    ]
+  },
+  {
+    name: "The Gauntlet",
+    par: 44,
+    grid: [
+      "###########",
+      "#F........#",
+      "#.######..#",
+      "#.#....P..#",
+      "#.#.####..#",
+      "#...#..P..#",
+      "#.###.#...#",
+      "#.....#P..#",
+      "#.######..#",
+      "#....P....#",
+      "#.##..####",
+      "#..T..T...#",
+      "#..T..T...#",
+      "###########"
+    ]
+  },
+  {
+    name: "Grand Finale",
+    par: 55,
+    grid: [
+      "#############",
+      "#F..........#",
+      "#.##.####.#.#",
+      "#..P.....P..#",
+      "#.##.###..#.#",
+      "#....#..P...#",
+      "##.#.#.####.#",
+      "#..P....#...#",
+      "#.###.#.#.#.#",
+      "#.....#.P...#",
+      "#.###.#.###.#",
+      "#.T.T.T.T.T.#",
+      "#############"
+    ]
+  }
+];
+
+// Validate and fix levels at load time
+function parseLevelGrid(levelIdx) {
+  const lvl = LEVELS[levelIdx];
+  const rows = lvl.grid;
+  const height = rows.length;
+  const width = Math.max(...rows.map(r => r.length));
+  // Pad rows to equal width
+  const padded = rows.map(r => r.padEnd(width, '#'));
+
+  const tiles = [];
+  const pallets = [];
+  const targets = [];
+  let forklift = { x: 1, y: 1 };
+
+  for (let y = 0; y < height; y++) {
+    tiles[y] = [];
+    for (let x = 0; x < width; x++) {
+      const ch = padded[y][x] || '#';
+      if (ch === '#') {
+        tiles[y][x] = 'wall';
+      } else if (ch === 'D') {
+        tiles[y][x] = 'wall'; // dock door
+      } else {
+        tiles[y][x] = 'floor';
+        if (ch === 'P') {
+          pallets.push({ x, y });
+        } else if (ch === 'T') {
+          targets.push({ x, y });
+        } else if (ch === 'F') {
+          forklift = { x, y };
+        }
+      }
+    }
+  }
+  return { tiles, pallets, targets, forklift, width, height };
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+
+const CELL = 56; // base cell size, will be scaled
+let currentLevel = 0;
+let gameState = null; // { tiles, pallets, targets, forklift, width, height, moves, history, direction, undoCount }
+let animating = false;
+let animQueue = [];
+let stuckTimer = null;
+let msgTimer = null;
+let completedThisSession = false;
+
+// localStorage helpers
+function loadStorage() {
+  try {
+    return {
+      stars: JSON.parse(localStorage.getItem('fp_stars') || 'null') || Array(15).fill(0),
+      best: JSON.parse(localStorage.getItem('fp_best') || 'null') || Array(15).fill(null),
+      lastLevel: parseInt(localStorage.getItem('fp_level') || '0')
+    };
+  } catch(e) {
+    return { stars: Array(15).fill(0), best: Array(15).fill(null), lastLevel: 0 };
+  }
+}
+function saveStars(idx, s) {
+  const d = loadStorage();
+  if (s > (d.stars[idx] || 0)) {
+    d.stars[idx] = s;
+    localStorage.setItem('fp_stars', JSON.stringify(d.stars));
+  }
+}
+function saveBest(idx, moves) {
+  const d = loadStorage();
+  if (d.best[idx] === null || moves < d.best[idx]) {
+    d.best[idx] = moves;
+    localStorage.setItem('fp_best', JSON.stringify(d.best));
+  }
+}
+function saveLastLevel(idx) {
+  localStorage.setItem('fp_level', String(idx));
+}
+
+// ============================================================
+// RENDERING
+// ============================================================
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+// Colors
+const C = {
+  wall:        '#3d2b1f',
+  wallTop:     '#5a3e2b',
+  wallLine:    '#2a1d12',
+  floor:       '#e8dcc8',
+  floorLine:   '#d4c8b0',
+  floorDark:   '#c8baa0',
+  target:      '#c4a882',
+  targetMark:  '#a08060',
+  pallet:      '#8b5e2c',
+  palletLight: '#c8894a',
+  palletDark:  '#5c3a18',
+  palletWrap:  '#d4a96488',
+  palletOnTarget: '#4a9e4a',
+  palletOnTargetGlow: '#6ece6e',
+  forkYellow:  '#f5c542',
+  forkDark:    '#c49a28',
+  forkBody:    '#e0b030',
+};
+
+let cellSize = CELL;
+let anim = {}; // { forklift: {ox,oy}, pallets: [{ox,oy}] }
+
+function resetAnim() {
+  anim = { forkliftOx: 0, forkliftOy: 0, palletOffsets: {} };
+}
+
+function computeCellSize() {
+  if (!gameState) return;
+  const wrap = document.getElementById('canvas-wrap');
+  const ww = wrap.clientWidth;
+  const wh = wrap.clientHeight;
+  const tcH = document.getElementById('touch-controls').offsetHeight;
+  const availW = ww;
+  const availH = wh - tcH;
+  const csW = Math.floor(availW / gameState.width);
+  const csH = Math.floor(availH / gameState.height);
+  cellSize = Math.max(24, Math.min(csW, csH, 80));
+  canvas.width = cellSize * gameState.width;
+  canvas.height = cellSize * gameState.height;
+}
+
+function drawCell(x, y) {
+  const px = x * cellSize;
+  const py = y * cellSize;
+  const cs = cellSize;
+  const tile = gameState.tiles[y][x];
+
+  if (tile === 'wall') {
+    // Brick pattern
+    ctx.fillStyle = C.wall;
+    ctx.fillRect(px, py, cs, cs);
+    // Brick lines
+    const bh = Math.max(4, Math.floor(cs / 4));
+    const isEven = (Math.floor(py / bh)) % 2 === 0;
+    ctx.strokeStyle = C.wallLine;
+    ctx.lineWidth = 1;
+    // horizontal
+    for (let by = bh; by < cs; by += bh) {
+      ctx.beginPath(); ctx.moveTo(px, py + by); ctx.lineTo(px + cs, py + by); ctx.stroke();
+    }
+    // vertical offset for brick effect
+    const off = isEven ? cs / 2 : 0;
+    for (let bx = 0; bx <= cs; bx += cs / 2) {
+      const sx = px + ((bx + off) % cs);
+      ctx.beginPath(); ctx.moveTo(sx, py); ctx.lineTo(sx, py + bh); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx, py + bh * 2); ctx.lineTo(sx, py + bh * 3); ctx.stroke();
+    }
+    // top highlight
+    ctx.fillStyle = C.wallTop;
+    ctx.fillRect(px, py, cs, 3);
+    return;
+  }
+
+  // Floor
+  ctx.fillStyle = (x + y) % 2 === 0 ? C.floor : C.floorDark;
+  ctx.fillRect(px, py, cs, cs);
+  // Floor grid lines
+  ctx.strokeStyle = C.floorLine;
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(px + 0.5, py + 0.5, cs - 1, cs - 1);
+}
+
+function drawTarget(x, y) {
+  const px = x * cellSize + cellSize / 2;
+  const py = y * cellSize + cellSize / 2;
+  const s = cellSize * 0.32;
+  ctx.strokeStyle = C.targetMark;
+  ctx.lineWidth = Math.max(2, cellSize / 18);
+  ctx.lineCap = 'round';
+  // X mark
+  ctx.beginPath(); ctx.moveTo(px - s, py - s); ctx.lineTo(px + s, py + s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px + s, py - s); ctx.lineTo(px - s, py + s); ctx.stroke();
+  // circle
+  ctx.beginPath();
+  ctx.arc(px, py, s * 0.6, 0, Math.PI * 2);
+  ctx.strokeStyle = C.targetMark + 'aa';
+  ctx.lineWidth = Math.max(1, cellSize / 28);
+  ctx.stroke();
+}
+
+function drawPallet(px, py, onTarget, wobble) {
+  const cs = cellSize;
+  const pad = Math.max(3, cs * 0.08);
+  const w = cs - pad * 2;
+  const h = cs - pad * 2;
+  const rx = px + pad;
+  const ry = py + pad;
+
+  if (onTarget) {
+    // Glow
+    ctx.shadowColor = '#6ece6e';
+    ctx.shadowBlur = 12;
+  }
+
+  // Base
+  ctx.fillStyle = onTarget ? C.palletOnTarget : C.pallet;
+  roundRect(ctx, rx, ry, w, h, Math.max(2, cs * 0.06));
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  // Top lighter face
+  const faceH = h * 0.18;
+  ctx.fillStyle = onTarget ? '#5aba5a' : C.palletLight;
+  roundRect(ctx, rx, ry, w, faceH, Math.max(2, cs * 0.06));
+  ctx.fill();
+
+  // Bottom darker
+  ctx.fillStyle = onTarget ? '#3a7a3a' : C.palletDark;
+  ctx.fillRect(rx, ry + h - faceH, w, faceH);
+
+  // Slats (horizontal lines)
+  const slats = 3;
+  ctx.strokeStyle = onTarget ? '#2a5a2a' : C.palletDark;
+  ctx.lineWidth = Math.max(1, cs / 28);
+  for (let i = 1; i <= slats; i++) {
+    const sy = ry + (h / (slats + 1)) * i;
+    ctx.beginPath(); ctx.moveTo(rx + 2, sy); ctx.lineTo(rx + w - 2, sy); ctx.stroke();
+  }
+
+  // Shrink wrap highlight
+  ctx.strokeStyle = onTarget ? '#7aee7a55' : C.palletWrap;
+  ctx.lineWidth = Math.max(1, cs / 20);
+  roundRect(ctx, rx + cs * 0.1, ry + cs * 0.1, w - cs * 0.2, h - cs * 0.2, Math.max(2, cs * 0.04));
+  ctx.stroke();
+
+  // Outline
+  ctx.strokeStyle = onTarget ? '#2a5a2a' : C.palletDark;
+  ctx.lineWidth = Math.max(1, cs / 22);
+  roundRect(ctx, rx, ry, w, h, Math.max(2, cs * 0.06));
+  ctx.stroke();
+}
+
+function drawForklift(px, py, dir, forkExtend) {
+  const cs = cellSize;
+  const cx = px + cs / 2;
+  const cy = py + cs / 2;
+  const bw = cs * 0.54;
+  const bh = cs * 0.7;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Rotate based on direction
+  const rotMap = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+  ctx.rotate(rotMap[dir] || 0);
+
+  // Body
+  const bx = -bw / 2;
+  const by = -bh / 2;
+
+  // Shadow
+  ctx.fillStyle = '#00000033';
+  roundRect(ctx, bx + 3, by + 3, bw, bh, cs * 0.08);
+  ctx.fill();
+
+  // Main body
+  ctx.fillStyle = C.forkBody;
+  roundRect(ctx, bx, by, bw, bh, cs * 0.08);
+  ctx.fill();
+
+  // Cab (top part)
+  ctx.fillStyle = C.forkYellow;
+  roundRect(ctx, bx + bw * 0.1, by + bh * 0.05, bw * 0.8, bh * 0.42, cs * 0.05);
+  ctx.fill();
+
+  // Window
+  ctx.fillStyle = '#88ccff99';
+  roundRect(ctx, bx + bw * 0.18, by + bh * 0.1, bw * 0.64, bh * 0.28, cs * 0.04);
+  ctx.fill();
+
+  // Outline
+  ctx.strokeStyle = C.forkDark;
+  ctx.lineWidth = Math.max(1, cs / 22);
+  roundRect(ctx, bx, by, bw, bh, cs * 0.08);
+  ctx.stroke();
+
+  // Forks (front = right in local space)
+  const forkW = Math.max(2, cs * 0.07);
+  const forkLen = bh * 0.38 + forkExtend * cs * 0.1;
+  const forkGap = bh * 0.22;
+  ctx.fillStyle = C.forkDark;
+  // Top fork
+  ctx.fillRect(bw / 2 - 1, -forkGap / 2 - forkW / 2, forkLen, forkW);
+  // Bottom fork
+  ctx.fillRect(bw / 2 - 1, forkGap / 2 - forkW / 2, forkLen, forkW);
+
+  // Wheels
+  const wheelR = Math.max(3, cs * 0.1);
+  ctx.fillStyle = '#222';
+  [[bx + bw * 0.15, -bh / 2 + 2], [bx + bw * 0.15, bh / 2 - 2],
+   [bx + bw * 0.78, -bh / 2 + 2], [bx + bw * 0.78, bh / 2 - 2]].forEach(([wx, wy]) => {
+    ctx.beginPath(); ctx.arc(wx + bw * 0, wy, wheelR, 0, Math.PI * 2); ctx.fill();
+  });
+
+  // Stripe
+  ctx.fillStyle = '#cc331199';
+  ctx.fillRect(bx + bw * 0.1, by + bh * 0.52, bw * 0.8, bh * 0.08);
+
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function render(animFraction) {
+  if (!gameState) return;
+  const cs = cellSize;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw all floor/wall tiles
+  for (let y = 0; y < gameState.height; y++) {
+    for (let x = 0; x < gameState.width; x++) {
+      drawCell(x, y);
+    }
+  }
+
+  // Draw targets
+  for (const t of gameState.targets) {
+    // Check if pallet is on this target — skip X drawing handled in pallet
+    const palletHere = gameState.pallets.some(p => p.x === t.x && p.y === t.y);
+    if (!palletHere) drawTarget(t.x, t.y);
+  }
+
+  // Draw pallets
+  for (let i = 0; i < gameState.pallets.length; i++) {
+    const p = gameState.pallets[i];
+    const offset = (anim.palletOffsets && anim.palletOffsets[i]) || { ox: 0, oy: 0 };
+    const ox = offset.ox * (1 - animFraction);
+    const oy = offset.oy * (1 - animFraction);
+    const onTarget = gameState.targets.some(t => t.x === p.x && t.y === p.y);
+    drawPallet(p.x * cs + ox, p.y * cs + oy, onTarget, 0);
+  }
+
+  // Draw forklift
+  const fox = (anim.forkliftOx || 0) * (1 - animFraction);
+  const foy = (anim.forkliftOy || 0) * (1 - animFraction);
+  drawForklift(
+    gameState.forklift.x * cs + fox,
+    gameState.forklift.y * cs + foy,
+    gameState.direction || 'right',
+    animFraction * 0.3
+  );
+}
+
+// ============================================================
+// TITLE SCREEN ANIMATION
+// ============================================================
+
+const titleCanvas = document.getElementById('title-forklift-canvas');
+const tctx = titleCanvas.getContext('2d');
+let titleT = 0;
+
+function renderTitle() {
+  tctx.clearRect(0, 0, 160, 100);
+  titleT += 0.02;
+  const x = 20 + Math.sin(titleT) * 5;
+
+  // Fake floor
+  tctx.fillStyle = '#e8dcc8';
+  tctx.fillRect(0, 68, 160, 32);
+  tctx.strokeStyle = '#d4c8b0';
+  tctx.lineWidth = 1;
+  for (let i = 0; i < 160; i += 20) {
+    tctx.beginPath(); tctx.moveTo(i, 68); tctx.lineTo(i, 100); tctx.stroke();
+  }
+
+  // Pallet
+  tctx.fillStyle = '#8b5e2c';
+  roundRect(tctx, x + 48, 44, 30, 24, 3);
+  tctx.fill();
+  tctx.strokeStyle = '#5c3a18'; tctx.lineWidth = 1.5;
+  roundRect(tctx, x + 48, 44, 30, 24, 3);
+  tctx.stroke();
+
+  // Forklift
+  tctx.save();
+  tctx.translate(x + 40, 56);
+  // Body
+  tctx.fillStyle = '#e0b030';
+  roundRect(tctx, -18, -18, 36, 36, 4);
+  tctx.fill();
+  // Cab
+  tctx.fillStyle = '#f5c542';
+  roundRect(tctx, -14, -16, 28, 16, 3);
+  tctx.fill();
+  // Window
+  tctx.fillStyle = '#88ccff88';
+  roundRect(tctx, -10, -14, 20, 10, 2);
+  tctx.fill();
+  // Forks
+  tctx.fillStyle = '#c49a28';
+  tctx.fillRect(18, -8, 16, 4);
+  tctx.fillRect(18, 4, 16, 4);
+  tctx.restore();
+
+  requestAnimationFrame(renderTitle);
+}
+
+// ============================================================
+// GAME LOGIC
+// ============================================================
+
+function initLevel(idx) {
+  currentLevel = idx;
+  saveLastLevel(idx);
+  const parsed = parseLevelGrid(idx);
+  gameState = {
+    ...parsed,
+    moves: 0,
+    history: [],
+    direction: 'right',
+    undoCount: 0,
+    complete: false
+  };
+  resetAnim();
+  animating = false;
+  animQueue = [];
+  completedThisSession = false;
+
+  computeCellSize();
+  updateHUD();
+  render(1);
+  showMessage(startMessage());
+  resetStuckTimer();
+}
+
+function startMessage() {
+  const msgs = [
+    "Good luck. You'll need it.",
+    "This one's tricky.",
+    "Just move the pallets. Easy.",
+    "Think before you push.",
+    "Warehouses don't run themselves.",
+    "Par is just a suggestion. For the weak.",
+    "These pallets aren't gonna move themselves... wait, yes they are.",
+  ];
+  return msgs[currentLevel % msgs.length];
+}
+
+function tryMove(dx, dy) {
+  if (animating || !gameState || gameState.complete) return;
+
+  const dir = dx === 1 ? 'right' : dx === -1 ? 'left' : dy === 1 ? 'down' : 'up';
+
+  const fx = gameState.forklift.x;
+  const fy = gameState.forklift.y;
+  const nx = fx + dx;
+  const ny = fy + dy;
+
+  // Bounds check
+  if (ny < 0 || ny >= gameState.height || nx < 0 || nx >= gameState.width) return;
+  if (gameState.tiles[ny][nx] === 'wall') {
+    gameState.direction = dir;
+    render(1);
+    return;
+  }
+
+  // Check for pallet at new pos
+  const palletIdx = gameState.pallets.findIndex(p => p.x === nx && p.y === ny);
+  let movedPalletIdx = -1;
+
+  if (palletIdx !== -1) {
+    // Try to push pallet
+    const ppx = nx + dx;
+    const ppy = ny + dy;
+    if (ppy < 0 || ppy >= gameState.height || ppx < 0 || ppx >= gameState.width) return;
+    if (gameState.tiles[ppy][ppx] === 'wall') return; // wall behind pallet
+    if (gameState.pallets.some(p => p.x === ppx && p.y === ppy)) return; // another pallet
+
+    movedPalletIdx = palletIdx;
+  }
+
+  // Save state for undo
+  const snapshot = {
+    forklift: { ...gameState.forklift },
+    pallets: gameState.pallets.map(p => ({ ...p })),
+    direction: gameState.direction,
+    moves: gameState.moves
+  };
+  gameState.history.push(snapshot);
+
+  // Set up animation offsets (starting positions relative to destination)
+  anim.forkliftOx = -dx * cellSize;
+  anim.forkliftOy = -dy * cellSize;
+  anim.palletOffsets = {};
+
+  // Move pallet
+  if (movedPalletIdx !== -1) {
+    anim.palletOffsets[movedPalletIdx] = { ox: -dx * cellSize, oy: -dy * cellSize };
+    gameState.pallets[movedPalletIdx].x += dx;
+    gameState.pallets[movedPalletIdx].y += dy;
+  }
+
+  // Move forklift
+  gameState.forklift.x = nx;
+  gameState.forklift.y = ny;
+  gameState.direction = dir;
+  gameState.moves++;
+
+  // Animate
+  animating = true;
+  const start = performance.now();
+  const DURATION = 100;
+
+  function step(now) {
+    const t = Math.min(1, (now - start) / DURATION);
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    render(ease);
+    if (t < 1) {
+      requestAnimationFrame(step);
+    } else {
+      animating = false;
+      anim = {};
+      render(1);
+      updateHUD();
+      checkComplete();
+      resetStuckTimer();
+      if (gameState.undoCount > 5 && gameState.moves % 15 === 0) {
+        showMessage("The undo key is your friend huh");
+      }
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function undo() {
+  if (gameState.history.length === 0 || animating) return;
+  const snap = gameState.history.pop();
+  gameState.forklift = snap.forklift;
+  gameState.pallets = snap.pallets;
+  gameState.direction = snap.direction;
+  gameState.moves = snap.moves;
+  gameState.undoCount++;
+  resetAnim();
+  render(1);
+  updateHUD();
+  if (gameState.undoCount === 3) showMessage("No shame in trying again");
+  else if (gameState.undoCount === 8) showMessage("The undo key is your friend huh");
+  resetStuckTimer();
+}
+
+function checkComplete() {
+  const allOn = gameState.targets.every(t =>
+    gameState.pallets.some(p => p.x === t.x && p.y === t.y)
+  );
+  if (!allOn) return;
+
+  gameState.complete = true;
+  clearStuckTimer();
+
+  const moves = gameState.moves;
+  const par = LEVELS[currentLevel].par;
+  let stars = 1;
+  if (moves <= par) stars = 3;
+  else if (moves <= par + 5) stars = 2;
+
+  saveStars(currentLevel, stars);
+  saveBest(currentLevel, moves);
+
+  setTimeout(() => showComplete(stars, moves, par), 400);
+}
+
+function showComplete(stars, moves, par) {
+  document.getElementById('overlay').classList.add('active');
+  document.getElementById('overlay-stars').textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+  document.getElementById('om-moves').textContent = moves;
+  document.getElementById('om-par').textContent = par;
+
+  let msg;
+  if (stars === 3) {
+    const msgs3 = ["PERFECT. How?", "Efficiency king.", "Suspicious level of competence.", "Were you a forklift in another life?"];
+    msg = msgs3[Math.floor(Math.random() * msgs3.length)];
+  } else if (stars === 2) {
+    const msgs2 = ["Not bad. For a human.", "Adequate. Barely.", "We'll take it.", "Room to improve. There's always room."];
+    msg = msgs2[Math.floor(Math.random() * msgs2.length)];
+  } else {
+    const msgs1 = ["You got there... eventually", "Functional. Barely.", "More of a stroll than a sprint.", "The pallets are in the right place. That's something."];
+    msg = msgs1[Math.floor(Math.random() * msgs1.length)];
+  }
+  document.getElementById('overlay-msg').textContent = '"' + msg + '"';
+
+  const hasNext = currentLevel < LEVELS.length - 1;
+  document.getElementById('btn-next').style.display = hasNext ? '' : 'none';
+}
+
+// ============================================================
+// HUD
+// ============================================================
+
+function updateHUD() {
+  if (!gameState) return;
+  document.getElementById('level-label').textContent = `LEVEL ${currentLevel + 1}`;
+  document.getElementById('level-name-display').textContent = LEVELS[currentLevel].name;
+  document.getElementById('move-display').textContent = gameState.moves;
+  document.getElementById('par-display').textContent = `PAR: ${LEVELS[currentLevel].par}`;
+}
+
+// ============================================================
+// MESSAGES
+// ============================================================
+
+function showMessage(text) {
+  const bar = document.getElementById('message-bar');
+  bar.textContent = text;
+  bar.classList.add('visible');
+  if (msgTimer) clearTimeout(msgTimer);
+  msgTimer = setTimeout(() => { bar.classList.remove('visible'); }, 4000);
+}
+
+function resetStuckTimer() {
+  clearStuckTimer();
+  stuckTimer = setTimeout(() => {
+    if (!gameState || gameState.complete) return;
+    const msgs = ["Might wanna undo that", "Rethink the strategy maybe", "Staring won't move the pallets.", "Still there?"];
+    showMessage(msgs[Math.floor(Math.random() * msgs.length)]);
+  }, 10000);
+}
+
+function clearStuckTimer() {
+  if (stuckTimer) { clearTimeout(stuckTimer); stuckTimer = null; }
+}
+
+// ============================================================
+// SCREENS
+// ============================================================
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function buildLevelSelect() {
+  const grid = document.getElementById('level-grid');
+  grid.innerHTML = '';
+  const storage = loadStorage();
+  LEVELS.forEach((lvl, i) => {
+    const tile = document.createElement('div');
+    tile.className = 'level-tile';
+    const s = storage.stars[i] || 0;
+    const best = storage.best[i];
+    const starStr = '★'.repeat(s) + '☆'.repeat(3 - s);
+    tile.innerHTML = `<div class="lnum">${i + 1}</div><div class="lname">${lvl.name}</div><div class="stars" style="color:${s > 0 ? '#f5c542' : '#444'}">${starStr}</div>${best !== null ? `<div class="best-moves">best: ${best} moves</div>` : ''}`;
+    tile.addEventListener('click', () => startGame(i));
+    grid.appendChild(tile);
+  });
+}
+
+function startGame(idx) {
+  showScreen('game-screen');
+  document.getElementById('overlay').classList.remove('active');
+
+  // Show touch controls on touch devices
+  const isTouchDevice = window.matchMedia('(hover: none)').matches || 'ontouchstart' in window;
+  document.getElementById('touch-controls').style.display = isTouchDevice ? 'flex' : 'none';
+
+  initLevel(idx);
+}
+
+// ============================================================
+// TOUCH / SWIPE
+// ============================================================
+
+let touchStartX = 0, touchStartY = 0;
+canvas.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+canvas.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    tryMove(dx > 0 ? 1 : -1, 0);
+  } else {
+    tryMove(0, dy > 0 ? 1 : -1);
+  }
+}, { passive: true });
+
+// Touch buttons
+['up','down','left','right'].forEach(dir => {
+  const btn = document.getElementById('tc-' + dir);
+  if (!btn) return;
+  const dmap = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
+  const fn = () => tryMove(...dmap[dir]);
+  btn.addEventListener('touchstart', e => { e.preventDefault(); fn(); }, { passive: false });
+  btn.addEventListener('click', fn);
+});
+
+// ============================================================
+// KEYBOARD
+// ============================================================
+
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('game-screen').classList.contains('active')) return;
+  switch (e.key) {
+    case 'ArrowUp':    case 'w': case 'W': e.preventDefault(); tryMove(0, -1); break;
+    case 'ArrowDown':  case 's': case 'S': e.preventDefault(); tryMove(0, 1); break;
+    case 'ArrowLeft':  case 'a': case 'A': e.preventDefault(); tryMove(-1, 0); break;
+    case 'ArrowRight': case 'd': case 'D': e.preventDefault(); tryMove(1, 0); break;
+    case 'u': case 'U': e.preventDefault(); undo(); break;
+    case 'r': case 'R': e.preventDefault(); initLevel(currentLevel); break;
+    case 'Escape': showScreen('level-select'); buildLevelSelect(); break;
+  }
+});
+
+// ============================================================
+// BUTTON WIRING
+// ============================================================
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  const storage = loadStorage();
+  const last = Math.min(storage.lastLevel || 0, LEVELS.length - 1);
+  startGame(last);
+});
+
+document.getElementById('btn-levels').addEventListener('click', () => {
+  buildLevelSelect();
+  showScreen('level-select');
+});
+
+document.getElementById('back-from-select').addEventListener('click', () => {
+  showScreen('title-screen');
+});
+
+document.getElementById('btn-undo').addEventListener('click', () => undo());
+document.getElementById('btn-restart').addEventListener('click', () => initLevel(currentLevel));
+document.getElementById('btn-to-menu').addEventListener('click', () => {
+  buildLevelSelect();
+  showScreen('level-select');
+});
+
+document.getElementById('btn-next').addEventListener('click', () => {
+  if (currentLevel < LEVELS.length - 1) {
+    document.getElementById('overlay').classList.remove('active');
+    startGame(currentLevel + 1);
+  }
+});
+
+document.getElementById('btn-replay').addEventListener('click', () => {
+  document.getElementById('overlay').classList.remove('active');
+  initLevel(currentLevel);
+});
+
+document.getElementById('btn-menu').addEventListener('click', () => {
+  document.getElementById('overlay').classList.remove('active');
+  buildLevelSelect();
+  showScreen('level-select');
+});
+
+// ============================================================
+// RESIZE
+// ============================================================
+
+window.addEventListener('resize', () => {
+  if (gameState && document.getElementById('game-screen').classList.contains('active')) {
+    computeCellSize();
+    render(1);
+  }
+});
+
+// ============================================================
+// BOOT
+// ============================================================
+
+renderTitle();
+showScreen('title-screen');
+
+</script>
+</body>
+</html>

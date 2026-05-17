@@ -596,6 +596,26 @@ def serve_jetpack():
     return FileResponse(str(BASE_DIR / "jetpack.html"))
 
 
+@app.get("/games/warehouse-rush")
+def serve_warehouse_rush():
+    return FileResponse(str(BASE_DIR / "warehouse_rush.html"))
+
+
+@app.get("/games/forklift")
+def serve_forklift():
+    return FileResponse(str(BASE_DIR / "forklift_puzzle.html"))
+
+
+@app.get("/games/jetpack2")
+def serve_jetpack2():
+    return FileResponse(str(BASE_DIR / "jetpack2.html"))
+
+
+@app.get("/games/truck-tycoon")
+def serve_truck_tycoon():
+    return FileResponse(str(BASE_DIR / "truck_tycoon.html"))
+
+
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 @app.get("/")
