@@ -2730,67 +2730,15 @@ class GameScene extends Phaser.Scene {
     STATE.currentTruck = truckIdx;
     this.mgTruck = this.trucks[truckIdx];
     this.mgPalletsTotal = this.mgTruck.pallets;
-    this.mgPalletsLeft = this.mgPalletsTotal;
+    this.mgPalletsLeft  = this.mgPalletsTotal;
     this.mgHits = 0; this.mgMisses = 0;
-    this.mgCombo = 0; this.mgPts = 0;
-    this.mgTimeLeft = 45000; // 45 seconds
-    this.mgKeys = ['←','→','↑','↓','SPACE'];
-    this.mgKeyMap = { 'ArrowLeft':'←','ArrowRight':'→','ArrowUp':'↑','ArrowDown':'↓',' ':'SPACE' };
-    this.mgCurrentKey = '';
-    this.mgWindowLeft = 0;
+    this.mgCombo = 0; this.mgPts  = 0;
 
-    // Initialize dock view state
-    this._jackX = GW/2;
-    this._palletOnJack = false;
-    this._dockViewY = 120;
-
-    this.mgShowNext();
-
-    // Show UI
-    this.mgBg.clear().setVisible(true);
-    this.mgBg.fillStyle(0x000000, 0.9);
-    this.mgBg.fillRect(0,0,GW,GH);
-    this.mgBg.fillStyle(0x1a2a1a,1);
-    this.mgBg.fillRoundedRect(GW/2-300, 40, 600, GH-80, 16);
-    this.mgBg.lineStyle(2,0x44cc44,0.8);
-    this.mgBg.strokeRoundedRect(GW/2-300, 40, 600, GH-80, 16);
-
-    [this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit].forEach(o=>o.setVisible(true));
-    this.mgTitle.setText(`🚛 UNLOADING TRUCK ${truckIdx+1}  —  ${this.mgPalletsTotal} PALLETS`);
-
-    this.mgDockBg.setVisible(true);
-    this.mgJackGfx.setVisible(true);
-    this.mgComboTxt.setVisible(true);
-    this._drawDockView();
-
-    // Key listener for mini-game
-    this.mgKeyListener = (event)=>{
-      if(!STATE.miniGameActive) return;
-      const pressed = this.mgKeyMap[event.key];
-      if(!pressed) return;
-      this.mgCheckPress(pressed);
-    };
-    window.addEventListener('keydown', this.mgKeyListener);
-
-    // Tap for mobile
-    this.mgTapArea = this.add.rectangle(GW/2, GH/2, 400, 200, 0, 0)
-      .setScrollFactor(0).setDepth(95).setInteractive();
-    this.mgTapArea.on('pointerdown', ()=> this.mgCheckPress(this.mgCurrentKey));
-
-    this.mgLoop = this.time.addEvent({
-      delay: 100, loop: true,
-      callback: ()=>{
-        if(!STATE.miniGameActive) return;
-        this.mgTimeLeft -= 100;
-        this.mgWindowLeft -= 100;
-        if(this.mgWindowLeft <= 0 && this.mgPalletsLeft > 0){
-          this.mgMisses++; this.mgCombo=0;
-          this.mgStatus.setText('❌ Missed! Combo reset.').setStyle({fill:'#ff6666'});
-          this.mgShowNext();
-        }
-        if(this.mgTimeLeft<=0 || this.mgPalletsLeft<=0) this.endMiniGame(this.mgPalletsLeft<=0);
-        this.mgUpdateBar();
-      }
+    // Cinematic cut: brief black flash, then the bay scene
+    const flash = this.add.rectangle(GW/2, GH/2, GW, GH, 0x000000, 0).setScrollFactor(0).setDepth(150);
+    this.tweens.add({ targets: flash, alpha: 1, duration: 220, yoyo: true, hold: 60,
+      onYoyo: ()=>{ this._initBayScene(truckIdx); },
+      onComplete: ()=>{ flash.destroy(); }
     });
   }
 
@@ -2892,6 +2840,17 @@ class GameScene extends Phaser.Scene {
     if(this.mgKeyListener){ window.removeEventListener('keydown',this.mgKeyListener); this.mgKeyListener=null; }
     if(this.mgTapArea){ this.mgTapArea.destroy(); this.mgTapArea=null; }
 
+    // ── Bay scene cleanup ──────────────────────────────────────────────────
+    if(this._bayUpdateLoop){ this._bayUpdateLoop.remove(); this._bayUpdateLoop = null; }
+    if(this._bayKeyHandler){ window.removeEventListener('keydown', this._bayKeyHandler); this._bayKeyHandler = null; }
+    if(this._bayKeyUpHandler){ window.removeEventListener('keyup', this._bayKeyUpHandler); this._bayKeyUpHandler = null; }
+    ['_bayBg','_bayMid','_bayFg','_bayTitle','_bayPrompt','_bayPalletTxt','_bayQuit','_bayTapE','_bayDimOverlay'].forEach(k=>{
+      if(this[k] && this[k].destroy){ this[k].destroy(); }
+      this[k] = null;
+    });
+    this._bay = null;
+    if(this.player) this.player.setVisible(true);
+
     if(this.mgDockBg) this.mgDockBg.setVisible(false);
     if(this.mgJackGfx) this.mgJackGfx.setVisible(false);
     if(this.mgComboTxt) this.mgComboTxt.setVisible(false);
@@ -2924,6 +2883,570 @@ class GameScene extends Phaser.Scene {
 
     // Check next assignment
     this.time.delayedCall(1500, ()=>{ if(!STATE.dialogueActive) this.showAssignment(); });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  REALISTIC BAY UNLOAD SCENE  —  walk to forklift, mount, drive, haul
+  // ═══════════════════════════════════════════════════════════════════════════
+  _initBayScene(truckIdx){
+    // Hide the world player; the bay scene has its own worker character
+    if(this.player) this.player.setVisible(false);
+
+    // Master state object for the scene — easy to nuke on exit
+    this._bay = {
+      phase: 'walking',            // walking → atForklift → driving → carrying → done
+      worker:  { x: -34, y: GH-110, walkPhase: 0 },
+      forklift:{ x: 240, y: GH-150, angle: 0, vx: 0, vy: 0, mounted: false, beepT: 0 },
+      truck:   { x: GW/2, y: 110 },
+      storage: { x: GW-130, y: GH-180 },
+      palletInTrailer: this.mgPalletsTotal,
+      palletInForklift: false,
+      palletsStored: 0,
+      promptFlash: 0
+    };
+
+    // Dim overlay so the bay scene reads as separate from the world
+    this._bayDimOverlay = this.add.rectangle(GW/2, GH/2, GW, GH, 0x000000, 0.92)
+      .setScrollFactor(0).setDepth(99);
+
+    // Graphics layers
+    this._bayBg  = this.add.graphics().setScrollFactor(0).setDepth(100);  // floor, trailer, storage
+    this._bayMid = this.add.graphics().setScrollFactor(0).setDepth(102);  // worker, forklift, pallets, glows
+    this._bayFg  = this.add.graphics().setScrollFactor(0).setDepth(104);  // shadows, dust, UI hints
+
+    // UI text
+    this._bayTitle = this.add.text(GW/2, 18,
+      `🚛 BAY ${truckIdx+1} — ${this.mgPalletsTotal} PALLETS`, {
+        fontSize:'16px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold',
+        stroke:'#000', strokeThickness:4
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(106);
+
+    this._bayPalletTxt = this.add.text(GW-14, 18,
+      `📦 ${this.mgPalletsTotal} in truck  |  📥 0 stored`, {
+        fontSize:'12px', fill:'#aaffaa', fontFamily:'monospace', fontStyle:'bold'
+      }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(106);
+
+    this._bayPrompt = this.add.text(GW/2, GH-22,
+      '👷 Walking to forklift...', {
+        fontSize:'13px', fill:'#fff', fontFamily:'monospace', fontStyle:'bold',
+        stroke:'#000', strokeThickness:3, backgroundColor:'#000a',
+        padding:{ x:10, y:5 }
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(106);
+
+    this._bayQuit = this.add.text(14, 18, '[Q] Leave Bay', {
+      fontSize:'10px', fill:'rgba(255,255,255,0.65)', fontFamily:'monospace'
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(106).setInteractive();
+    this._bayQuit.on('pointerdown', ()=> this.endMiniGame(false));
+
+    // Mobile: tap zone for E
+    this._bayTapE = this.add.text(GW-14, GH-22, '🅴 ACTION', {
+      fontSize:'13px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold',
+      stroke:'#000', strokeThickness:3, backgroundColor:'#000a',
+      padding:{ x:10, y:5 }
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(106).setInteractive();
+    this._bayTapE.on('pointerdown', ()=>{ this._bayKeys.e = true; });
+
+    // Keyboard state
+    this._bayKeys = { up:false, down:false, left:false, right:false, e:false, space:false };
+    this._bayKeyHandler = (e)=>{
+      if(!STATE.miniGameActive) return;
+      const k = (e.key || '').toLowerCase();
+      if(k==='w'||k==='arrowup')    this._bayKeys.up = true;
+      if(k==='s'||k==='arrowdown')  this._bayKeys.down = true;
+      if(k==='a'||k==='arrowleft')  this._bayKeys.left = true;
+      if(k==='d'||k==='arrowright') this._bayKeys.right = true;
+      if(k==='e')                    this._bayKeys.e = true;
+      if(k===' ')                    this._bayKeys.space = true;
+      if(k==='q')                    this.endMiniGame(false);
+      // Prevent page scroll on arrows/space
+      if(['arrowup','arrowdown','arrowleft','arrowright',' '].indexOf(k) !== -1) e.preventDefault && e.preventDefault();
+    };
+    this._bayKeyUpHandler = (e)=>{
+      const k = (e.key || '').toLowerCase();
+      if(k==='w'||k==='arrowup')    this._bayKeys.up = false;
+      if(k==='s'||k==='arrowdown')  this._bayKeys.down = false;
+      if(k==='a'||k==='arrowleft')  this._bayKeys.left = false;
+      if(k==='d'||k==='arrowright') this._bayKeys.right = false;
+      if(k==='e')                    this._bayKeys.e = false;
+      if(k===' ')                    this._bayKeys.space = false;
+    };
+    window.addEventListener('keydown', this._bayKeyHandler);
+    window.addEventListener('keyup',   this._bayKeyUpHandler);
+
+    // Drive loop at 60fps
+    this._bayUpdateLoop = this.time.addEvent({
+      delay: 16, loop: true,
+      callback: ()=>{ if(STATE.miniGameActive && this._bay) this._updateBayScene(16); }
+    });
+
+    this._drawBayScene();
+  }
+
+  _updateBayScene(dtMs){
+    const b = this._bay; if(!b) return;
+    const dt = dtMs / 1000;
+
+    if(b.phase === 'walking'){
+      // Auto-walk in from off-screen left, animate stride
+      b.worker.x += 110 * dt;
+      b.worker.walkPhase += dt * 8;
+      if(b.worker.x >= b.forklift.x - 32){
+        b.worker.x = b.forklift.x - 32;
+        b.phase = 'atForklift';
+        this._bayPrompt.setText('🎯 Press E to mount the forklift');
+      }
+    }
+    else if(b.phase === 'atForklift'){
+      if(this._bayKeys.e){
+        this._bayKeys.e = false;
+        b.forklift.mounted = true;
+        b.phase = 'driving';
+        SFX.hit && SFX.hit(1);
+        this._bayPrompt.setText('🚜 WASD to drive · 🅴 to grab a pallet from the truck');
+      }
+    }
+    else if(b.phase === 'driving' || b.phase === 'carrying'){
+      // Drive forklift — slower when carrying
+      const baseSpd = b.palletInForklift ? 130 : 175;
+      let ax = 0, ay = 0;
+      if(this._bayKeys.left)  ax -= 1;
+      if(this._bayKeys.right) ax += 1;
+      if(this._bayKeys.up)    ay -= 1;
+      if(this._bayKeys.down)  ay += 1;
+      const len = Math.hypot(ax, ay);
+      if(len > 0){
+        ax /= len; ay /= len;
+        // Smooth angle turn
+        const targetAngle = Math.atan2(ay, ax);
+        let diff = targetAngle - b.forklift.angle;
+        while(diff > Math.PI)  diff -= Math.PI*2;
+        while(diff < -Math.PI) diff += Math.PI*2;
+        b.forklift.angle += diff * Math.min(1, dt * 9);
+      }
+      b.forklift.vx = ax * baseSpd;
+      b.forklift.vy = ay * baseSpd;
+      b.forklift.x += b.forklift.vx * dt;
+      b.forklift.y += b.forklift.vy * dt;
+      b.forklift.x = Phaser.Math.Clamp(b.forklift.x, 60,  GW-60);
+      b.forklift.y = Phaser.Math.Clamp(b.forklift.y, 175, GH-80);
+
+      // Reverse beep counter (going up = forward, going down = forward too — use vy sign as cue)
+      b.forklift.beepT += dt;
+
+      // E = pickup or drop
+      if(this._bayKeys.e){
+        this._bayKeys.e = false;
+        if(!b.palletInForklift){
+          // Try pickup from trailer
+          const dt2truck = Phaser.Math.Distance.Between(b.forklift.x, b.forklift.y, b.truck.x, b.truck.y+90);
+          if(dt2truck < 110 && b.palletInTrailer > 0){
+            b.palletInForklift = true;
+            b.palletInTrailer--;
+            b.phase = 'carrying';
+            SFX.hit && SFX.hit(1);
+            this._bayPrompt.setText('📦 Got it! Take it to the yellow zone on the right ➡');
+            this._bayPalletTxt.setText(`📦 ${b.palletInTrailer} in truck  |  📥 ${b.palletsStored} stored`);
+          } else {
+            this._bayPrompt.setText('⬆ Get closer to the truck to grab a pallet');
+            b.promptFlash = 0.6;
+          }
+        } else {
+          // Try drop at storage
+          const dt2store = Phaser.Math.Distance.Between(b.forklift.x, b.forklift.y, b.storage.x, b.storage.y+20);
+          if(dt2store < 80){
+            b.palletInForklift = false;
+            b.palletsStored++;
+            this.mgHits = b.palletsStored;          // keep score calc compatible
+            this.mgPalletsLeft = b.palletInTrailer; // remaining shown in HUD
+            this.mgPts += 25;
+            STATE.score += 25;
+            STATE.energy = Math.max(0, STATE.energy - 1.8);
+            SFX.comboDing && SFX.comboDing(b.palletsStored);
+            this._bayPalletTxt.setText(`📦 ${b.palletInTrailer} in truck  |  📥 ${b.palletsStored} stored`);
+
+            if(b.palletInTrailer <= 0){
+              b.phase = 'done';
+              this._bayPrompt.setText('🏆 TRUCK EMPTY — Nice work!');
+              this.time.delayedCall(1800, ()=>{ if(STATE.miniGameActive) this.endMiniGame(true); });
+            } else {
+              b.phase = 'driving';
+              this._bayPrompt.setText(`✅ Dropped! ${b.palletInTrailer} pallet${b.palletInTrailer===1?'':'s'} left in the trailer`);
+            }
+          } else {
+            this._bayPrompt.setText('➡ Drop zone is the yellow circle on the right');
+            b.promptFlash = 0.6;
+          }
+        }
+      }
+    }
+
+    if(b.promptFlash > 0) b.promptFlash -= dt;
+    this._drawBayScene();
+  }
+
+  _drawBayScene(){
+    const b = this._bay; if(!b) return;
+    const t = this.time.now;
+
+    // ── BACKGROUND: dock floor + trailer + storage ───────────────────────
+    this._bayBg.clear();
+    // Sky/wall above trailer
+    this._bayBg.fillStyle(0x1d2530, 1);
+    this._bayBg.fillRect(0, 0, GW, 60);
+    // Wall stripe (warehouse fluorescent lights vibe)
+    this._bayBg.fillStyle(0x2a3340, 1);
+    this._bayBg.fillRect(0, 30, GW, 30);
+    for(let i=0; i<6; i++){
+      this._bayBg.fillStyle(0xfff4b0, 0.18);
+      this._bayBg.fillRect(40 + i*(GW-80)/6, 36, 60, 4);
+    }
+    // Concrete floor (gradient)
+    this._bayBg.fillStyle(0x4a4f57, 1);
+    this._bayBg.fillRect(0, 60, GW, GH-60);
+    this._bayBg.fillStyle(0x3a3e44, 0.45);
+    this._bayBg.fillRect(0, GH-70, GW, 70);
+    // Floor scuff marks
+    this._bayBg.lineStyle(1, 0x2a2e34, 0.4);
+    for(let i=0; i<8; i++){
+      const sx = (i*97 + 30) % GW;
+      const sy = 220 + (i*73) % (GH-280);
+      this._bayBg.lineBetween(sx, sy, sx+20, sy+2);
+    }
+    // Yellow safety border (perimeter triangles)
+    this._bayBg.fillStyle(0xfdd835, 0.9);
+    for(let x=0; x<GW; x+=24){
+      this._bayBg.fillTriangle(x, GH-58, x+12, GH-58, x+6, GH-50);
+    }
+    // Lane markings
+    this._bayBg.lineStyle(2, 0xffffff, 0.4);
+    this._bayBg.strokeRect(40, 200, GW-80, GH-280);
+
+    // ── DOCK BUMPER (red/white stripes below trailer) ────────────────────
+    const dockY = 175;
+    this._bayBg.fillStyle(0x1a1a1a, 1);
+    this._bayBg.fillRect(b.truck.x-135, dockY+2, 270, 8);
+    for(let i=0; i<12; i++){
+      const cx = b.truck.x-130 + i*22;
+      this._bayBg.fillStyle(i%2===0 ? 0xcc2222 : 0xffffff, 1);
+      this._bayBg.fillRect(cx, dockY-4, 20, 12);
+    }
+
+    // ── TRAILER (top of screen, open back facing us) ─────────────────────
+    // Trailer skin
+    this._bayBg.fillStyle(0xe6efff, 1);
+    this._bayBg.fillRect(b.truck.x-140, 60, 280, 115);
+    // Top shadow band
+    this._bayBg.fillStyle(0xa8b8cc, 1);
+    this._bayBg.fillRect(b.truck.x-140, 60, 280, 9);
+    // Rivet line
+    this._bayBg.fillStyle(0x88a0bb, 0.6);
+    for(let i=0; i<14; i++){
+      this._bayBg.fillCircle(b.truck.x-132 + i*20, 72, 1.4);
+    }
+    // Open back door frame
+    this._bayBg.fillStyle(0x1a1a1a, 1);
+    this._bayBg.fillRect(b.truck.x-110, 78, 220, 97);
+    // Interior (gradient: lighter front, darker back)
+    this._bayBg.fillStyle(0x2e2e30, 1);
+    this._bayBg.fillRect(b.truck.x-105, 82, 210, 90);
+    this._bayBg.fillStyle(0x1f1f22, 0.5);
+    this._bayBg.fillRect(b.truck.x-105, 82, 210, 25);
+    // Floor of trailer (catwalk)
+    this._bayBg.fillStyle(0x4a4030, 1);
+    this._bayBg.fillRect(b.truck.x-105, 165, 210, 8);
+
+    // Pallets inside trailer (back to front)
+    const palW = 40, palH = 17;
+    const palStartX = b.truck.x - 100 + 5;
+    const palBaseY = 90;
+    const rows = 3, cols = 4;
+    let palShown = 0;
+    for(let r=rows-1; r>=0; r--){
+      for(let c=0; c<cols; c++){
+        if(palShown < b.palletInTrailer){
+          const px = palStartX + c*(palW+5);
+          const py = palBaseY + r*(palH+6);
+          // Wood pallet
+          this._bayBg.fillStyle(0x8b4513, 1);
+          this._bayBg.fillRect(px, py+9, palW, 7);
+          // Cargo box (cardboard)
+          this._bayBg.fillStyle(0xc8a060, 1);
+          this._bayBg.fillRect(px+1, py, palW-2, 11);
+          this._bayBg.lineStyle(1, 0x6a4010, 0.6);
+          this._bayBg.strokeRect(px+1, py, palW-2, 11);
+          // Top highlight
+          this._bayBg.fillStyle(0xe8c890, 0.5);
+          this._bayBg.fillRect(px+1, py, palW-2, 2);
+          palShown++;
+        }
+      }
+    }
+
+    // Trailer side label panel
+    this._bayBg.fillStyle(0x00488a, 1);
+    this._bayBg.fillRect(b.truck.x-36, 132, 72, 22);
+    this._bayBg.fillStyle(0xffffff, 1);
+    this._bayBg.fillRect(b.truck.x-30, 138, 60, 10);
+    // Trailer wheels
+    this._bayBg.fillStyle(0x111111, 1);
+    [-95, -75, 75, 95].forEach(dx => {
+      this._bayBg.fillCircle(b.truck.x+dx, 178, 9);
+      this._bayBg.fillStyle(0x444444, 1);
+      this._bayBg.fillCircle(b.truck.x+dx, 178, 4);
+      this._bayBg.fillStyle(0x111111, 1);
+    });
+
+    // ── STORAGE RACK (right side) ────────────────────────────────────────
+    const sx = b.storage.x, sy = b.storage.y;
+    // Frame uprights
+    this._bayBg.fillStyle(0xcc6600, 1);
+    this._bayBg.fillRect(sx-58, sy-110, 9, 220);
+    this._bayBg.fillRect(sx+49, sy-110, 9, 220);
+    // Shelves
+    for(let lvl=0; lvl<3; lvl++){
+      const ly = sy-95 + lvl*70;
+      this._bayBg.fillStyle(0xaa5500, 1);
+      this._bayBg.fillRect(sx-58, ly, 116, 6);
+      this._bayBg.fillStyle(0x884400, 1);
+      this._bayBg.fillRect(sx-58, ly+5, 116, 2);
+    }
+    // Stored pallets on shelves
+    for(let i=0; i<b.palletsStored; i++){
+      const r = Math.floor(i/3);
+      const c = i%3;
+      if(r < 3){
+        const ppx = sx-52 + c*32;
+        const ppy = sy-89 + r*70;
+        // Wood pallet
+        this._bayBg.fillStyle(0x8b4513, 1);
+        this._bayBg.fillRect(ppx, ppy+22, 28, 7);
+        // Cargo box
+        this._bayBg.fillStyle(0xc8a060, 1);
+        this._bayBg.fillRect(ppx+1, ppy, 26, 24);
+        this._bayBg.lineStyle(1, 0x6a4010, 0.6);
+        this._bayBg.strokeRect(ppx+1, ppy, 26, 24);
+        // Box label
+        this._bayBg.fillStyle(0xffffff, 0.75);
+        this._bayBg.fillRect(ppx+7, ppy+9, 14, 5);
+      }
+    }
+    // Drop-zone marker (yellow circle on floor)
+    const dropPulse = 0.5 + 0.3 * Math.sin(t*0.005);
+    this._bayBg.lineStyle(4, 0xfdd835, dropPulse);
+    this._bayBg.strokeCircle(sx, sy+20, 55);
+    this._bayBg.fillStyle(0xfdd835, 0.13);
+    this._bayBg.fillCircle(sx, sy+20, 55);
+
+    // ── MID LAYER: worker + forklift + pickup-zone highlight ─────────────
+    this._bayMid.clear();
+
+    // Pickup zone highlight (when driving without a pallet)
+    if(b.phase === 'driving' && !b.palletInForklift){
+      const pulse = 0.4 + 0.35 * Math.sin(t*0.006);
+      this._bayMid.lineStyle(3, 0x44ff66, pulse);
+      this._bayMid.strokeCircle(b.truck.x, b.truck.y+90, 90);
+      this._bayMid.fillStyle(0x44ff66, 0.08);
+      this._bayMid.fillCircle(b.truck.x, b.truck.y+90, 90);
+    }
+
+    // Worker (only visible before mounting)
+    if(b.phase === 'walking' || b.phase === 'atForklift'){
+      const wx = b.worker.x, wy = b.worker.y;
+      // Shadow
+      this._bayMid.fillStyle(0x000000, 0.35);
+      this._bayMid.fillEllipse(wx, wy+22, 24, 7);
+      // Walking legs (alternating)
+      const legSwing = (b.phase === 'walking') ? Math.sin(b.worker.walkPhase) * 4 : 0;
+      this._bayMid.fillStyle(0x222244, 1);
+      this._bayMid.fillRect(wx-7, wy-1, 5, 18 + legSwing);
+      this._bayMid.fillRect(wx+2, wy-1, 5, 18 - legSwing);
+      // Boots
+      this._bayMid.fillStyle(0x111111, 1);
+      this._bayMid.fillRect(wx-8, wy+15+legSwing, 7, 4);
+      this._bayMid.fillRect(wx+1, wy+15-legSwing, 7, 4);
+      // Body — hi-vis vest
+      this._bayMid.fillStyle(0xff8c00, 1);
+      this._bayMid.fillRoundedRect(wx-10, wy-20, 20, 22, 3);
+      // Reflective stripes
+      this._bayMid.fillStyle(0xfff4a0, 0.85);
+      this._bayMid.fillRect(wx-10, wy-13, 20, 2);
+      this._bayMid.fillRect(wx-10, wy-5, 20, 2);
+      // Arms
+      this._bayMid.fillStyle(0xff8c00, 1);
+      const armSwing = (b.phase === 'walking') ? Math.sin(b.worker.walkPhase) * 3 : 0;
+      this._bayMid.fillRect(wx-13, wy-18 + armSwing, 4, 14);
+      this._bayMid.fillRect(wx+9, wy-18 - armSwing, 4, 14);
+      // Head
+      this._bayMid.fillStyle(0xe8b890, 1);
+      this._bayMid.fillCircle(wx, wy-26, 7);
+      // Hard hat
+      this._bayMid.fillStyle(0xffdd00, 1);
+      this._bayMid.fillEllipse(wx, wy-30, 17, 9);
+      this._bayMid.fillRect(wx-9, wy-29, 18, 3);
+      // Hat highlight
+      this._bayMid.fillStyle(0xffffff, 0.4);
+      this._bayMid.fillEllipse(wx-3, wy-32, 5, 3);
+    }
+
+    // FORKLIFT
+    const fx = b.forklift.x, fy = b.forklift.y, fa = b.forklift.angle;
+    const cos = Math.cos(fa), sin = Math.sin(fa);
+    // Shadow
+    this._bayMid.fillStyle(0x000000, 0.4);
+    this._bayMid.fillEllipse(fx, fy+24, 60, 13);
+    // Chassis (yellow)
+    this._bayMid.fillStyle(0xffcc00, 1);
+    this._bayMid.fillRoundedRect(fx-24, fy-16, 48, 32, 5);
+    // Highlight on chassis
+    this._bayMid.fillStyle(0xffe468, 0.6);
+    this._bayMid.fillRoundedRect(fx-22, fy-14, 44, 6, 3);
+    // Cab/operator seat well
+    this._bayMid.fillStyle(0xc89500, 1);
+    this._bayMid.fillRoundedRect(fx-15, fy-9, 30, 18, 3);
+    // Operator (if mounted)
+    if(b.forklift.mounted){
+      // Body in seat
+      this._bayMid.fillStyle(0xff8c00, 1);
+      this._bayMid.fillRoundedRect(fx-7, fy-7, 14, 14, 2);
+      this._bayMid.fillStyle(0xfff4a0, 0.85);
+      this._bayMid.fillRect(fx-7, fy-4, 14, 1.5);
+      // Head
+      this._bayMid.fillStyle(0xe8b890, 1);
+      this._bayMid.fillCircle(fx, fy-11, 5);
+      // Hard hat
+      this._bayMid.fillStyle(0xffdd00, 1);
+      this._bayMid.fillEllipse(fx, fy-13, 12, 6);
+    }
+    // Black safety stripes on bumpers
+    this._bayMid.fillStyle(0x1a1a1a, 1);
+    for(let i=0; i<4; i++){
+      this._bayMid.fillRect(fx-22 + i*12, fy-16, 5, 2.5);
+      this._bayMid.fillRect(fx-22 + i*12, fy+14, 5, 2.5);
+    }
+    // Wheels (4 black tires)
+    this._bayMid.fillStyle(0x111111, 1);
+    this._bayMid.fillRoundedRect(fx-28, fy-19, 7, 13, 2);
+    this._bayMid.fillRoundedRect(fx+21, fy-19, 7, 13, 2);
+    this._bayMid.fillRoundedRect(fx-28, fy+6,  7, 13, 2);
+    this._bayMid.fillRoundedRect(fx+21, fy+6,  7, 13, 2);
+    // Wheel hubs
+    this._bayMid.fillStyle(0x555555, 1);
+    this._bayMid.fillCircle(fx-24.5, fy-12.5, 1.8);
+    this._bayMid.fillCircle(fx+24.5, fy-12.5, 1.8);
+    this._bayMid.fillCircle(fx-24.5, fy+12.5, 1.8);
+    this._bayMid.fillCircle(fx+24.5, fy+12.5, 1.8);
+
+    // MAST + FORKS (rotated to face driving direction)
+    const mastX = fx + cos*24;
+    const mastY = fy + sin*24;
+    // Mast post
+    this._bayMid.fillStyle(0x888888, 1);
+    this._bayMid.beginPath();
+    // mast as rotated rect
+    const mw = 6, mh = 24;
+    const perpX = -sin, perpY = cos;
+    const m1x = mastX + perpX*mw/2 - cos*mh/2;
+    const m1y = mastY + perpY*mw/2 - sin*mh/2;
+    const m2x = mastX - perpX*mw/2 - cos*mh/2;
+    const m2y = mastY - perpY*mw/2 - sin*mh/2;
+    const m3x = mastX - perpX*mw/2 + cos*mh/2;
+    const m3y = mastY - perpY*mw/2 + sin*mh/2;
+    const m4x = mastX + perpX*mw/2 + cos*mh/2;
+    const m4y = mastY + perpY*mw/2 + sin*mh/2;
+    this._bayMid.moveTo(m1x, m1y);
+    this._bayMid.lineTo(m2x, m2y);
+    this._bayMid.lineTo(m3x, m3y);
+    this._bayMid.lineTo(m4x, m4y);
+    this._bayMid.closePath();
+    this._bayMid.fill();
+    // Forks (two prongs ahead of mast)
+    this._bayMid.fillStyle(0xeeaa00, 1);
+    const forkLen = 22, forkW = 4, forkSpread = 7;
+    const drawFork = (offset) => {
+      const baseX = mastX + perpX*offset;
+      const baseY = mastY + perpY*offset;
+      const tipX  = baseX + cos*forkLen;
+      const tipY  = baseY + sin*forkLen;
+      // fork rect via 4 corners
+      const f1x = baseX + perpX*forkW/2;
+      const f1y = baseY + perpY*forkW/2;
+      const f2x = baseX - perpX*forkW/2;
+      const f2y = baseY - perpY*forkW/2;
+      const f3x = tipX  - perpX*forkW/2;
+      const f3y = tipY  - perpY*forkW/2;
+      const f4x = tipX  + perpX*forkW/2;
+      const f4y = tipY  + perpY*forkW/2;
+      this._bayMid.beginPath();
+      this._bayMid.moveTo(f1x, f1y);
+      this._bayMid.lineTo(f2x, f2y);
+      this._bayMid.lineTo(f3x, f3y);
+      this._bayMid.lineTo(f4x, f4y);
+      this._bayMid.closePath();
+      this._bayMid.fill();
+    };
+    drawFork( forkSpread);
+    drawFork(-forkSpread);
+
+    // PALLET ON FORKS (if carrying)
+    if(b.palletInForklift){
+      const palCenterX = mastX + cos*12;
+      const palCenterY = mastY + sin*12 - 6;
+      const ppW = 34, ppH = 14;
+      // Pallet wood base — rotated rect
+      this._bayMid.fillStyle(0x8b4513, 1);
+      const p1x = palCenterX - cos*ppW/2 + perpX*ppH/2;
+      const p1y = palCenterY - sin*ppW/2 + perpY*ppH/2;
+      const p2x = palCenterX + cos*ppW/2 + perpX*ppH/2;
+      const p2y = palCenterY + sin*ppW/2 + perpY*ppH/2;
+      const p3x = palCenterX + cos*ppW/2 - perpX*ppH/2;
+      const p3y = palCenterY + sin*ppW/2 - perpY*ppH/2;
+      const p4x = palCenterX - cos*ppW/2 - perpX*ppH/2;
+      const p4y = palCenterY - sin*ppW/2 - perpY*ppH/2;
+      this._bayMid.beginPath();
+      this._bayMid.moveTo(p1x, p1y);
+      this._bayMid.lineTo(p2x, p2y);
+      this._bayMid.lineTo(p3x, p3y);
+      this._bayMid.lineTo(p4x, p4y);
+      this._bayMid.closePath();
+      this._bayMid.fill();
+      // Cargo box on top
+      this._bayMid.fillStyle(0xc8a060, 1);
+      const cbW = 30, cbH = 11;
+      const cbcx = palCenterX, cbcy = palCenterY - 9;
+      const c1x = cbcx - cos*cbW/2 + perpX*cbH/2;
+      const c1y = cbcy - sin*cbW/2 + perpY*cbH/2;
+      const c2x = cbcx + cos*cbW/2 + perpX*cbH/2;
+      const c2y = cbcy + sin*cbW/2 + perpY*cbH/2;
+      const c3x = cbcx + cos*cbW/2 - perpX*cbH/2;
+      const c3y = cbcy + sin*cbW/2 - perpY*cbH/2;
+      const c4x = cbcx - cos*cbW/2 - perpX*cbH/2;
+      const c4y = cbcy - sin*cbW/2 - perpY*cbH/2;
+      this._bayMid.beginPath();
+      this._bayMid.moveTo(c1x, c1y);
+      this._bayMid.lineTo(c2x, c2y);
+      this._bayMid.lineTo(c3x, c3y);
+      this._bayMid.lineTo(c4x, c4y);
+      this._bayMid.closePath();
+      this._bayMid.fill();
+    }
+
+    // Direction indicator (subtle cone of light forward)
+    if(b.forklift.mounted){
+      this._bayMid.fillStyle(0xffff99, 0.10);
+      this._bayMid.beginPath();
+      this._bayMid.moveTo(fx + cos*18, fy + sin*18);
+      this._bayMid.lineTo(fx + cos*55 - sin*18, fy + sin*55 + cos*18);
+      this._bayMid.lineTo(fx + cos*55 + sin*18, fy + sin*55 - cos*18);
+      this._bayMid.closePath();
+      this._bayMid.fill();
+    }
+
+    // Prompt flash (red tint when wrong action)
+    if(b.promptFlash > 0){
+      this._bayPrompt.setStyle({ fill: '#ff8866' });
+    } else {
+      this._bayPrompt.setStyle({ fill: '#ffffff' });
+    }
   }
 
   // ── INTERACTION ────────────────────────────────────────────────────────────
