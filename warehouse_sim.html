@@ -3081,6 +3081,7 @@ class GameScene extends Phaser.Scene {
     if(this._bayUpdateLoop){ this._bayUpdateLoop.remove(); this._bayUpdateLoop = null; }
     if(this._bayKeyHandler){ window.removeEventListener('keydown', this._bayKeyHandler); this._bayKeyHandler = null; }
     if(this._bayKeyUpHandler){ window.removeEventListener('keyup', this._bayKeyUpHandler); this._bayKeyUpHandler = null; }
+    if(this._bayClickHandler){ this.input.off('pointerdown', this._bayClickHandler); this._bayClickHandler = null; }
     ['_bayBg','_bayMid','_bayFg','_bayTitle','_bayPrompt','_bayPalletTxt','_bayQuit','_bayRageQuit','_bayJamesTxt','_bayTapE','_bayDimOverlay'].forEach(k=>{
       if(this[k] && this[k].destroy){ this[k].destroy(); }
       this[k] = null;
@@ -3202,6 +3203,14 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(106).setInteractive();
     this._bayTapE.on('pointerdown', ()=>{ this._bayKeys.e = true; });
 
+    // Left-click anywhere in the bay scene = grab / drop pallet (same as E)
+    this._bayClickHandler = (pointer)=>{
+      if(!STATE.miniGameActive || !this._bay) return;
+      if(pointer.button !== 0) return; // left mouse only
+      this._bayKeys.e = true;
+    };
+    this.input.on('pointerdown', this._bayClickHandler);
+
     // Keyboard state
     this._bayKeys = { up:false, down:false, left:false, right:false, e:false, space:false };
     this._bayKeyHandler = (e)=>{
@@ -3275,7 +3284,7 @@ class GameScene extends Phaser.Scene {
         b.forklift.mounted = true;
         b.phase = 'driving';
         SFX.hit && SFX.hit(1);
-        this._bayPrompt.setText('🚜 WASD to drive · 🅴 to grab a pallet from the truck');
+        this._bayPrompt.setText('🚜 WASD to drive · 🅴 or LEFT-CLICK to grab a pallet');
       }
     }
     else if(b.phase === 'driving' || b.phase === 'carrying'){
