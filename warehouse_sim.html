@@ -111,6 +111,7 @@ const STATE = {
   groupRoastDone: false,    // group roast already fired this shift
   groupRoastActive: false,  // mid-roast right now
   jamesSmokeParty: false,   // James personally pulled the whole crew outside
+  smokeChatOpen: false,     // smoke session chat panel is visible
   jeffAskTimer: 0,
   jeffAskTarget: null,
 };
@@ -799,6 +800,9 @@ class GameScene extends Phaser.Scene {
     // Message log
     this.msgLog = [];
     this.createMessageLog();
+
+    // Smoke chat session panel
+    this.createSmokeChat();
 
     // Floating text pool
     this.floatTexts = [];
@@ -1667,7 +1671,10 @@ class GameScene extends Phaser.Scene {
     this.dlgCloseTxt = this.add.text(GW-20, GH-20, '[ESC] Close', {
       fontSize:'10px', fill:'rgba(255,255,255,0.4)', fontFamily:'monospace'
     }).setOrigin(1,1).setScrollFactor(0).setDepth(82).setVisible(false);
-    this.input.keyboard.on('keydown-ESC', ()=> this.closeDialogue());
+    this.input.keyboard.on('keydown-ESC', ()=>{
+      this.closeDialogue();
+      if(STATE.smokeChatOpen) this.closeSmokeChat();
+    });
   }
 
   openDialogue(npc){
@@ -2578,11 +2585,172 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── SMOKE CHAT SESSION ────────────────────────────────────────────────────
+  createSmokeChat(){
+    const PX = GW - 262, PY = 60, PW = 258;
+    this._scPX = PX; this._scPY = PY; this._scPW = PW;
+
+    this.scBg = this.add.graphics().setScrollFactor(0).setDepth(72).setVisible(false);
+
+    this.scHeaderTxt = this.add.text(PX + PW/2, PY + 5, '🚬  SMOKE BREAK  🚬', {
+      fontSize:'12px', fill:'#aaffaa', fontFamily:'monospace', fontStyle:'bold'
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(73).setVisible(false);
+
+    this.scWhoTxt = this.add.text(PX + 6, PY + 22, '', {
+      fontSize:'9px', fill:'#88cc88', fontFamily:'monospace', wordWrap:{ width: PW - 12 }
+    }).setScrollFactor(0).setDepth(73).setVisible(false);
+
+    // Pre-allocate message slots (10 slots)
+    this.scMsgPool = [];
+    for(let i = 0; i < 10; i++){
+      const t = this.add.text(PX + 6, PY + 44 + i * 44, '', {
+        fontSize:'11px', fill:'#ffffff', fontFamily:'monospace',
+        wordWrap:{ width: PW - 12 }, lineSpacing: 1
+      }).setScrollFactor(0).setDepth(73).setVisible(false).setAlpha(0);
+      this.scMsgPool.push(t);
+    }
+
+    this.scLeaveTxt = this.add.text(PX + PW/2, GH - 14, '[ESC] Leave smoke area', {
+      fontSize:'9px', fill:'rgba(150,255,150,0.45)', fontFamily:'monospace'
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(73).setVisible(false);
+
+    this._scMessages = [];
+    this._scParticleTimer = null;
+  }
+
+  openSmokeChat(){
+    if(STATE.smokeChatOpen) return;
+    STATE.smokeChatOpen = true;
+    this._scMessages = [];
+
+    const PX = this._scPX, PY = this._scPY, PW = this._scPW;
+
+    // Draw panel background
+    this.scBg.clear();
+    this.scBg.fillStyle(0x050c08, 0.91);
+    this.scBg.fillRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 10);
+    this.scBg.lineStyle(1.5, 0x44ff88, 0.35);
+    this.scBg.strokeRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 10);
+    this.scBg.lineStyle(1, 0x44ff88, 0.2);
+    this.scBg.lineBetween(PX, PY + 40, PX + PW, PY + 40);
+    this.scBg.setVisible(true);
+
+    // Build who's-here list
+    const atSmoke = (id) => {
+      const npc = this.npcs.find(n=>n.id===id);
+      if(!npc) return false;
+      const z = ZONES.outside;
+      return npc.sprite.x >= z.x && npc.sprite.x <= z.x+z.w &&
+             npc.sprite.y >= z.y && npc.sprite.y <= z.y+z.h;
+    };
+    const NPC_SC_COLORS = { james:'#ffa01e', chance:'#44aaff', lee:'#ff80c0', chandler:'#bbbbbb', drew:'#cc88ff', jeff:'#44dd44' };
+    const hereNames = ['james','lee','chance','chandler','drew','jeff']
+      .filter(id => atSmoke(id) || STATE.smokingNPCs.includes(id))
+      .map(id =>{ const n = this.npcs.find(x=>x.id===id); return n ? n.name : id; });
+    this.scWhoTxt.setText(hereNames.length ? `👥 ${hereNames.join('  ')}` : '👤 Just you out here.').setVisible(true);
+    this.scHeaderTxt.setVisible(true);
+    this.scLeaveTxt.setVisible(true);
+
+    // Clear message pool
+    this.scMsgPool.forEach(t => t.setText('').setVisible(false).setAlpha(0));
+
+    // Zoom camera into smoke area
+    this.cameras.main.stopFollow();
+    this.cameras.main.zoomTo(1.8, 700, 'Quad.easeInOut');
+    this.cameras.main.pan(160, 90, 700, 'Quad.easeInOut');
+
+    // Smoke particle emitter
+    if(this._scParticleTimer) this._scParticleTimer.remove();
+    this._scParticleTimer = this.time.addEvent({
+      delay: 650, callback: this._spawnSmokeParticle, callbackScope: this, loop: true
+    });
+
+    // Post a welcome line
+    this.time.delayedCall(800, ()=>{
+      this.postSmokeChat('player', '*steps outside and lights up* 💨');
+    });
+  }
+
+  closeSmokeChat(){
+    if(!STATE.smokeChatOpen) return;
+    STATE.smokeChatOpen = false;
+    this.scBg.setVisible(false);
+    this.scHeaderTxt.setVisible(false);
+    this.scWhoTxt.setVisible(false);
+    this.scLeaveTxt.setVisible(false);
+    this.scMsgPool.forEach(t => t.setVisible(false));
+    // Restore camera
+    this.cameras.main.stopFollow();
+    this.cameras.main.zoomTo(GW < 600 ? 0.7 : 0.85, 500, 'Quad.easeInOut');
+    this.cameras.main.pan(this.player.x, this.player.y, 500, 'Quad.easeInOut');
+    // Re-attach follow
+    this.time.delayedCall(520, ()=>{
+      this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    });
+    if(this._scParticleTimer){ this._scParticleTimer.remove(); this._scParticleTimer = null; }
+  }
+
+  postSmokeChat(id, text){
+    if(!STATE.smokeChatOpen) return;
+    const NPC_SC_COLORS = {
+      james:'#ffa01e', chance:'#44aaff', lee:'#ff80c0',
+      chandler:'#bbbbbb', drew:'#cc88ff', jeff:'#44dd44',
+      todd:'#88aaff', pam:'#ffcc44', player:'#aaffaa'
+    };
+    const npc = this.npcs ? this.npcs.find(n=>n.id===id) : null;
+    const name = npc ? npc.name : (id === 'player' ? STATE.playerName || 'You' : id);
+    const color = NPC_SC_COLORS[id] || '#cccccc';
+
+    this._scMessages.push({ name, color, text });
+    if(this._scMessages.length > 10) this._scMessages.shift();
+    this._redrawSmokeChat();
+
+    // Animate newest slot sliding in
+    const newest = this.scMsgPool[this._scMessages.length - 1];
+    if(newest){
+      newest.setAlpha(0);
+      this.tweens.add({ targets: newest, alpha: 1, duration: 280, ease: 'Quad.Out' });
+    }
+  }
+
+  _redrawSmokeChat(){
+    this.scMsgPool.forEach(t => t.setVisible(false).setAlpha(0));
+    const msgs = this._scMessages;
+    msgs.forEach((msg, i) => {
+      const slot = this.scMsgPool[i];
+      if(!slot) return;
+      const age = msgs.length - 1 - i; // 0 = newest
+      const alpha = Math.max(0.35, 1 - age * 0.11);
+      slot.setText(`${msg.name} › ${msg.text}`)
+          .setStyle({ fill: msg.color, fontSize:'11px', fontFamily:'monospace', wordWrap:{ width: this._scPW - 12 } })
+          .setAlpha(alpha)
+          .setVisible(true);
+    });
+  }
+
+  _spawnSmokeParticle(){
+    const gfx = this.add.graphics().setDepth(6);
+    const x = 108 + Math.random() * 110;
+    const y = 72 + Math.random() * 44;
+    const r = 3 + Math.random() * 5;
+    gfx.fillStyle(0x99bb99, 0.22);
+    gfx.fillCircle(0, 0, r);
+    gfx.setPosition(x, y);
+    this.tweens.add({
+      targets: gfx, y: y - 50, alpha: 0, scaleX: 2.8, scaleY: 2.8,
+      duration: 2800 + Math.random() * 1400, ease: 'Quad.Out',
+      onComplete: ()=> gfx.destroy()
+    });
+  }
+
   // ── SMOKE AREA MENU ───────────────────────────────────────────────────────
   showSmokeAreaMenu(){
     if(STATE.dialogueActive || STATE.miniGameActive || STATE.groupRoastActive) return;
 
     const SMOKE_X = 160, SMOKE_Y = 90; // centre of smoke area
+
+    // Open zoomed-in chat session
+    this.openSmokeChat();
 
     // Helper: is an NPC currently in the outside zone (smoke area)?
     const atSmoke = (id) => {
@@ -2682,6 +2850,8 @@ class GameScene extends Phaser.Scene {
       if(!STATE.smokeCalledNPCs.includes(id)) STATE.smokeCalledNPCs.push(id);
       this.time.delayedCall(300, ()=>{ this.showBubble(npc, line); });
       this.floatText(this.player.x, this.player.y, `📞 ${npc.name} is heading out!`, '#aaffaa');
+      // Also log to smoke chat
+      this.time.delayedCall(320, ()=> this.postSmokeChat(id, line));
     };
 
     if(choiceId === 'callChandler'){
@@ -2691,6 +2861,7 @@ class GameScene extends Phaser.Scene {
         '"This feels like a trap. I\'m coming anyway because I need air."',
         '"If Chance is out there I\'m turning around immediately."',
       ];
+      this.postSmokeChat('player', '📞 *texts Chandler* "Aye come outside for a sec"');
       sendToSmoke('chandler', Phaser.Math.RND.pick(lines));
       // Add to follow state so he walks there
       if(!STATE.smokingNPCs.includes('chandler')) STATE.smokingNPCs.push('chandler');
@@ -2702,6 +2873,7 @@ class GameScene extends Phaser.Scene {
         '"Nobody else knows about this. We clear?"',
         '"I\'ll be right there. Professionally."',
       ];
+      this.postSmokeChat('player', '📞 *texts James* "Psst — smoke break?"');
       sendToSmoke('james', Phaser.Math.RND.pick(lines));
       if(!STATE.smokingNPCs.includes('james')) STATE.smokingNPCs.push('james');
     }
@@ -2712,6 +2884,7 @@ class GameScene extends Phaser.Scene {
         '"Who else is out there? Actually it doesn\'t matter. I\'m coming."',
         '"The outside? With PEOPLE? Perfect."',
       ];
+      this.postSmokeChat('player', '📞 *waves Chance over* "Bro come outside"');
       sendToSmoke('chance', Phaser.Math.RND.pick(lines));
       if(!STATE.smokingNPCs.includes('chance')) STATE.smokingNPCs.push('chance');
     }
@@ -2722,6 +2895,7 @@ class GameScene extends Phaser.Scene {
         '"Give me thirty seconds. I\'m coming."',
         '"ABSOLUTELY. I need out of this building."',
       ];
+      this.postSmokeChat('player', '📞 *waves at Lee* "Psst — outside?"');
       sendToSmoke('lee', Phaser.Math.RND.pick(lines));
       STATE.leeFollowing = true;
       const lee = this.npcs.find(n=>n.id==='lee');
@@ -2743,6 +2917,8 @@ class GameScene extends Phaser.Scene {
       STATE.energy = Math.min(100, STATE.energy + 20);
       STATE.suspicion = Math.max(0, STATE.suspicion - 8);
       this.floatText(this.player.x, this.player.y, '💨 Chilled out. Energy +20, Suspicion -8', '#aaffaa');
+      this.postSmokeChat('player', '*leans back and exhales slowly* 💨 damn this is nice');
+      this.time.delayedCall(6000, ()=>{ if(STATE.smokeChatOpen && !STATE.dialogueActive) this.closeSmokeChat(); });
     }
   }
 
@@ -2769,6 +2945,7 @@ class GameScene extends Phaser.Scene {
     const beat = (ms, npc, text, floatTxt='', floatCol='#ff6a00') => {
       this.time.delayedCall(ms, ()=>{
         if(npc) this.showBubble(npc, text);
+        if(npc) this.postSmokeChat(npc.id, text);
         if(floatTxt) this.floatText(160, 50, floatTxt, floatCol);
       });
     };
@@ -2797,6 +2974,7 @@ class GameScene extends Phaser.Scene {
     this.time.delayedCall(32000, ()=>{
       STATE.miniGameActive   = false;
       STATE.groupRoastActive = false;
+      if(STATE.smokeChatOpen) this.closeSmokeChat();
       STATE.score += 200;
       STATE.suspicion = Math.max(0, STATE.suspicion - 15);
       STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 20);
@@ -2822,6 +3000,7 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(ms, ()=>{
         const n = this.npcs.find(x=>x.id===id);
         if(n) this.showBubble(n, text);
+        this.postSmokeChat(id, text);
       });
     };
     // Helper: send an NPC walking to smoke
@@ -2874,6 +3053,7 @@ class GameScene extends Phaser.Scene {
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms, ()=>{
         const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+        this.postSmokeChat(id, text);
       });
     };
     this.floatText(160, 48, '"So about Chandler... the briefcase though 🍞"', '#ffd700');
@@ -2901,6 +3081,7 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(15500, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: Crew Mentality!', '#ffa01e'));
     }
+    this.time.delayedCall(20000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── PARTY OPTION: Call Drew fat ────────────────────────────────────────────
@@ -2908,6 +3089,7 @@ class GameScene extends Phaser.Scene {
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms, ()=>{
         const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+        this.postSmokeChat(id, text);
       });
     };
     this.floatText(160, 48, '"Drew... looking a little THICK bro 👀"', '#9955cc');
@@ -2929,6 +3111,7 @@ class GameScene extends Phaser.Scene {
     STATE.score += 60; STATE.drawerDebt += 5;
     this.time.delayedCall(1200, ()=>
       this.floatText(160, 70, '🍔 +60 pts — Drew is having an actual breakdown', '#9955cc'));
+    this.time.delayedCall(21000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── PARTY OPTION: Yell EGGROLL at Lee ─────────────────────────────────────
@@ -2936,6 +3119,7 @@ class GameScene extends Phaser.Scene {
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms, ()=>{
         const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+        this.postSmokeChat(id, text);
       });
     };
     this.floatText(160, 44, '🥡  " E G G R O L L ! ! ! "  🥡', '#ffaa00');
@@ -2966,6 +3150,7 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(19000, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: EGGROLLLLL!!! 🥡', '#ffaa00'));
     }
+    this.time.delayedCall(23000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
@@ -4167,6 +4352,12 @@ class GameScene extends Phaser.Scene {
 
     // Mini map (update if visible)
     if(this.miniMapVisible) this.drawMiniMap();
+
+    // Auto-close smoke session when player walks away
+    if(STATE.smokeChatOpen && !STATE.dialogueActive && !STATE.miniGameActive){
+      const _sd = Phaser.Math.Distance.Between(this.player.x, this.player.y, 160, 90);
+      if(_sd > 290) this.closeSmokeChat();
+    }
 
     // Peak rush score bonus
     if(this._peakRush && this.player.body.speed > 50) STATE.score++;
