@@ -110,6 +110,7 @@ const STATE = {
   smokeCalledNPCs: [],      // NPCs called to smoke area this session
   groupRoastDone: false,    // group roast already fired this shift
   groupRoastActive: false,  // mid-roast right now
+  jamesSmokeParty: false,   // James personally pulled the whole crew outside
 };
 
 // Zone layout
@@ -369,6 +370,119 @@ const JAMES_NUCLEAR = [
   "You think I don't know about the things you do?! I have NOTES. DETAILED NOTES.",
   "I am going to write an incident report so detailed it will become a CASE STUDY.",
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SFX ENGINE  —  Web Audio API, zero external deps
+// ═══════════════════════════════════════════════════════════════════════════
+const SFX = (() => {
+  let ctx = null;
+  // Unlock on first gesture
+  const unlock = () => {
+    if(!ctx){ ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    if(ctx.state === 'suspended') ctx.resume();
+  };
+  document.addEventListener('pointerdown', unlock, { once: true });
+  document.addEventListener('keydown',     unlock, { once: true });
+
+  function tone(type, freq, vol, dur, delay=0, freqEnd=null){
+    if(!ctx) return;
+    try {
+      const t = ctx.currentTime + delay;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      if(freqEnd) o.frequency.exponentialRampToValueAtTime(freqEnd, t + dur * 0.8);
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.start(t); o.stop(t + dur + 0.01);
+    } catch(e){}
+  }
+
+  function noise(vol, dur, delay=0){
+    if(!ctx) return;
+    try {
+      const t = ctx.currentTime + delay;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1);
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'bandpass'; filt.frequency.value = 200; filt.Q.value = 0.5;
+      src.buffer = buf;
+      src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      src.start(t); src.stop(t + dur + 0.01);
+    } catch(e){}
+  }
+
+  return {
+    // Pallet hit — deep thud with rising combo pitch
+    hit(combo=1){
+      const f = Math.min(120 + combo * 18, 280);
+      tone('triangle', f,    0.5, 0.12);
+      tone('sine',     f*0.5, 0.3, 0.18);
+      noise(0.15, 0.06);
+    },
+    // PERFECT hit (first 40% of window) — bright chime
+    perfect(){
+      tone('sine', 880,  0.3, 0.18);
+      tone('sine', 1320, 0.2, 0.22, 0.05);
+    },
+    // Miss — harsh buzz
+    miss(){
+      tone('sawtooth', 160, 0.4, 0.15, 0, 80);
+      noise(0.2, 0.12);
+    },
+    // Combo milestone ding (every 5 combo)
+    comboDing(n){
+      const freqs = [523, 659, 784, 988, 1175, 1397];
+      const f = freqs[Math.min(Math.floor(n/5), freqs.length-1)];
+      tone('sine', f,    0.25, 0.3);
+      tone('sine', f*1.5, 0.12, 0.25, 0.08);
+    },
+    // Short UI click
+    click(){
+      tone('square', 600, 0.12, 0.04, 0, 400);
+    },
+    // Dialogue open pop
+    pop(){
+      tone('sine', 480, 0.18, 0.08);
+      tone('sine', 720, 0.1,  0.06, 0.04);
+    },
+    // Achievement fanfare
+    achievement(){
+      [523,659,784,1047].forEach((f,i) => tone('sine', f, 0.28, 0.3, i*0.09));
+    },
+    // Truck horn (game start / truck arrival)
+    horn(){
+      tone('sawtooth', 110, 0.45, 0.4);
+      tone('sawtooth',  90, 0.35, 0.55, 0.3);
+    },
+    // Shift-end / completion fanfare
+    shiftDone(){
+      [392,494,587,784].forEach((f,i) => tone('sine', f, 0.3, 0.4, i*0.12));
+    },
+    // Soft footstep (called on movement)
+    step(){
+      noise(0.06, 0.04);
+      tone('triangle', 55 + Math.random()*20, 0.08, 0.05);
+    },
+    // James shout (sawtooth burst)
+    james(){
+      tone('sawtooth', 220, 0.4, 0.12);
+      tone('sawtooth', 180, 0.3, 0.18, 0.08);
+    },
+    // Danger pulse (suspicion rising)
+    danger(){
+      tone('sine', 180, 0.3, 0.15, 0, 220);
+    },
+  };
+})();
 
 // ── PERSON SPRITE GENERATOR ────────────────────────────────────────────────
 function makePersonTexture(scene, key, app){
@@ -1307,18 +1421,39 @@ class GameScene extends Phaser.Scene {
         if(STATE.smokingNPCs.includes('james')){
           response = '"I\'m already out there! What are you doing still in here?! GO."';
         } else if(STATE.rapportJames >= 2){
-          const smokeYes = [
-            '"...yeah okay. Five minutes. Nobody saw this. This never happened."',
-            '"You know what? Fine. FIVE minutes. I never agreed to this. Let\'s go."',
-            '"I swear if Pam sees us I will deny everything. Including knowing you. Let\'s go."',
-            '"Off the record — yes. On the record — I am doing a perimeter check. Got it?"',
-            '"Don\'t tell anyone. I mean it. I will know if you told anyone."',
-          ];
-          response = Phaser.Math.RND.pick(smokeYes);
-          energyChange = 20; scoreChange = 50; STATE.rapportJames++;
-          STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 25);
-          STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'james'])];
-          this.floatText(this.player.x, this.player.y, '🔥 +50 pts! James is actually rolling! 🚬', '#ffa01e');
+          if(Math.random() < 0.5){
+            // ── 50% YES — James goes AND drags the whole crew ─────────────────
+            const smokeYes = [
+              '"...yeah okay. Five minutes. Nobody saw this. This never happened. Actually — hold on."',
+              '"You know what? Fine. FIVE minutes. And I\'m pulling everyone. Don\'t ask why."',
+              '"Off the record — yes. And I\'m making it a whole thing. Just because."',
+              '"Sure. I\'m going. And everybody else is going. I don\'t know why I\'m doing this."',
+              '"...I said I wouldn\'t. But I am. And I\'m bringing the entire crew. Don\'t question it."',
+            ];
+            response = Phaser.Math.RND.pick(smokeYes);
+            energyChange = 20; scoreChange = 75; STATE.rapportJames++;
+            STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 25);
+            if(!STATE.jamesSmokeParty){
+              this.floatText(this.player.x, this.player.y, '🔥 +75 pts! JAMES IS PULLING THE WHOLE CREW! 🚬', '#ffa01e');
+              this.time.delayedCall(2600, ()=> this.triggerJamesSmokeCrew(npc));
+            } else {
+              STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'james'])];
+              this.floatText(this.player.x, this.player.y, '🔥 +75 pts! James is rolling! 🚬', '#ffa01e');
+            }
+          } else {
+            // ── 50% NOT TODAY ─────────────────────────────────────────────────
+            const smokeMaybe = [
+              '"...not today. Ask me again. I\'m never in a better mood, but ask anyway."',
+              '"I have sixteen things on this clipboard. \'Smoke break\' is not one of them. Not today."',
+              '"I WOULD. I genuinely would right now. But the dock — look, not today."',
+              '"Not this shift. Don\'t ask me why. Just... not this one."',
+              '"I\'ll pretend you didn\'t ask. You pretend I didn\'t almost say yes. Deal."',
+              '"The answer is no today. Tomorrow\'s different. Probably not. But could be."',
+            ];
+            response = Phaser.Math.RND.pick(smokeMaybe);
+            scoreChange = 5;
+            this.floatText(npc.sprite.x, npc.sprite.y-40, '🎲 Not today... try again!', '#aaaaff');
+          }
         } else {
           const smokeNo = [
             '"Excuse me?! EXCUSE ME?! Back to work."',
@@ -1928,22 +2063,28 @@ class GameScene extends Phaser.Scene {
     const chanceHere   = atSmoke('chance');
     const leeHere      = atSmoke('lee') || STATE.leeFollowing;
 
-    // Build dynamic choices
-    const choices = [];
-    if(!chandlerHere) choices.push({ label:'📞 Call Chandler out here', id:'callChandler' });
-    if(!jamesHere)    choices.push({ label:'📞 Call James out here',    id:'callJames'    });
-    if(!chanceHere)   choices.push({ label:'📞 Call Chance out here',   id:'callChance'   });
-    if(!leeHere)      choices.push({ label:'📞 Call Lee out here',      id:'callLee'      });
-
-    // Group roast unlocked when Chandler is here + at least 1 other person
+    // Pre-calculate roast + party states
     const others = [jamesHere, chanceHere, leeHere].filter(Boolean).length;
     const roastReady = chandlerHere && others >= 1 && !STATE.groupRoastDone;
     const roastAlmostReady = !chandlerHere && (jamesHere || chanceHere || leeHere);
+    const partyMode = STATE.jamesSmokeParty && jamesHere; // James pulled everyone out
 
-    if(roastReady){
-      choices.unshift({ label:'🔥 GROUP ROAST Chandler — DO IT', id:'groupRoast', hot:true });
+    // Build dynamic choices
+    const choices = [];
+    if(partyMode){
+      // James's crew assembled — unlock the rowdy options
+      choices.push({ label:'🍞 Talk shit about Chandler',  id:'partyChandler',   hot:true });
+      choices.push({ label:'🍔 Call Drew fat',             id:'partyDrewFat',    hot:true });
+      choices.push({ label:'🥡 Yell EGGROLL at Lee 😈',   id:'partyLeeEggroll', hot:true });
+      choices.push({ label:'💨 Just vibe out here',        id:'chill' });
+    } else {
+      if(!chandlerHere) choices.push({ label:'📞 Call Chandler out here', id:'callChandler' });
+      if(!jamesHere)    choices.push({ label:'📞 Call James out here',    id:'callJames'    });
+      if(!chanceHere)   choices.push({ label:'📞 Call Chance out here',   id:'callChance'   });
+      if(!leeHere)      choices.push({ label:'📞 Call Lee out here',      id:'callLee'      });
+      if(roastReady)    choices.unshift({ label:'🔥 GROUP ROAST Chandler — DO IT', id:'groupRoast', hot:true });
+      choices.push({ label:'💨 Just chill here (+energy)', id:'chill' });
     }
-    choices.push({ label:'💨 Just chill here (+energy)', id:'chill' });
 
     // ── BUILD THE DIALOGUE UI ──
     STATE.dialogueActive = true;
@@ -1957,11 +2098,14 @@ class GameScene extends Phaser.Scene {
 
     // Header — use the portrait area for the title
     let headerTxt = '🚬 Smoke\nArea';
-    if(roastReady) headerTxt = '🔥 ROAST\nTIME 🔥';
+    if(partyMode)             headerTxt = '🔥 THE\nCREW 🔥';
+    else if(roastReady)       headerTxt = '🔥 ROAST\nTIME 🔥';
     else if(roastAlmostReady) headerTxt = '🚬 Call\nChandler!';
-    this.dlgPortrait.setFillStyle(roastReady ? 0xff3300 : 0x116611).setVisible(true);
+    const _portColor    = partyMode ? 0xff6600 : roastReady ? 0xff3300 : 0x116611;
+    const _portTxtColor = (partyMode || roastReady) ? '#ff6a00' : '#aaffaa';
+    this.dlgPortrait.setFillStyle(_portColor).setVisible(true);
     this.dlgPortraitTxt.setText(headerTxt)
-      .setStyle({fill: roastReady ? '#ff6a00':'#aaffaa', fontSize:'11px'}).setVisible(true);
+      .setStyle({fill: _portTxtColor, fontSize:'11px'}).setVisible(true);
 
     // Who's here
     const hereList = [];
@@ -1969,8 +2113,10 @@ class GameScene extends Phaser.Scene {
     if(jamesHere)    hereList.push('James 📋');
     if(chanceHere)   hereList.push('Chance 🧢');
     if(leeHere)      hereList.push('Lee 💕');
-    const hereTxt = hereList.length ? 'Here now: '+hereList.join(', ') : 'Just you out here.';
-    this.dlgText.setText(hereTxt).setStyle({fill:'#aaffaa'}).setVisible(true);
+    const hereTxt = partyMode
+      ? '🔥 James\'s crew is out here. Time to be TERRIBLE. 🔥'
+      : (hereList.length ? 'Here now: '+hereList.join(', ') : 'Just you out here.');
+    this.dlgText.setText(hereTxt).setStyle({fill: partyMode ? '#ff6a00' : '#aaffaa'}).setVisible(true);
 
     // Hide unused buttons first
     this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
@@ -2049,6 +2195,15 @@ class GameScene extends Phaser.Scene {
     else if(choiceId === 'groupRoast'){
       this.triggerGroupRoast();
     }
+    else if(choiceId === 'partyChandler'){
+      this.triggerPartyChandler();
+    }
+    else if(choiceId === 'partyDrewFat'){
+      this.triggerPartyDrewFat();
+    }
+    else if(choiceId === 'partyLeeEggroll'){
+      this.triggerPartyLeeEggroll();
+    }
     else if(choiceId === 'chill'){
       STATE.energy = Math.min(100, STATE.energy + 20);
       STATE.suspicion = Math.max(0, STATE.suspicion - 8);
@@ -2118,6 +2273,164 @@ class GameScene extends Phaser.Scene {
           this.floatText(160, 100, '🏆 ACHIEVEMENT: Roast Master!', '#ffd700'));
       }
     });
+  }
+
+  // ── JAMES PULLS THE WHOLE CREW ─────────────────────────────────────────────
+  triggerJamesSmokeCrew(jamesNPC){
+    if(STATE.jamesSmokeParty) return;
+    STATE.jamesSmokeParty = true;
+
+    const SX = 160, SY = 90; // smoke area centre
+
+    // Helper: schedule a bubble on an NPC
+    const beat = (ms, id, text) => {
+      this.time.delayedCall(ms, ()=>{
+        const n = this.npcs.find(x=>x.id===id);
+        if(n) this.showBubble(n, text);
+      });
+    };
+    // Helper: send an NPC walking to smoke
+    const toSmoke = (ms, id, ox=0, oy=0) => {
+      this.time.delayedCall(ms, ()=>{
+        const n = this.npcs.find(x=>x.id===id);
+        if(!n) return;
+        n.targetX = SX + ox;
+        n.targetY = SY + oy;
+        STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, id])];
+      });
+    };
+
+    // James announces it
+    this.cameras.main.shake(300, 0.01);
+    this.floatText(this.player.x, this.player.y - 50, '🔥 JAMES IS CALLING EVERYONE OUT 🔥', '#ff6600');
+
+    beat(400,  'james',    '"Alright. EVERYBODY. Outside. NOW. Don\'t ask questions."');
+    beat(2000, 'lee',      '"...Wait — is James actually— OH MY GOD I\'M COMING."');
+    beat(2900, 'chance',   '"Did James just— bro. I\'ve been WAITING for this day."');
+    beat(3900, 'chandler', '"...when James says outside, do I have to go? I feel like I have to go."');
+    beat(4900, 'drew',     '"Wait is there food outside?? I\'m going either way."');
+    beat(6000, 'james',    '"I said NOW. Why are you all still standing INSIDE."');
+
+    // Send them all walking
+    toSmoke(2400, 'lee',      -45,  12);
+    toSmoke(3300, 'chance',    55,  -8);
+    toSmoke(4300, 'chandler',  10,  32);
+    toSmoke(5300, 'drew',     -22,  26);
+    toSmoke(0,    'james',     32,  18);
+
+    this.time.delayedCall(7200, ()=>{
+      this.floatText(SX, 50, '🚬 THE WHOLE CREW IS HEADING OUTSIDE', '#ffd700');
+    });
+    this.time.delayedCall(9500, ()=>{
+      beat(0, 'james', '"This is a one-time thing. Nobody mention this in the building."');
+      this.floatText(SX, 70, '🔥 James\'s Crew assembled! New smoke options now available!', '#ff6600');
+    });
+
+    // Achievement
+    if(!STATE.achievements.includes('james_crew')){
+      STATE.achievements.push('james_crew');
+      this.time.delayedCall(11000, ()=>
+        this.floatText(SX, 90, '🏆 ACHIEVEMENT: James\'s Inner Circle!', '#ffd700'));
+    }
+  }
+
+  // ── PARTY OPTION: Talk shit about Chandler ─────────────────────────────────
+  triggerPartyChandler(){
+    const beat = (ms, id, text) => {
+      this.time.delayedCall(ms, ()=>{
+        const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+      });
+    };
+    this.floatText(160, 48, '"So about Chandler... the briefcase though 🍞"', '#ffd700');
+    this.cameras.main.shake(150, 0.004);
+
+    beat(800,  'chance',   '"FINALLY. SOMEBODY SAID IT. Out loud. In the open air."');
+    beat(2100, 'james',    '"I\'m not going to comment on this. ...The briefcase IS a lot though."');
+    beat(3500, 'lee',      '"Chandler — I say this with love — what is literally IN the briefcase."');
+    beat(4900, 'chandler', '"I hate all of you. Individually and collectively."');
+    beat(6300, 'chance',   '"He said hate. His eye is twitching. That\'s love. That\'s love right there."');
+    beat(7700, 'james',    '"I\'m staying out of this. ...The briefcase still undermines your authority though."');
+    beat(9100, 'chandler', '"JAMES! You were supposed to be neutral! You\'re the MANAGER!"');
+    beat(10500,'james',    '"I\'m commenting professionally. Professionally, the briefcase is a lot."');
+    beat(11900,'chance',   '"PROFESSIONALLY. He said PROFESSIONALLY. Somebody write that down."');
+    beat(13300,'lee',      '"This is the best smoke break I have ever had in my entire career here."');
+    beat(14600,'drew',     '"I wasn\'t even invited to this. But I support it fully. Can I borrow $3?"');
+
+    STATE.score += 80; STATE.chandlerCallCount += 2;
+    STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 15);
+    this.time.delayedCall(1000, ()=>
+      this.floatText(160, 70, '🍞 +80 pts — Chandler roasted by the whole crew!', '#ffd700'));
+
+    if(!STATE.achievements.includes('crew_roast')){
+      STATE.achievements.push('crew_roast');
+      this.time.delayedCall(15500, ()=>
+        this.floatText(160, 80, '🏆 ACHIEVEMENT: Crew Mentality!', '#ffa01e'));
+    }
+  }
+
+  // ── PARTY OPTION: Call Drew fat ────────────────────────────────────────────
+  triggerPartyDrewFat(){
+    const beat = (ms, id, text) => {
+      this.time.delayedCall(ms, ()=>{
+        const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+      });
+    };
+    this.floatText(160, 48, '"Drew... looking a little THICK bro 👀"', '#9955cc');
+    this.cameras.main.shake(150, 0.004);
+
+    beat(700,  'drew',    '"..."');
+    beat(1600, 'drew',    '"Bro. BRO. I don\'t EAT. I can\'t afford to eat. I am literally STARVING."');
+    beat(3100, 'chance',  '"He\'s not fat. He\'s financially inflamed. That\'s the medical term."');
+    beat(4500, 'lee',     '"WAIT. Did you just— to DREW?! He eats like two crackers a shift."');
+    beat(5800, 'james',   '"I am not here right now. I\'m looking at birds. I don\'t hear anything."');
+    beat(7200, 'drew',    '"I\'ve been BROKE-HUNGRY since Tuesday. Do you know what broke-hungry IS?!"');
+    beat(8700, 'chance',  '"Broke-hungry. I\'m coining that. That\'s mine now. Moving on."');
+    beat(10100,'drew',    '"I\'m going to need someone to lend me $5 after this. Emotional damages."');
+    beat(11500,'chandler','"...I feel bad. Genuinely. But I\'m also not lending him anything."');
+    beat(13000,'james',   '"Nobody is lending Drew money on company time. New policy. Effective now."');
+    beat(14500,'drew',    '"JAMES IS THAT A REAL POLICY?! IS THAT ON PAPER SOMEWHERE?!"');
+    beat(15800,'james',   '"It\'s on my clipboard. That\'s paper enough."');
+
+    STATE.score += 60; STATE.drawerDebt += 5;
+    this.time.delayedCall(1200, ()=>
+      this.floatText(160, 70, '🍔 +60 pts — Drew is having an actual breakdown', '#9955cc'));
+  }
+
+  // ── PARTY OPTION: Yell EGGROLL at Lee ─────────────────────────────────────
+  triggerPartyLeeEggroll(){
+    const beat = (ms, id, text) => {
+      this.time.delayedCall(ms, ()=>{
+        const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+      });
+    };
+    this.floatText(160, 44, '🥡  " E G G R O L L ! ! ! "  🥡', '#ffaa00');
+    this.cameras.main.shake(400, 0.014);
+
+    beat(550,  'lee',      '"..."');
+    beat(1400, 'lee',      '"...EXCUSE me???"');
+    beat(2600, 'lee',      '"WHO IN THE — WHAT — WHY WOULD YOU JUST SAY THAT—"');
+    beat(3900, 'chance',   '"I AM DECEASED. CALL MY FAMILY. TELL THEM I DIED HAPPY."');
+    beat(5200, 'james',    '"I don\'t know any of you. I\'m doing a perimeter check. Over here."');
+    beat(6500, 'chandler', '"I don\'t know whether to laugh or leave. I\'m going to do both."');
+    beat(7900, 'lee',      '"You are SO lucky I like you. SO. LUCKY. I cannot stress this enough."');
+    beat(9300, 'chance',   '"EGGROLL. That\'s your name now. Actually that\'s ALL of us. We\'re the Eggroll Crew."');
+    beat(10700,'james',    '"...this is a professional environment." *does not make eye contact*');
+    beat(12100,'lee',      '"JAMES! Say something! He just yelled EGGROLL at me in front of everyone!"');
+    beat(13500,'james',    '"I — I don\'t — the dock — I\'m going." *power-walks away*');
+    beat(15000,'chance',   '"James just RAGE-WALKED. I\'ve never seen him move that fast in my life."');
+    beat(16400,'drew',     '"Bro what did I walk into. Can I still borrow $3 or is the vibe off."');
+    beat(17800,'lee',      '"I\'m getting you back. I don\'t know when or how. But I AM."');
+
+    STATE.score += 100;
+    this.time.delayedCall(1000, ()=>
+      this.floatText(160, 70, '🥡 +100 pts — ABSOLUTE CHAOS. LEE IS UNHINGED.', '#ffaa00'));
+    this.cameras.main.flash(200, 255, 170, 0);
+
+    if(!STATE.achievements.includes('eggroll')){
+      STATE.achievements.push('eggroll');
+      this.time.delayedCall(19000, ()=>
+        this.floatText(160, 80, '🏆 ACHIEVEMENT: EGGROLLLLL!!! 🥡', '#ffaa00'));
+    }
   }
 
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
