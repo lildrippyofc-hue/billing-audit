@@ -135,13 +135,16 @@ const STATE = {
   beingChased: false,      // James/Marcus actively hunting player
   marcusAggression: 0,     // 0-100 how hot Marcus is on your trail
 
-  // Lee's clingy check-in behavior — she walks up unprompted asking for things
+  // Lee's check-in behavior — she walks up unprompted asking for things
   leeCheckInTimer:   20000, // ms until next time Lee approaches you
   leeCheckIns:       0,     // count of total check-ins this shift
   leeApproaching:    false, // currently walking toward player
   leeCheckInPick:    null,  // 'eggroll' | 'help' | 'gossip' for this visit
   eggrollAccepts:    0,     // times you walked TOWARD Lee when she offered
   eggrollDeclines:   0,     // times you walked AWAY when she offered
+  // Lee's curiosity wander — she roams the warehouse gathering intel
+  leeWanderTimer:    8000,  // ms until Lee picks next observation post
+  leeLastReport:     null,  // last thing she observed (for "what did you see?" dialogue)
 
   // James's random EGGROLL outburst
   jamesEggrollTimer: 45000, // ms until James loses it and yells EGGROLL
@@ -258,25 +261,52 @@ const NPC_DEFS = [
     ],
     choices:["Call him Bread Boy 🍞","Ignore him","Ask him to go smoke 🚬"],
   },
-  { id:'lee', name:'Lee', title:'(Says Yes)', color:0xff80c0, zone:'breakRoom', patrol:false,
+  { id:'lee', name:'Lee', title:'(The Correspondent)', color:0xff80c0, zone:'floor', patrol:false,
     appearance:{ shirt:0xee6699, pants:0xddbbcc, skin:0xe8a878, hair:0x2a1808, ponytail:true },
     lines:[
-      "Yes!","Of course!","Sure, why not?","Absolutely!","Yeah yeah yeah!",
-      "I mean... yes.",
-      "Obviously!",
-      "100% yes.",
-      "I was literally just about to suggest that.",
-      "Done. Already did it in my head.",
-      "I know three secrets before 9 AM and one of them is about the vending machine.",
-      "I don't gossip. I provide verbal incident reports with flair.",
-      "If Pam asks, I have been productive spiritually.",
-      "I can distract James with one sentence. It's a gift and a responsibility.",
-      "The break room has lore. Deep lore.",
-      "I heard something but I signed an emotional NDA with myself.",
+      // ── Curious / observational ──
+      "Hold on. Did you just see that or was it just me?",
+      "I have been watching that corner for six minutes. Something is about to happen.",
+      "I walk the whole building every shift just to know what's going on. It's called awareness.",
+      "I'm not nosy. I'm spatially aware. Big difference.",
+      "I've been here three hours and I already know seven things that would genuinely shock you.",
+      "I circled the dock twice. Collected all available information. You're welcome.",
+      "If I was a security camera, I'd be the best one they have.",
+      "Something is happening near bay three. I'm going to go look. For safety reasons.",
+      "I feel like something is about to happen. I'm positioning myself accordingly.",
+      "Chance is suspiciously quiet right now. That is WORSE than loud Chance.",
+      // ── Reporter personality ──
+      "I don't gossip. I file verbal incident reports with context and flair.",
+      "My observational skills are honestly wasted in a warehouse.",
+      "I keep a mental log. It's detailed. It has timestamps. It's a whole thing.",
+      "I should have been a detective. Or a journalist. Or a detective who IS a journalist.",
+      "If you want to know what's really going on on this dock — you come to me.",
+      "I've been watching Chandler for twenty minutes. I have a theory. Several.",
+      "I'm gathering data right now. Just by standing here. You'd be surprised.",
+      "I walk slower past conversations that sound interesting. I call it research.",
+      "I know who's been in the break room, for how long, and what they ate. Just naturally.",
+      // ── Eggroll / casual ──
+      "I eat eggrolls for focus. It's science. I made it up but it works.",
+      "I said yes to like nine things today and I only regret two of them. That's progress.",
+      "I'm a yes person but I'm a STRATEGIC yes person. There's nuance.",
+      "Yes, obviously, of course — those are my three favorite words.",
+      "I know three secrets before 9AM and one of them is about the vending machine.",
+      // ── Dock intel ──
+      "The break room has lore. Deep, layered lore that goes back years.",
+      "I heard something but I signed an emotional NDA with myself. Ask me again later.",
       "I am not dramatic. The building is dramatic and I am documenting it.",
-      "I could run this dock with a coffee and one good rumor.",
+      "I could run this whole dock with a coffee and one well-placed rumor.",
+      "I can distract James with one sentence. It's a gift AND a responsibility.",
+      "Drew hasn't eaten in two hours. He is going to do something desperate. I can feel it.",
+      "James looks like he has something to say. I'm staying within earshot.",
+      // ── Random curiosity ──
+      "Do you ever walk a different route just to see what you find? That's my whole thing.",
+      "I have a theory about everything that happens here. Would you like to hear it?",
+      "I'm building a comprehensive understanding of this dock. For fun.",
+      "My break room visits are strategic. I'm listening while I'm in there.",
+      "If Pam asks, I have been productive spiritually.",
     ],
-    choices:["Ask to cover your truck","Ask her to distract James","Go smoke together 🚬"],
+    choices:["Ask to cover your truck","Ask her to distract James","Go smoke together 🚬","What did you see? 👀"],
     gossipChoices:["Spill on Chandler 🍞","What's Drew's deal?","Real talk about James","What's Chance's deal? 🔥"],
   },
   { id:'todd', name:'Todd', title:'(Freezer Lead)', color:0x44cc44, zone:'freezer', patrol:false,
@@ -2411,7 +2441,7 @@ class GameScene extends Phaser.Scene {
           this.floatText(this.player.x, this.player.y, '🎭 Lee is distracting James! Suspicion -20', '#ff80c0');
         }
       }
-      else { // Go smoke — Lee drags the whole crew
+      else if(idx===2){ // Go smoke — Lee drags the whole crew
         if(STATE.leeDistractingJames){
           response = '"I can\'t right now — I\'m keeping James busy! Meet you out there after!"';
         } else if(STATE.jamesSmokeParty){
@@ -2421,6 +2451,24 @@ class GameScene extends Phaser.Scene {
           scoreChange = 5;
           this.floatText(this.player.x, this.player.y, '🚬 Lee is dragging the WHOLE CREW outside!', '#ff80c0');
           this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
+        }
+      }
+      else { // idx===3: What did you see? 👀
+        const report = STATE.leeLastReport;
+        if(report){
+          response = report;
+          STATE.leeLastReport = null; // consumed
+          scoreChange = 15;
+          this.floatText(this.player.x, this.player.y, '👀 Lee filed her report! +15', '#ff80c0');
+        } else {
+          const nothingYet = [
+            '"I\'m still gathering intel. Give me ten minutes and I\'ll have something GOOD."',
+            '"Not yet. But I feel it. Something is brewing and I\'m positioned."',
+            '"I just got here. Let me walk around first. I\'ll report back."',
+            '"Nothing confirmed yet. But Chandler looked at his phone seven times. That\'s suspicious."',
+            '"I saw James staring at the dock door for two whole minutes. Make of that what you will."',
+          ];
+          response = Phaser.Math.RND.pick(nothingYet);
         }
       }
     }
@@ -4985,6 +5033,178 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── LEE CURIOSITY WANDER ────────────────────────────────────────────────────
+  // Lee roams the warehouse on her own schedule, gathering intel on whatever
+  // is happening. What she sees gets stored in STATE.leeLastReport and can be
+  // retrieved via the "What did you see? 👀" dialogue choice.
+  _updateLeeCuriosity(lee, delta){
+    if(!lee) return;
+    if(STATE.dialogueActive || STATE.miniGameActive || STATE._fightScene) return;
+    if(STATE.smokeChatOpen || STATE.groupRoastActive) return;
+    if(STATE.leeApproaching || STATE.leeFollowing) return;
+    if(STATE.leeDistractingJames || STATE.jamesEggrollScene) return;
+    if(STATE.smokingNPCs.includes('lee')) return;
+
+    STATE.leeWanderTimer -= delta;
+    if(STATE.leeWanderTimer > 0) return;
+    STATE.leeWanderTimer = 20000 + Math.random() * 25000; // 20-45s between wanders
+
+    // ── Pick the most interesting thing happening right now ──
+    const james    = this.npcs.find(n => n.id === 'james');
+    const michelle = this.npcs.find(n => n.id === 'michelle');
+    const chance   = this.npcs.find(n => n.id === 'chance');
+    const todd     = this.npcs.find(n => n.id === 'todd');
+    const chandler = this.npcs.find(n => n.id === 'chandler');
+
+    // Priority list — first match wins
+    let dest = null; // { x, y } world coords
+    let spyLine  = '';  // what Lee says when she arrives
+    let report   = '';  // what she files in STATE.leeLastReport
+
+    if(STATE.jamesAnnoyance >= 70 && james){
+      // James is about to blow — get a front-row seat
+      dest = { x: james.sprite.x + 50 + Math.random()*30, y: james.sprite.y + 20 };
+      spyLine = Phaser.Math.RND.pick([
+        '"James looks like he\'s about to tear the roof off. Taking notes."',
+        '"Oh this is ABOUT to be a moment. I\'m staying right here."',
+        '"His vein is visible from across the dock. Documenting."',
+        '"Someone\'s one email away from a breakdown. I\'m witness."',
+      ]);
+      report = Phaser.Math.RND.pick([
+        `"James hit ${Math.round(STATE.jamesAnnoyance)}% stress while I watched. His eye was twitching."`,
+        '"I watched James pace the dock for four minutes straight. He muttered your name twice."',
+        '"James stress-counted pallets out loud. He lost count at nine. Started over."',
+        '"He tried to radio Marcus, hung up, radioed again, hung up. He\'s spiraling."',
+      ]);
+
+    } else if(STATE.clerkOnDock && michelle){
+      // Michelle is on the dock — chaos potential is high
+      dest = { x: michelle.sprite.x + 45 + Math.random()*30, y: michelle.sprite.y };
+      spyLine = Phaser.Math.RND.pick([
+        '"Michelle\'s on the dock again. This always gets interesting."',
+        '"I\'m just going to casually stand nearby. For safety reasons."',
+        '"Michelle + dock + bored clerks. I\'m grabbing a front row position."',
+        '"She\'s pacing. She\'s DEFINITELY mad about something."',
+      ]);
+      report = Phaser.Math.RND.pick([
+        '"Michelle complained about the dock temp for six solid minutes. Nobody moved."',
+        '"She asked James three questions he didn\'t have answers to. His soul left his body."',
+        '"Michelle counted the pallets herself. Then recounted them. Then left without saying why."',
+        '"I think she filed a mental complaint about the lighting. She squinted at a fluorescent for a while."',
+      ]);
+
+    } else if(!STATE.chanceDead && chance && STATE.michelleAnnoyance > 50){
+      // Chance is pushing Michelle — drama incoming
+      dest = { x: chance.sprite.x + 40, y: chance.sprite.y + 10 };
+      spyLine = Phaser.Math.RND.pick([
+        '"Chance is doing that thing again. I\'m watching from a safe distance."',
+        '"Oh he\'s at it. I\'m grabbing popcorn. Spiritually."',
+        '"Chance has chosen violence. I\'m here to observe and report."',
+        '"Michelle annoyance is at dangerous levels. Chance does not know this."',
+      ]);
+      report = Phaser.Math.RND.pick([
+        '"Chance said something to Michelle and she went very still. That\'s the scary still."',
+        '"I watched Chance walk past Michelle THREE TIMES doing the thing with his face."',
+        `"Michelle annoyance is at ${Math.round(STATE.michelleAnnoyance)}%. Chance is still talking. It\'s a lot."`,
+        '"He told Michelle her scanner was slow. She did not respond. I left quickly."',
+      ]);
+
+    } else if(STATE.currentTruck !== null){
+      // Active truck on the dock — observe the hustle (or lack of it)
+      const dz = ZONES['dock'];
+      dest = { x: dz.x + 200 + Math.random() * 400, y: dz.y + 60 + Math.random() * 120 };
+      spyLine = Phaser.Math.RND.pick([
+        '"There\'s a truck on. Let me see what\'s actually happening out there."',
+        '"Someone\'s supposed to be unloading. I\'m going to confirm that."',
+        '"I\'m doing a wellness check on the dock. Professionally."',
+        '"Truck\'s in. I\'m observing the general vibe of the situation."',
+      ]);
+      report = Phaser.Math.RND.pick([
+        '"The dock is moving but barely. Jeff has been on the same pallet for a while."',
+        '"I saw two people standing near the truck having what appeared to be a philosophical conversation."',
+        '"The unload is going. I rate it a 6 out of 10 for urgency."',
+        '"Someone left a pallet half-stacked and just... walked away. I made a note."',
+      ]);
+
+    } else if(todd){
+      // Go spy on Todd in the freezer — always something weird happening in there
+      const fz = ZONES['freezer'];
+      dest = { x: fz.x + 60 + Math.random() * 200, y: fz.y + 60 + Math.random() * 100 };
+      spyLine = Phaser.Math.RND.pick([
+        '"I\'m going to check on Todd. Not because I care. For science."',
+        '"Something is always happening in the freezer and nobody reports it. I\'m fixing that."',
+        '"Todd update time. He\'s in the freezer. Something is always going on in there."',
+        '"I need to know what Todd does in there. This is a personal mission."',
+      ]);
+      report = Phaser.Math.RND.pick([
+        '"Todd was just sitting on a pallet in the freezer. Eyes closed. Totally fine apparently."',
+        '"He was reorganizing shelves in a very specific order that I could not figure out."',
+        '"Todd had a full conversation with himself and then laughed. I left before he saw me."',
+        '"He was eating something cold directly from a bag. Made solid eye contact. Said nothing."',
+        '"Todd has a blanket in the freezer. A BLANKET. I have questions."',
+      ]);
+
+    } else {
+      // Random wander — pick a zone she doesn't usually go and observe the vibe
+      const wander = Phaser.Math.RND.pick(['dock','floor','dryStorage','restroom']);
+      const wz = ZONES[wander];
+      dest = { x: wz.x + 60 + Math.random() * (wz.w - 120), y: wz.y + 40 + Math.random() * (wz.h - 80) };
+      const zName = wz.name.replace(/ 📋|❄️/g,'').trim();
+      spyLine = Phaser.Math.RND.pick([
+        `"I\'m doing a full walkthrough of the ${zName}. Just to know things."`,
+        '"No agenda. Just walking. Taking notes mentally. You wouldn\'t understand."',
+        '"I need to know the vibe of every section. It\'s called being thorough."',
+        '"Doing a perimeter check. Nobody asked me to. I do it anyway."',
+      ]);
+      report = Phaser.Math.RND.pick([
+        `"The ${zName} has the energy of a place where something already happened. Can\'t explain it."`,
+        '"I walked the whole floor. Everything is fine. Someone moved a label 4 inches. I noticed."',
+        '"General warehouse observation: two people looked suspicious, one looked tired, one looked hungry."',
+        '"I found a pallet jack parked diagonal. Filed it. Mentally."',
+        '"The vibe in dry storage is off. Nobody\'s talking about it. I\'m talking about it now."',
+      ]);
+    }
+
+    // Move Lee to the observation spot
+    lee.targetX = dest.x;
+    lee.targetY = dest.y;
+
+    // Show a curious line when she starts walking
+    this.showBubble(lee, spyLine, 3200);
+
+    // When she arrives, store the intel report
+    const checkArrival = () => {
+      if(!lee) return;
+      const d = Phaser.Math.Distance.Between(lee.sprite.x, lee.sprite.y, dest.x, dest.y);
+      if(d < 90){
+        // Arrived — file the report
+        if(!STATE.leeLastReport) STATE.leeLastReport = report;
+        // Show a little observation bubble
+        const observeLines = [
+          '"...okay. I see things."',
+          '"...noted. Noted. Definitely noted."',
+          '"Mental note filed. You\'re welcome, future self."',
+          '"I\'m just going to stand here and absorb the information."',
+          '"Filed. Verbally. In my head."',
+        ];
+        this.time.delayedCall(1800, () => {
+          if(lee && !STATE.leeApproaching) this.showBubble(lee, Phaser.Math.RND.pick(observeLines), 2800);
+        });
+        // Drift back to floor after a while
+        this.time.delayedCall(5000, () => {
+          if(!lee || STATE.leeApproaching || STATE.leeDistractingJames) return;
+          const fz = ZONES['floor'];
+          lee.targetX = fz.x + 200 + Math.random() * (fz.w - 400);
+          lee.targetY = fz.y + 60 + Math.random() * (fz.h - 120);
+        });
+      } else {
+        // Not there yet — check again in a moment
+        this.time.delayedCall(1200, checkArrival);
+      }
+    };
+    this.time.delayedCall(1200, checkArrival);
+  }
+
   // ── JAMES RANDOM EGGROLL OUTBURST ──────────────────────────────────────────
   // Triggers on a long random timer. James loses it and yells EGGROLL out of
   // nowhere; Lee drops everything and runs to him in confusion.
@@ -5201,9 +5421,10 @@ class GameScene extends Phaser.Scene {
         npc.tag.setVisible(true);
       }
 
-      // ── LEE CLINGY CHECK-IN — she walks up unprompted ────────────────────
+      // ── LEE CLINGY CHECK-IN + CURIOSITY WANDER ───────────────────────────
       if(npc.id === 'lee'){
         this._updateLeeCheckIn(npc, delta);
+        this._updateLeeCuriosity(npc, delta);
         // If she's approaching player, she handled her own targeting; fall
         // through so the velocity/bubble drawing code at the bottom runs.
       }
