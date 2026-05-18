@@ -129,6 +129,24 @@ const STATE = {
   playerRunBoost: 0,       // ms left on sprint burst
   beingChased: false,      // James/Marcus actively hunting player
   marcusAggression: 0,     // 0-100 how hot Marcus is on your trail
+
+  // Lee's clingy check-in behavior — she walks up unprompted asking for things
+  leeCheckInTimer:   20000, // ms until next time Lee approaches you
+  leeCheckIns:       0,     // count of total check-ins this shift
+  leeApproaching:    false, // currently walking toward player
+  leeCheckInPick:    null,  // 'eggroll' | 'help' | 'gossip' for this visit
+  eggrollAccepts:    0,     // times you walked TOWARD Lee when she offered
+  eggrollDeclines:   0,     // times you walked AWAY when she offered
+
+  // James's random EGGROLL outburst
+  jamesEggrollTimer: 45000, // ms until James loses it and yells EGGROLL
+  jamesEggrollFired: 0,     // count of James outbursts (for achievement)
+  jamesEggrollScene: false, // mid-scene right now (prevents overlap)
+
+  // Achievement tracking
+  peopleAnnoyed:        [], // ids of NPCs pissed off this shift
+  toddFreezerRetreats:  0,  // count of Todd freezer retreats
+  chandlerQuitCount:    0,  // "updating my resume" count
 };
 
 // Zone layout
@@ -4166,7 +4184,12 @@ class GameScene extends Phaser.Scene {
     beat(14600,'drew',     '"I wasn\'t even invited to this. But I support it fully. Can I borrow $3?"');
 
     STATE.score += 80; STATE.chandlerCallCount += 2;
+    STATE.chandlerQuitCount++;
     STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 15);
+    this.noteAnnoyed('chandler');
+    if(STATE.chandlerCallCount >= 8){
+      this.awardAchievement('chandler_done', "Chandler's Updating His Resume", '#c8a050');
+    }
     this.time.delayedCall(1000 * SLOW, ()=>
       this.floatText(160, 70, '🍞 +80 pts — Chandler roasted by the whole crew!', '#ffd700'));
 
@@ -4206,6 +4229,10 @@ class GameScene extends Phaser.Scene {
     beat(15800,'james',   '"It\'s on my clipboard. That\'s paper enough."');
 
     STATE.score += 60; STATE.drawerDebt += 5;
+    this.noteAnnoyed('drew');
+    if((STATE.drewLends*5 + (STATE.drawerDebt||0)) >= 25){
+      this.awardAchievement('drew_broke', 'Drew Is Financially Ruined Because Of You', '#cc88ff');
+    }
     this.time.delayedCall(1200 * SLOW, ()=>
       this.floatText(160, 70, '🍔 +60 pts — Drew is having an actual breakdown', '#9955cc'));
     this.time.delayedCall(24000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
@@ -4241,6 +4268,8 @@ class GameScene extends Phaser.Scene {
     beat(17800,'lee',      '"I\'m getting you back. I don\'t know when or how. But I AM."');
 
     STATE.score += 100;
+    this.noteAnnoyed('lee');
+    this.noteAnnoyed('james');
     this.time.delayedCall(1000 * SLOW, ()=>
       this.floatText(160, 70, '🥡 +100 pts — ABSOLUTE CHAOS. LEE IS UNHINGED.', '#ffaa00'));
     this.cameras.main.flash(200, 255, 170, 0);
@@ -4287,6 +4316,12 @@ class GameScene extends Phaser.Scene {
 
     STATE.score += 120;
     STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
+    STATE.toddFreezerRetreats++;
+    this.noteAnnoyed('todd');
+    this.noteAnnoyed('james');
+    if(STATE.toddFreezerRetreats >= 3){
+      this.awardAchievement('todd_3x', 'You Drove Todd Back To The Ice (3x)', '#88ccff');
+    }
     this.nudgeEmotion('jorie', 'unbothered');
     this.nudgeEmotion('todd',  'haunted');
     this.time.delayedCall(1500 * SLOW, ()=>
@@ -4299,6 +4334,245 @@ class GameScene extends Phaser.Scene {
         this.floatText(160, 80, '🏆 ACHIEVEMENT: Pregnant and DANGEROUS!', '#ff6633'));
     }
     this.time.delayedCall(28000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  ACHIEVEMENT HELPERS  +  LEE CHECK-IN  +  JAMES EGGROLL OUTBURST
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Award an achievement once and float a celebration line. Returns true if newly awarded.
+  awardAchievement(id, label, color='#ffd700'){
+    if(STATE.achievements.includes(id)) return false;
+    STATE.achievements.push(id);
+    const px = this.player ? this.player.x : 160;
+    const py = this.player ? this.player.y - 40 : 80;
+    this.floatText(px, py, '🏆 '+label, color);
+    SFX.comboDing && SFX.comboDing(5);
+    return true;
+  }
+
+  // Mark an NPC as "pissed off" for the hostile-workplace tracker. Idempotent per NPC per shift.
+  noteAnnoyed(npcId){
+    if(!STATE.peopleAnnoyed.includes(npcId)){
+      STATE.peopleAnnoyed.push(npcId);
+      if(STATE.peopleAnnoyed.length >= 3){
+        this.awardAchievement('hostile', 'Hostile Workplace — pissed off 3+ people!', '#ff5544');
+      }
+      if(STATE.peopleAnnoyed.length >= 5){
+        this.awardAchievement('toxic', 'TOXIC ENVIRONMENT — the whole crew hates you', '#ff2222');
+      }
+    }
+  }
+
+  // ── LEE CHECK-IN ────────────────────────────────────────────────────────────
+  // Called once per frame from updateNPCs. Lee periodically walks up to player
+  // to offer eggrolls, help, or gossip. Tracks accepts/declines for achievements.
+  _updateLeeCheckIn(lee, delta){
+    if(!lee) return;
+    if(STATE.dialogueActive || STATE.miniGameActive) return;
+    if(STATE.smokeChatOpen || STATE.groupRoastActive) return;
+    if(STATE.leeDistractingJames || STATE.leeFollowing) return;
+    if(STATE.smokingNPCs.includes('lee')) return;
+    if(STATE.jamesEggrollScene) return;
+
+    // ── Currently approaching player ──
+    if(STATE.leeApproaching){
+      const dist = Phaser.Math.Distance.Between(lee.sprite.x, lee.sprite.y, this.player.x, this.player.y);
+      // Glue Lee to player's position as she chases you
+      lee.targetX = this.player.x - 36;
+      lee.targetY = this.player.y + 14;
+
+      // Close enough — deliver the line
+      if(dist < 78){
+        const lines = {
+          eggroll: [
+            '"Yo. EGGROLLS. Want some? I got eggrolls."',
+            '"Eggrolls. I keep \'em in my locker. Don\'t ask. Want one?"',
+            '"Listen — eggrolls. The answer is always eggrolls. You in?"',
+            '"I got two eggrolls left and one of \'em has your name on it."',
+            '"Eggrolls. Eggrolls. Eggrolls. That\'s all I\'m gonna say."',
+            '"Hot tip: my eggrolls go HARD. Want one?"',
+          ],
+          help: [
+            '"You good? You need help with anything? I\'m BORED."',
+            '"Hey — anything I can do? I will literally do your truck."',
+            '"What you working on? Need a hand? Say the word."',
+            '"Yo I\'m caught up on everything. You need backup?"',
+            '"I\'ll cover you if you need a sec. Just say the word."',
+            '"Anything stupid you need me to do? I\'m your girl."',
+          ],
+          gossip: [
+            '"Yo come here — I got TEA. Wait. Are we alone?"',
+            '"Don\'t look but Pam just walked past muttering. About you."',
+            '"James was talking about you. Want me to find out?"',
+            '"I just saw Chandler in the bathroom for like 12 minutes. Just so you know."',
+            '"Drew tried to borrow $40. I said no. Don\'t lend him anything."',
+            '"Todd hasn\'t come out the freezer in two hours. I\'m starting to worry."',
+          ]
+        };
+        const pool = lines[STATE.leeCheckInPick] || lines.gossip;
+        this.showBubble(lee, Phaser.Math.RND.pick(pool), 3400);
+
+        STATE.leeApproaching = false;
+        STATE.leeCheckIns++;
+        STATE.leeCheckInTimer = 32000 + Math.random() * 22000; // 32-54s until next
+
+        // Track accepts/declines based on player movement over the next 4s
+        if(STATE.leeCheckInPick === 'eggroll'){
+          const startDist = dist;
+          const startX = this.player.x, startY = this.player.y;
+          this.time.delayedCall(4000, ()=>{
+            const lee2 = this.npcs.find(n=>n.id==='lee');
+            if(!lee2) return;
+            const newDist = Phaser.Math.Distance.Between(lee2.sprite.x, lee2.sprite.y, this.player.x, this.player.y);
+            const moved = Phaser.Math.Distance.Between(startX, startY, this.player.x, this.player.y);
+            if(moved > 50 && newDist > startDist + 30){
+              // Walked away from her
+              STATE.eggrollDeclines++;
+              if(STATE.eggrollDeclines === 1){
+                this.awardAchievement('eggroll_no', 'Stop Offering Me Eggrolls', '#ff8855');
+              }
+              if(STATE.eggrollDeclines >= 5){
+                this.awardAchievement('eggroll_hater', 'EGGROLL FREE ZONE — declined 5 times', '#ff4422');
+              }
+            } else if(newDist < 60){
+              // Stayed close = accepted
+              STATE.eggrollAccepts++;
+              STATE.score += 5;
+              this.floatText(this.player.x, this.player.y, '🥡 +5 — you took the eggroll', '#ffaa00');
+              if(STATE.eggrollAccepts === 1){
+                this.awardAchievement('eggroll_yes', 'EGGROLL CONFIRMED — first one\'s on Lee', '#ffaa00');
+              }
+              if(STATE.eggrollAccepts >= 5){
+                this.awardAchievement('eggroll_devotee', 'EGGROLL DEVOTEE — 5 eggrolls deep', '#ffd700');
+              }
+            }
+          });
+        }
+
+        // Lee BFF achievement
+        if(STATE.leeCheckIns >= 5){
+          this.awardAchievement('lee_friend', "Lee's BFF — she just keeps coming back", '#ff80c0');
+        }
+        if(STATE.leeCheckIns >= 12){
+          this.awardAchievement('lee_obsessed', "Lee Is Obsessed With You", '#ff4080');
+        }
+
+        // Lee drifts back to break room after delivering
+        this.time.delayedCall(2200, ()=>{
+          if(!lee || STATE.leeApproaching) return;
+          const z = ZONES['breakRoom'];
+          lee.targetX = z.x + 60 + Math.random()*(z.w-120);
+          lee.targetY = z.y + 40 + Math.random()*(z.h-80);
+        });
+      }
+      return; // skip normal Lee movement while approaching
+    }
+
+    // ── Tick the check-in timer ──
+    STATE.leeCheckInTimer -= delta;
+    if(STATE.leeCheckInTimer <= 0){
+      // Don't bother her if player is in smoke area or freezer (out of her zone)
+      if(STATE.currentZone === 'freezer'){
+        STATE.leeCheckInTimer = 20000;
+        return;
+      }
+      STATE.leeApproaching  = true;
+      const r = Math.random();
+      STATE.leeCheckInPick  = r < 0.45 ? 'eggroll' : r < 0.78 ? 'help' : 'gossip';
+      // Show a brief "Lee is heading your way" cue
+      const cueTxt = STATE.leeCheckInPick === 'eggroll' ? '🥡 Lee is heading your way...' :
+                     STATE.leeCheckInPick === 'help'    ? '🙋 Lee wants to help...' :
+                                                           '👀 Lee has tea for you...';
+      this.floatText(this.player.x, this.player.y - 60, cueTxt, '#ff80c0');
+    }
+  }
+
+  // ── JAMES RANDOM EGGROLL OUTBURST ──────────────────────────────────────────
+  // Triggers on a long random timer. James loses it and yells EGGROLL out of
+  // nowhere; Lee drops everything and runs to him in confusion.
+  _updateJamesEggrollEvent(delta){
+    if(STATE.dialogueActive || STATE.miniGameActive) return;
+    if(STATE.jamesEggrollScene) return;
+    if(STATE.smokeChatOpen || STATE.groupRoastActive) return;
+
+    STATE.jamesEggrollTimer -= delta;
+    if(STATE.jamesEggrollTimer > 0) return;
+
+    const james = this.npcs.find(n=>n.id==='james');
+    const lee   = this.npcs.find(n=>n.id==='lee');
+    if(!james || !lee){ STATE.jamesEggrollTimer = 60000; return; }
+    if(james.interacting || lee.interacting){ STATE.jamesEggrollTimer = 30000; return; }
+
+    this._triggerJamesEggroll(james, lee);
+    // Reset to a long random delay so it stays rare
+    STATE.jamesEggrollTimer = 90000 + Math.random() * 90000; // 90-180s
+  }
+
+  _triggerJamesEggroll(james, lee){
+    STATE.jamesEggrollScene = true;
+    STATE.jamesEggrollFired++;
+
+    // BIG sky-floating spectacle
+    this.cameras.main.shake(280, 0.012);
+    this.cameras.main.flash(200, 255, 220, 80);
+    this.floatText(james.sprite.x, james.sprite.y - 70, '🥡 EGGROLL!!! 🥡', '#ffaa00');
+
+    // James shouts
+    this.clearAllBubbles && this.clearAllBubbles();
+    this.showBubble(james, '"EGGROLL!!! ...wait. WHY did I just yell that. WHY."', 3800);
+
+    // Lock James in place for the scene
+    const jOrigTimer = james.moveTimer;
+    james.moveTimer = 8000;
+
+    // Lee immediately drops everything and SPRINTS to James
+    STATE.leeApproaching = false;
+    STATE.leeFollowing   = false;
+    STATE.leeDistractingJames = false;
+    lee.running = true;
+
+    this.time.delayedCall(800, ()=>{
+      if(!lee || !james) return;
+      lee.targetX = james.sprite.x + 38;
+      lee.targetY = james.sprite.y;
+      this.showBubble(lee, '"WHO. WHO SAID IT. WHO SAID EGGROLL."', 3200);
+    });
+
+    this.time.delayedCall(3200, ()=>{
+      if(!james) return;
+      this.showBubble(james, '"...it was me. I — I don\'t know why. It just came out."', 3400);
+    });
+
+    this.time.delayedCall(5800, ()=>{
+      if(!lee) return;
+      this.showBubble(lee, '"JAMES?! NOT YOU TOO! ...you know what — RESPECT. Welcome to the crew."', 3600);
+    });
+
+    this.time.delayedCall(8200, ()=>{
+      if(!james) return;
+      this.showBubble(james, '"I\'m going back to my office. This conversation never happened."', 3000);
+    });
+
+    this.time.delayedCall(10800, ()=>{
+      STATE.jamesEggrollScene = false;
+      if(lee) lee.running = false;
+      if(james) james.moveTimer = jOrigTimer;
+    });
+
+    // Achievements
+    if(STATE.jamesEggrollFired === 1){
+      this.time.delayedCall(1200, ()=>{
+        this.awardAchievement('james_witness', 'You Heard It Too?! — James said EGGROLL', '#ffaa00');
+      });
+    }
+    if(STATE.jamesEggrollFired === 5){
+      this.time.delayedCall(1200, ()=>{
+        this.awardAchievement('james_witness_5', 'James Has Officially Lost It (5x)', '#ff6600');
+      });
+    }
+    // Big score reward for witnessing
+    STATE.score += 30;
   }
 
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
@@ -4417,6 +4691,13 @@ class GameScene extends Phaser.Scene {
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
       this.updateNpcEmotion(npc, delta);
+
+      // ── LEE CLINGY CHECK-IN — she walks up unprompted ────────────────────
+      if(npc.id === 'lee'){
+        this._updateLeeCheckIn(npc, delta);
+        // If she's approaching player, she handled her own targeting; fall
+        // through so the velocity/bubble drawing code at the bottom runs.
+      }
 
       // ── LEE DISTRACTION MODE ────────────────────────────────────────────
       if(npc.id === 'lee' && STATE.leeDistractingJames){
@@ -5567,6 +5848,7 @@ class GameScene extends Phaser.Scene {
   triggerFired(){
     STATE.miniGameActive = true;
     STATE._caught = true;
+    this.awardAchievement('nuclear', 'NUCLEAR — James actually fired you', '#ff0000');
 
     const james   = this.npcs.find(n=>n.id==='james');
     const pam     = this.npcs.find(n=>n.id==='pam');
@@ -5734,6 +6016,9 @@ class GameScene extends Phaser.Scene {
     this.movePlayer(delta);
     this.updateNPCs(delta);
 
+    // James random EGGROLL outburst — rare, glorious event
+    this._updateJamesEggrollEvent(delta);
+
     // Tick game clock (display only — no time limit, game ends on lose conditions)
     this.gameTimer += delta;
     STATE.gameMinutes += (delta/1000) * (60/120);
@@ -5800,6 +6085,8 @@ class GameScene extends Phaser.Scene {
       if(james){ this.showBubble(james, '"THAT\'S IT. EVERYONE BETTER LOOK BUSY RIGHT NOW."'); }
       this.cameras.main.shake(300, 0.010);
       this.floatText(WW/2, 500, '😠 JAMES IS PISSED OFF — Watch out!', '#ff6600');
+      this.awardAchievement('james_pissed', 'Got James to 50% — Pissed Off', '#ff8844');
+      this.noteAnnoyed('james');
     }
     if(!this._jamesMilestone80 && STATE.jamesAnnoyance >= 80){
       this._jamesMilestone80 = true;
@@ -5809,6 +6096,8 @@ class GameScene extends Phaser.Scene {
       this.cameras.main.shake(500, 0.020);
       STATE.suspicion = Math.min(99, STATE.suspicion + 20);
       this.floatText(WW/2, 480, '🤬 JAMES NUCLEAR MODE — Suspicion +20!', '#ff2200');
+      this.awardAchievement('james_red', 'James Saw Red — annoyance 80+', '#ff3300');
+      this.noteAnnoyed('james');
     }
     if(!this._jamesMilestone95 && STATE.jamesAnnoyance >= 95){
       this._jamesMilestone95 = true;
@@ -5818,7 +6107,20 @@ class GameScene extends Phaser.Scene {
       this.cameras.main.shake(700, 0.028);
       this.cameras.main.flash(200, 255, 50, 0);
       this.floatText(WW/2, 460, '☠️ JAMES IS AT 95 — ONE MORE THING AND YOU\'RE DONE', '#ff0000');
+      this.awardAchievement('james_warning', 'One More Thing — James is at the edge', '#ff0000');
     }
+    // Pam suspicion achievements — milestone style
+    if(!this._pamWatching && STATE.suspicion >= 75){
+      this._pamWatching = true;
+      this.awardAchievement('pam_watch', "You're On Pam's List Now", '#ff8800');
+      this.noteAnnoyed('pam');
+    }
+    if(!this._pamMaxed && STATE.suspicion >= 95){
+      this._pamMaxed = true;
+      this.awardAchievement('pam_max', 'PAM HAS A FOLDER ON YOU NOW', '#ff4400');
+    }
+    if(STATE.suspicion < 75){ this._pamWatching = false; this._pamMaxed = false; }
+    else if(STATE.suspicion < 95){ this._pamMaxed = false; }
     // Reset milestones if James calms back down
     if(STATE.jamesAnnoyance < 30){ this._jamesMilestone30=false; this._jamesMilestone50=false; this._jamesMilestone80=false; this._jamesMilestone95=false; }
     else if(STATE.jamesAnnoyance < 50){ this._jamesMilestone50=false; this._jamesMilestone80=false; this._jamesMilestone95=false; }
