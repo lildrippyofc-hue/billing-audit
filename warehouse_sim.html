@@ -2746,7 +2746,7 @@ class GameScene extends Phaser.Scene {
     const others = [jamesHere, chanceHere, leeHere].filter(Boolean).length;
     const roastReady = chandlerHere && others >= 1 && !STATE.groupRoastDone;
     const roastAlmostReady = !chandlerHere && (jamesHere || chanceHere || leeHere);
-    const partyMode = STATE.jamesSmokeParty && jamesHere; // James pulled everyone out
+    const partyMode = STATE.jamesSmokeParty; // crew was called — always show party options
 
     // Build dynamic choices
     const choices = [];
@@ -2920,8 +2920,8 @@ class GameScene extends Phaser.Scene {
     // ── THE ROAST SEQUENCE ─────────────────────────────────────────────────
     const beat = (ms, npc, text, floatTxt='', floatCol='#ff6a00') => {
       this.time.delayedCall(ms, ()=>{
-        if(npc) this.showBubble(npc, text);
-        if(npc) this.postSmokeChat(npc.id, text);
+        this.clearAllBubbles();
+        if(npc){ this.showBubble(npc, text, 1600); this.postSmokeChat(npc.id, text); }
         if(floatTxt) this.floatText(160, 50, floatTxt, floatCol);
       });
     };
@@ -2972,10 +2972,14 @@ class GameScene extends Phaser.Scene {
     const SX = 160, SY = 90;
     const id = initiatorNpc.id;
 
+    // Zoom camera straight to smoke area RIGHT NOW — don't wait for menu
+    this.openSmokeChat();
+
+    // Walk-in beats go to chat log only — NPCs are still scattered across the
+    // map while the camera is already zoomed on the smoke area, so world bubbles
+    // would be off-screen anyway. Chat panel tells the story cleanly.
     const beat = (ms, npcId, text) => {
       this.time.delayedCall(ms, ()=>{
-        const n = this.npcs.find(x=>x.id===npcId);
-        if(n) this.showBubble(n, text);
         this.postSmokeChat(npcId, text);
       });
     };
@@ -3064,7 +3068,7 @@ class GameScene extends Phaser.Scene {
       this.floatText(SX, 50, '🚬 THE WHOLE CREW IS HEADING OUTSIDE', '#ffd700');
     });
     this.time.delayedCall(9800, ()=>{
-      // Last arrival line + auto-open party menu
+      // Everyone has arrived — show a world bubble from the initiator (they're at the area now)
       const lastLine = {
         james:   '"This is a one-time thing. Nobody mention this in the building."',
         chance:  '"Okay we\'re all out here. Now what? ...I have ideas."',
@@ -3072,10 +3076,20 @@ class GameScene extends Phaser.Scene {
         lee:     '"OKAY. We\'re all outside. This is what I needed. This is everything."',
         drew:    '"I can\'t believe that worked. I organized something. Write it down."',
       }[id] || '"Alright. We\'re here."';
-      beat(0, id, lastLine);
+      this.clearAllBubbles();
+      const iNpc = this.npcs.find(x=>x.id===id);
+      if(iNpc) this.showBubble(iNpc, lastLine);
+      this.postSmokeChat(id, lastLine);
       this.floatText(SX, 68, '🔥 The whole crew is assembled! Choose your move!', '#ff6600');
-      // Auto-open the smoke session if not already open
-      this.time.delayedCall(1400, ()=>{ this.showSmokeAreaMenu(); });
+      // Refresh who's-here in the panel header now that everyone has arrived
+      if(this.scWhoTxt){
+        const hereNow = ['james','lee','chance','chandler','drew']
+          .map(nid =>{ const n=this.npcs.find(x=>x.id===nid); return n ? n.name : nid; });
+        this.scWhoTxt.setText(`👥 ${hereNow.join('  ')}`);
+      }
+      // Show the party options — smokeChatOpen is already true so openSmokeChat skips;
+      // showSmokeAreaMenu just builds the dialogue box with party choices
+      this.time.delayedCall(1800, ()=>{ this.showSmokeAreaMenu(); });
     });
 
     // Achievement
@@ -3090,7 +3104,9 @@ class GameScene extends Phaser.Scene {
   triggerPartyChandler(){
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms, ()=>{
-        const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+        this.clearAllBubbles(); // one speaker at a time
+        const n = this.npcs.find(x=>x.id===id);
+        if(n) this.showBubble(n, text, 1600);
         this.postSmokeChat(id, text);
       });
     };
@@ -3126,7 +3142,9 @@ class GameScene extends Phaser.Scene {
   triggerPartyDrewFat(){
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms, ()=>{
-        const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+        this.clearAllBubbles();
+        const n = this.npcs.find(x=>x.id===id);
+        if(n) this.showBubble(n, text, 1600);
         this.postSmokeChat(id, text);
       });
     };
@@ -3156,7 +3174,9 @@ class GameScene extends Phaser.Scene {
   triggerPartyLeeEggroll(){
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms, ()=>{
-        const n = this.npcs.find(x=>x.id===id); if(n) this.showBubble(n, text);
+        this.clearAllBubbles();
+        const n = this.npcs.find(x=>x.id===id);
+        if(n) this.showBubble(n, text, 1600);
         this.postSmokeChat(id, text);
       });
     };
@@ -3830,11 +3850,21 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  showBubble(npc, text){
+  showBubble(npc, text, duration=3200){
     if(!npc) return;
     npc.bubble.setText(text).setVisible(true);
     npc.bubbleGfx.setVisible(true);
-    npc.bubbleTimer = 3500;
+    npc.bubbleTimer = duration;
+  }
+
+  // Clear every NPC bubble — call before showing a new one so only one is visible
+  clearAllBubbles(){
+    if(!this.npcs) return;
+    this.npcs.forEach(n=>{
+      n.bubbleTimer = 0;
+      if(n.bubble)    n.bubble.setVisible(false);
+      if(n.bubbleGfx) n.bubbleGfx.setVisible(false);
+    });
   }
 
   // ── RANDOM EVENTS ──────────────────────────────────────────────────────────
