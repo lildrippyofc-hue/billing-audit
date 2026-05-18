@@ -3892,49 +3892,55 @@ class GameScene extends Phaser.Scene {
   }
 
   // ── SMOKE CHAT SESSION ────────────────────────────────────────────────────
+  // Bottom-tray layout: game visible in the top ~52%, chat fills the rest.
   createSmokeChat(){
-    const PX = GW - 282, PY = 58, PW = 278;
+    const PY = Math.floor(GH * 0.50); // tray starts at midpoint
+    const PX = 6, PW = GW - 12;
     this._scPX = PX; this._scPY = PY; this._scPW = PW;
 
     this.scBg = this.add.graphics().setScrollFactor(0).setDepth(72).setVisible(false);
 
-    this.scHeaderTxt = this.add.text(PX + PW/2, PY + 7, 'SMOKE BREAK CHAT', {
-      fontSize:'12px', fill:'#c8ffd2', fontFamily:'monospace', fontStyle:'bold'
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(73).setVisible(false);
-
-    this.scWhoTxt = this.add.text(PX + 6, PY + 22, '', {
-      fontSize:'9px', fill:'#8fdc9b', fontFamily:'monospace', wordWrap:{ width: PW - 16 }
+    // Header left: title
+    this.scHeaderTxt = this.add.text(PX + 12, PY + 9, '🚬 SMOKE BREAK', {
+      fontSize:'13px', fill:'#c8ffd2', fontFamily:'monospace', fontStyle:'bold'
     }).setScrollFactor(0).setDepth(73).setVisible(false);
 
-    // Pre-allocate message slots (14 slots — positions are set dynamically in _redrawSmokeChat)
+    // Header centre: who's here
+    this.scWhoTxt = this.add.text(PX + PW * 0.42, PY + 9, '', {
+      fontSize:'9px', fill:'#8fdc9b', fontFamily:'monospace',
+      wordWrap:{ width: PW * 0.44 }
+    }).setOrigin(0, 0).setScrollFactor(0).setDepth(73).setVisible(false);
+
+    // Header right: big obvious EXIT button
+    this.scStopBtn = this.add.text(PX + PW - 6, PY + 6, '🚪 END BREAK', {
+      fontSize:'13px', fill:'#ffdddd',
+      backgroundColor:'#7a1515',
+      padding:{ left:11, right:11, top:6, bottom:6 },
+      fontFamily:'monospace', fontStyle:'bold'
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(74).setVisible(false).setInteractive({ useHandCursor:true });
+    this.scStopBtn.on('pointerover', ()=> this.scStopBtn.setStyle({ backgroundColor:'#c02020', fill:'#ffffff' }));
+    this.scStopBtn.on('pointerout',  ()=> this.scStopBtn.setStyle({ backgroundColor:'#7a1515', fill:'#ffdddd' }));
+    this.scStopBtn.on('pointerdown', ()=> this.leaveSmokeBreak());
+
+    // Message pool — 12 slots, origins set in _redrawSmokeChat
     this.scMsgPool = [];
-    for(let i = 0; i < 14; i++){
-      const t = this.add.text(PX + 11, PY + 48, '', {
-        fontSize:'11px', fill:'#ffffff', fontFamily:'monospace',
-        wordWrap:{ width: PW - 22 }, lineSpacing: 3
+    for(let i = 0; i < 12; i++){
+      const t = this.add.text(PX + 12, GH - 38, '', {
+        fontSize:'12px', fill:'#ffffff', fontFamily:'monospace',
+        wordWrap:{ width: PW - 24 }, lineSpacing: 2
       }).setScrollFactor(0).setDepth(73).setVisible(false).setAlpha(0).setOrigin(0, 1);
       this.scMsgPool.push(t);
     }
 
-    this.scLeaveTxt = this.add.text(PX + PW/2, GH - 14, '[ESC] Leave smoke area  |  Click here', {
-      fontSize:'9px', fill:'rgba(205,255,210,0.62)', fontFamily:'monospace'
+    // Footer: dim ESC hint (the big button is the real exit)
+    this.scLeaveTxt = this.add.text(PX + PW / 2, GH - 7, '[ESC] or tap END BREAK to leave', {
+      fontSize:'9px', fill:'rgba(180,255,190,0.40)', fontFamily:'monospace'
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(73).setVisible(false).setInteractive({ useHandCursor:true });
-    this.scLeaveTxt.on('pointerover', ()=> this.scLeaveTxt.setStyle({ fill:'#ffffff' }));
-    this.scLeaveTxt.on('pointerout',  ()=> this.scLeaveTxt.setStyle({ fill:'rgba(205,255,210,0.62)' }));
+    this.scLeaveTxt.on('pointerover', ()=> this.scLeaveTxt.setStyle({ fill:'#aaffaa' }));
+    this.scLeaveTxt.on('pointerout',  ()=> this.scLeaveTxt.setStyle({ fill:'rgba(180,255,190,0.40)' }));
     this.scLeaveTxt.on('pointerdown', ()=> this.leaveSmokeBreak());
 
-    this.scStopBtn = this.add.text(PX + PW - 8, PY + 8, 'STOP BREAK', {
-      fontSize:'11px',
-      fill:'#ffdddd',
-      backgroundColor:'#7a1515',
-      padding:{ left:8, right:8, top:4, bottom:4 },
-      fontFamily:'monospace'
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(74).setVisible(false).setInteractive({ useHandCursor:true });
-    this.scStopBtn.on('pointerover', ()=> this.scStopBtn.setStyle({ backgroundColor:'#b32020', fill:'#ffffff' }));
-    this.scStopBtn.on('pointerout',  ()=> this.scStopBtn.setStyle({ backgroundColor:'#7a1515', fill:'#ffdddd' }));
-    this.scStopBtn.on('pointerdown', ()=> this.leaveSmokeBreak());
-
-    this._scMessages = [];
+    this._scMessages   = [];
     this._scParticleTimer = null;
   }
 
@@ -3945,21 +3951,29 @@ class GameScene extends Phaser.Scene {
 
     const PX = this._scPX, PY = this._scPY, PW = this._scPW;
 
-    // Draw panel background
+    // ── panel background ─────────────────────────────────────────────────────
     this.scBg.clear();
-    this.scBg.fillStyle(0x000000, 0.30);
-    this.scBg.fillRoundedRect(PX - 6, PY - 4, PW + 10, GH - PY + 2, 16);
-    this.scBg.fillStyle(0x06110a, 0.94);
-    this.scBg.fillRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 14);
+    // soft shadow above tray
+    this.scBg.fillStyle(0x000000, 0.35);
+    this.scBg.fillRect(0, PY - 8, GW, 12);
+    // main dark tray
+    this.scBg.fillStyle(0x06110a, 0.97);
+    this.scBg.fillRect(0, PY, GW, GH - PY);
+    // header tint strip
     this.scBg.fillStyle(0x44ff88, 0.10);
-    this.scBg.fillRoundedRect(PX + 4, PY + 4, PW - 8, 34, 10);
+    this.scBg.fillRect(0, PY, GW, 38);
+    // top border line
     this.scBg.lineStyle(2, 0x44ff88, 0.55);
-    this.scBg.strokeRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 14);
-    this.scBg.lineStyle(1, 0x44ff88, 0.28);
-    this.scBg.lineBetween(PX + 8, PY + 42, PX + PW - 8, PY + 42);
+    this.scBg.lineBetween(0, PY, GW, PY);
+    // header separator
+    this.scBg.lineStyle(1, 0x33cc66, 0.28);
+    this.scBg.lineBetween(PX + 6, PY + 40, PX + PW - 6, PY + 40);
+    // footer separator
+    this.scBg.lineStyle(1, 0x33cc66, 0.18);
+    this.scBg.lineBetween(PX + 6, GH - 26, PX + PW - 6, GH - 26);
     this.scBg.setVisible(true);
 
-    // Build who's-here list
+    // ── who's here ───────────────────────────────────────────────────────────
     const atSmoke = (id) => {
       const npc = this.npcs.find(n=>n.id===id);
       if(!npc) return false;
@@ -3967,33 +3981,27 @@ class GameScene extends Phaser.Scene {
       return npc.sprite.x >= z.x && npc.sprite.x <= z.x+z.w &&
              npc.sprite.y >= z.y && npc.sprite.y <= z.y+z.h;
     };
-    const NPC_SC_COLORS = { james:'#ffa01e', chance:'#44aaff', lee:'#ff80c0', chandler:'#bbbbbb', drew:'#cc88ff', jeff:'#44dd44', jorie:'#ff6633' };
     const hereNames = ['james','lee','chance','chandler','drew','jeff','jorie']
       .filter(id => atSmoke(id) || STATE.smokingNPCs.includes(id))
       .map(id =>{ const n = this.npcs.find(x=>x.id===id); return n ? n.name : id; });
-    this.scWhoTxt.setText(hereNames.length ? `👥 ${hereNames.join('  ')}` : '👤 Just you out here.').setVisible(true);
+    this.scWhoTxt.setText(hereNames.length ? `👥 ${hereNames.join('  ')}` : '👤 Just you.').setVisible(true);
     this.scHeaderTxt.setVisible(true);
     this.scLeaveTxt.setVisible(true);
-    if(this.scStopBtn) this.scStopBtn.setVisible(true);
+    this.scStopBtn.setVisible(true);
 
-    // Clear message pool
     this.scMsgPool.forEach(t => t.setText('').setVisible(false).setAlpha(0));
-
-    // Wipe any existing NPC bubbles the moment we open (they'd float in wrong space)
     this.time.delayedCall(50, ()=>{ this.clearAllBubbles(); });
 
-    // Zoom camera into smoke area
+    // ── camera: gentler zoom, stays out so the tray is readable ──────────────
     this.cameras.main.stopFollow();
-    this.cameras.main.zoomTo(1.8, 700, 'Quad.easeInOut');
-    this.cameras.main.pan(160, 90, 700, 'Quad.easeInOut');
+    this.cameras.main.zoomTo(1.25, 600, 'Quad.easeInOut');
+    this.cameras.main.pan(165, 72, 600, 'Quad.easeInOut');
 
-    // Smoke particle emitter
     if(this._scParticleTimer) this._scParticleTimer.remove();
     this._scParticleTimer = this.time.addEvent({
       delay: 650, callback: this._spawnSmokeParticle, callbackScope: this, loop: true
     });
 
-    // Post a welcome line
     this.time.delayedCall(800, ()=>{
       this.postSmokeChat('player', '*steps outside and lights up* 💨');
     });
@@ -4007,12 +4015,10 @@ class GameScene extends Phaser.Scene {
     this.scWhoTxt.setVisible(false);
     this.scLeaveTxt.setVisible(false);
     if(this.scStopBtn) this.scStopBtn.setVisible(false);
-    this.scMsgPool.forEach(t => t.setVisible(false));
-    // Restore camera
+    this.scMsgPool.forEach(t => t.setVisible(false).setAlpha(0));
     this.cameras.main.stopFollow();
     this.cameras.main.zoomTo(GW < 600 ? 0.7 : 0.85, 500, 'Quad.easeInOut');
     this.cameras.main.pan(this.player.x, this.player.y, 500, 'Quad.easeInOut');
-    // Re-attach follow
     this.time.delayedCall(520, ()=>{
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     });
@@ -4056,39 +4062,48 @@ class GameScene extends Phaser.Scene {
   }
 
   _redrawSmokeChat(){
-    // Dynamic bottom-stacking layout — no overlaps, every message readable
-    const msgs = this._scMessages;
-    const panelTop    = this._scPY + 48;
-    const panelBottom = GH - 26;
-    const gap = 7;
+    const msgs       = this._scMessages;
+    const panelTop   = this._scPY + 44;   // just below header separator
+    const panelBot   = GH - 30;           // just above footer separator
+    const GAP        = 8;                 // guaranteed space between messages
+    const MIN_H      = 18;               // minimum slot height in case font not loaded
 
-    // Hide all slots first
     this.scMsgPool.forEach(t => t.setVisible(false).setAlpha(0));
 
-    // Render newest message first, stacking upward from the bottom
-    let y = panelBottom;
-    let slotIdx = 0;
-    for(let i = msgs.length - 1; i >= 0 && slotIdx < this.scMsgPool.length; i--){
+    // Measure all candidate messages first, then position — this avoids
+    // reading stale height from a previous render pass.
+    const visible = [];
+    for(let i = msgs.length - 1; i >= 0 && visible.length < this.scMsgPool.length; i--){
       const msg  = msgs[i];
-      const slot = this.scMsgPool[slotIdx++];
-      const age  = msgs.length - 1 - i; // 0 = newest
-      const alpha = Math.max(0.45, 1 - age * 0.07);
+      const slot = this.scMsgPool[visible.length];
+      const age  = msgs.length - 1 - i;
 
-      slot.setOrigin(0, 1); // bottom-left anchor so y = bottom of this message
+      // Apply style + content first so Phaser recalculates bounds
+      slot.setOrigin(0, 1);
       slot.setStyle({
-        fill: msg.color, fontSize:'11px', fontFamily:'monospace',
-        fontStyle:'bold', wordWrap:{ width: this._scPW - 22 }, lineSpacing:3
+        fill:       msg.color,
+        fontSize:   '12px',
+        fontFamily: 'monospace',
+        fontStyle:  'bold',
+        wordWrap:   { width: this._scPW - 24 },
+        lineSpacing: 2,
       });
-      slot.setText(`${msg.name}\n${msg.text}`);
-      slot.setAlpha(alpha);
-      slot.setPosition(this._scPX + 11, y);
+      slot.setText(`${msg.name}:  ${msg.text}`);
+      // Force a synchronous layout so slot.height is accurate
+      slot.setPosition(-9999, -9999);
       slot.setVisible(true);
 
-      // Move cursor up by this message's actual rendered height + gap
-      y -= slot.height + gap;
+      visible.push({ slot, age, h: Math.max(slot.height, MIN_H) });
+    }
 
-      // Stop drawing once we've climbed above the panel top
-      if(y < panelTop) break;
+    // Now place from the bottom up — no stale heights, no overlaps
+    let y = panelBot;
+    for(const { slot, age, h } of visible){
+      const alpha = Math.max(0.42, 1 - age * 0.09);
+      slot.setPosition(this._scPX + 12, y);
+      slot.setAlpha(alpha);
+      y -= h + GAP;
+      if(y - h < panelTop){ slot.setVisible(false); break; } // ran out of room
     }
   }
 
