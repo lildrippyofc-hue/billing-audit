@@ -111,6 +111,8 @@ const STATE = {
   groupRoastDone: false,    // group roast already fired this shift
   groupRoastActive: false,  // mid-roast right now
   jamesSmokeParty: false,   // James personally pulled the whole crew outside
+  jeffAskTimer: 0,
+  jeffAskTarget: null,
 };
 
 // Zone layout
@@ -281,6 +283,31 @@ const NPC_DEFS = [
       '"Honestly? I could leave. Better offers exist. But then who would watch all this?"',
     ],
     choices:["Laugh along 😂","Defend Chandler 🛡️","Sic him on Drew 💸","Tell him to chill 🙄"],
+  },
+  { id:'jeff', name:'Jeff', title:'(Chill Lead 🌿)', color:0x44bb44, zone:'dock', patrol:false,
+    appearance:{ shirt:0x2a5c2a, pants:0x1a2e1a, skin:0xd4956a, hair:0x2a1c08 },
+    lines:[
+      '"Hey... you wanna smoke real quick? Like right now."',
+      '"I\'m not saying I\'m high right now. I\'m just saying I\'m very at peace."',
+      '"Have you ever looked at a pallet... like REALLY looked at it?"',
+      '"What time is it? No wait — does time even matter in here?"',
+      '"I had a whole plan for today and then I remembered I\'m at work."',
+      '"Bro this job is so much easier when you approach it with the right... mindset."',
+      '"I\'m technically a lead. Which means I lead. From here. Chilling."',
+      '"No stress bro. None. You feel that? That\'s peace."',
+      '"James asked me to supervise Bay 3. I\'m doing that. From here. Mentally."',
+      '"Every pallet is just a box with potential. Think about it."',
+      '"Did you eat today? You should eat. Or not. Depends on the vibe."',
+      '"The forklift has been beeping for 20 minutes. That\'s just its personality now."',
+      '"I told James I had things under control. He said \'nothing is under control.\' We were both right."',
+      '"If a pallet falls and nobody\'s in the bay, did it make a sound?"',
+      '"I\'ve been meaning to talk to HR but every time I go in there I forget why I\'m there."',
+      '"Todd texted me from inside the freezer. Just the word \'cold.\' Nothing else."',
+      '"Drew tried to ask me for $5. I said I don\'t carry cash. He asked if I had Venmo. I do not confirm or deny."',
+      '"Chance is out here calling people out and honestly every single time he\'s right."',
+      '"Lee knows everything about everyone. Everything. I respect it deeply."',
+    ],
+    choices:['Smoke with Jeff 🌿', 'Nah I\'m good 🚫', 'Tell James 😈', 'What are you even on? 🤔'],
   },
   { id:'pam', name:'Pam', title:'(The Manager)', color:0xcc3333, zone:'dock', patrol:true,
     appearance:{ shirt:0xcc2222, pants:0x221122, skin:0xf0c890, hair:0xddcc88, blazer:true, clipboard:true },
@@ -1269,6 +1296,7 @@ class GameScene extends Phaser.Scene {
       }).setScrollFactor(0).setDepth(82).setVisible(false).setInteractive();
       btn.on('pointerover',()=>btn.setStyle({fill:'#fff'}));
       btn.on('pointerout', ()=>btn.setStyle({fill:'#ffd700'}));
+      btn.on('pointerdown',()=>{ SFX.click(); });
       this.dlgChoiceBtns.push(btn);
     }
     this.dlgCloseTxt = this.add.text(GW-20, GH-20, '[ESC] Close', {
@@ -1279,6 +1307,7 @@ class GameScene extends Phaser.Scene {
 
   openDialogue(npc){
     if(STATE.dialogueActive || STATE.miniGameActive) return;
+    SFX.pop();
     STATE.dialogueActive = true;
     this.dialogue = npc;
     this.player.setVelocity(0,0);
@@ -1675,6 +1704,75 @@ class GameScene extends Phaser.Scene {
         this.floatText(this.player.x, this.player.y, '🙄 Chance has zero chill. None.', '#ff6a00');
       }
     }
+    else if(npc.id === 'jeff'){
+      if(idx === 0){ // Smoke with Jeff
+        const jeffYes = [
+          '"That\'s what I\'m talking about. Let\'s go. Slowly though."',
+          '"Bro yes. I knew you were built different."',
+          '"Okay. Okay. Right now. We\'re doing this. Calmly."',
+          '"Perfect. Perfect. This is exactly the vibe I needed today."',
+        ];
+        response = Phaser.Math.RND.pick(jeffYes);
+        energyChange = 25; suspChange = 8; scoreChange = 30;
+        this.floatText(this.player.x, this.player.y, '🌿 You smoked with Jeff. Things feel... different.', '#44bb44');
+        this.floatText(this.player.x, this.player.y - 30, '⚡ Energy +25, Suspicion +8, +30 pts', '#aaffaa');
+        this.tweens.add({
+          targets: this.cameras.main,
+          zoom: this.cameras.main.zoom * 0.92,
+          duration: 2000,
+          yoyo: true,
+          ease: 'Sine.easeInOut',
+        });
+      }
+      else if(idx === 1){ // Nah I'm good
+        const jeffRespect = [
+          '"Nah that\'s valid. Offer stands though."',
+          '"Respect. Completely. No judgment. None."',
+          '"All good. You do you. I\'ll be here."',
+          '"That\'s cool. That\'s actually cool. Boundaries are healthy."',
+        ];
+        response = Phaser.Math.RND.pick(jeffRespect);
+        scoreChange = 5;
+        this.floatText(this.player.x, this.player.y, '🚫 Jeff respects it. No hard feelings.', '#44bb44');
+      }
+      else if(idx === 2){ // Tell James
+        const jeffCallout = [
+          '"...bro really? Okay."',
+          '"Wow. Okay. That happened."',
+          '"Noted. I respect the chaos. Respect it completely."',
+        ];
+        response = Phaser.Math.RND.pick(jeffCallout);
+        scoreChange = 20;
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 15);
+        const james = this.npcs.find(n=>n.id==='james');
+        const jamesShocked = [
+          '"JEFF. MY OFFICE. NOW. ...After the shift."',
+          '"I KNEW IT. I ALWAYS KNOW. JEFF! RIGHT NOW."',
+          '"Jeff has been doing WHAT?! On MY dock?!"',
+          '"Jeff. JEFF. I don\'t even — we\'ll talk. Oh we\'ll TALK."',
+        ];
+        if(james) this.time.delayedCall(400, ()=> this.showBubble(james, Phaser.Math.RND.pick(jamesShocked)));
+        this.floatText(this.player.x, this.player.y, '😈 You snitched on Jeff! Chaos +20 pts', '#ffaa00');
+        const chance = this.npcs.find(n=>n.id==='chance');
+        if(chance){
+          const proxDist = Phaser.Math.Distance.Between(this.player.x, this.player.y, chance.sprite.x, chance.sprite.y);
+          if(proxDist < 400){
+            this.time.delayedCall(2000, ()=> this.showBubble(chance, '"Wait — did they just snitch on Jeff?! I need a minute to process this."'));
+          }
+        }
+      }
+      else { // idx === 3: What are you even on?
+        const jeffPhilosophy = [
+          '"Nothing, bro. This is just... mental clarity. Peak work-life balance. You feel it."',
+          '"I\'m on a vibe, bro. A carefully maintained, deeply intentional vibe."',
+          '"This is what happens when you truly respect the process. And also take breaks. Lots of breaks."',
+          '"Peace, man. Just pure peace. You should try it. Costs nothing. Well. Almost nothing."',
+        ];
+        response = Phaser.Math.RND.pick(jeffPhilosophy);
+        energyChange = 5; scoreChange = 15;
+        this.floatText(this.player.x, this.player.y, '🤔 Jeff drops some wisdom. Energy +5, +15 pts', '#44bb44');
+      }
+    }
     else if(npc.id === 'pam'){
       if(idx===0){ // Pretend to work
         response = '"I\'m watching you. Very carefully."'; suspChange = -5;
@@ -1825,6 +1923,14 @@ class GameScene extends Phaser.Scene {
       .setOrigin(1,1).setScrollFactor(0).setDepth(91).setVisible(false).setInteractive();
     this.mgQuit.on('pointerdown',()=>this.endMiniGame(false));
     this.input.keyboard.on('keydown-Q', ()=>{ if(STATE.miniGameActive) this.endMiniGame(false); });
+
+    // Dock animation view for mini-game
+    this.mgDockBg  = this.add.graphics().setScrollFactor(0).setDepth(92).setVisible(false);
+    this.mgJackGfx = this.add.graphics().setScrollFactor(0).setDepth(93).setVisible(false);
+    this.mgComboTxt= this.add.text(GW/2+190, GH/2+20, '', {
+      fontSize:'52px', fill:'#ff6600', fontFamily:'monospace', fontStyle:'bold',
+      stroke:'#000', strokeThickness:5
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(93).setVisible(false);
   }
 
   startMiniGame(truckIdx){
@@ -1843,6 +1949,12 @@ class GameScene extends Phaser.Scene {
     this.mgKeyMap = { 'ArrowLeft':'←','ArrowRight':'→','ArrowUp':'↑','ArrowDown':'↓',' ':'SPACE' };
     this.mgCurrentKey = '';
     this.mgWindowLeft = 0;
+
+    // Initialize dock view state
+    this._jackX = GW/2;
+    this._palletOnJack = false;
+    this._dockViewY = 120;
+
     this.mgShowNext();
 
     // Show UI
@@ -1856,6 +1968,11 @@ class GameScene extends Phaser.Scene {
 
     [this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit].forEach(o=>o.setVisible(true));
     this.mgTitle.setText(`🚛 UNLOADING TRUCK ${truckIdx+1}  —  ${this.mgPalletsTotal} PALLETS`);
+
+    this.mgDockBg.setVisible(true);
+    this.mgJackGfx.setVisible(true);
+    this.mgComboTxt.setVisible(true);
+    this._drawDockView();
 
     // Key listener for mini-game
     this.mgKeyListener = (event)=>{
@@ -1907,12 +2024,59 @@ class GameScene extends Phaser.Scene {
       this.mgPts += pts;
       STATE.score += pts;
       STATE.energy = Math.max(0, STATE.energy - 1.5);
+      SFX.hit(this.mgCombo);
+      if(this.mgCombo > 0 && this.mgCombo % 5 === 0) SFX.comboDing(this.mgCombo);
       this.mgStatus.setText(`✅ PALLET! Combo ×${this.mgCombo} (+${pts} pts)`).setStyle({fill:'#44ff44'});
       this.tweens.add({ targets:this.mgPrompt, y:GH/2-40, yoyo:true, duration:100 });
+
+      // Combo display
+      if(this.mgComboTxt){
+        this.mgComboTxt.setText(this.mgCombo > 1 ? `×${this.mgCombo}` : '').setVisible(true);
+        this.tweens.add({ targets:this.mgComboTxt, scaleX:[1.4,1], scaleY:[1.4,1], duration:180 });
+      }
+
+      // Animate jack: jack drives to truck, loads pallet, drives back to storage
+      if(this.mgDockBg && this.mgDockBg.visible){
+        const truckX   = GW/2 + 180; // truck side
+        const storageX = GW/2 - 190; // storage side
+        const homeX    = GW/2;
+        this._jackX = homeX;
+        this._palletOnJack = false;
+        // Drive to truck
+        this.tweens.add({
+          targets: this, _jackX: truckX, duration: 220, ease: 'Linear',
+          onUpdate: ()=> this._drawDockView(),
+          onComplete: ()=>{
+            this._palletOnJack = true;
+            this._drawDockView();
+            // Drive back to storage
+            this.tweens.add({
+              targets: this, _jackX: storageX, duration: 260, ease: 'Linear',
+              onUpdate: ()=> this._drawDockView(),
+              onComplete: ()=>{
+                this._palletOnJack = false;
+                this._jackX = homeX;
+                this._drawDockView();
+              }
+            });
+          }
+        });
+      }
       this.mgShowNext();
     } else {
       this.mgMisses++; this.mgCombo=0;
+      SFX.miss();
       this.mgStatus.setText('❌ Wrong key! Pallet dropped.').setStyle({fill:'#ff4444'});
+      if(this.mgComboTxt) this.mgComboTxt.setText('').setVisible(false);
+      // Shake the jack
+      if(this.mgDockBg && this.mgDockBg.visible){
+        const origX = this._jackX;
+        this.tweens.add({
+          targets: this, _jackX: origX + 18, duration: 70, yoyo: true, repeat: 3,
+          onUpdate: ()=> this._drawDockView(),
+          onComplete: ()=>{ this._jackX = origX; this._drawDockView(); }
+        });
+      }
       this.tweens.add({ targets:this.mgPrompt, x:GW/2+10, yoyo:true, duration:80, repeat:2,
         onComplete:()=>this.mgPrompt.setX(GW/2) });
     }
@@ -1939,6 +2103,13 @@ class GameScene extends Phaser.Scene {
     if(this.mgKeyListener){ window.removeEventListener('keydown',this.mgKeyListener); this.mgKeyListener=null; }
     if(this.mgTapArea){ this.mgTapArea.destroy(); this.mgTapArea=null; }
 
+    if(this.mgDockBg) this.mgDockBg.setVisible(false);
+    if(this.mgJackGfx) this.mgJackGfx.setVisible(false);
+    if(this.mgComboTxt) this.mgComboTxt.setVisible(false);
+
+    if(success) SFX.shiftDone();
+    else        SFX.miss();
+
     const truck = this.trucks[STATE.currentTruck];
     if(truck){
       const ratio = this.mgHits / this.mgPalletsTotal;
@@ -1959,7 +2130,7 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    [this.mgBg,this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit].forEach(o=>o.setVisible(false));
+    [this.mgBg,this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit,this.mgDockBg,this.mgJackGfx,this.mgComboTxt].forEach(o=>o&&o.setVisible(false));
     STATE.currentTruck = null;
 
     // Check next assignment
@@ -2443,18 +2614,101 @@ class GameScene extends Phaser.Scene {
       return;
     }
     const truck = Phaser.Math.RND.pick(available);
-    STATE.currentTruckObj = truck;
-    const idx = this.trucks.indexOf(truck);
+    const idx   = this.trucks.indexOf(truck);
+    const james  = this.npcs.find(n=>n.id==='james');
 
-    const james = this.npcs.find(n=>n.id==='james');
-    if(james) this.showBubble(james, `Go to Bay ${idx+1}!\n${truck.pallets} pallets!`);
-    this.floatText(this.player.x, this.player.y, `📋 Assigned: Bay ${idx+1} (${truck.pallets} pallets)\nWalk to the truck & press E`, '#ffa01e');
+    SFX.horn();
+    if(james) this.showBubble(james, `Bay ${idx+1}! ${truck.pallets} pallets!\nGET MOVING.`);
 
     // Highlight the bay
     const gfx = this.add.graphics().setDepth(5);
     gfx.lineStyle(3, 0x44ff44, 1);
     gfx.strokeRect(truck.x-truck.w/2, truck.y-truck.h/2, truck.w, truck.h);
-    this.tweens.add({ targets:gfx, alpha:0, duration:3000, onComplete:()=>gfx.destroy() });
+    this.tweens.add({ targets:gfx, alpha:0, duration:6000, onComplete:()=>gfx.destroy() });
+
+    // Open dialogue with choices
+    STATE.dialogueActive = true;
+    this._pendingAssignTruck = truck;
+    this._pendingAssignIdx   = idx;
+
+    const boxY = GH - 145;
+    this.dlgBg.setVisible(true);
+    this.dlgBg.clear()
+      .fillStyle(0x000a00, 0.93).fillRoundedRect(5, boxY-5, GW-10, 145, 10)
+      .lineStyle(2, 0x44ff44, 0.9).strokeRoundedRect(5, boxY-5, GW-10, 145, 10);
+
+    this.dlgPortrait.setFillStyle(0x2a5aaa).setVisible(true);
+    this.dlgPortraitTxt.setText('James\n(Manager)').setStyle({fill:'#ffa01e',fontSize:'11px'}).setVisible(true);
+
+    const jLines = [
+      `"Bay ${idx+1}. ${truck.pallets} pallets. I shouldn't have to say it twice."`,
+      `"You're on Bay ${idx+1}. ${truck.pallets} pallets sitting there doing nothing. GO."`,
+      `"Bay ${idx+1}. ${truck.pallets} pallets. I have it on the clipboard. Move."`,
+      `"I need Bay ${idx+1} cleared. ${truck.pallets} pallets. Not tomorrow. Now."`,
+    ];
+    const assignLine = Phaser.Math.RND.pick(jLines);
+    this.dlgText.setText('James: '+assignLine).setStyle({fill:'#fff'}).setVisible(true);
+    this.dlgCloseTxt.setText('[ESC] Ignore (James will notice)').setVisible(true);
+
+    const choices = [
+      `✅ On it! (Bay ${idx+1})`,
+      `😎 Nah I'm good`,
+      `🤔 Which bay again?`,
+    ];
+    this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+    this.choiceKeys = [];
+    choices.forEach((ch, i)=>{
+      const btn = this.dlgChoiceBtns[i];
+      btn.setText(`${i+1}. ${ch}`).setPosition(130, boxY+30+i*26)
+         .setStyle({fill: i===1 ? '#ff8888' : '#ffd700'}).setVisible(true);
+      btn.removeAllListeners('pointerdown');
+      btn.on('pointerdown', ()=>{ SFX.click(); this.handleAssignmentChoice(i); });
+      const k = this.input.keyboard.addKey(49+i);
+      k.once('down', ()=>{ if(STATE.dialogueActive) this.handleAssignmentChoice(i); });
+      this.choiceKeys.push(k);
+    });
+  }
+
+  handleAssignmentChoice(idx){
+    const truck = this._pendingAssignTruck;
+    const truckIdx = this._pendingAssignIdx;
+    this.closeDialogue();
+
+    if(idx === 0){ // On it!
+      STATE.currentTruckObj = truck;
+      const james = this.npcs.find(n=>n.id==='james');
+      const okLines = [
+        '"Good. I don\'t want to see you back until that bay is clear."',
+        '"Finally. Don\'t make me wait."',
+        '"That\'s what I needed to hear. Move."',
+      ];
+      if(james) this.time.delayedCall(400, ()=> this.showBubble(james, Phaser.Math.RND.pick(okLines)));
+      this.floatText(this.player.x, this.player.y, `🚛 Head to Bay ${truckIdx+1}! Press E at the truck.`, '#44ff44');
+    }
+    else if(idx === 1){ // Nah I'm good
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 22);
+      STATE.suspicion = Math.min(100, STATE.suspicion + 12);
+      SFX.miss();
+      this.cameras.main.shake(250, 0.01);
+      const jamesNo = [
+        '"...NAH?! NAH?! Did you just say NAH to me on MY dock?!"',
+        '"Excuse me?! EXCUSE ME?! Back to work. NOW. Or I\'m calling corporate."',
+        '"I\'m sorry — I don\'t think I heard you correctly. Because you didn\'t just say no."',
+        `"You're going to Bay ${truckIdx+1}. I don't know what 'nah' means. Figure it out."`,
+      ];
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james) this.showBubble(james, Phaser.Math.RND.pick(jamesNo));
+      this.floatText(this.player.x, this.player.y, '😬 James is FURIOUS. Suspicion +12, Annoyance +22', '#ff4400');
+      const chance = this.npcs.find(n=>n.id==='chance');
+      if(chance) this.time.delayedCall(2000, ()=> this.showBubble(chance, '"...did they just say nah to James. I\'m going to need a minute."'));
+    }
+    else { // Which bay again?
+      STATE.currentTruckObj = truck;
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 6);
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james) this.showBubble(james, `"BAY ${truckIdx+1}. RIGHT THERE. THE ONE. WITH THE TRUCK. IN IT."`);
+      this.floatText(this.player.x, this.player.y, `🤔 Bay ${truckIdx+1} — over there! ${truck.pallets} pallets.`, '#ffaa44');
+    }
   }
 
   // ── NPC AI ─────────────────────────────────────────────────────────────────
@@ -2844,7 +3098,148 @@ class GameScene extends Phaser.Scene {
           this.showBubble(npc, Phaser.Math.RND.pick(leeIdle));
         }
       }
+
+      // ── JEFF: periodically walks up to someone and asks to smoke ─────────────
+      if(npc.id==='jeff'){
+        STATE.jeffAskTimer = (STATE.jeffAskTimer||0) + delta;
+        if(STATE.jeffAskTimer > 22000 && !STATE.jeffAskTarget){
+          STATE.jeffAskTimer = 0;
+          // Pick a random target (not pam, not jeff himself)
+          const candidates = ['lee','chance','chandler','drew','todd'];
+          STATE.jeffAskTarget = Phaser.Math.RND.pick(candidates);
+        }
+        if(STATE.jeffAskTarget){
+          const target = this.npcs.find(n=>n.id===STATE.jeffAskTarget);
+          if(target){
+            npc.targetX = target.sprite.x + 40;
+            npc.targetY = target.sprite.y;
+            const dist = Phaser.Math.Distance.Between(npc.sprite.x,npc.sprite.y,target.sprite.x,target.sprite.y);
+            if(dist < 70 && npc.bubbleTimer <= 0){
+              const askLines = [
+                '"Yo... you wanna step outside real quick?"',
+                '"Hey between you and me — you smoke?"',
+                '"I got something. Just saying. No pressure."',
+                '"You look stressed. I have a solution."',
+                '"Real quick. Outside. Two minutes. Maybe five."',
+              ];
+              this.showBubble(npc, Phaser.Math.RND.pick(askLines));
+              // Target reacts based on who they are
+              this.time.delayedCall(1400, ()=>{
+                if(!target) return;
+                const reactions = {
+                  lee:      ['"JEFF. YES. Let\'s go RIGHT NOW."', '"Oh my god yes. I needed this."'],
+                  chance:   ['"You know I\'m good bro. But I respect the hustle."', '"Nah I\'m clean. But I appreciate the offer king."'],
+                  chandler: ['"I\'m telling James."', '"That is HIGHLY inappropriate and I will be reporting this."'],
+                  drew:     ['"Does it cost anything? Wait — I don\'t even care. Yes."', '"Bro yes. Do I need money for this?"'],
+                  todd:     ['"I\'m already somewhere else mentally. So sure."', '"...I\'ve been in the freezer for 9 hours. Yes. Obviously."'],
+                };
+                const pool = reactions[STATE.jeffAskTarget] || ['"...maybe."'];
+                this.showBubble(target, Phaser.Math.RND.pick(pool));
+                // Chandler actually does tell James
+                if(STATE.jeffAskTarget === 'chandler'){
+                  this.time.delayedCall(3000, ()=>{
+                    const james = this.npcs.find(n=>n.id==='james');
+                    if(james) this.showBubble(james, '"Jeff. My office. NOW. ...After the shift. After the shift."');
+                    this.floatText(npc.sprite.x, npc.sprite.y-50, '😬 Chandler snitched on Jeff!', '#ffaa00');
+                  });
+                }
+              });
+              this.time.delayedCall(6000, ()=>{ STATE.jeffAskTarget = null; });
+            }
+          } else {
+            STATE.jeffAskTarget = null;
+          }
+        }
+        // Jeff idle mutter
+        if(npc.bubbleTimer<=0 && !STATE.jeffAskTarget && Math.random()<0.0008){
+          this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
+        }
+      }
     });
+  }
+
+  _drawDockView(){
+    const ax = GW/2 - 240, ay = this._dockViewY || 120, aw = 480, ah = 100;
+    const truckSideX = ax + aw - 90; // truck on right
+    const storeSideX = ax + 10;      // storage on left
+    const jx = this._jackX || GW/2;
+
+    // Background
+    this.mgDockBg.clear();
+    this.mgDockBg.fillStyle(0x111822, 1);
+    this.mgDockBg.fillRoundedRect(ax, ay, aw, ah, 8);
+    this.mgDockBg.lineStyle(1, 0x44cc44, 0.4);
+    this.mgDockBg.strokeRoundedRect(ax, ay, aw, ah, 8);
+
+    // Floor
+    this.mgDockBg.lineStyle(1, 0x333344, 0.8);
+    this.mgDockBg.lineBetween(ax+5, ay+ah-12, ax+aw-5, ay+ah-12);
+
+    // TRUCK (right side)
+    this.mgDockBg.fillStyle(0x334466, 1);
+    this.mgDockBg.fillRoundedRect(truckSideX, ay+8, 80, ah-20, 4);
+    this.mgDockBg.fillStyle(0x22334d, 1);
+    this.mgDockBg.fillRoundedRect(truckSideX+4, ay+12, 72, ah-28, 2);
+    // Pallets remaining in truck
+    const cols = 4, maxRows = 4;
+    const palletsLeft = Math.max(0, this.mgPalletsLeft || 0);
+    for(let r=0; r<maxRows; r++){
+      const py = ay + ah - 18 - r*16;
+      for(let c=0; c<cols; c++){
+        const palIdx = r*cols + c;
+        if(palIdx < palletsLeft){
+          this.mgDockBg.fillStyle(0xcc8833, 0.95);
+          this.mgDockBg.fillRect(truckSideX+6+c*16, py, 14, 12);
+          this.mgDockBg.fillStyle(0xddaa44, 0.4);
+          this.mgDockBg.fillRect(truckSideX+6+c*16, py, 14, 4);
+        }
+      }
+    }
+
+    // STORAGE RACK (left side)
+    this.mgDockBg.fillStyle(0x222233, 1);
+    this.mgDockBg.fillRect(storeSideX, ay+10, 70, ah-22);
+    // Shelf lines
+    this.mgDockBg.lineStyle(1, 0x333355, 0.8);
+    for(let r=0;r<3;r++) this.mgDockBg.lineBetween(storeSideX, ay+10+r*28, storeSideX+70, ay+10+r*28);
+    // Pallets stored (green = done)
+    const stored = (this.mgPalletsTotal||0) - palletsLeft;
+    for(let r=0; r<Math.min(4, Math.ceil(stored/3)); r++){
+      const py = ay + ah - 18 - r*16;
+      for(let c=0; c<3; c++){
+        if(r*3+c < stored){
+          this.mgDockBg.fillStyle(0x44cc44, 0.85);
+          this.mgDockBg.fillRect(storeSideX+4+c*20, py, 17, 12);
+        }
+      }
+    }
+
+    // PALLET JACK (yellow — moves back and forth)
+    this.mgJackGfx.clear();
+    // Body
+    this.mgJackGfx.fillStyle(0xffcc00, 1);
+    this.mgJackGfx.fillRoundedRect(jx-22, ay+ah-30, 44, 16, 3);
+    // Highlight stripe
+    this.mgJackGfx.fillStyle(0xffffff, 0.18);
+    this.mgJackGfx.fillRoundedRect(jx-20, ay+ah-29, 40, 5, 2);
+    // Handle (left side)
+    this.mgJackGfx.fillStyle(0x666666, 1);
+    this.mgJackGfx.fillRoundedRect(jx-28, ay+ah-26, 8, 10, 2);
+    // Forks (right side extend out)
+    this.mgJackGfx.fillStyle(0xeeaa00, 1);
+    this.mgJackGfx.fillRect(jx+20, ay+ah-28, 18, 5);
+    this.mgJackGfx.fillRect(jx+20, ay+ah-19, 18, 5);
+    // Wheels
+    this.mgJackGfx.fillStyle(0x222222, 1);
+    this.mgJackGfx.fillCircle(jx-18, ay+ah-14, 5);
+    this.mgJackGfx.fillCircle(jx+18, ay+ah-14, 5);
+    // Pallet ON the jack (when carrying)
+    if(this._palletOnJack){
+      this.mgJackGfx.fillStyle(0xcc8833, 0.97);
+      this.mgJackGfx.fillRoundedRect(jx-16, ay+ah-42, 32, 12, 2);
+      this.mgJackGfx.fillStyle(0xddaa44, 0.35);
+      this.mgJackGfx.fillRoundedRect(jx-16, ay+ah-42, 32, 5, 2);
+    }
   }
 
   showBubble(npc, text){
@@ -3324,6 +3719,7 @@ class GameScene extends Phaser.Scene {
     }
     if(!this._jamesMilestone50 && STATE.jamesAnnoyance >= 50){
       this._jamesMilestone50 = true;
+      SFX.james();
       const james = this.npcs.find(n=>n.id==='james');
       if(james){ this.showBubble(james, '"THAT\'S IT. EVERYONE BETTER LOOK BUSY RIGHT NOW."'); }
       this.cameras.main.shake(300, 0.010);
@@ -3331,6 +3727,7 @@ class GameScene extends Phaser.Scene {
     }
     if(!this._jamesMilestone80 && STATE.jamesAnnoyance >= 80){
       this._jamesMilestone80 = true;
+      SFX.james(); SFX.danger();
       const james = this.npcs.find(n=>n.id==='james');
       if(james){ this.showBubble(james, '"I AM DONE. I AM SO DONE. EVERYONE IS GETTING AN EMAIL TONIGHT!"'); }
       this.cameras.main.shake(500, 0.020);
@@ -3392,6 +3789,13 @@ class GameScene extends Phaser.Scene {
 
     // Player name tag (above head — origin is at feet so offset by full height)
     this.playerTag.setPosition(this.player.x, this.player.y-66);
+
+    // Footstep SFX
+    this._stepTimer = (this._stepTimer||0) + delta;
+    if(this._stepTimer > 280 && this.player.body.speed > 20){
+      SFX.step();
+      this._stepTimer = 0;
+    }
 
     // E prompt
     this.updateEPrompt();
