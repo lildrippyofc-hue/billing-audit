@@ -53,8 +53,13 @@
         <span style="color:#ffd700;">Q</span><span style="color:#dddddd;">Cancel truck unloading</span>
         <span style="color:#ffd700;">Timeclock</span><span style="color:#dddddd;">Punch out &amp; go off the clock</span>
         <span style="color:#ffd700;">Smoke Area</span><span style="color:#dddddd;">Hang outside - risky but fun</span>
-        <span style="color:#ff7777;">James Meter</span><span style="color:#ffaaaa;">Hits 100% = you're fired. PO#s are 10 digits.</span>
+        <span style="color:#ff7777;">James Meter</span><span style="color:#ffaaaa;">Hits 100% = you're fired. Talk him down to chill it.</span>
       </div>
+    </div>
+    <div style="width:100%;background:rgba(255,160,30,0.08);border:1.5px solid rgba(255,160,30,0.35);border-radius:12px;padding:11px 14px;text-align:center;">
+      <p style="color:rgba(255,255,255,0.5);font-size:10px;font-weight:700;letter-spacing:1.2px;margin-bottom:4px;">GOT IDEAS FOR THE GAME?</p>
+      <p style="color:#ffd700;font-size:15px;font-weight:900;letter-spacing:1px;">📱 785-760-1248</p>
+      <p style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:3px;">Text me your ideas — I might just add them 👀</p>
     </div>
   </div>
 </div>
@@ -231,7 +236,7 @@ const NPC_DEFS = [
       '"The dock IS my personality at this point. I\'ve accepted it."',
       '"One day I\'m just going to walk into the freezer and Todd\'s going to be there. Just waiting."',
     ],
-    choices:["Say hi 👋","Ask for easier truck 😅","Let's smoke 🚬","🏃 RUN!"],
+    choices:["Say hi 👋","You're the best, James 🌟","Let's smoke 🚬","🏃 RUN!"],
   },
   { id:'chandler', name:'Chandler', title:'(Bread Boy)', color:0xc8a050, zone:'floor', patrol:false,
     appearance:{ shirt:0xc8a050, pants:0x4466aa, skin:0xf0c080, hair:0xd4aa30 },
@@ -2272,7 +2277,7 @@ class GameScene extends Phaser.Scene {
         ];
         response = Phaser.Math.RND.pick(hiLines);
         suspChange = -10; STATE.rapportJames++;
-        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 8);
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 14);
       }
       // Off-the-clock override — if player clocked out, idx 1 becomes "I'm off the clock"
       if(idx===1 && STATE.clockedOut){
@@ -2283,7 +2288,7 @@ class GameScene extends Phaser.Scene {
           '"OFF. THE. CLOCK. Those words. In that order. You said them to MY FACE."',
         ];
         response = Phaser.Math.RND.pick(offLines);
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 35);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 24);
         STATE.suspicion = Math.min(100, STATE.suspicion + 20);
         this.floatText(this.player.x, this.player.y, '🚫 YOU\'RE OFF THE CLOCK — James is LOSING IT', '#ff4400');
         this.cameras.main.shake(350, 0.014);
@@ -2311,23 +2316,27 @@ class GameScene extends Phaser.Scene {
         this.time.delayedCall(2500, ()=>this.closeDialogue());
         return;
       }
-      else if(idx===1){ // Ask for easier truck
-        const noLines = [
-          '"No. Next question."',
-          '"That\'s not how any of this works. None of it. Any of it."',
-          '"I don\'t negotiate with... whatever this is. Go."',
-          '"No no no no no. No. Go. Now."',
-          '"Easier truck?! They\'re BOXES. They\'re ALL BOXES."',
-          '"Oh you want EASIER? You think I have an Easy Truck? Is that what you think?"',
-          '"I\'m going to pretend you didn\'t ask me that. For both our sakes."',
-          '"The truck is the truck. The dock is the dock. You are the worker. Go."',
-          '"I\'m sorry did you just ask me to FIND you a lighter load? On MY dock?"',
-          '"You know what makes a truck easier? Going and unloading it. Try that."',
-          '"Ha. HA. Good one. No. Go."',
+      else if(idx===1){ // "You're the best, James" — calm him down
+        const chillLines = [
+          '"I... okay. Thank you. I needed that. ...Back to work."',
+          '"That\'s — look, I\'m not going to pretend that didn\'t help. Get back out there."',
+          '"Nobody EVER says that. ...I mean it. Thank you. Don\'t tell the others."',
+          '"You know what, you\'re alright. Just unload the truck and we\'re good."',
+          '"I\'m going to write that down. Nobody compliments the dock guy. Nobody."',
+          '"...I\'m not going to cry. I\'m FINE. Go. Just — go work. Good talk."',
+          '"You think flattery gets you out of work? ...It doesn\'t. But I appreciate it. Move."',
+          '"That\'s real. That\'s genuine. I can tell. ...I\'ll ease up. Don\'t push it."',
         ];
-        response = Phaser.Math.RND.pick(noLines);
-        suspChange = 8; STATE.jamesAnnoyance += 15;
-        this.floatText(npc.sprite.x, npc.sprite.y-40, '😠 +15 annoyance', '#ff6600');
+        const calmedA = STATE.jamesAnnoyance;
+        response = Phaser.Math.RND.pick(chillLines);
+        const drop = 18 + Math.floor(Math.random()*10); // 18-27 annoyance drop
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - drop);
+        suspChange = -5; scoreChange = 20; STATE.rapportJames++;
+        this.nudgeEmotion('james', 'smug', 12000);
+        this.floatText(npc.sprite.x, npc.sprite.y - 44, `😌 James chilled out (-${drop} rage)`, '#88ddff');
+        if(calmedA >= 60){
+          this.awardAchievement('james_deescalate', 'Hostage Negotiator — talked James down from the edge', '#88ddff');
+        }
       }
       else if(idx===2){ // Go smoke — James pulls the whole crew
         if(STATE.jamesSmokeParty){
@@ -2351,7 +2360,7 @@ class GameScene extends Phaser.Scene {
         STATE.playerRunBoost = 3500;
         STATE.beingChased = true;
         STATE.suspicion = Math.min(100, STATE.suspicion + 22);
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 20);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 13);
         this.floatText(this.player.x, this.player.y, '🏃 RUNNING FROM JAMES!', '#ff4400');
         this.cameras.main.shake(300, 0.012);
         // James runs after player
@@ -2603,7 +2612,7 @@ class GameScene extends Phaser.Scene {
         ];
         response = Phaser.Math.RND.pick(jeffCallout);
         scoreChange = 20;
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 15);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 9);
         const james = this.npcs.find(n=>n.id==='james');
         const jamesShocked = [
           '"JEFF. MY OFFICE. NOW. ...After the shift."',
@@ -2788,7 +2797,7 @@ class GameScene extends Phaser.Scene {
         scoreChange = 15;
       } else if(idx===2){
         response = '"James is answering questions with noises now. That is where we are as an operation."';
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 8);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 5);
         const james = this.npcs.find(n=>n.id==='james');
         if(james) this.time.delayedCall(900, ()=> this.showBubble(james, '"Christine, I heard my name and I am already tired."'));
       } else {
@@ -4785,7 +4794,7 @@ class GameScene extends Phaser.Scene {
     beat(22000,'james',   '"Temperature check complete. Everything is fine. Nobody document this."');
 
     STATE.score += 120;
-    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 6);
     STATE.toddFreezerRetreats++;
     this.noteAnnoyed('todd');
     this.noteAnnoyed('james');
@@ -5127,7 +5136,7 @@ class GameScene extends Phaser.Scene {
       this.floatText(this.player.x, this.player.y, `🚛 Head to Bay ${truckIdx+1}! Press E at the truck.`, '#44ff44');
     }
     else if(idx === 1){ // Nah I'm good
-      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 22);
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 14);
       STATE.suspicion = Math.min(100, STATE.suspicion + 12);
       SFX.miss();
       this.cameras.main.shake(250, 0.01);
@@ -5145,7 +5154,7 @@ class GameScene extends Phaser.Scene {
     }
     else { // Which bay again?
       STATE.currentTruckObj = truck;
-      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 6);
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 4);
       const james = this.npcs.find(n=>n.id==='james');
       if(james) this.showBubble(james, `"BAY ${truckIdx+1}. RIGHT THERE. THE ONE. WITH THE TRUCK. IN IT."`);
       this.floatText(this.player.x, this.player.y, `🤔 Bay ${truckIdx+1} — over there! ${truck.pallets} pallets.`, '#ffaa44');
@@ -5390,7 +5399,7 @@ class GameScene extends Phaser.Scene {
             ];
             this.showBubble(npc, Phaser.Math.RND.pick(jCaughtLines));
             STATE.suspicion = Math.min(100, STATE.suspicion + 15);
-            STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 20);
+            STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 12);
             this.floatText(this.player.x, this.player.y - 40, '😤 James caught you!', '#ffa01e');
           }
         } else if(!STATE.beingChased && STATE.suspicion < 75){
@@ -5547,7 +5556,7 @@ class GameScene extends Phaser.Scene {
                   const tier = Math.min(2, Math.floor(STATE.chandlerRageLevel / 2));
                   this.showBubble(target, Phaser.Math.RND.pick(chandRages[tier]));
                   if(STATE.chandlerRageLevel >= 4){
-                    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance+10);
+                    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance+6);
                     this.floatText(target.sprite.x, target.sprite.y-50, '😤 Chandler is LOSING IT', '#ffd700');
                   }
                 });
@@ -6031,7 +6040,7 @@ class GameScene extends Phaser.Scene {
         this.showBubble(lee, '"TODD NO. That is not a break, that is an HR slideshow."', 3600);
       }
       this.cameras.main.shake(250, 0.008);
-      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 11);
       STATE.suspicion = Math.min(99, STATE.suspicion + 18);
       this.floatText(WW/2, 430, 'Todd got caught before doing anything stupid. Suspicion +18', '#ff5555');
     });
@@ -6077,7 +6086,7 @@ class GameScene extends Phaser.Scene {
       ()=>{ // Chandler breakdown
         const c=this.npcs.find(n=>n.id==='chandler');
         if(c){ this.showBubble(c,'"I WENT TO COLLEGE FOR THIS?! I HAVE A DEGREE!"'); STATE.score+=15; }
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 20);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 12);
         this.floatText(this.player.x,this.player.y,'😂 Chandler breaking down. James annoyed. +15','#ffd700');
       },
       ()=>{ // Health inspector
@@ -6086,7 +6095,7 @@ class GameScene extends Phaser.Scene {
         this.cameras.main.shake(200,0.01);
       },
       ()=>{ // James full meltdown event
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 30);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
         const james=this.npcs.find(n=>n.id==='james');
         if(james) this.showBubble(james,'"WHO LEFT THE PALLET JACK IN THE MIDDLE OF THE DOCK?! WHO?! I WANT A NAME!"');
         this.floatText(WW/2,400,'🔥 JAMES IS HAVING A MOMENT','#ff4400');
@@ -6131,7 +6140,7 @@ class GameScene extends Phaser.Scene {
       ()=>{ // Vending machine eats money
         this.floatText(WW/2,600,'🤖 VENDING MACHINE ATE SOMEONE\'S MONEY. CHAOS IN THE BREAK ROOM.','#ffaa00');
         STATE.suspicion=Math.min(99,STATE.suspicion+8);
-        STATE.jamesAnnoyance=Math.min(100,STATE.jamesAnnoyance+15);
+        STATE.jamesAnnoyance=Math.min(100,STATE.jamesAnnoyance+9);
         const james=this.npcs.find(n=>n.id==='james');
         if(james) this.showBubble(james,'"I am not replacing that dollar. That machine has been here longer than me."');
       },
@@ -6491,7 +6500,7 @@ class GameScene extends Phaser.Scene {
 
     // Raise suspicion + James annoyance
     STATE.suspicion = Math.min(99, STATE.suspicion + 12);
-    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 25);
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 16);
     this.floatText(WW/2, 280, '🚛 ANGRY TRUCK DRIVER ON THE DOCK!', '#ff6622');
     if(james) this.showBubble(james, '"Sir. SIR. Please lower your voice. Or don\'t. I\'m used to it."');
 
@@ -6657,7 +6666,7 @@ class GameScene extends Phaser.Scene {
             ];
         this.showBubble(james, Phaser.Math.RND.pick(jamesReplies));
       }
-      const annoyanceAdd = activeId === 'michelle' ? 8 : 5;
+      const annoyanceAdd = activeId === 'michelle' ? 5 : 3;
       STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + annoyanceAdd);
       this.nudgeEmotion('james', 'stressed', 14000);
 
@@ -6872,10 +6881,13 @@ class GameScene extends Phaser.Scene {
 
     // James annoyance passive decay (he calms down when you're working)
     STATE.jamesAnnoyanceTimer += delta;
-    if(STATE.jamesAnnoyanceTimer > 20000){
+    if(STATE.jamesAnnoyanceTimer > 12000){
       STATE.jamesAnnoyanceTimer = 0;
       if(STATE.currentZone === 'dock' || STATE.currentZone === 'floor'){
-        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 3);
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 5);
+      } else {
+        // Slower decay elsewhere — he forgets you exist but not fast
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 2);
       }
     }
 
