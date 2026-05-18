@@ -367,6 +367,43 @@
     :root.dark input[type="text"], :root.dark input[type="search"] { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
+    /* ── Comprehensive dark-mode text fixes ─────────────────────────────────── */
+    /* Page heading & subtitle */
+    :root.dark h1                                          { color: #7ac8f0; }
+    :root.dark .subtitle                                   { color: #90bcd8; }
+    /* Panel headings */
+    :root.dark .panel h2                                   { color: #7ac8f0; }
+    :root.dark .panel-title                                { color: #7ac8f0; }
+    /* Big stat numbers that are still navy */
+    :root.dark .highlight-value                            { color: #55ddff; }
+    :root.dark .dock-count                                 { color: #55ccee; }
+    /* Badge icons in overview items */
+    :root.dark .badge                                      { color: #55ccee; background: #1a2d40; }
+    /* Dock section tabs */
+    :root.dark .dock-tab-button                            { color: #90bcd8; background: #1a2d40; border-color: #2e5070; }
+    :root.dark .dock-tab-button[aria-selected="true"]      { color: #fff;    background: #2e5070; border-color: #3a6080; }
+    /* Brand strip */
+    :root.dark .brand-mark                                 { color: #90bcd8; background: #1a2d40; border-color: #2e5070; }
+    :root.dark .brand-swoosh                               { color: #7faec8; }
+    :root.dark .brand-quote                                { color: #7ac8f0; border-left-color: #00ccee; }
+    /* Audit sub-tabs selected state */
+    :root.dark .audit-subtab-button[aria-selected="true"]  { color: #eaf4ff; background: #1a2d40; }
+    /* Validation status pills */
+    :root.dark .validation-status.pass                     { color: #4aee98; background: #0a2e1e; }
+    :root.dark .validation-status.error                    { color: #ff8877; background: #2a0a08; }
+    :root.dark .validation-status.potential                { color: #ffaa66; background: #2a1200; }
+    /* Dock progress bars */
+    :root.dark .dock-bar                                   { background: #1e3a55; }
+    :root.dark .dock-bar span                              { background: #00ccee; }
+    :root.dark .dock-row                                   { border-color: #1e3a55; }
+    /* Table body text (td already set but some td subclasses may override) */
+    :root.dark td, :root.dark .table-body-cell             { color: #c8e2f5; }
+    /* General body text nodes that inherit light defaults */
+    :root.dark p, :root.dark li, :root.dark span.text      { color: inherit; }
+    /* Any leftover inline #004976 links/labels */
+    :root.dark a                                           { color: #55bbee; }
+    :root.dark a:visited                                   { color: #9ba8dd; }
+
     /* ─── 70s Psychedelic Shroom Trip Mode ─────────────────────────────────── */
     @keyframes shroomBg {
       0%   { background-position: 0% 0%;   }
@@ -460,7 +497,27 @@
     :root.retro .panel-kicker { color: #c89850; }
     :root.retro .help-quick-ref { background: linear-gradient(135deg,#160800,#1e0f04); border-color: #e8a020; }
     :root.retro input[type="text"], :root.retro input[type="search"], :root.retro select { background: #0d0500; border-color: #4a2808; color: #ffeab0; }
-    :root.retro .highlight-value, :root.retro h2, :root.retro h3 { color: #ffeab0; }
+    :root.retro h1                                          { color: #e8a020; }
+    :root.retro .subtitle                                   { color: #c89850; }
+    :root.retro .panel h2, :root.retro .panel-title         { color: #e8a020; }
+    :root.retro .highlight-value                            { color: #e8a020; }
+    :root.retro .dock-count                                 { color: #e8a020; }
+    :root.retro .badge                                      { color: #e8a020; background: #1e0f04; }
+    :root.retro .dock-tab-button                            { color: #c89850; background: #1e0f04; border-color: #4a2808; }
+    :root.retro .dock-tab-button[aria-selected="true"]      { color: #ffeab0; background: #3a1a04; border-color: #7a3a08; }
+    :root.retro .brand-mark                                 { color: #c89850; background: #1e0f04; border-color: #4a2808; }
+    :root.retro .brand-swoosh                               { color: #c89850; }
+    :root.retro .brand-quote                                { color: #e8a020; border-left-color: #ff6b00; }
+    :root.retro .audit-subtab-button[aria-selected="true"]  { color: #ffeab0; background: #2a1508; }
+    :root.retro .validation-status.pass                     { color: #7ab340; background: #0e1a04; }
+    :root.retro .validation-status.error                    { color: #ff8855; background: #2a0a00; }
+    :root.retro .validation-status.potential                { color: #e8a020; background: #2a1200; }
+    :root.retro .dock-bar                                   { background: #3a1a04; }
+    :root.retro .dock-bar span                              { background: #e8a020; }
+    :root.retro .dock-row                                   { border-color: #4a2808; }
+    :root.retro td, :root.retro .table-body-cell            { color: #ffeab0; }
+    :root.retro a                                           { color: #e8a020; }
+    :root.retro h2, :root.retro h3                          { color: #ffeab0; }
 
     :root.retro .tab-panel {
       --section-accent:   #e8a020;
@@ -3716,7 +3773,7 @@
           <!-- QUICK REF -->
           <div class="help-quick-ref">
             <h3>The Two Most Important Steps</h3>
-            <p>If you forget everything else on this page, remember these two things: <strong>Step 2 is Upload The File</strong> (orange button, top right) and <strong>Step 5 is Mark Roll Off or Breakdown</strong> (Roll Off Audit tab). Those two steps are the whole job. Everything else is just extra detail.</p><p style="margin-top:14px; color:#004976; font-weight:600;">If you made a mistake, just go back and fix it. Everything in this app can be changed.</p>
+            <p>If you forget everything else on this page, remember these two things: <strong>Step 2 is Upload The File</strong> (orange button, top right) and <strong>Step 5 is Mark Roll Off or Breakdown</strong> (Roll Off Audit tab). Those two steps are the whole job. Everything else is just extra detail.</p><p style="margin-top:14px; color:var(--teal); font-weight:600;">If you made a mistake, just go back and fix it. Everything in this app can be changed.</p>
           </div>
 
         </div><!-- end .help-panel-inner -->
