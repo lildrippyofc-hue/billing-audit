@@ -3584,7 +3584,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">The page is completely blank or white. What do I do?</p>
-                <p class="faq-a">The page is Press <strong>Ctrl + Shift + R</strong> to force-reload the page. If it is still blank, close the tab, open a new one, and go to <span class="good">http://localhost:8000</span>.</p>
+                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> to force-reload the page. If it is still blank, close the tab, open a new one, and go to <span class="good">https://www.jamehinna.net</span>.</p>
               </div>
 
               <div class="faq-item">
@@ -3649,7 +3649,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">History says no saved reports. Why?</p>
-                <p class="faq-a">The server might not be running. Look for the black command window that says "Uvicorn running on port 8000." If that window is closed the database is off. Ask your manager to run start.bat to restart it. Then click Refresh on the History page.</p>
+                <p class="faq-a">The website may need a fresh connection. Press <strong>Ctrl + Shift + R</strong>, then click Refresh on the History page. If it still shows no reports, ask your manager to check the website database.</p>
               </div>
 
               <div class="faq-item">
@@ -3664,7 +3664,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">How do I open this app again tomorrow?</p>
-                <p class="faq-a">Ask your manager to run the <strong>start.bat</strong> file in the Billing audit folder. That starts the server. Then open your browser and go to <span class="good">http://localhost:8000</span>. Do this every day when you start work. All your previous decisions are still saved.</p>
+                <p class="faq-a">Open your browser and go to <span class="good">https://www.jamehinna.net</span>. Log in, upload today's report, and keep working. All your previous saved decisions stay in the website database.</p>
               </div>
 
               <div class="faq-item">
@@ -9624,8 +9624,8 @@
         .catch(function(err) {
           _newsLoading = false;
           if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.innerHTML = "&#8635; Refresh"; }
-          if (grid) grid.innerHTML = '<div class="news-error">Could not load the live dashboard. Start the app with start.bat, then try refreshing.<br><small>' + (err.message || '') + '</small></div>';
-          setPollStatus("Could not load RealClearPolling. Start the app with start.bat, then try refreshing.");
+          if (grid) grid.innerHTML = '<div class="news-error">Could not load the live dashboard. Refresh the website, then try again.<br><small>' + (err.message || '') + '</small></div>';
+          setPollStatus("Could not load RealClearPolling. Refresh the website, then try again.");
           if (lastUpd) lastUpd.textContent = "Failed to load.";
         });
     }

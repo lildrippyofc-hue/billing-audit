@@ -206,6 +206,14 @@ const NPC_DEFS = [
       "100% yes.",
       "I was literally just about to suggest that.",
       "Done. Already did it in my head.",
+      "I know three secrets before 9 AM and one of them is about the vending machine.",
+      "I don't gossip. I provide verbal incident reports with flair.",
+      "If Pam asks, I have been productive spiritually.",
+      "I can distract James with one sentence. It's a gift and a responsibility.",
+      "The break room has lore. Deep lore.",
+      "I heard something but I signed an emotional NDA with myself.",
+      "I am not dramatic. The building is dramatic and I am documenting it.",
+      "I could run this dock with a coffee and one good rumor.",
     ],
     choices:["Ask to cover your truck","Ask her to distract James","Go smoke together 🚬"],
     gossipChoices:["Spill on Chandler 🍞","What's Drew's deal?","Real talk about James","What's Chance's deal? 🔥"],
@@ -223,6 +231,12 @@ const NPC_DEFS = [
       "The ice makes sounds at 3 AM. Not bad sounds. Just... sounds.",
       "I haven't seen sunlight in four days. It's fine.",
       "The mystery box hums sometimes. I hum back.",
+      "If I start sprinting, do not follow me.",
+      "I found a second mystery box. It found me first.",
+      "Outside smells like danger and asphalt.",
+      "I made eye contact with a frozen pallet and now we have an understanding.",
+      "Sometimes I sneak out just to confirm the sky is still there.",
+      "If Pam asks, I was never outside.",
     ],
     choices:["Ask if he's okay","Ask what's in the mystery box","Invite him to smoke 🚬"],
   },
@@ -327,6 +341,58 @@ const NPC_DEFS = [
     ],
     choices:["Pretend to work","Run","Blame Chandler"],
   },
+];
+
+const NPC_EMOTIONS = {
+  james: [
+    { id:'focused', label:'Locked In', icon:'📋', color:0x7eb8ff, lines:['"Clipboard says move. So move."', '"I am counting trucks and bad decisions."'] },
+    { id:'annoyed', label:'Annoyed', icon:'😤', color:0xff8844, lines:['"My patience is on backorder."', '"Every minute creates a new problem."'] },
+    { id:'stressed', label:'Stressed', icon:'⚠️', color:0xff3333, lines:['"I need three less problems immediately."', '"Somebody is about to get an email."'] },
+    { id:'proud', label:'Proud', icon:'✅', color:0x44dd88, lines:['"That was actually decent work."', '"Keep that pace and we might survive."'] },
+  ],
+  chandler: [
+    { id:'defensive', label:'Defensive', icon:'🛡️', color:0xffd36a, lines:['"I am more than the bread thing."', '"Please stop making this about bread."'] },
+    { id:'embarrassed', label:'Embarrassed', icon:'😳', color:0xff99aa, lines:['"I heard that."', '"Can we all pretend that did not happen?"'] },
+    { id:'angry', label:'Heated', icon:'🔥', color:0xff5544, lines:['"I am one comment away from a meeting."', '"Nope. Not today."'] },
+    { id:'hopeful', label:'Trying', icon:'🙂', color:0x88ddff, lines:['"Maybe today is normal. Maybe."', '"I am choosing peace for six minutes."'] },
+  ],
+  lee: [
+    { id:'happy', label:'Helpful', icon:'✨', color:0xff80c0, lines:['"Yes. Already yes."', '"I can fix this socially."', '"Give me one clipboard and ten minutes. I will change history."'] },
+    { id:'curious', label:'Curious', icon:'👀', color:0xffb3df, lines:['"Wait, what happened? Tell me everything."', '"I know there is a story here."', '"Nobody look at me. I am gathering evidence emotionally."'] },
+    { id:'chaotic', label:'Scheming', icon:'🎭', color:0xff55aa, lines:['"I have an idea and it is probably fine."', '"Distract who? Say less."', '"This is either genius or paperwork. Let us find out."'] },
+    { id:'tired', label:'Over It', icon:'☕', color:0xcc99ff, lines:['"I am emotionally on break."', '"My body is here. My spirit clocked out."', '"If the radio calls me one more time, I am becoming furniture."'] },
+  ],
+  todd: [
+    { id:'calm', label:'Frozen Calm', icon:'❄️', color:0x88ddff, lines:['"The freezer understands me."', '"It is quiet in here. Too quiet."'] },
+    { id:'haunted', label:'Spooked', icon:'👁️', color:0xaa88ff, lines:['"That pallet moved. I know it did."', '"Something is humming again."'] },
+    { id:'focused', label:'Guarding', icon:'📦', color:0x44dd88, lines:['"Nobody touches the old pallet."', '"I have a system. The system is cold."'] },
+    { id:'badIdea', label:'Bad Idea', icon:'🚫', color:0xff4444, lines:['"I am stepping outside for a terrible reason."', '"This is probably an HR video waiting to happen."', '"Do not let Pam see me. Or James. Or sunlight."'] },
+  ],
+  drew: [
+    { id:'hungry', label:'Hungry', icon:'🍔', color:0xcc88ff, lines:['"I can hear the vending machine judging me."', '"Lunch would fix most of my problems."'] },
+    { id:'broke', label:'Broke', icon:'💸', color:0xffcc66, lines:['"Financially, I am in overtime."', '"My wallet is more of a concept."'] },
+    { id:'panicked', label:'Panicked', icon:'😬', color:0xff7744, lines:['"Who told James? Be honest."', '"I was about to work. I swear."'] },
+  ],
+  chance: [
+    { id:'amused', label:'Entertained', icon:'😂', color:0xffa01e, lines:['"This shift has plot development."', '"I am not causing it. I am observing loudly."'] },
+    { id:'instigating', label:'Instigating', icon:'🔥', color:0xff5522, lines:['"Someone say something funny. I need material."', '"This is too quiet. Suspicious."'] },
+    { id:'respectful', label:'Locked In', icon:'🤝', color:0x44aaff, lines:['"Credit where it is due. That was clean."', '"James is cooking today. I respect it."'] },
+  ],
+  jeff: [
+    { id:'chill', label:'Chill', icon:'🌿', color:0x44dd88, lines:['"The vibe is mostly stable."', '"No stress. Just forklifts and destiny."'] },
+    { id:'confused', label:'Foggy', icon:'💭', color:0x99ffaa, lines:['"I came over here for a reason."', '"What were we doing? It felt important."'] },
+    { id:'generous', label:'Sharing', icon:'🤙', color:0x88ff88, lines:['"You look stressed. I know a solution."', '"Outside real quick? Purely tactical."'] },
+  ],
+  pam: [
+    { id:'watching', label:'Watching', icon:'📝', color:0xffcc44, lines:['"I am observing patterns."', '"Keep doing that. I am writing it down."'] },
+    { id:'strict', label:'Strict', icon:'🚨', color:0xff4444, lines:['"This floor needs discipline."', '"I brought extra forms today."'] },
+    { id:'suspicious', label:'Suspicious', icon:'🔎', color:0xff8844, lines:['"Something is off."', '"Why does everyone look busy all of a sudden?"'] },
+  ],
+};
+
+const DEFAULT_EMOTIONS = [
+  { id:'normal', label:'Normal', icon:'•', color:0xffffff, lines:[] },
+  { id:'busy', label:'Busy', icon:'↻', color:0xffd36a, lines:['"Another day, another truck."'] },
 ];
 
 // James annoyance escalated lines (30-79 annoyance: salty, passive-aggressive, sarcastic)
@@ -717,35 +783,42 @@ function makePersonTexture(scene, key, app){
 function drawSpeechBubble(gfx, cx, cy, text, textObj){
   gfx.clear();
   const bounds = textObj.getBounds();
-  const pad = 9;
+  const pad = 10;
   const bx = bounds.x - pad;
   const by = bounds.y - pad;
-  const bw = Math.max(bounds.width + pad*2, 60);
+  const bw = Math.max(bounds.width + pad*2, 72);
   const bh = bounds.height + pad*2;
-  const br = 8; // border radius
+  const br = 12;
+  const accent = textObj._bubbleAccentColor || 0xffa01e;
 
-  // Shadow
-  gfx.fillStyle(0x000000, 0.18);
-  gfx.fillRoundedRect(bx+3, by+3, bw, bh, br);
+  // Soft shadow and thin lift line make bubbles readable on busy warehouse art.
+  gfx.fillStyle(0x000000, 0.28);
+  gfx.fillRoundedRect(bx+4, by+5, bw, bh, br);
+  gfx.fillStyle(0x000000, 0.10);
+  gfx.fillRoundedRect(bx+1, by+2, bw, bh, br);
 
   // Bubble fill
-  gfx.fillStyle(0xffffff, 0.97);
+  gfx.fillStyle(0xfffbef, 0.98);
   gfx.fillRoundedRect(bx, by, bw, bh, br);
+  gfx.fillStyle(accent, 0.16);
+  gfx.fillRoundedRect(bx+3, by+3, bw-6, 6, 4);
 
   // Border
-  gfx.lineStyle(1.5, 0x444444, 0.7);
+  gfx.lineStyle(2, accent, 0.82);
   gfx.strokeRoundedRect(bx, by, bw, bh, br);
+  gfx.lineStyle(1, 0xffffff, 0.7);
+  gfx.strokeRoundedRect(bx+2, by+2, bw-4, bh-4, br-2);
 
   // Tail pointing down toward character
-  const tailX = cx;
+  const tailX = Phaser.Math.Clamp(cx, bx + 16, bx + bw - 16);
   const tailTop = by + bh;
-  gfx.fillStyle(0xffffff, 0.97);
-  gfx.fillTriangle(tailX-7, tailTop, tailX+7, tailTop, tailX, tailTop+11);
-  gfx.lineStyle(1.5, 0x444444, 0.7);
-  gfx.strokeTriangle(tailX-7, tailTop, tailX+7, tailTop, tailX, tailTop+11);
+  gfx.fillStyle(0xfffbef, 0.98);
+  gfx.fillTriangle(tailX-9, tailTop-1, tailX+9, tailTop-1, tailX, tailTop+13);
+  gfx.lineStyle(2, accent, 0.82);
+  gfx.strokeTriangle(tailX-9, tailTop-1, tailX+9, tailTop-1, tailX, tailTop+13);
   // Cover the border where tail meets bubble
-  gfx.lineStyle(2, 0xffffff, 1);
-  gfx.lineBetween(tailX-6, tailTop, tailX+6, tailTop);
+  gfx.lineStyle(3, 0xfffbef, 1);
+  gfx.lineBetween(tailX-7, tailTop, tailX+7, tailTop);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1399,6 +1472,90 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0.5, 1).setDepth(20).setVisible(false);
   }
 
+  emotionPoolFor(npc){
+    return NPC_EMOTIONS[npc.id] || DEFAULT_EMOTIONS;
+  }
+
+  setNpcEmotion(npc, emotion, duration=18000){
+    if(!npc || !emotion) return;
+    npc.emotion = emotion;
+    npc.emotionTimer = duration;
+    npc.emotionNextAt = 9000 + Math.random() * 18000;
+    const label = `${emotion.icon} ${npc.name}\n${emotion.label}`;
+    npc.tag.setText(label);
+    npc.tag.setStyle({
+      fontSize:'10px',
+      fill:'#ffffff',
+      fontFamily:'monospace',
+      stroke:'#000',
+      strokeThickness:3,
+      align:'center',
+      backgroundColor:'rgba(0,0,0,0.72)',
+      padding:{x:6,y:3}
+    });
+  }
+
+  randomizeNpcEmotion(npc, reason='idle'){
+    if(!npc) return;
+    const pool = this.emotionPoolFor(npc).slice();
+    let picked = null;
+
+    if(npc.id === 'james'){
+      if(STATE.jamesAnnoyance >= 80) picked = pool.find(e => e.id === 'stressed');
+      else if(STATE.jamesAnnoyance >= 45) picked = pool.find(e => e.id === 'annoyed');
+      else if(reason === 'goodWork') picked = pool.find(e => e.id === 'proud');
+    }
+    if(npc.id === 'chandler' && STATE.chandlerRageLevel >= 3) picked = pool.find(e => e.id === 'angry');
+    if(npc.id === 'pam' && STATE.suspicion >= 60) picked = pool.find(e => e.id === 'suspicious');
+    if(npc.id === 'drew' && reason === 'money') picked = pool.find(e => e.id === 'broke');
+    if(npc.id === 'lee' && (STATE.leeFollowing || STATE.leeDistractingJames)) picked = pool.find(e => e.id === 'chaotic');
+
+    if(!picked) picked = Phaser.Math.RND.pick(pool);
+    this.setNpcEmotion(npc, picked, 14000 + Math.random() * 22000);
+  }
+
+  updateNpcEmotion(npc, delta){
+    if(!npc) return;
+    npc.emotionTimer -= delta;
+    npc.emotionNextAt -= delta;
+
+    if(npc.id === 'james' && STATE.jamesAnnoyance >= 80 && npc.emotion?.id !== 'stressed'){
+      this.randomizeNpcEmotion(npc, 'stress');
+      return;
+    }
+    if(npc.id === 'chandler' && STATE.chandlerRageLevel >= 4 && npc.emotion?.id !== 'angry'){
+      this.randomizeNpcEmotion(npc, 'roasted');
+      return;
+    }
+    if(npc.id === 'pam' && STATE.suspicion >= 75 && npc.emotion?.id !== 'suspicious'){
+      this.randomizeNpcEmotion(npc, 'suspicion');
+      return;
+    }
+
+    if(npc.emotionTimer <= 0 || npc.emotionNextAt <= 0){
+      this.randomizeNpcEmotion(npc, 'idle');
+      const moodLine = Phaser.Math.RND.pick((npc.emotion && npc.emotion.lines) || []);
+      if(moodLine && npc.bubbleTimer <= 0 && Math.random() < 0.45){
+        this.showBubble(npc, moodLine, 3000);
+      }
+    }
+  }
+
+  getNpcLine(npc){
+    if(!npc) return '';
+    const moodLines = (npc.emotion && npc.emotion.lines) || [];
+    if(moodLines.length && Math.random() < 0.35) return Phaser.Math.RND.pick(moodLines);
+    return Phaser.Math.RND.pick(npc.lines || moodLines || ['...']);
+  }
+
+  nudgeEmotion(id, emotionId, duration=18000){
+    if(!this.npcs) return;
+    const npc = this.npcs.find(n => n.id === id);
+    if(!npc) return;
+    const emotion = this.emotionPoolFor(npc).find(e => e.id === emotionId);
+    if(emotion) this.setNpcEmotion(npc, emotion, duration);
+  }
+
   createNPCs(){
     this.npcs = [];
 
@@ -1426,8 +1583,10 @@ class GameScene extends Phaser.Scene {
 
       // Speech bubble: text object (world space)
       const bubble = this.add.text(sx, sy-90, '', {
-        fontSize:'12px', fill:'#111111', fontFamily:'monospace',
-        wordWrap:{width:175}, align:'center',
+        fontSize:'12px', fill:'#1b1f2a', fontFamily:'monospace',
+        fontStyle:'bold',
+        wordWrap:{width:190}, align:'center',
+        lineSpacing:3,
         resolution: 2
       }).setOrigin(0.5, 1).setDepth(16).setVisible(false);
 
@@ -1443,7 +1602,11 @@ class GameScene extends Phaser.Scene {
         bubbleTimer: 0,
         interacting: false,
         bubbleDirty: false,
+        emotion: null,
+        emotionTimer: 0,
+        emotionNextAt: 0,
       };
+      this.randomizeNpcEmotion(npc, 'spawn');
 
       this.physics.add.collider(sprite, this.walls);
       this.npcs.push(npc);
@@ -1648,20 +1811,20 @@ class GameScene extends Phaser.Scene {
   createDialogueBox(){
     // Semi-transparent panel at bottom
     this.dlgBg = this.add.graphics().setScrollFactor(0).setDepth(80).setVisible(false);
-    this.dlgPortrait = this.add.rectangle(70, GH-80, 80, 100, 0x334455)
+    this.dlgPortrait = this.add.rectangle(70, GH-80, 84, 104, 0x334455)
       .setScrollFactor(0).setDepth(81).setVisible(false);
     this.dlgPortraitTxt = this.add.text(70, GH-80, '', {
       fontSize:'11px', fill:'#ffa01e', fontFamily:'monospace', align:'center'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(82).setVisible(false);
-    this.dlgText = this.add.text(130, GH-135, '', {
-      fontSize:'14px', fill:'#fff', fontFamily:'monospace',
-      wordWrap:{width:GW-160}, lineSpacing:4
+    this.dlgText = this.add.text(132, GH-137, '', {
+      fontSize:'14px', fill:'#fff7e6', fontFamily:'monospace',
+      wordWrap:{width:GW-170}, lineSpacing:5
     }).setScrollFactor(0).setDepth(82).setVisible(false);
     this.dlgChoiceBtns = [];
     for(let i=0;i<4;i++){
-      const btn = this.add.text(130, GH-80+i*24, '', {
-        fontSize:'12px', fill:'#ffd700', fontFamily:'monospace',
-        backgroundColor:'rgba(50,50,50,0.9)', padding:{x:6,y:3}
+      const btn = this.add.text(132, GH-81+i*25, '', {
+        fontSize:'12px', fill:'#ffd36a', fontFamily:'monospace',
+        backgroundColor:'rgba(20,26,36,0.92)', padding:{x:8,y:4}
       }).setScrollFactor(0).setDepth(82).setVisible(false).setInteractive();
       btn.on('pointerover',()=>btn.setStyle({fill:'#fff'}));
       btn.on('pointerout', ()=>btn.setStyle({fill:'#ffd700'}));
@@ -1701,19 +1864,22 @@ class GameScene extends Phaser.Scene {
     } else if(npc.id === 'lee' && STATE.leeFollowing){
       line = '"We\'re almost at the smokers corner! Keep walking, don\'t look suspicious."';
     } else {
-      line = Phaser.Math.RND.pick(npc.lines);
+      line = this.getNpcLine(npc);
     }
 
     // Draw background (gossip = pink tinted)
     this.dlgBg.clear().setVisible(true);
-    this.dlgBg.fillStyle(gossipMode ? 0x1a0010 : 0x000000, 0.88);
-    this.dlgBg.fillRect(0, GH-165, GW, 165);
-    this.dlgBg.lineStyle(2, gossipMode ? 0xff60c0 : 0xffa01e, 0.6);
-    this.dlgBg.strokeRect(0, GH-165, GW, 165);
+    this.dlgBg.fillStyle(0x000000, 0.34).fillRoundedRect(8, GH-172, GW-16, 158, 18);
+    this.dlgBg.fillStyle(gossipMode ? 0x210019 : 0x0b1018, 0.94);
+    this.dlgBg.fillRoundedRect(12, GH-168, GW-24, 154, 16);
+    this.dlgBg.fillStyle(gossipMode ? 0xff60c0 : 0xffa01e, 0.12);
+    this.dlgBg.fillRoundedRect(18, GH-162, GW-36, 10, 6);
+    this.dlgBg.lineStyle(2, gossipMode ? 0xff60c0 : 0xffa01e, 0.82);
+    this.dlgBg.strokeRoundedRect(12, GH-168, GW-24, 154, 16);
     if(gossipMode){
       // Smoke emoji trail
       this.dlgBg.fillStyle(0xff80c0, 0.06);
-      for(let i=0;i<8;i++) this.dlgBg.fillCircle(20+i*110, GH-155+20, 18+i*3);
+      for(let i=0;i<8;i++) this.dlgBg.fillCircle(30+i*110, GH-146, 15+i*2);
     }
 
     // Portrait
@@ -1872,6 +2038,9 @@ class GameScene extends Phaser.Scene {
             '"Oh I\'ve got him. Watch."',
             '"Say less. I\'m about to walk over there and ask him about his fantasy football team. He\'ll be busy for twenty minutes."',
             '"Done. I\'m going to tell him I heard corporate is doing surprise visits this week. He loves that."',
+            '"I\'ll ask him where the good tape went. He will give me a TED Talk."',
+            '"I am going to say the words dock sensor and let nature handle the rest."',
+            '"Watch this. I am about to weaponize small talk."',
           ];
           response = Phaser.Math.RND.pick(distractLines);
           STATE.leeDistractingJames = true;
@@ -2137,6 +2306,17 @@ class GameScene extends Phaser.Scene {
     STATE.score = Math.max(0, STATE.score + scoreChange);
     STATE.energy = Math.max(0, Math.min(100, STATE.energy + energyChange));
     STATE.suspicion = Math.max(0, Math.min(100, STATE.suspicion + suspChange));
+
+    if(npc.id === 'chandler') this.nudgeEmotion('chandler', idx === 0 ? 'angry' : idx === 1 ? 'hopeful' : 'defensive');
+    if(npc.id === 'james') this.nudgeEmotion('james', idx === 0 || idx === 2 ? 'proud' : idx === 1 ? 'annoyed' : 'stressed');
+    if(npc.id === 'lee') this.nudgeEmotion('lee', idx === 1 ? 'chaotic' : idx === 2 ? 'curious' : 'happy');
+    if(npc.id === 'todd') this.nudgeEmotion('todd', idx === 1 ? 'haunted' : idx === 2 ? 'calm' : 'focused');
+    if(npc.id === 'drew') this.nudgeEmotion('drew', idx === 0 || idx === 2 ? 'broke' : idx === 1 ? 'panicked' : 'hungry');
+    if(npc.id === 'chance') this.nudgeEmotion('chance', idx === 1 ? 'respectful' : 'instigating');
+    if(npc.id === 'jeff') this.nudgeEmotion('jeff', idx === 0 ? 'chill' : idx === 2 ? 'confused' : 'generous');
+    if(npc.id === 'pam') this.nudgeEmotion('pam', idx === 0 ? 'watching' : 'strict');
+    if(npc.id === 'pam' && idx === 2) this.nudgeEmotion('chandler', 'angry', 22000);
+    if(npc.id === 'chance' && idx === 2) this.nudgeEmotion('drew', 'panicked', 22000);
 
     // Show response
     this.dlgText.setText(npc.name+': '+response);
@@ -2563,31 +2743,31 @@ class GameScene extends Phaser.Scene {
 
   // ── SMOKE CHAT SESSION ────────────────────────────────────────────────────
   createSmokeChat(){
-    const PX = GW - 262, PY = 60, PW = 258;
+    const PX = GW - 282, PY = 58, PW = 278;
     this._scPX = PX; this._scPY = PY; this._scPW = PW;
 
     this.scBg = this.add.graphics().setScrollFactor(0).setDepth(72).setVisible(false);
 
-    this.scHeaderTxt = this.add.text(PX + PW/2, PY + 5, '🚬  SMOKE BREAK  🚬', {
-      fontSize:'12px', fill:'#aaffaa', fontFamily:'monospace', fontStyle:'bold'
+    this.scHeaderTxt = this.add.text(PX + PW/2, PY + 7, 'SMOKE BREAK CHAT', {
+      fontSize:'12px', fill:'#c8ffd2', fontFamily:'monospace', fontStyle:'bold'
     }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(73).setVisible(false);
 
     this.scWhoTxt = this.add.text(PX + 6, PY + 22, '', {
-      fontSize:'9px', fill:'#88cc88', fontFamily:'monospace', wordWrap:{ width: PW - 12 }
+      fontSize:'9px', fill:'#8fdc9b', fontFamily:'monospace', wordWrap:{ width: PW - 16 }
     }).setScrollFactor(0).setDepth(73).setVisible(false);
 
     // Pre-allocate message slots (10 slots)
     this.scMsgPool = [];
     for(let i = 0; i < 10; i++){
-      const t = this.add.text(PX + 6, PY + 44 + i * 44, '', {
+      const t = this.add.text(PX + 10, PY + 48 + i * 41, '', {
         fontSize:'11px', fill:'#ffffff', fontFamily:'monospace',
-        wordWrap:{ width: PW - 12 }, lineSpacing: 1
+        wordWrap:{ width: PW - 20 }, lineSpacing: 2
       }).setScrollFactor(0).setDepth(73).setVisible(false).setAlpha(0);
       this.scMsgPool.push(t);
     }
 
     this.scLeaveTxt = this.add.text(PX + PW/2, GH - 14, '[ESC] Leave smoke area', {
-      fontSize:'9px', fill:'rgba(150,255,150,0.45)', fontFamily:'monospace'
+      fontSize:'9px', fill:'rgba(205,255,210,0.62)', fontFamily:'monospace'
     }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(73).setVisible(false);
 
     this._scMessages = [];
@@ -2603,12 +2783,16 @@ class GameScene extends Phaser.Scene {
 
     // Draw panel background
     this.scBg.clear();
-    this.scBg.fillStyle(0x050c08, 0.91);
-    this.scBg.fillRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 10);
-    this.scBg.lineStyle(1.5, 0x44ff88, 0.35);
-    this.scBg.strokeRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 10);
-    this.scBg.lineStyle(1, 0x44ff88, 0.2);
-    this.scBg.lineBetween(PX, PY + 40, PX + PW, PY + 40);
+    this.scBg.fillStyle(0x000000, 0.30);
+    this.scBg.fillRoundedRect(PX - 6, PY - 4, PW + 10, GH - PY + 2, 16);
+    this.scBg.fillStyle(0x06110a, 0.94);
+    this.scBg.fillRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 14);
+    this.scBg.fillStyle(0x44ff88, 0.10);
+    this.scBg.fillRoundedRect(PX + 4, PY + 4, PW - 8, 34, 10);
+    this.scBg.lineStyle(2, 0x44ff88, 0.55);
+    this.scBg.strokeRoundedRect(PX - 2, PY - 2, PW + 4, GH - PY, 14);
+    this.scBg.lineStyle(1, 0x44ff88, 0.28);
+    this.scBg.lineBetween(PX + 8, PY + 42, PX + PW - 8, PY + 42);
     this.scBg.setVisible(true);
 
     // Build who's-here list
@@ -2697,8 +2881,8 @@ class GameScene extends Phaser.Scene {
       if(!slot) return;
       const age = msgs.length - 1 - i; // 0 = newest
       const alpha = Math.max(0.35, 1 - age * 0.11);
-      slot.setText(`${msg.name} › ${msg.text}`)
-          .setStyle({ fill: msg.color, fontSize:'11px', fontFamily:'monospace', wordWrap:{ width: this._scPW - 12 } })
+      slot.setText(`${msg.name}\n${msg.text}`)
+          .setStyle({ fill: msg.color, fontSize:'11px', fontFamily:'monospace', fontStyle:'bold', wordWrap:{ width: this._scPW - 20 }, lineSpacing:2 })
           .setAlpha(alpha)
           .setVisible(true);
     });
@@ -3322,6 +3506,7 @@ class GameScene extends Phaser.Scene {
   updateNPCs(delta){
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
+      this.updateNpcEmotion(npc, delta);
 
       // ── LEE DISTRACTION MODE ────────────────────────────────────────────
       if(npc.id === 'lee' && STATE.leeDistractingJames){
@@ -3338,14 +3523,18 @@ class GameScene extends Phaser.Scene {
             james.moveTimer = 1500;
             // Occasional chatter between Lee and James
             if(npc.bubbleTimer <= 0 && Math.random() < 0.004){
-              const leeTalking = [
-                '"So I heard corporate is doing surprise audits..."',
-                '"James I have a question about the door sensor."',
-                '"Do you think the inventory counts are accurate? I\'m worried."',
-                '"You\'re doing SUCH a good job, honestly. How do you handle it all?"',
-                '"I heard Pam mentioned your name in a meeting! A good way, I think!"',
-                '"Between us — do you think the loading dock meets code?"',
-              ];
+          const leeTalking = [
+            '"So I heard corporate is doing surprise audits..."',
+            '"James I have a question about the door sensor."',
+            '"Do you think the inventory counts are accurate? I\'m worried."',
+            '"You\'re doing SUCH a good job, honestly. How do you handle it all?"',
+            '"I heard Pam mentioned your name in a meeting! A good way, I think!"',
+            '"Between us — do you think the loading dock meets code?"',
+            '"Quick question: if a pallet jack disappears emotionally, is that maintenance or HR?"',
+            '"I saw a label that said urgent. Does urgent mean today urgent or email urgent?"',
+            '"James, be honest. Do you own that clipboard or does it own you?"',
+            '"I need your opinion on tape guns. This is serious."',
+          ];
               this.showBubble(npc, Phaser.Math.RND.pick(leeTalking));
             }
             if(james.bubbleTimer <= 0 && Math.random() < 0.004){
@@ -3560,6 +3749,11 @@ class GameScene extends Phaser.Scene {
 
       // ── TODD: freezer zone behavior, occasionally emerges ──
       if(npc.id==='todd'){
+        if(!this._toddBadIdeaCooldown && !STATE.dialogueActive && Math.random() < 0.00035){
+          this._toddBadIdeaCooldown = true;
+          this.triggerToddBadIdea();
+          this.time.delayedCall(45000, ()=>{ this._toddBadIdeaCooldown = false; });
+        }
         if(npc.bubbleTimer<=0 && Math.random()<0.0010){
           const toddCreepy = [
             '"...the temperature dropped two degrees. The freezer is happy today."',
@@ -3570,6 +3764,9 @@ class GameScene extends Phaser.Scene {
             '"Someone moved one of my pallets. I know who did it. I\'m not saying."',
             '"I haven\'t blinked in like 20 minutes. I should blink."',
             '"Cold is just warmth that gave up. Think about it."',
+            '"I am going outside for fresh air. Or something legally less clear."',
+            '"If anyone asks, I am performing a temperature audit of the parking lot."',
+            '"I saw the sun on camera. I need to verify it personally."',
           ];
           this.showBubble(npc, Phaser.Math.RND.pick(toddCreepy));
         }
@@ -3677,7 +3874,7 @@ class GameScene extends Phaser.Scene {
 
         // Chance general idle commentary
         if(npc.bubbleTimer<=0 && !STATE.chanceRoastTarget && Math.random()<0.0008){
-          this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
+          this.showBubble(npc, this.getNpcLine(npc));
         }
 
         // Chance reacts when James annoyance is high — he loves it
@@ -3702,6 +3899,12 @@ class GameScene extends Phaser.Scene {
             '"I have been here for 6 hours and have done maybe 40 minutes of work. Allegedly."',
             '"Group chat is popping off right now. Don\'t ask."',
             '"I could be doing something important right now. I choose not to."',
+            '"I heard Chandler has a secret snack drawer. I respect the secrecy, not the snacks."',
+            '"If this place had a documentary crew, I would be the narrator."',
+            '"Drew asked if IOUs expire. I said emotionally yes, legally no idea."',
+            '"Pam walks like she already knows what you did."',
+            '"James has clipboard posture. You know exactly what I mean."',
+            '"Todd waved at me from the freezer once and I still think about it."',
           ];
           this.showBubble(npc, Phaser.Math.RND.pick(leeIdle));
         }
@@ -3760,7 +3963,7 @@ class GameScene extends Phaser.Scene {
         }
         // Jeff idle mutter
         if(npc.bubbleTimer<=0 && !STATE.jeffAskTarget && Math.random()<0.0008){
-          this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
+          this.showBubble(npc, this.getNpcLine(npc));
         }
       }
     });
@@ -3852,9 +4055,21 @@ class GameScene extends Phaser.Scene {
 
   showBubble(npc, text, duration=3200){
     if(!npc) return;
-    npc.bubble.setText(text).setVisible(true);
+    const cleanText = String(text || '').replace(/\s+/g, ' ').trim();
+    const longLine = cleanText.length > 95;
+    npc.bubble._bubbleAccentColor = npc.color || 0xffa01e;
+    npc.bubble.setStyle({
+      fontSize: longLine ? '11px' : '12px',
+      fill:'#1b1f2a',
+      fontFamily:'monospace',
+      fontStyle:'bold',
+      wordWrap:{ width: longLine ? 215 : 190 },
+      align:'center',
+      lineSpacing:3
+    });
+    npc.bubble.setText(cleanText).setVisible(true);
     npc.bubbleGfx.setVisible(true);
-    npc.bubbleTimer = duration;
+    npc.bubbleTimer = Math.max(duration, cleanText.length > 120 ? 4600 : duration);
   }
 
   // Clear every NPC bubble — call before showing a new one so only one is visible
@@ -3868,6 +4083,60 @@ class GameScene extends Phaser.Scene {
   }
 
   // ── RANDOM EVENTS ──────────────────────────────────────────────────────────
+  triggerToddBadIdea(){
+    if(this._toddBadIdeaActive) return;
+    this._toddBadIdeaActive = true;
+    const todd = this.npcs.find(n=>n.id==='todd');
+    const pam = this.npcs.find(n=>n.id==='pam');
+    const james = this.npcs.find(n=>n.id==='james');
+    const lee = this.npcs.find(n=>n.id==='lee');
+    if(!todd){ this._toddBadIdeaActive = false; return; }
+
+    this.nudgeEmotion('todd', 'badIdea', 26000);
+    todd.targetX = 130;
+    todd.targetY = 90;
+    todd.moveTimer = 0;
+    this.showBubble(todd, '"I am stepping outside for a terrible reason. If anyone asks, I am checking the air."', 3600);
+    this.floatText(todd.sprite.x, todd.sprite.y-45, 'Todd is sneaking out...', '#88ddff');
+
+    this.time.delayedCall(3600, ()=>{
+      this.showBubble(todd, '"Absolutely not. This is a bad idea. Even I know this is a bad idea."', 3600);
+      STATE.suspicion = Math.min(99, STATE.suspicion + 10);
+    });
+
+    this.time.delayedCall(6500, ()=>{
+      if(pam){
+        pam.targetX = todd.sprite.x + 60;
+        pam.targetY = todd.sprite.y + 20;
+        pam.moveTimer = 0;
+        this.nudgeEmotion('pam', 'strict', 18000);
+        this.showBubble(pam, '"Todd. Whatever you are about to do, the answer is no."', 3600);
+      }
+      if(lee){
+        this.nudgeEmotion('lee', 'chaotic', 18000);
+        this.showBubble(lee, '"TODD NO. That is not a break, that is an HR slideshow."', 3600);
+      }
+      this.cameras.main.shake(250, 0.008);
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
+      STATE.suspicion = Math.min(99, STATE.suspicion + 18);
+      this.floatText(WW/2, 430, 'Todd got caught before doing anything stupid. Suspicion +18', '#ff5555');
+    });
+
+    this.time.delayedCall(10000, ()=>{
+      todd.targetX = 1380;
+      todd.targetY = 900;
+      todd.moveTimer = 0;
+      this.nudgeEmotion('todd', 'haunted', 24000);
+      this.showBubble(todd, '"I am returning to the freezer. The freezer makes better choices than I do."', 4200);
+      if(james){
+        this.nudgeEmotion('james', 'stressed', 18000);
+        this.showBubble(james, '"I leave people unsupervised for THIRTY SECONDS."', 3600);
+      }
+    });
+
+    this.time.delayedCall(18000, ()=>{ this._toddBadIdeaActive = false; });
+  }
+
   triggerRandomEvent(){
     const events = [
       ()=>{ // Peak rush
@@ -3941,6 +4210,9 @@ class GameScene extends Phaser.Scene {
           this.showBubble(todd,'"I was told there\'s a fire. There is no fire. I\'m staying out here anyway."');
         }
         this.floatText(WW/2,500,'❄️ Todd has left the freezer. Something is wrong.','#44ccff');
+      },
+      ()=>{ // Todd sneaks out with a terrible idea
+        this.triggerToddBadIdea();
       },
       ()=>{ // Vending machine eats money
         this.floatText(WW/2,600,'🤖 VENDING MACHINE ATE SOMEONE\'S MONEY. CHAOS IN THE BREAK ROOM.','#ffaa00');
@@ -4205,9 +4477,11 @@ class GameScene extends Phaser.Scene {
 
     // Trucker name bubble
     const tBubbleTxt = this.add.text(tx, 160, rant, {
-      fontSize:'12px', fill:'#111', fontFamily:'monospace',
-      wordWrap:{width:200}, align:'center', resolution:2
+      fontSize:'12px', fill:'#1b1f2a', fontFamily:'monospace',
+      fontStyle:'bold',
+      wordWrap:{width:215}, align:'center', lineSpacing:3, resolution:2
     }).setOrigin(0.5,1).setDepth(20);
+    tBubbleTxt._bubbleAccentColor = 0xff8844;
     const tBubbleGfx = this.add.graphics().setDepth(19);
 
     // Name tag
@@ -4402,7 +4676,7 @@ class GameScene extends Phaser.Scene {
     if(this.npcChatterTimer > 12000){
       this.npcChatterTimer = 0;
       const npc = Phaser.Math.RND.pick(this.npcs);
-      this.showBubble(npc, Phaser.Math.RND.pick(npc.lines));
+      this.showBubble(npc, this.getNpcLine(npc));
     }
 
     // Player name tag (above head — origin is at feet so offset by full height)
