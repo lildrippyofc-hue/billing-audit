@@ -37,14 +37,25 @@
       <div class="chip">Shifts Survived: <em id="shiftsBadge">0</em></div>
     </div>
     <div style="width:100%">
-      <p style="color:rgba(255,255,255,0.45);font-size:12px;margin-bottom:8px;text-align:center;">YOUR NAME ON THE BADGE:</p>
+      <p style="color:rgba(255,255,255,0.8);font-size:12px;font-weight:700;margin-bottom:8px;text-align:center;letter-spacing:1px;">YOUR NAME ON THE BADGE:</p>
       <input class="menu-input" id="playerNameInput" placeholder="First name" maxlength="12" value="">
     </div>
     <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <button class="menu-btn" id="goodWorkerBtn" style="font-size:15px;">😇 Good Worker<br><span style="font-size:11px;opacity:0.8">High score path</span></button>
       <button class="menu-btn" id="chaosBtn" style="background:linear-gradient(135deg,#440088,#8800cc);font-size:15px;">😈 Chaos Mode<br><span style="font-size:11px;opacity:0.8">Slacker legend</span></button>
     </div>
-    <p style="color:rgba(255,255,255,0.3);font-size:11px;">WASD/Arrows to move · E to interact · M for map</p>
+    <div style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,160,30,0.25);border-radius:10px;padding:10px 14px;">
+      <p style="color:#ffa01e;font-size:10px;font-weight:900;letter-spacing:1.5px;margin-bottom:7px;">📋 HOW TO PLAY</p>
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11px;font-family:monospace;line-height:1.7;">
+        <span style="color:#ffd700;white-space:nowrap;">WASD / Arrows</span><span style="color:#dddddd;">Move around the warehouse</span>
+        <span style="color:#ffd700;">E</span><span style="color:#dddddd;">Talk to coworkers / interact</span>
+        <span style="color:#ffd700;">M</span><span style="color:#dddddd;">Toggle minimap</span>
+        <span style="color:#ffd700;">Q</span><span style="color:#dddddd;">Cancel truck unloading</span>
+        <span style="color:#ffd700;">Timeclock</span><span style="color:#dddddd;">Punch out &amp; go off the clock</span>
+        <span style="color:#ffd700;">Smoke Area</span><span style="color:#dddddd;">Hang outside — risky but fun</span>
+        <span style="color:#ff7777;">⚠ James Meter</span><span style="color:#ffaaaa;">Hits 100% = you're fired. PO#s are 10 digits.</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -61,7 +72,7 @@ const SAVE = (() => {
 function savePersist() { localStorage.setItem('wh_sim', JSON.stringify(SAVE)); }
 SAVE.highScore = SAVE.highScore || 0;
 SAVE.shifts    = SAVE.shifts    || 0;
-document.getElementById('hsBadge').textContent    = SAVE.highScore;
+document.getElementById('hsBadge').textContent    = (SAVE.highScore||0).toLocaleString();
 document.getElementById('shiftsBadge').textContent = SAVE.shifts;
 
 // ── GAME CONFIG ─────────────────────────────────────────────────────────────
@@ -114,6 +125,10 @@ const STATE = {
   smokeChatOpen: false,     // smoke session chat panel is visible
   jeffAskTimer: 0,
   jeffAskTarget: null,
+  clockedOut: false,       // player punched out at timeclock
+  playerRunBoost: 0,       // ms left on sprint burst
+  beingChased: false,      // James/Marcus actively hunting player
+  marcusAggression: 0,     // 0-100 how hot Marcus is on your trail
 };
 
 // Zone layout
@@ -178,7 +193,7 @@ const NPC_DEFS = [
       '"The dock IS my personality at this point. I\'ve accepted it."',
       '"One day I\'m just going to walk into the freezer and Todd\'s going to be there. Just waiting."',
     ],
-    choices:["Say hi 👋","Ask for easier truck 😬","Go smoke 🚬","Ask what he does all day 🤔"],
+    choices:["Say hi 👋","Ask for easier truck 😅","Let's smoke 🚬","🏃 RUN!"],
   },
   { id:'chandler', name:'Chandler', title:'(Bread Boy)', color:0xc8a050, zone:'floor', patrol:false,
     appearance:{ shirt:0xc8a050, pants:0x4466aa, skin:0xf0c080, hair:0xd4aa30 },
@@ -324,6 +339,46 @@ const NPC_DEFS = [
     ],
     choices:['Smoke with Jeff 🌿', 'Nah I\'m good 🚫', 'Tell James 😈', 'What are you even on? 🤔'],
   },
+  { id:'jorie', name:'Jorie', title:'(Ready to Fight 🤰)', color:0xff6633, zone:'dock', patrol:false,
+    appearance:{ shirt:0xcc3300, pants:0x2a1a2a, skin:0xc87840, hair:0x1a0a04, pregnant:true, bun:true },
+    lines:[
+      '"I\'m not on my period, I\'m PREGNANT, there is a difference and neither one is your business."',
+      '"Jeff just asked me to do his performance review. HIS OWN performance review. I said no with eye contact."',
+      '"I am eight months pregnant and I have not missed a single shift. That is DEDICATION or a PROBLEM and I haven\'t decided which."',
+      '"My doctor said reduce stress. My doctor has never worked here."',
+      '"I told HR I need ergonomic accommodations. They sent me a pamphlet. I laminated it so it\'s stiff enough to hit someone with."',
+      '"This baby kicks every time I see Todd. That\'s either a warning sign or a power move."',
+      '"You know what? I\'m fine. I\'m completely fine. Don\'t ask follow-up questions."',
+      '"Jeff said \'are you sure you should be lifting that.\' I said \'are you sure YOU should be a lead.\' We both went quiet."',
+      '"I have been in this condition for eight months and I have NEVER been more ready to fight. If anything the pregnancy increased it."',
+      '"My feet hurt. My back hurts. I have a doctor\'s note that says I should be on bed rest. I am HERE. On this dock. VOLUNTARILY. Do not push me."',
+      '"Chandler asked if I had a name picked out. I said I\'m naming her Chance so she learns to talk back early."',
+      '"Todd walked past me. That\'s the whole story. That\'s enough."',
+      '"They said \'how are you doing this pregnant.\' Easy. Spite."',
+      '"James gave me a lighter assignment today. I did it in twenty minutes and then stared at him until he gave me another one."',
+      '"Every single person on this dock is on thin ice. I am the ice. It is thin today."',
+      '"Drew asked to borrow $5. I looked at my belly. I looked at him. He said never mind."',
+    ],
+    choices:['Wassup 👋', 'You good? 😬', 'Warn about Todd 💀', 'Let\'s go smoke 🚬'],
+  },
+  { id:'marcus', name:'Marcus', title:'(Asst. Supervisor 🗒️)', color:0xcc7700, zone:'floor', patrol:true,
+    appearance:{ shirt:0xd4a844, pants:0x554433, skin:0xf0d0b0, hair:0x6b4423, clipboard:true, badge:true },
+    lines:[
+      '"I\'m going to need to document that."',
+      '"James is going to hear about this."',
+      '"I\'m doing a productivity check. You have been clocked."',
+      '"I have a whole form for this. It\'s already partially filled out."',
+      '"My job is to notice things. I notice EVERYTHING."',
+      '"Fun fact: I log start times. Want to know what I have for YOU?"',
+      '"James asked me to keep an eye out. Consider yourself kept an eye on."',
+      '"I take my role very seriously. Unlike some people on this dock."',
+      '"I\'m not saying I\'m watching you specifically. I\'m saying I\'m watching this AREA."',
+      '"Every minute of unproductive time costs this company money. I do the math."',
+      '"I made a spreadsheet. You\'re in it."',
+      '"I heard about the smoke break. I\'m not saying anything. Yet."',
+    ],
+    choices:['Suck up to him 😇', 'Tell him to mind his business 😤', 'Throw Chandler under the bus 🍞', 'BOLT 🏃'],
+  },
   { id:'pam', name:'Pam', title:'(The Manager)', color:0xcc3333, zone:'dock', patrol:true,
     appearance:{ shirt:0xcc2222, pants:0x221122, skin:0xf0c890, hair:0xddcc88, blazer:true, clipboard:true },
     lines:[
@@ -387,6 +442,18 @@ const NPC_EMOTIONS = {
     { id:'watching', label:'Watching', icon:'📝', color:0xffcc44, lines:['"I am observing patterns."', '"Keep doing that. I am writing it down."'] },
     { id:'strict', label:'Strict', icon:'🚨', color:0xff4444, lines:['"This floor needs discipline."', '"I brought extra forms today."'] },
     { id:'suspicious', label:'Suspicious', icon:'🔎', color:0xff8844, lines:['"Something is off."', '"Why does everyone look busy all of a sudden?"'] },
+  ],
+  jorie: [
+    { id:'ready', label:'Ready to Fight', icon:'👊', color:0xff6633, lines:['"Pick a reason. Any reason."', '"I\'ve been warmed up since I clocked in."', '"Don\'t. Just... don\'t."'] },
+    { id:'tired', label:'Exhausted', icon:'😮‍💨', color:0xffaa66, lines:['"Eight months in and STILL dealing with this."', '"I need to sit down but I won\'t give them the satisfaction."'] },
+    { id:'unbothered', label:'Unbothered', icon:'😌', color:0xffcc99, lines:['"I\'m at peace. Don\'t ruin it."', '"Everything is fine. Mysteriously."', '"I\'m calm. Be afraid."'] },
+    { id:'final', label:'Final Warning', icon:'⚠️', color:0xff3300, lines:['"This is your LAST warning."', '"I said what I said. You have five seconds."', '"I am THIS close."'] },
+  ],
+  marcus: [
+    { id:'suspicious', label:'Suspicious', icon:'🔎', color:0xffaa22, lines:['"Something is off and I am GOING to find it."', '"My Spidey sense is going off. Don\'t move."'] },
+    { id:'reporting', label:'Reporting', icon:'📋', color:0xff6600, lines:['"This is going in the log."', '"James needs to know about this immediately."'] },
+    { id:'smug', label:'Smug', icon:'😏', color:0xffdd44, lines:['"I knew it. I always know."', '"I do this job well. Not everyone can say that."'] },
+    { id:'nervous', label:'Nervous', icon:'😰', color:0xaaddff, lines:['"I hope James thinks I\'m doing well."', '"Am I being too aggressive? No. I\'m being appropriately thorough."'] },
   ],
 };
 
@@ -651,6 +718,22 @@ function makePersonTexture(scene, key, app){
     g.fillRect(22, 26, 2, 12);
   }
 
+  // ── PREGNANT BELLY (Jorie) ──
+  if(app.pregnant){
+    // Belly bump pokes out front of shirt
+    g.fillStyle(skin, 1);
+    g.fillEllipse(21, 34, 24, 19);
+    // Shirt tint over belly
+    g.fillStyle(shirt, 0.45);
+    g.fillEllipse(21, 33, 22, 17);
+    // Belly shading
+    g.fillStyle(0x000000, 0.09);
+    g.fillEllipse(21, 37, 18, 10);
+    // Belly button
+    g.fillStyle(0x000000, 0.18);
+    g.fillCircle(21, 35, 1.5);
+  }
+
   // ── ARMS ──
   g.fillStyle(skin, 1);
   g.fillRoundedRect(0,  22, 8, 18, 4);
@@ -698,6 +781,18 @@ function makePersonTexture(scene, key, app){
     g.fillStyle(hair, 1);
     g.fillRoundedRect(28, 0, 7, 18, 4);
     g.fillCircle(31, 18, 4);
+  }
+
+  // High bun (Jorie)
+  if(app.bun){
+    g.fillStyle(hair, 1);
+    g.fillCircle(21, -4, 7);
+    // Bun highlight
+    g.fillStyle(0xffffff, 0.12);
+    g.fillCircle(19, -6, 3);
+    // Hair tie
+    g.fillStyle(0xff6633, 0.8);
+    g.fillRect(17, -1, 8, 2);
   }
 
   // ── BACKWARDS CAP (Chance) ──
@@ -1609,6 +1704,22 @@ class GameScene extends Phaser.Scene {
       this.randomizeNpcEmotion(npc, 'spawn');
 
       this.physics.add.collider(sprite, this.walls);
+
+      // Give Marcus a wide multi-zone patrol path
+      if(def.id === 'marcus'){
+        npc.patrolPath = [
+          { x: 200, y: 250 },  // dock left
+          { x: 700, y: 280 },  // dock mid
+          { x: 1200, y: 260 }, // dock right
+          { x: 1400, y: 550 }, // floor right
+          { x: 800,  y: 600 }, // floor mid
+          { x: 200,  y: 560 }, // floor left
+          { x: 150,  y: 320 }, // dock far left
+          { x: 600,  y: 850 }, // break room approach
+        ];
+        npc.moveTimer = 1000;
+      }
+
       this.npcs.push(npc);
     });
   }
@@ -1737,7 +1848,9 @@ class GameScene extends Phaser.Scene {
 
   // ── PLAYER MOVEMENT ────────────────────────────────────────────────────────
   movePlayer(delta){
-    const speed = 180 * (STATE.energy>0 ? 1 : 0.4);
+    STATE.playerRunBoost = Math.max(0, (STATE.playerRunBoost||0) - delta);
+    const runMult = STATE.playerRunBoost > 0 ? 2.6 : 1;
+    const speed = 180 * (STATE.energy>0 ? 1 : 0.4) * runMult;
     const cur = this.cursors;
     const w = this.wasd;
     let vx=0, vy=0;
@@ -1966,6 +2079,43 @@ class GameScene extends Phaser.Scene {
         suspChange = -10; STATE.rapportJames++;
         STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 8);
       }
+      // Off-the-clock override — if player clocked out, idx 1 becomes "I'm off the clock"
+      if(idx===1 && STATE.clockedOut){
+        const offLines = [
+          '"I\'M SORRY — off the WHAT?! You clocked OUT?! On MY dock?!"',
+          '"Off the clock?! The TRUCKS don\'t clock out! The FREIGHT doesn\'t clock out!"',
+          '"You punched out. In the MIDDLE of a shift. I — you — I need a minute."',
+          '"OFF. THE. CLOCK. Those words. In that order. You said them to MY FACE."',
+        ];
+        response = Phaser.Math.RND.pick(offLines);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 35);
+        STATE.suspicion = Math.min(100, STATE.suspicion + 20);
+        this.floatText(this.player.x, this.player.y, '🚫 YOU\'RE OFF THE CLOCK — James is LOSING IT', '#ff4400');
+        this.cameras.main.shake(350, 0.014);
+        const jNpc = this.npcs.find(n=>n.id==='james');
+        if(jNpc){ jNpc.running = false; } // too stunned to chase right away
+        this.time.delayedCall(2000, ()=>{
+          this.floatText(this.player.x, this.player.y, '😤 James is writing something down...', '#ff8800');
+          STATE.beingChased = true;
+          const jNpc2 = this.npcs.find(n=>n.id==='james');
+          if(jNpc2){ jNpc2.running = true; jNpc2.chaseTarget = 'player'; }
+          this.time.delayedCall(6000, ()=>{
+            STATE.beingChased = false;
+            const j3 = this.npcs.find(n=>n.id==='james');
+            if(j3) j3.running = false;
+          });
+        });
+        // Nudge and return early so we don't fall through
+        this.nudgeEmotion('james', 'stressed');
+        STATE.score = Math.max(0, STATE.score + scoreChange);
+        STATE.energy = Math.max(0, Math.min(100, STATE.energy + energyChange));
+        STATE.suspicion = Math.max(0, Math.min(100, STATE.suspicion + suspChange));
+        this.dlgText.setText('James: '+response);
+        this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+        this.dlgCloseTxt.setText('[E/ESC] Close');
+        this.time.delayedCall(2500, ()=>this.closeDialogue());
+        return;
+      }
       else if(idx===1){ // Ask for easier truck
         const noLines = [
           '"No. Next question."',
@@ -2001,26 +2151,25 @@ class GameScene extends Phaser.Scene {
           this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
         }
       }
-      else { // idx===3: Ask what he does all day
-        const whatLines = [
-          '"What do I— WHAT DO I— I do EVERYTHING. You want a LIST? Sit down. It\'s long."',
-          '"I answer 400 emails a day. FOUR HUNDRED. Do you know how many that is? I stopped counting in 2021."',
-          '"I manage THIS. Whatever THIS is at any given moment. Which is apparently EVERYTHING and ALSO your problem."',
-          '"I do your job. And the job above your job. And frankly some decisions about your life you haven\'t made yet."',
-          '"I\'m in SIX MEETINGS before you even clock in. Six. About THIS PLACE. That YOU work at."',
-          '"I prevent this entire building from becoming a crime scene. DAILY. You\'re welcome."',
-          '"I once handled a forklift fire, a vendor dispute, three HR complaints, AND a missing pallet. Before 8AM. On a Sunday."',
-          '"I have a spreadsheet. My name is on it 47 times under \'responsible party.\' I counted. It made me sad."',
-          '"What do I do?! I keep YOU employed! That\'s what I do! You\'re welcome AGAIN!"',
-          '"I schedule. I report. I supervise. I document. I beg corporate. I survive. DAILY. That\'s my day."',
-          '"I was here when the PREVIOUS manager had a breakdown. I WATCHED. And then I TOOK THE JOB. That\'s what I do."',
-          '"My day starts at 4AM and ends when I stop thinking about this dock. Which is never. So it never ends."',
-        ];
-        response = Phaser.Math.RND.pick(whatLines);
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 25);
-        suspChange = 10;
-        this.floatText(npc.sprite.x, npc.sprite.y-40, '🤯 James PISSED OFF +25', '#ff2200');
-        this.cameras.main.shake(200, 0.006);
+      else { // idx===3: RUN!
+        response = '"...HEY! WHERE ARE YOU GOING?! GET BACK HERE!"';
+        STATE.playerRunBoost = 3500;
+        STATE.beingChased = true;
+        STATE.suspicion = Math.min(100, STATE.suspicion + 22);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 20);
+        this.floatText(this.player.x, this.player.y, '🏃 RUNNING FROM JAMES!', '#ff4400');
+        this.cameras.main.shake(300, 0.012);
+        // James runs after player
+        const jNpc = this.npcs.find(n=>n.id==='james');
+        if(jNpc){ jNpc.running = true; jNpc.chaseTarget = 'player'; }
+        const marcus = this.npcs.find(n=>n.id==='marcus');
+        if(marcus){ marcus.running = true; marcus.chaseTarget = 'player'; }
+        this.time.delayedCall(4000, ()=>{
+          STATE.beingChased = false;
+          if(jNpc) jNpc.running = false;
+          if(marcus) marcus.running = false;
+          STATE.playerRunBoost = 0;
+        });
       }
     }
     else if(npc.id === 'lee'){
@@ -2289,6 +2438,117 @@ class GameScene extends Phaser.Scene {
         this.floatText(this.player.x, this.player.y, '🤔 Jeff drops some wisdom. Energy +5, +15 pts', '#44bb44');
       }
     }
+    else if(npc.id === 'jorie'){
+      if(idx === 0){ // Wassup 👋
+        const jorieWassup = [
+          '"Wassup. You see anything weird today? Because I have been warmed up since 6AM."',
+          '"Hey. Nothing. I\'m fine. I just have that look on my face. This is my regular face."',
+          '"What\'s up. Don\'t actually answer that. I\'m asking as a greeting, not an investigation."',
+          '"Wassup. I like you. I want to be clear about that so you understand the contrast when I\'m mad."',
+          '"Hey. You\'re one of the good ones. I can tell because you said hi instead of avoiding eye contact like Todd."',
+        ];
+        response = Phaser.Math.RND.pick(jorieWassup);
+        scoreChange = 10;
+      }
+      else if(idx === 1){ // You good? 😬
+        const jorieGood = [
+          '"Do I LOOK good? I am eight months pregnant on a warehouse dock. Be specific with your questions."',
+          '"I\'m fine. My feet are not fine. My back is a crime scene. But I — personally — am FINE."',
+          '"Honestly? I\'m winning. I am growing a human being and I still clocked in before Drew. I\'m winning."',
+          '"I\'ve been better. But I\'ve also never felt more prepared to fight a random person, so it balances out."',
+          '"I am so tired. Like spiritually tired. But I\'ll never tell them that so externally I\'m incredible."',
+          '"My doctor said eight hours of sleep. I said I get six if I\'m lucky and two of those are me thinking about who annoyed me. So. Fine."',
+        ];
+        response = Phaser.Math.RND.pick(jorieGood);
+        scoreChange = 5;
+        this.floatText(this.player.x, this.player.y, '🤰 Jorie is fine. Somehow.', '#ff6633');
+      }
+      else if(idx === 2){ // Warn about Todd 💀
+        const jorieTodd = [
+          '"Todd? That fat cracker better STAY in his freezer. I am too pregnant to walk all the way over there but I WILL."',
+          '"I don\'t need a warning about Todd. Todd needs a LAWYER and maybe a head start."',
+          '"If Todd walks past me one more time I am going to say things that will go in BOTH our HR files."',
+          '"Oh I already know about Todd. We\'ve had words. Specifically I had words and he nodded rapidly and backed away."',
+          '"Todd and I have a system. He stays in the freezer. I don\'t go to the freezer. We both survive the shift."',
+          '"The baby kicks every time Todd\'s name comes up. My child already knows. My child is READY."',
+        ];
+        response = Phaser.Math.RND.pick(jorieTodd);
+        scoreChange = 15; suspChange = 5;
+        this.floatText(this.player.x, this.player.y, '💀 Jorie is NOT scared of Todd', '#ff6633');
+        const todd = this.npcs.find(n=>n.id==='todd');
+        if(todd) this.time.delayedCall(900, ()=>{
+          if(todd.bubbleTimer <= 0) this.showBubble(todd, '"...someone mentioned me. I can feel it from the freezer."');
+        });
+      }
+      else { // Let's go smoke 🚬
+        if(STATE.jamesSmokeParty){
+          response = '"I\'m already on my way. Don\'t rush me. I am CARRYING SOMETHING."';
+        } else {
+          const jorieSmokeRally = [
+            '"Fine. EVERYBODY outside. I need fresh air and I need to stop making direct eye contact with Todd. MOVE."',
+            '"Smoke break. All of us. Right now. I\'m not asking. I\'m pregnant and I have lost the ability to ask nicely."',
+            '"You know what? Yes. Outside. Everyone. Now. Before I do something that gets documented."',
+            '"I\'m calling it. Crew smoke. My feet hurt, my back hurts, and I deserve this. EVERYBODY LET\'S GO."',
+          ];
+          response = Phaser.Math.RND.pick(jorieSmokeRally);
+          scoreChange = 20; energyChange = 10;
+          this.floatText(this.player.x, this.player.y, '🤰🚬 Jorie is CALLING IT — EVERYONE OUTSIDE!', '#ff6633');
+          this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
+        }
+      }
+    }
+    else if(npc.id === 'marcus'){
+      if(idx === 0){ // Suck up
+        const suckLines = [
+          '"Oh — really? You think I\'m doing a good job? I mean... I know. But thank you."',
+          '"Wow. That\'s — I appreciate that. I\'ll make a note that you were cooperative."',
+          '"You get it. Most people here don\'t GET it. But you get it."',
+        ];
+        response = Phaser.Math.RND.pick(suckLines);
+        scoreChange = 5; suspChange = -12;
+        this.nudgeEmotion('marcus', 'smug');
+        this.floatText(this.player.x, this.player.y, '😇 Marcus likes you now. Suspicion -12', '#ffdd44');
+      }
+      else if(idx === 1){ // Mind his business
+        const mbLines = [
+          '"MIND my — I\'m an ASSISTANT SUPERVISOR. This IS my business."',
+          '"Mind my business?! My BUSINESS is THIS FLOOR. Everything here is my business!"',
+          '"Okay. Noted. I\'m noting that you said that. In writing."',
+        ];
+        response = Phaser.Math.RND.pick(mbLines);
+        suspChange = 15; STATE.marcusAggression = Math.min(100, (STATE.marcusAggression||0) + 25);
+        this.nudgeEmotion('marcus', 'reporting');
+        const james = this.npcs.find(n=>n.id==='james');
+        if(james) this.time.delayedCall(1500, ()=>{
+          this.showBubble(james, '"...Marcus just texted me something. I\'m not reading it right now."');
+        });
+        this.floatText(this.player.x, this.player.y, '😤 Marcus is documenting you. +15 suspicion', '#ff6600');
+      }
+      else if(idx === 2){ // Throw Chandler under the bus
+        response = '"Chandler? CHANDLER. Oh I have a file on Chandler. I\'ve been WAITING for someone to bring him up."';
+        scoreChange = 20; suspChange = -18;
+        STATE.marcusAggression = Math.max(0, (STATE.marcusAggression||0) - 20);
+        this.nudgeEmotion('marcus', 'smug');
+        const chandler = this.npcs.find(n=>n.id==='chandler');
+        if(chandler) this.time.delayedCall(800, ()=>{
+          this.showBubble(chandler, '"I can feel someone talking about me. Again."');
+        });
+        this.floatText(this.player.x, this.player.y, '🍞 Chandler takes the fall AGAIN! +20, Suspicion -18', '#ffd700');
+      }
+      else { // BOLT
+        response = '"...WAIT. HEY. COME BACK. THAT\'S — I\'M GOING TO LOG THIS!"';
+        STATE.playerRunBoost = 3000;
+        STATE.suspicion = Math.min(100, STATE.suspicion + 18);
+        STATE.marcusAggression = Math.min(100, (STATE.marcusAggression||0) + 30);
+        this.floatText(this.player.x, this.player.y, '🏃 BOLTED FROM MARCUS!', '#ff4400');
+        this.cameras.main.shake(200, 0.008);
+        const marcusNpc = this.npcs.find(n=>n.id==='marcus');
+        if(marcusNpc){ marcusNpc.running = true; marcusNpc.chaseTarget = 'player'; }
+        this.time.delayedCall(5000, ()=>{
+          if(marcusNpc) marcusNpc.running = false;
+        });
+      }
+    }
     else if(npc.id === 'pam'){
       if(idx===0){ // Pretend to work
         response = '"I\'m watching you. Very carefully."'; suspChange = -5;
@@ -2314,9 +2574,11 @@ class GameScene extends Phaser.Scene {
     if(npc.id === 'drew') this.nudgeEmotion('drew', idx === 0 || idx === 2 ? 'broke' : idx === 1 ? 'panicked' : 'hungry');
     if(npc.id === 'chance') this.nudgeEmotion('chance', idx === 1 ? 'respectful' : 'instigating');
     if(npc.id === 'jeff') this.nudgeEmotion('jeff', idx === 0 ? 'chill' : idx === 2 ? 'confused' : 'generous');
+    if(npc.id === 'jorie') this.nudgeEmotion('jorie', idx === 0 ? 'unbothered' : idx === 1 ? 'tired' : idx === 2 ? 'final' : 'ready');
     if(npc.id === 'pam') this.nudgeEmotion('pam', idx === 0 ? 'watching' : 'strict');
     if(npc.id === 'pam' && idx === 2) this.nudgeEmotion('chandler', 'angry', 22000);
     if(npc.id === 'chance' && idx === 2) this.nudgeEmotion('drew', 'panicked', 22000);
+    if(npc.id === 'marcus') this.nudgeEmotion('marcus', idx === 0 ? 'smug' : idx === 1 ? 'reporting' : idx === 2 ? 'smug' : 'suspicious');
 
     // Show response
     this.dlgText.setText(npc.name+': '+response);
@@ -2697,7 +2959,16 @@ class GameScene extends Phaser.Scene {
 
   useObject(id){
     const responses = {
-      timeclock: ()=>{ this.floatText(this.player.x,this.player.y,'⏱ Clocked in!',  '#44ff44'); STATE.score+=5; },
+      timeclock: ()=>{
+        STATE.clockedOut = !STATE.clockedOut;
+        if(STATE.clockedOut){
+          this.floatText(this.player.x, this.player.y, '🕐 CLOCKED OUT — You\'re off! 👋', '#ff6633');
+          this.floatText(this.player.x, this.player.y-28, 'Now go tell James you\'re done 😈', '#ffaa44');
+        } else {
+          this.floatText(this.player.x, this.player.y, '⏱ Clocked back in. Back to work.', '#44ff44');
+          STATE.score += 5;
+        }
+      },
       tldesk:    ()=>{ this.showAssignment(); },
       vending:   ()=>{ STATE.energy=Math.min(100,STATE.energy+15); this.floatText(this.player.x,this.player.y,'🥤 Energy +15!','#44aaff'); STATE.score+=2; },
       coffee:    ()=>{ STATE.energy=Math.min(100,STATE.energy+25); this.floatText(this.player.x,this.player.y,'☕ Coffee! Energy +25!','#cc8844'); STATE.score+=3; },
@@ -2803,8 +3074,8 @@ class GameScene extends Phaser.Scene {
       return npc.sprite.x >= z.x && npc.sprite.x <= z.x+z.w &&
              npc.sprite.y >= z.y && npc.sprite.y <= z.y+z.h;
     };
-    const NPC_SC_COLORS = { james:'#ffa01e', chance:'#44aaff', lee:'#ff80c0', chandler:'#bbbbbb', drew:'#cc88ff', jeff:'#44dd44' };
-    const hereNames = ['james','lee','chance','chandler','drew','jeff']
+    const NPC_SC_COLORS = { james:'#ffa01e', chance:'#44aaff', lee:'#ff80c0', chandler:'#bbbbbb', drew:'#cc88ff', jeff:'#44dd44', jorie:'#ff6633' };
+    const hereNames = ['james','lee','chance','chandler','drew','jeff','jorie']
       .filter(id => atSmoke(id) || STATE.smokingNPCs.includes(id))
       .map(id =>{ const n = this.npcs.find(x=>x.id===id); return n ? n.name : id; });
     this.scWhoTxt.setText(hereNames.length ? `👥 ${hereNames.join('  ')}` : '👤 Just you out here.').setVisible(true);
@@ -2813,6 +3084,9 @@ class GameScene extends Phaser.Scene {
 
     // Clear message pool
     this.scMsgPool.forEach(t => t.setText('').setVisible(false).setAlpha(0));
+
+    // Wipe any existing NPC bubbles the moment we open (they'd float in wrong space)
+    this.time.delayedCall(50, ()=>{ this.clearAllBubbles(); });
 
     // Zoom camera into smoke area
     this.cameras.main.stopFollow();
@@ -2855,7 +3129,7 @@ class GameScene extends Phaser.Scene {
     const NPC_SC_COLORS = {
       james:'#ffa01e', chance:'#44aaff', lee:'#ff80c0',
       chandler:'#bbbbbb', drew:'#cc88ff', jeff:'#44dd44',
-      todd:'#88aaff', pam:'#ffcc44', player:'#aaffaa'
+      todd:'#88aaff', pam:'#ffcc44', jorie:'#ff6633', marcus:'#ffaa22', player:'#aaffaa'
     };
     const npc = this.npcs ? this.npcs.find(n=>n.id===id) : null;
     const name = npc ? npc.name : (id === 'player' ? STATE.playerName || 'You' : id);
@@ -2932,21 +3206,24 @@ class GameScene extends Phaser.Scene {
     const roastAlmostReady = !chandlerHere && (jamesHere || chanceHere || leeHere);
     const partyMode = STATE.jamesSmokeParty; // crew was called — always show party options
 
-    // Build dynamic choices
+    // Build dynamic choices — roast options always available when crew is here
     const choices = [];
     if(partyMode){
-      // James's crew assembled — unlock the rowdy options
-      choices.push({ label:'🍞 Talk shit about Chandler',  id:'partyChandler',   hot:true });
-      choices.push({ label:'🍔 Call Drew fat',             id:'partyDrewFat',    hot:true });
-      choices.push({ label:'🥡 Yell EGGROLL at Lee 😈',   id:'partyLeeEggroll', hot:true });
-      choices.push({ label:'💨 Just vibe out here',        id:'chill' });
+      // Full crew assembled — show the rowdy options + more
+      choices.push({ label:'🍞 Talk shit about Chandler',   id:'partyChandler',   hot:true });
+      choices.push({ label:'🍔 Call Drew fat',              id:'partyDrewFat',    hot:true });
+      choices.push({ label:'🥡 Scream EGGROLL at Lee 😈',  id:'partyLeeEggroll', hot:true });
+      choices.push({ label:'🤰 Put Jorie on Todd',         id:'partyJorieTold',  hot:true });
     } else {
-      if(!chandlerHere) choices.push({ label:'📞 Call Chandler out here', id:'callChandler' });
-      if(!jamesHere)    choices.push({ label:'📞 Call James out here',    id:'callJames'    });
-      if(!chanceHere)   choices.push({ label:'📞 Call Chance out here',   id:'callChance'   });
-      if(!leeHere)      choices.push({ label:'📞 Call Lee out here',      id:'callLee'      });
-      if(roastReady)    choices.unshift({ label:'🔥 GROUP ROAST Chandler — DO IT', id:'groupRoast', hot:true });
-      choices.push({ label:'💨 Just chill here (+energy)', id:'chill' });
+      // Solo or partial crew — can still start roasts + call people out
+      if(roastReady) choices.push({ label:'🔥 GROUP ROAST — DO IT NOW',    id:'groupRoast',    hot:true });
+      if(chandlerHere || partyMode) choices.push({ label:'🍞 Roast Chandler',       id:'partyChandler', hot:true });
+      if(leeHere      || partyMode) choices.push({ label:'🥡 Scream EGGROLL at Lee', id:'partyLeeEggroll', hot:true });
+      if(!chandlerHere) choices.push({ label:'📞 Call Chandler out here',  id:'callChandler' });
+      if(!jamesHere)    choices.push({ label:'📞 Call James out here',     id:'callJames'    });
+      if(!chanceHere)   choices.push({ label:'📞 Call Chance out here',    id:'callChance'   });
+      if(!leeHere)      choices.push({ label:'📞 Call Lee out here',       id:'callLee'      });
+      choices.push({ label:'💨 Just chill (+energy)',       id:'chill' });
     }
 
     // ── BUILD THE DIALOGUE UI ──
@@ -2971,13 +3248,15 @@ class GameScene extends Phaser.Scene {
       .setStyle({fill: _portTxtColor, fontSize:'11px'}).setVisible(true);
 
     // Who's here
+    const jorieHere = atSmoke('jorie') || STATE.smokingNPCs.includes('jorie');
     const hereList = [];
     if(chandlerHere) hereList.push('Chandler 🍞');
     if(jamesHere)    hereList.push('James 📋');
     if(chanceHere)   hereList.push('Chance 🧢');
     if(leeHere)      hereList.push('Lee 💕');
+    if(jorieHere)    hereList.push('Jorie 🤰');
     const hereTxt = partyMode
-      ? '🔥 James\'s crew is out here. Time to be TERRIBLE. 🔥'
+      ? '🔥 The whole crew is out here. What you tryna do? 🔥'
       : (hereList.length ? 'Here now: '+hereList.join(', ') : 'Just you out here.');
     this.dlgText.setText(hereTxt).setStyle({fill: partyMode ? '#ff6a00' : '#aaffaa'}).setVisible(true);
 
@@ -3072,6 +3351,9 @@ class GameScene extends Phaser.Scene {
     }
     else if(choiceId === 'partyLeeEggroll'){
       this.triggerPartyLeeEggroll();
+    }
+    else if(choiceId === 'partyJorieTold'){
+      this.triggerPartyJorieTold();
     }
     else if(choiceId === 'chill'){
       STATE.energy = Math.min(100, STATE.energy + 20);
@@ -3186,12 +3468,14 @@ class GameScene extends Phaser.Scene {
       beat(2800, 'chance',   '"Did James just — bro. I\'ve been WAITING for this day."');
       beat(3800, 'chandler', '"...when James says outside, do I have to go? I feel like I have to go."');
       beat(4800, 'drew',     '"Wait is there food outside?? I\'m going either way."');
+      beat(5900, 'jorie',    '"James said outside. That\'s the only person I listen to. Let\'s go."');
       beat(5900, 'james',    '"I said NOW. Why are you all still standing INSIDE."');
       toSmoke(0,    'james',     32,  18);
       toSmoke(2300, 'lee',      -45,  12);
       toSmoke(3200, 'chance',    55,  -8);
       toSmoke(4200, 'chandler',  10,  32);
       toSmoke(5200, 'drew',     -22,  26);
+      toSmoke(6200, 'jorie',      0,  22);
 
     } else if(id === 'chance'){
       this.floatText(this.player.x, this.player.y-50, '🔥 CHANCE IS CALLING EVERYONE OUT 🔥', '#ff6a00');
@@ -3200,12 +3484,14 @@ class GameScene extends Phaser.Scene {
       beat(3000, 'james',    '"...I have zero authority right now apparently. Fine. FIVE MINUTES. GO."');
       beat(4100, 'chandler', '"Is this mandatory? ...Yes. I need this. I\'m going."');
       beat(5200, 'drew',     '"Wait — someone\'s paying right? No? Still going."');
+      beat(5900, 'jorie',    '"I heard \'everybody outside\' and that\'s all I needed. Moving."');
       beat(6300, 'chance',   '"That\'s what I thought. Every. Body. MOVE."');
       toSmoke(500,  'chance',    55,  -8);
       toSmoke(1800, 'lee',      -45,  12);
       toSmoke(3200, 'james',     32,  18);
       toSmoke(4300, 'chandler',  10,  32);
       toSmoke(5400, 'drew',     -22,  26);
+      toSmoke(6400, 'jorie',      0,  22);
 
     } else if(id === 'chandler'){
       this.floatText(this.player.x, this.player.y-50, '🍞 CHANDLER IS CALLING EVERYONE OUT 🍞', '#c8a050');
@@ -3214,11 +3500,13 @@ class GameScene extends Phaser.Scene {
       beat(3100, 'lee',      '"DID CHANDLER TAKE CHARGE?! Greatest shift I\'ve had all year!"');
       beat(4300, 'james',    '"I can\'t explain what\'s happening. ...EVERYBODY OUT. Now."');
       beat(5500, 'drew',     '"Wait is Chandler okay? I\'m going either way."');
+      beat(6200, 'jorie',    '"Chandler called it? Hm. Respect. I\'m going."');
       toSmoke(1000, 'chandler',  10,  32);
       toSmoke(2300, 'chance',    55,  -8);
       toSmoke(3500, 'lee',      -45,  12);
       toSmoke(4700, 'james',     32,  18);
       toSmoke(5800, 'drew',     -22,  26);
+      toSmoke(6800, 'jorie',      0,  22);
 
     } else if(id === 'lee'){
       this.floatText(this.player.x, this.player.y-50, '🔥 LEE IS CALLING EVERYONE OUT 🔥', '#ff80c0');
@@ -3227,11 +3515,13 @@ class GameScene extends Phaser.Scene {
       beat(3000, 'james',    '"...Lee has made a command decision. ...I\'ll allow it. Five minutes."');
       beat(4100, 'chandler', '"Lee said everyone which means me specifically. I\'m going."');
       beat(5200, 'drew',     '"LEE IS MAD?! I don\'t know what\'s happening but I\'m IN."');
+      beat(5900, 'jorie',    '"Lee? I follow Lee. Let\'s go."');
       toSmoke(500,  'lee',      -45,  12);
       toSmoke(1800, 'chance',    55,  -8);
       toSmoke(3200, 'james',     32,  18);
       toSmoke(4300, 'chandler',  10,  32);
       toSmoke(5400, 'drew',     -22,  26);
+      toSmoke(6300, 'jorie',      0,  22);
 
     } else if(id === 'drew'){
       this.floatText(this.player.x, this.player.y-50, '💸 DREW IS CALLING EVERYONE OUT 💸', '#cc88ff');
@@ -3240,11 +3530,28 @@ class GameScene extends Phaser.Scene {
       beat(3000, 'lee',      '"Drew is organizing something?! I don\'t know but I\'m IN."');
       beat(4200, 'james',    '"...Drew is doing this. I refuse to analyze it. Let\'s just go."');
       beat(5400, 'chandler', '"Drew has never organized a thing in his life. And yet. Here we all are."');
+      beat(6200, 'jorie',    '"Drew called a smoke break. I don\'t even know what to say. I\'m going."');
       toSmoke(1200, 'drew',     -22,  26);
       toSmoke(2400, 'chance',    55,  -8);
       toSmoke(3600, 'lee',      -45,  12);
       toSmoke(4800, 'james',     32,  18);
       toSmoke(5900, 'chandler',  10,  32);
+      toSmoke(6900, 'jorie',      0,  22);
+
+    } else if(id === 'jorie'){
+      this.floatText(this.player.x, this.player.y-50, '🤰 JORIE IS CALLING EVERYONE OUT — MOVE! 🤰', '#ff6633');
+      beat(400,  'jorie',    '"EVERYBODY. Outside. RIGHT NOW. I\'m pregnant and I\'m STILL the most intimidating person in this building."');
+      beat(2000, 'jeff',     '"...Jorie said outside so I\'m going outside. That\'s just how this works."');
+      beat(3300, 'chance',   '"JORIE called a smoke break?! I have never felt safer and also more threatened in my entire life."');
+      beat(4500, 'james',    '"...Jorie has spoken. I\'m not going to argue with Jorie. EVERYBODY OUT."');
+      beat(5700, 'lee',      '"YOOO Jorie is RUNNING this shift right now. I respect it SO MUCH."');
+      beat(6800, 'drew',     '"I don\'t know what\'s happening but Jorie looks serious so I am moving immediately."');
+      toSmoke(800,  'jorie',      0,  22);
+      toSmoke(2100, 'jeff',      35,  -5);
+      toSmoke(3400, 'chance',    55,  -8);
+      toSmoke(4600, 'james',     32,  18);
+      toSmoke(5800, 'lee',      -45,  12);
+      toSmoke(6900, 'drew',     -22,  26);
     }
 
     // Everyone's headed out — then auto-open the smoke session with party options
@@ -3259,6 +3566,7 @@ class GameScene extends Phaser.Scene {
         chandler:'"I don\'t know why I did that. But here we all are."',
         lee:     '"OKAY. We\'re all outside. This is what I needed. This is everything."',
         drew:    '"I can\'t believe that worked. I organized something. Write it down."',
+        jorie:   '"Good. You all listened. I respect that. Now somebody hand me something to lean on."',
       }[id] || '"Alright. We\'re here."';
       this.clearAllBubbles();
       const iNpc = this.npcs.find(x=>x.id===id);
@@ -3267,7 +3575,7 @@ class GameScene extends Phaser.Scene {
       this.floatText(SX, 68, '🔥 The whole crew is assembled! Choose your move!', '#ff6600');
       // Refresh who's-here in the panel header now that everyone has arrived
       if(this.scWhoTxt){
-        const hereNow = ['james','lee','chance','chandler','drew']
+        const hereNow = ['james','lee','chance','chandler','drew','jorie']
           .map(nid =>{ const n=this.npcs.find(x=>x.id===nid); return n ? n.name : nid; });
         this.scWhoTxt.setText(`👥 ${hereNow.join('  ')}`);
       }
@@ -3395,6 +3703,53 @@ class GameScene extends Phaser.Scene {
     this.time.delayedCall(23000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
+  // ── PARTY OPTION: Sic Jorie on Todd ──────────────────────────────────────
+  triggerPartyJorieTold(){
+    const beat = (ms, id, text) => {
+      this.time.delayedCall(ms, ()=>{
+        this.clearAllBubbles();
+        const n = this.npcs.find(x=>x.id===id);
+        if(n) this.showBubble(n, text, 1800);
+        this.postSmokeChat(id, text);
+      });
+    };
+    this.floatText(160, 44, '💥 "Yo Jorie... Todd just said something about you" 💥', '#ff6633');
+    this.cameras.main.shake(200, 0.006);
+
+    beat(600,  'jorie',   '"...he said WHAT."');
+    beat(1700, 'chance',  '"I\'m not going to repeat it. But I WILL say it was bold."');
+    beat(3000, 'jorie',   '"TODD. FAT CRACKER. COME HERE."');
+    beat(4200, 'todd',    '"...the freezer suddenly feels very far away."');
+    beat(5500, 'jorie',   '"GET OUT OF THE FREEZER TODD. I KNOW YOU CAN HEAR ME."');
+    beat(6800, 'lee',     '"Oh my GOD. Oh my GOD. Jorie is GOING for it. This is the greatest day."');
+    beat(8100, 'todd',    '"I did not say anything. I was in the freezer. The freezer has no opinions."');
+    beat(9400, 'jorie',   '"You wanna run that back? You wanna RUN. THAT. BACK. Todd?"');
+    beat(10700,'chance',  '"She\'s using the full name. The full LAST name voice. Todd you are cooked."');
+    beat(12000,'james',   '"I am not here. This is a temperature check. I am doing a temperature check right now."');
+    beat(13400,'todd',    '"I\'m going back to the freezer. I live there. It is my home. Goodbye."');
+    beat(14700,'jorie',   '"WALK AWAY. KEEP WALKING. I SEE YOU PICKING UP THE PACE TODD."');
+    beat(16100,'lee',     '"She just ended him with WORDS ALONE. Not even a step toward him. Just vibes."');
+    beat(17500,'chance',  '"Todd took ten steps back and is now INSIDE the freezer with the DOOR CLOSED. Respect."');
+    beat(19000,'jorie',   '"...and that\'s how that goes. Somebody get me a chair. My feet hurt."');
+    beat(20500,'drew',    '"I don\'t even know Todd like that but I felt that. I felt that in my chest."');
+    beat(22000,'james',   '"Temperature check complete. Everything is fine. Nobody document this."');
+
+    STATE.score += 120;
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
+    this.nudgeEmotion('jorie', 'unbothered');
+    this.nudgeEmotion('todd',  'haunted');
+    this.time.delayedCall(1500, ()=>
+      this.floatText(160, 70, '💥 +120 pts — Todd DESTROYED by Jorie from across the dock', '#ff6633'));
+    this.cameras.main.flash(180, 255, 100, 50);
+
+    if(!STATE.achievements.includes('jorie_todd')){
+      STATE.achievements.push('jorie_todd');
+      this.time.delayedCall(23000, ()=>
+        this.floatText(160, 80, '🏆 ACHIEVEMENT: Pregnant and DANGEROUS!', '#ff6633'));
+    }
+    this.time.delayedCall(25000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+  }
+
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
   showAssignment(){
     if(STATE.dialogueActive || STATE.miniGameActive) return;
@@ -3504,6 +3859,10 @@ class GameScene extends Phaser.Scene {
 
   // ── NPC AI ─────────────────────────────────────────────────────────────────
   updateNPCs(delta){
+    // During smoke sessions suppress all autonomous idle bubbles so the chat log
+    // is the only voice and nothing overlaps on screen.
+    const suppressIdleBubbles = STATE.smokeChatOpen;
+
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
       this.updateNpcEmotion(npc, delta);
@@ -3633,10 +3992,12 @@ class GameScene extends Phaser.Scene {
       const dy = npc.targetY - npc.sprite.y;
       const dist = Math.hypot(dx,dy);
       if(dist > 10){
-        // Lee runs faster when following so she doesn't fall behind
+        // Base speed
         let spd = npc.patrol ? 70 : 45;
         if(STATE.leeFollowing && npc.id === 'lee') spd = 160;
         if(STATE.smokingNPCs.includes(npc.id)) spd = 150;
+        // Running overrides — chasing or being aggressive
+        if(npc.running) spd = Math.max(spd, 175);
         npc.sprite.setVelocity((dx/dist)*spd, (dy/dist)*spd);
       } else {
         npc.sprite.setVelocity(0,0);
@@ -3666,6 +4027,32 @@ class GameScene extends Phaser.Scene {
         }
       }
 
+      // ── JAMES: chase player when beingChased or very high suspicion ──
+      if(npc.id === 'james'){
+        // Chase player when beingChased or very high suspicion
+        if((STATE.beingChased || STATE.suspicion >= 75) && !STATE.smokeChatOpen){
+          npc.running = true;
+          npc.targetX = this.player.x;
+          npc.targetY = this.player.y;
+          const catchDist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, this.player.x, this.player.y);
+          if(catchDist < 60 && !STATE.dialogueActive && npc.bubbleTimer <= 0){
+            npc.running = false;
+            STATE.beingChased = false;
+            const jCaughtLines = [
+              '"STOP. Right there. We are having a conversation RIGHT NOW."',
+              '"I have been CHASING you. On my DOCK. This is your fault."',
+              '"You ran. From ME. The MANAGER. I am making a note."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(jCaughtLines));
+            STATE.suspicion = Math.min(100, STATE.suspicion + 15);
+            STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 20);
+            this.floatText(this.player.x, this.player.y - 40, '😤 James caught you!', '#ffa01e');
+          }
+        } else if(!STATE.beingChased && STATE.suspicion < 75){
+          npc.running = false;
+        }
+      }
+
       // ── PAM: suspicion pressure + inspection speeches ──
       if(npc.id==='pam'){
         const d = Phaser.Math.Distance.Between(this.player.x,this.player.y,npc.sprite.x,npc.sprite.y);
@@ -3681,7 +4068,7 @@ class GameScene extends Phaser.Scene {
           }
         }
         // Pam occasionally announces herself
-        if(npc.bubbleTimer<=0 && Math.random()<0.0008){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && Math.random()<0.0008){
           const pamRoam = [
             '"I am doing a walkthrough. Everyone act normal."',
             '"Productivity review. Carry on."',
@@ -3696,7 +4083,7 @@ class GameScene extends Phaser.Scene {
 
       // ── CHANDLER: mutters to himself, reacts to stress ──
       if(npc.id==='chandler'){
-        if(npc.bubbleTimer<=0 && Math.random()<0.0012){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && Math.random()<0.0012){
           const chandlerMutters = [
             '"I have a degree. A real one. From a real school."',
             '"...Bread Boy. I can\'t believe this is my life."',
@@ -3710,7 +4097,7 @@ class GameScene extends Phaser.Scene {
           this.showBubble(npc, Phaser.Math.RND.pick(chandlerMutters));
         }
         // Chandler reacts to high James annoyance
-        if(STATE.jamesAnnoyance >= 70 && npc.bubbleTimer<=0 && Math.random()<0.004){
+        if(!suppressIdleBubbles && STATE.jamesAnnoyance >= 70 && npc.bubbleTimer<=0 && Math.random()<0.004){
           this.showBubble(npc, '"...when James gets like this I just stare at my shoes and pretend I\'m somewhere else."');
         }
       }
@@ -3734,7 +4121,7 @@ class GameScene extends Phaser.Scene {
           }
           this.time.delayedCall(5000, ()=>{ this._drewStalking = false; });
         }
-        if(npc.bubbleTimer<=0 && Math.random()<0.0010){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && Math.random()<0.0010){
           const drewIdle = [
             '"I\'m so hungry bro."',
             '"You know what sounds good right now? Literally anything."',
@@ -3754,7 +4141,7 @@ class GameScene extends Phaser.Scene {
           this.triggerToddBadIdea();
           this.time.delayedCall(45000, ()=>{ this._toddBadIdeaCooldown = false; });
         }
-        if(npc.bubbleTimer<=0 && Math.random()<0.0010){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && Math.random()<0.0010){
           const toddCreepy = [
             '"...the temperature dropped two degrees. The freezer is happy today."',
             '"I started talking to the compressor. It listens."',
@@ -3873,12 +4260,12 @@ class GameScene extends Phaser.Scene {
         }
 
         // Chance general idle commentary
-        if(npc.bubbleTimer<=0 && !STATE.chanceRoastTarget && Math.random()<0.0008){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && !STATE.chanceRoastTarget && Math.random()<0.0008){
           this.showBubble(npc, this.getNpcLine(npc));
         }
 
         // Chance reacts when James annoyance is high — he loves it
-        if(STATE.jamesAnnoyance >= 70 && npc.bubbleTimer<=0 && Math.random()<0.003){
+        if(!suppressIdleBubbles && STATE.jamesAnnoyance >= 70 && npc.bubbleTimer<=0 && Math.random()<0.003){
           const chanceJamesReacts = [
             '"This is the BEST SHIFT I\'ve ever worked."',
             '"James is at like a 9 out of 10 right now. Phenomenal energy."',
@@ -3891,7 +4278,7 @@ class GameScene extends Phaser.Scene {
 
       // ── LEE: idle chatter in break room when not on a mission ──
       if(npc.id==='lee' && !STATE.leeDistractingJames && !STATE.leeFollowing){
-        if(npc.bubbleTimer<=0 && Math.random()<0.0010){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && Math.random()<0.0010){
           const leeIdle = [
             '"Okay but has anyone actually READ the break room rules? Hilarious."',
             '"I told James I was on break. He said \'you\'re always on break.\' RUDE."',
@@ -3961,9 +4348,191 @@ class GameScene extends Phaser.Scene {
             STATE.jeffAskTarget = null;
           }
         }
+        // Jeff asks Jorie to do his job
+        STATE.jeffJorieJobTimer = (STATE.jeffJorieJobTimer||0) + delta;
+        if(STATE.jeffJorieJobTimer > 28000 && !STATE.jeffJorieJobTarget){
+          STATE.jeffJorieJobTimer = 0;
+          if(Math.random() < 0.45) STATE.jeffJorieJobTarget = true;
+        }
+        if(STATE.jeffJorieJobTarget){
+          const jorie = this.npcs.find(n=>n.id==='jorie');
+          if(jorie){
+            npc.targetX = jorie.sprite.x + 42;
+            npc.targetY = jorie.sprite.y;
+            const dist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, jorie.sprite.x, jorie.sprite.y);
+            if(dist < 72 && npc.bubbleTimer <= 0){
+              const jeffJobLines = [
+                '"Hey Jorie... you think you could handle the bay check real quick? You\'re way better at it."',
+                '"Jorie. Lead sheet needs filling. You\'re good at that kind of thing. I believe in you."',
+                '"Yo — if you\'re not busy — the morning count? It\'s literally just numbers."',
+                '"Hey could you supervise Bay 3 for like twenty minutes? I have to... exist somewhere else."',
+                '"Jorie. Real quick. Could you just... do the whole lead thing today? I\'m having a vibe."',
+              ];
+              this.showBubble(npc, Phaser.Math.RND.pick(jeffJobLines));
+              this.time.delayedCall(1400, ()=>{
+                if(jorie.bubbleTimer <= 0){
+                  const jorieRefusal = [
+                    '"JEFF. I am growing a HUMAN. Do YOUR job."',
+                    '"You want ME — eight months pregnant — to fill out YOUR lead sheet?! JEFF."',
+                    '"I will fight you. Right now. On this dock. I am in NO condition to fight and I will STILL fight you."',
+                    '"No. Jeff. N-O. You are the LEAD. The title is literally LEAD. LEAD."',
+                    '"Say that again. Please. Say that one more time. I am BEGGING you to repeat it so I can hear myself respond."',
+                    '"I am carrying a CHILD and you are asking me to carry your RESPONSIBILITIES. Pick ONE."',
+                    '"Jeff I have one nerve left and it has your name on a sticky note on it."',
+                  ];
+                  this.showBubble(jorie, Phaser.Math.RND.pick(jorieRefusal));
+                  this.floatText(jorie.sprite.x, jorie.sprite.y - 55, '💥 Jorie REFUSED Jeff\'s job!', '#ff6633');
+                  this.nudgeEmotion('jorie', 'final');
+                  this.nudgeEmotion('jeff', 'confused');
+                }
+              });
+              this.time.delayedCall(7500, ()=>{ STATE.jeffJorieJobTarget = false; });
+            }
+          } else {
+            STATE.jeffJorieJobTarget = false;
+          }
+        }
         // Jeff idle mutter
-        if(npc.bubbleTimer<=0 && !STATE.jeffAskTarget && Math.random()<0.0008){
+        if(!suppressIdleBubbles && npc.bubbleTimer<=0 && !STATE.jeffAskTarget && !STATE.jeffJorieJobTarget && Math.random()<0.0008){
           this.showBubble(npc, this.getNpcLine(npc));
+        }
+      }
+
+      // ── MARCUS: assistant supervisor — patrols wide, hunts slackers ──────────
+      if(npc.id === 'marcus'){
+        STATE.marcusAggression = STATE.marcusAggression || 0;
+
+        // If chasing player
+        if(npc.chaseTarget === 'player'){
+          npc.targetX = this.player.x;
+          npc.targetY = this.player.y;
+          const catchDist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, this.player.x, this.player.y);
+          if(catchDist < 55 && npc.bubbleTimer <= 0){
+            npc.running = false;
+            npc.chaseTarget = null;
+            STATE.beingChased = false;
+            const caughtLines = [
+              '"GOT YOU. This is going in a very specific document."',
+              '"You cannot outrun paperwork. You CANNOT."',
+              '"Caught. Logged. Filed. Have a nice day."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(caughtLines));
+            STATE.suspicion = Math.min(100, STATE.suspicion + 18);
+            STATE.marcusAggression = Math.min(100, STATE.marcusAggression + 15);
+            this.nudgeEmotion('marcus', 'smug');
+            this.floatText(this.player.x, this.player.y - 40, '😬 Marcus caught you! +18 suspicion', '#ff6600');
+          }
+        }
+
+        // Suspicion-driven hunt
+        if(STATE.suspicion >= 65 && !npc.chaseTarget && !suppressIdleBubbles){
+          npc.running = true;
+          npc.targetX = this.player.x;
+          npc.targetY = this.player.y;
+          if(npc.bubbleTimer <= 0 && Math.random() < 0.003){
+            const huntLines = [
+              '"I SEE you. Don\'t think I don\'t."',
+              '"You\'ve been flagged. Internally. By me."',
+              '"James, I found them — never mind, I\'m handling it."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(huntLines));
+            this.nudgeEmotion('marcus', 'suspicious');
+          }
+        } else if(STATE.suspicion < 65){
+          npc.running = false;
+          if(npc.chaseTarget === 'player' && !STATE.beingChased) npc.chaseTarget = null;
+        }
+
+        // Smoke area bust check — Marcus wanders near outside and catches you
+        if(STATE.smokeChatOpen && !STATE._marcusBustCooldown){
+          const outsideZ = ZONES.outside;
+          const marcusNearOutside = npc.sprite.x >= outsideZ.x - 60 && npc.sprite.x <= outsideZ.x + outsideZ.w + 60 &&
+                                    npc.sprite.y >= outsideZ.y - 40 && npc.sprite.y <= outsideZ.y + outsideZ.h + 60;
+          if(marcusNearOutside && Math.random() < 0.0008 && npc.bubbleTimer <= 0){
+            STATE._marcusBustCooldown = true;
+            this.time.delayedCall(30000, ()=>{ STATE._marcusBustCooldown = false; });
+            this.showBubble(npc, '"I SMELL SMOKE. I am COMING OVER THERE."');
+            this.floatText(this.player.x, this.player.y, '🚨 MARCUS IS COMING — ABORT!', '#ff2200');
+            this.cameras.main.shake(300, 0.01);
+            STATE.suspicion = Math.min(100, STATE.suspicion + 28);
+            this.postSmokeChat('marcus', '*radio crackle* "I have a visual on the smoke area."');
+            // Everyone scrambles
+            this.time.delayedCall(1500, ()=>{
+              this.postSmokeChat('lee', '"PAM IS — no wait — MARCUS IS COMING. RUN."');
+              this.postSmokeChat('chance', '"Every man for himself. MOVE."');
+            });
+            this.time.delayedCall(3000, ()=>{
+              if(STATE.smokeChatOpen) this.closeSmokeChat();
+              this.floatText(this.player.x, this.player.y, '💨 Smoke break BUSTED! +28 suspicion', '#ff4400');
+            });
+          }
+        }
+
+        // Wide patrol — Marcus covers floor + dock
+        if(!npc.chaseTarget && !suppressIdleBubbles && npc.bubbleTimer <= 0 && Math.random() < 0.0006){
+          this.showBubble(npc, this.getNpcLine(npc));
+          this.nudgeEmotion('marcus', Math.random() < 0.5 ? 'suspicious' : 'nervous');
+        }
+      }
+
+      // ── JORIE: stays near Jeff, threatens nearby NPCs, Todd cracker moment ──
+      if(npc.id === 'jorie'){
+        // Drift toward Jeff when straying too far
+        const jeff = this.npcs.find(n=>n.id==='jeff');
+        if(jeff && !STATE.jamesSmokeParty && !STATE.jeffJorieJobTarget){
+          const jeffDist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, jeff.sprite.x, jeff.sprite.y);
+          if(jeffDist > 130 && npc.moveTimer <= 0){
+            npc.targetX = jeff.sprite.x + 48;
+            npc.targetY = jeff.sprite.y + 12;
+          }
+        }
+        // Proximity to Todd → "fat cracker" trigger
+        const todd = this.npcs.find(n=>n.id==='todd');
+        if(todd){
+          STATE._jorieCrackerCooldown = (STATE._jorieCrackerCooldown||0) - delta;
+          const toddDist = Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, todd.sprite.x, todd.sprite.y);
+          if(toddDist < 85 && STATE._jorieCrackerCooldown <= 0 && npc.bubbleTimer <= 0){
+            STATE._jorieCrackerCooldown = 38000;
+            const crackerLines = [
+              '"TODD. You fat cracker. Why are you near me right now?! GO."',
+              '"I KNOW that\'s Todd. Todd — fat cracker — I will not say it again. FREEZER. NOW."',
+              '"Uh uh. Todd. Fat. Cracker. Turn your whole body around and walk away."',
+              '"TODD! You\'ve got about three seconds before I say something that becomes a MEETING."',
+              '"Why is Todd over here?! Todd back UP. I am PREGNANT and I will still run at you."',
+              '"Todd I am not playing with you today. Or any day. But ESPECIALLY today."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(crackerLines));
+            this.floatText(npc.sprite.x, npc.sprite.y - 55, '💥 JORIE ACTIVATED', '#ff6633');
+            this.nudgeEmotion('jorie', 'final');
+            // Todd retreats immediately
+            this.time.delayedCall(700, ()=>{
+              if(todd.bubbleTimer <= 0) this.showBubble(todd, '"...noted. Retreating."');
+              todd.targetX = 185; todd.targetY = 325;
+            });
+            STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 8);
+          }
+        }
+        // Random fight threat to nearby NPCs
+        if(!suppressIdleBubbles && npc.bubbleTimer <= 0 && Math.random() < 0.00045){
+          const fightTargets = this.npcs.filter(n =>
+            !['james','jeff','jorie','pam'].includes(n.id) &&
+            Phaser.Math.Distance.Between(npc.sprite.x, npc.sprite.y, n.sprite.x, n.sprite.y) < 145
+          );
+          if(fightTargets.length > 0){
+            const threats = [
+              '"Keep walking. Don\'t stop. Don\'t look at me. Don\'t acknowledge this conversation is happening."',
+              '"You got something to say? To my face. Right now. Go ahead I\'ll wait."',
+              '"I\'m watching you. I have been watching you for eleven minutes. I am READY."',
+              '"Try me. PLEASE try me. I have been looking for an outlet since 7AM."',
+              '"I\'ve been looking for a reason all shift and you are walking dangerously close to being it."',
+              '"I don\'t need a warm-up. I am warm. I have ALWAYS been warm. It\'s the baby."',
+              '"I am eight months pregnant and somehow MORE dangerous. Figure out why."',
+            ];
+            this.showBubble(npc, Phaser.Math.RND.pick(threats));
+            this.nudgeEmotion('jorie', 'ready');
+          } else if(Math.random() < 0.4){
+            this.showBubble(npc, this.getNpcLine(npc));
+          }
         }
       }
     });
@@ -4443,6 +5012,70 @@ class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── JAMES FIRES YOU (annoyance = 100) ───────────────────────────────────
+  triggerFired(){
+    STATE.miniGameActive = true;
+    STATE._caught = true;
+
+    const james   = this.npcs.find(n=>n.id==='james');
+    const pam     = this.npcs.find(n=>n.id==='pam');
+    const chance  = this.npcs.find(n=>n.id==='chance');
+    const lee     = this.npcs.find(n=>n.id==='lee');
+    const chandler= this.npcs.find(n=>n.id==='chandler');
+    const marcus  = this.npcs.find(n=>n.id==='marcus');
+
+    // James storms toward the player
+    if(james){
+      james.running = true;
+      james.targetX = this.player.x;
+      james.targetY = this.player.y;
+    }
+
+    this.cameras.main.shake(800, 0.03);
+    this.cameras.main.flash(600, 255, 60, 0);
+    this.floatText(WW/2, WH/2 - 80, '🤬 JAMES HAS REACHED HIS LIMIT 🤬', '#ff2200');
+
+    // Beat sequence
+    this.time.delayedCall(400, ()=>{
+      if(james) this.showBubble(james,
+        '"THAT. IS. IT. I have been documenting, tolerating, and PROFESSIONALLY MANAGING my reaction for THIS ENTIRE SHIFT."');
+    });
+    this.time.delayedCall(1800, ()=>{
+      this.cameras.main.shake(400, 0.018);
+      if(james) this.showBubble(james,
+        '"You are DONE. Pack your THINGS. Security will walk you out. I\'m calling Pam."');
+      this.floatText(this.player.x, this.player.y - 60, '🔥 JAMES SNAPPED — YOU\'RE FIRED', '#ff2200');
+    });
+    this.time.delayedCall(2600, ()=>{
+      if(pam) this.showBubble(pam, '"I\'ve been waiting for this moment. I have the paperwork ready."');
+    });
+    this.time.delayedCall(3400, ()=>{
+      if(chance) this.showBubble(chance, '"...DAMN. He actually did it. He went to 100. Legendary."');
+    });
+    this.time.delayedCall(4000, ()=>{
+      if(lee) this.showBubble(lee, '"I cannot believe what I just witnessed. I need to text everyone."');
+    });
+    this.time.delayedCall(4600, ()=>{
+      if(chandler) this.showBubble(chandler, '"...I\'m going to update my resume tonight. This is a sign."');
+    });
+    this.time.delayedCall(5200, ()=>{
+      if(marcus) this.showBubble(marcus, '"I logged this. Every second of it. Timestamped."');
+    });
+    this.time.delayedCall(5800, ()=>{
+      if(james) this.showBubble(james,
+        '"You know what? Despite all this — I genuinely thought you had potential. This is on BOTH of us."');
+    });
+    this.time.delayedCall(7200, ()=>{
+      if(james) this.showBubble(james, '"...okay get out."');
+      this.cameras.main.flash(300, 255, 100, 0);
+    });
+    this.time.delayedCall(8800, ()=>{
+      STATE.miniGameActive = false;
+      STATE.score = Math.floor(STATE.score * 0.4); // lose 60% of score
+      this.endShift('fired');
+    });
+  }
+
   // ── ANGRY TRUCKER EVENT ───────────────────────────────────────────────────
   spawnAngryTrucker(){
     if(this._truckerActive) return;
@@ -4626,9 +5259,26 @@ class GameScene extends Phaser.Scene {
       STATE.suspicion = Math.min(99, STATE.suspicion + 20);
       this.floatText(WW/2, 480, '🤬 JAMES NUCLEAR MODE — Suspicion +20!', '#ff2200');
     }
+    if(!this._jamesMilestone95 && STATE.jamesAnnoyance >= 95){
+      this._jamesMilestone95 = true;
+      SFX.james(); SFX.danger();
+      const james = this.npcs.find(n=>n.id==='james');
+      if(james){ this.showBubble(james, '"I am WARNING you. One. More. Thing."'); }
+      this.cameras.main.shake(700, 0.028);
+      this.cameras.main.flash(200, 255, 50, 0);
+      this.floatText(WW/2, 460, '☠️ JAMES IS AT 95 — ONE MORE THING AND YOU\'RE DONE', '#ff0000');
+    }
     // Reset milestones if James calms back down
-    if(STATE.jamesAnnoyance < 30){ this._jamesMilestone30=false; this._jamesMilestone50=false; this._jamesMilestone80=false; }
-    else if(STATE.jamesAnnoyance < 50){ this._jamesMilestone50=false; this._jamesMilestone80=false; }
+    if(STATE.jamesAnnoyance < 30){ this._jamesMilestone30=false; this._jamesMilestone50=false; this._jamesMilestone80=false; this._jamesMilestone95=false; }
+    else if(STATE.jamesAnnoyance < 50){ this._jamesMilestone50=false; this._jamesMilestone80=false; this._jamesMilestone95=false; }
+    else if(STATE.jamesAnnoyance < 80){ this._jamesMilestone80=false; this._jamesMilestone95=false; }
+
+    // LOSE: James annoyance hits 100 → you're FIRED
+    if(STATE.jamesAnnoyance >= 100 && !STATE._caught && !STATE.dialogueActive){
+      STATE._caught = true;
+      this.triggerFired();
+      return;
+    }
     else if(STATE.jamesAnnoyance < 80){ this._jamesMilestone80=false; }
 
     // James proximity snap — sarcastic snaps when player walks near him
@@ -4773,8 +5423,8 @@ class UIScene extends Phaser.Scene {
     }).setOrigin(0,1).setDepth(41);
 
     // Controls hint
-    this.add.text(10, GH-18, 'WASD: Move  |  E: Interact  |  M: Map  |  Q: Stop unloading', {
-      fontSize:'9px', fill:'rgba(255,255,255,0.25)', fontFamily:'monospace'
+    this.add.text(10, GH-18, 'WASD: Move  ·  E: Talk/Interact  ·  M: Map  ·  Q: Stop Unload  ·  Timeclock: Punch Out  ·  Smoke Area: Outside  ·  PO#s are 10 digits', {
+      fontSize:'9px', fill:'rgba(255,255,255,0.72)', fontFamily:'monospace'
     }).setOrigin(0,1).setDepth(41);
 
     this.lastAch = '';
@@ -4793,7 +5443,7 @@ class UIScene extends Phaser.Scene {
     this.clockTxt.setStyle({ fill: pctShift>0.85?'#ff4444':pctShift>0.6?'#ffaa00':'#ffa01e' });
 
     // Score
-    this.scoreTxt.setText('⭐ '+STATE.score);
+    this.scoreTxt.setText('⭐ '+STATE.score.toLocaleString());
 
     // Energy bar
     const epct = STATE.energy/100;
@@ -4855,9 +5505,10 @@ class UIScene extends Phaser.Scene {
     this.endShown = true;
 
     const reasonData = {
-      caught:     { title:'🚨 YOU GOT FIRED 🚨',       sub:'Pam has your personal items in a box.',         color:0xff2222 },
-      passedout:  { title:'💤 YOU PASSED OUT',          sub:'James had to call your emergency contact.',      color:0x4444cc },
-      normal:     { title:'🏁 SHIFT SURVIVED!',         sub:STATE.playerName+"'s shift is done.",            color:0xffa01e },
+      caught:     { title:'🚨 YOU GOT FIRED 🚨',        sub:'Pam has your personal items in a box.',                       color:0xff2222 },
+      passedout:  { title:'💤 YOU PASSED OUT',           sub:'James had to call your emergency contact.',                   color:0x4444cc },
+      fired:      { title:'🤬 JAMES FIRED YOU 🤬',       sub:'"Pack your stuff. Security will walk you out." — James',      color:0xff4400 },
+      normal:     { title:'🏁 SHIFT SURVIVED!',          sub:STATE.playerName+"'s shift is done.",                          color:0xffa01e },
     };
     const rd = reasonData[reason] || reasonData.normal;
     const headColor = isNew ? '#ffd700' : ('#'+rd.color.toString(16).padStart(6,'0'));
@@ -4871,16 +5522,23 @@ class UIScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(201);
 
     // Stats
+    const jAnnoyFinal = Math.round(STATE.jamesAnnoyance);
+    const jAnnoyLabel = jAnnoyFinal >= 100 ? '💀 100% — HE FIRED YOU' :
+                        jAnnoyFinal >= 80  ? '🤬 '+jAnnoyFinal+'% — NUCLEAR' :
+                        jAnnoyFinal >= 50  ? '😠 '+jAnnoyFinal+'% — Pissed' :
+                        jAnnoyFinal >= 30  ? '😤 '+jAnnoyFinal+'% — Salty' : '😐 '+jAnnoyFinal+'% — Fine';
+    const fmtN = n => Number(n).toLocaleString();
     const stats = [
-      ['Final Score', score + ' pts'],
-      ['Trucks Unloaded', STATE.trucksUnloaded],
-      ['Suspicion Level', Math.round(STATE.suspicion)+'%'],
-      ['Energy Remaining', Math.round(STATE.energy)+'%'],
-      ['Achievements', STATE.achievements.length],
-      ['Drew owes you', '$'+(STATE.drewLends*5)],
-      ['Chandler provocations', STATE.chandlerCallCount+' times'],
-      ['All-time High Score', SAVE.highScore + ' pts'],
-      ['Shifts Survived', SAVE.shifts],
+      ['Final Score',          fmtN(score) + ' pts'],
+      ['Trucks Unloaded',      STATE.trucksUnloaded],
+      ['James Annoyance',      jAnnoyLabel],
+      ['Suspicion Level',      Math.round(STATE.suspicion)+'%'],
+      ['Energy Remaining',     Math.round(STATE.energy)+'%'],
+      ['Achievements',         STATE.achievements.length],
+      ['Drew owes you',        '$'+fmtN(STATE.drewLends*5)],
+      ['Chandler provocations',STATE.chandlerCallCount+' times'],
+      ['All-time High Score',  fmtN(SAVE.highScore) + ' pts'],
+      ['Shifts Survived',      SAVE.shifts],
     ];
     stats.forEach(([label, val], i)=>{
       this.add.text(GW/2-160, 200+i*34, label+':', {fontSize:'14px',fill:'#888',fontFamily:'monospace'}).setOrigin(0,0.5).setDepth(201);
