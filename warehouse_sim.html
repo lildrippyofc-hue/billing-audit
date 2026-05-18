@@ -171,6 +171,9 @@ const STATE = {
   clerkVisitReason:    null,  // delay | random | food
   michelleWanderTimer: 5000,  // ms until Michelle walks to a random dock worker
   michelleDockPesterCount: 0, // how many times she's bothered James this visit
+  jamesOfficeSummonTimer:  95000, // ms until clerks drag James into their office
+  jamesOfficeSummonActive: false, // James is currently trapped in the clerk office
+  _fightScene:         false,     // Michelle vs Chance fight cutscene is playing
 };
 
 // Zone layout
@@ -6601,7 +6604,8 @@ class GameScene extends Phaser.Scene {
 
     if(!STATE.clerkOnDock && !STATE.michelleAskingFood){
       STATE.clerkDockNextTimer -= delta;
-      STATE.michelleFoodTimer -= delta;
+      STATE.michelleFoodTimer  -= delta;
+      if(!STATE.jamesOfficeSummonActive) STATE.jamesOfficeSummonTimer -= delta;
 
       if(STATE.truckDelayTimer > 42000){
         STATE.truckDelayTimer = 0;
@@ -6611,6 +6615,8 @@ class GameScene extends Phaser.Scene {
         this.startClerkDockVisit('michelle', 'food');
       } else if(STATE.clerkDockNextTimer <= 0){
         this.startClerkDockVisit(Math.random() < 0.5 ? 'christine' : 'michelle', 'random');
+      } else if(!STATE.jamesOfficeSummonActive && STATE.jamesOfficeSummonTimer <= 0){
+        this._summonJamesToOffice(Math.random() < 0.55 ? 'michelle' : 'christine');
       }
       return;
     }
@@ -6774,21 +6780,296 @@ class GameScene extends Phaser.Scene {
 
   michelleKillsChance(){
     const michelle = this.npcs.find(n=>n.id==='michelle');
-    const chance = this.npcs.find(n=>n.id==='chance');
-    if(!michelle || !chance || STATE.chanceDead) return;
-    STATE.chanceDead = true;
+    const chance   = this.npcs.find(n=>n.id==='chance');
+    if(!michelle || !chance || STATE.chanceDead || STATE._fightScene) return;
+    this._michelleFightScene(michelle, chance);
+  }
+
+  _michelleFightScene(michelle, chance){
+    if(STATE._fightScene) return;
+    STATE.chanceDead      = true;
     STATE.michelleKillCount++;
     STATE.michelleAnnoyance = 0;
-    chance.running = false;
-    chance.sprite.setVelocity(0, 0);
-    chance.sprite.setVisible(false);
-    chance.tag.setVisible(false);
-    chance.bubble.setVisible(false);
-    chance.bubbleGfx.clear().setVisible(false);
-    this.showBubble(michelle, '"Chance. I warned you. Take a lap in the afterlife."');
-    this.floatText(michelle.sprite.x, michelle.sprite.y - 50, 'Michelle removed Chance from the dock.', '#ff2266');
-    this.cameras.main.shake(350, 0.012);
-    this.awardAchievement('michelle_snap', 'Michelle Snapped - Chance got deleted', '#ff66cc');
+    STATE._fightScene     = true;
+
+    // Freeze both NPCs
+    michelle.sprite.setVelocity(0,0); michelle.running = false;
+    chance.sprite.setVelocity(0,0);   chance.running   = false;
+    this.physics.world.pause();
+
+    const D  = 260;
+    const CX = GW / 2;
+    const CY = GH / 2;
+    const _fo = [];  // every object we create goes here for bulk cleanup
+    const reg = o => { _fo.push(o); return o; };
+
+    // helpers
+    const mkRect = (x,y,w,h,col) =>
+      reg(this.add.rectangle(x,y,w,h,col).setAlpha(0).setScrollFactor(0).setDepth(D));
+    const mkTxt = (x,y,str,style,dep) =>
+      reg(this.add.text(x,y,str,{fontFamily:'monospace',...style})
+        .setOrigin(0.5).setScrollFactor(0).setDepth(dep||D+4).setAlpha(0));
+    const mkImg = (x,y,key,sc) =>
+      reg(this.add.image(x,y,key).setScale(sc||4.5).setScrollFactor(0).setDepth(D+5));
+
+    const cleanup = () => {
+      this.physics.world.resume();
+      chance.sprite.setVisible(false);
+      chance.tag.setVisible(false);
+      if(chance.bubble)    chance.bubble.setVisible(false);
+      if(chance.bubbleGfx) chance.bubbleGfx.clear().setVisible(false);
+      _fo.forEach(o=>{ try{ o.destroy(); }catch(e){} });
+      STATE._fightScene = false;
+      this.awardAchievement('michelle_snap','Michelle Snapped — Chance got deleted','#ff66cc');
+    };
+
+    // ── T+0 : dark overlay ───────────────────────────────────────────────────
+    const overlay = mkRect(CX, CY, GW+10, GH+10, 0x000000);
+    overlay.setDepth(D-1);
+    this.tweens.add({targets:overlay, alpha:0.92, duration:340});
+
+    // ── T+160 : arena panel + boxing ropes ───────────────────────────────────
+    this.time.delayedCall(160, ()=>{
+      const panel = mkRect(CX, CY,        GW*0.94, GH*0.80, 0x0d0d1c); panel.setDepth(D+1);
+      const flr   = mkRect(CX, CY+GH*0.28, GW*0.94, 58,     0x1e1e30); flr.setDepth(D+2);
+      const r1    = mkRect(CX, CY-GH*0.22, GW*0.90, 5,      0xdd2222); r1.setDepth(D+2);
+      const r2    = mkRect(CX, CY-GH*0.10, GW*0.90, 3,      0xdd2222); r2.setDepth(D+2);
+      [panel,flr,r1,r2].forEach(o=> this.tweens.add({targets:o, alpha:1, duration:260}));
+    });
+
+    // ── T+300 : title ────────────────────────────────────────────────────────
+    this.time.delayedCall(300, ()=>{
+      const t = mkTxt(CX, CY-GH*0.35,
+        '💀  MICHELLE  vs  CHANCE  💀',
+        {fontSize:'21px', fill:'#ff66cc', fontStyle:'bold', stroke:'#000', strokeThickness:5},
+        D+6
+      ).setScale(0.25);
+      this.tweens.add({targets:t, alpha:1, scaleX:1, scaleY:1, duration:420, ease:'Back.Out'});
+    });
+
+    // ── T+540 : characters slide in ──────────────────────────────────────────
+    let mImg, cImg;
+    this.time.delayedCall(540, ()=>{
+      mImg = mkImg(-70, CY+18, 'npc_michelle', 4.8);
+      cImg = mkImg(GW+70, CY+18, 'npc_chance',  4.8).setFlipX(true);
+      mImg.setAlpha(1); cImg.setAlpha(1);
+      this.tweens.add({targets:mImg, x:CX-165, duration:480, ease:'Power2'});
+      this.tweens.add({targets:cImg, x:CX+165, duration:480, ease:'Power2'});
+    });
+
+    // ── T+1200 : ROUND 1 flash ───────────────────────────────────────────────
+    this.time.delayedCall(1200, ()=>{
+      const rnd = mkTxt(CX, CY-GH*0.17,'⚡ ROUND 1 ⚡',
+        {fontSize:'24px', fill:'#ffffff', fontStyle:'bold', stroke:'#000', strokeThickness:4}, D+7
+      ).setScale(1.6);
+      this.tweens.add({targets:rnd, alpha:1, scaleX:1, scaleY:1, duration:0});
+      this.tweens.add({targets:rnd, alpha:0, duration:650, delay:420});
+    });
+
+    // ── T+1820 : Michelle charges ────────────────────────────────────────────
+    this.time.delayedCall(1820, ()=>{
+      if(mImg) this.tweens.add({targets:mImg, x:CX-82, duration:270, ease:'Power3'});
+    });
+
+    // ── T+2090 : 💥 WHAM! ────────────────────────────────────────────────────
+    this.time.delayedCall(2090, ()=>{
+      this.cameras.main.shake(260, 0.024);
+      const w = mkTxt(CX+44, CY-52,'💥 WHAM!',
+        {fontSize:'48px', fill:'#ffdd00', fontStyle:'bold', stroke:'#000', strokeThickness:7}, D+8
+      ).setScale(0.15);
+      this.tweens.add({targets:w, alpha:1, scaleX:1, scaleY:1, duration:170, ease:'Back.Out',
+        onComplete:()=>this.tweens.add({targets:w, alpha:0, duration:480, delay:380})});
+      // Stars
+      for(let i=0;i<7;i++){
+        const s = reg(this.add.text(
+          CX+90+Phaser.Math.Between(-55,55), CY-50+Phaser.Math.Between(-35,35),
+          '⭐',{fontSize:'17px'}).setScrollFactor(0).setDepth(D+8));
+        this.tweens.add({targets:s, y:s.y-55, alpha:0, duration:750+Math.random()*300});
+      }
+      if(cImg) this.tweens.add({targets:cImg, x:CX+230, angle:22, duration:340, ease:'Power2'});
+    });
+
+    // ── T+2820 : Michelle backs up then charges again ────────────────────────
+    this.time.delayedCall(2820, ()=>{
+      if(mImg) this.tweens.add({targets:mImg, x:CX-165, duration:190,
+        onComplete:()=> this.time.delayedCall(140, ()=>{
+          if(mImg) this.tweens.add({targets:mImg, x:CX-72, duration:240, ease:'Power3'});
+        })
+      });
+    });
+
+    // ── T+3200 : 💥 BAM! ─────────────────────────────────────────────────────
+    this.time.delayedCall(3200, ()=>{
+      this.cameras.main.shake(230, 0.019);
+      const b = mkTxt(CX-10, CY-84,'💥 BAM!',
+        {fontSize:'44px', fill:'#ff4422', fontStyle:'bold', stroke:'#000', strokeThickness:7}, D+8
+      ).setScale(0.15);
+      this.tweens.add({targets:b, alpha:1, scaleX:1, scaleY:1, duration:170, ease:'Back.Out',
+        onComplete:()=>this.tweens.add({targets:b, alpha:0, duration:480, delay:380})});
+      if(cImg) this.tweens.add({targets:cImg, x:CX+305, angle:58, duration:340});
+      // Chance sweat drops
+      for(let i=0;i<4;i++){
+        const sw = reg(this.add.text(
+          CX+280+Phaser.Math.Between(-20,20), CY+Phaser.Math.Between(-30,10),
+          '💧',{fontSize:'14px'}).setScrollFactor(0).setDepth(D+8));
+        this.tweens.add({targets:sw, y:sw.y+30, alpha:0, duration:600+Math.random()*200});
+      }
+    });
+
+    // ── T+3950 : final charge ────────────────────────────────────────────────
+    this.time.delayedCall(3950, ()=>{
+      if(mImg) this.tweens.add({targets:mImg, x:CX-55, duration:210, ease:'Power3'});
+    });
+
+    // ── T+4160 : 💀 POW!!! ───────────────────────────────────────────────────
+    this.time.delayedCall(4160, ()=>{
+      this.cameras.main.shake(340, 0.030);
+      this.cameras.main.flash(220, 255, 80, 80);
+      const p = mkTxt(CX+58, CY-18,'💀 POW!!!',
+        {fontSize:'56px', fill:'#ff66cc', fontStyle:'bold', stroke:'#000000', strokeThickness:9}, D+8
+      ).setScale(0.1);
+      this.tweens.add({targets:p, alpha:1, scaleX:1, scaleY:1, duration:190, ease:'Back.Out',
+        onComplete:()=>this.tweens.add({targets:p, alpha:0, duration:680, delay:780})});
+      // Chance goes DOWN
+      if(cImg) this.tweens.add({targets:cImg, x:CX+370, angle:92, y:CY+62, alpha:0.65, duration:420});
+    });
+
+    // ── T+4980 : K.O. ────────────────────────────────────────────────────────
+    this.time.delayedCall(4980, ()=>{
+      const ko = mkTxt(CX, CY+8,'K.O.',
+        {fontSize:'92px', fill:'#ffd700', fontStyle:'bold', stroke:'#000000', strokeThickness:13}, D+9
+      ).setScale(0.08);
+      this.tweens.add({targets:ko, alpha:1, scaleX:1, scaleY:1, duration:360, ease:'Back.Out'});
+      this.cameras.main.flash(280, 255, 210, 0);
+      // Michelle victory — flip to face screen
+      if(mImg){ mImg.setFlipX(true);
+        this.tweens.add({targets:mImg, x:CX-130, duration:300});
+      }
+    });
+
+    // ── T+5780 : Michelle quote ───────────────────────────────────────────────
+    this.time.delayedCall(5780, ()=>{
+      const q = mkTxt(CX, CY+GH*0.30,
+        '"Chance. I warned you. Take a lap in the afterlife. ✌️"',
+        {fontSize:'13px', fill:'#ffccee', fontStyle:'italic', stroke:'#000', strokeThickness:3,
+         backgroundColor:'rgba(0,0,0,0.7)', padding:{x:10,y:6}}, D+9);
+      this.tweens.add({targets:q, alpha:1, duration:400});
+    });
+
+    // ── T+6600 : James reacts ────────────────────────────────────────────────
+    this.time.delayedCall(6600, ()=>{
+      const james = this.npcs.find(n=>n.id==='james');
+      const jLines = [
+        '"WHAT — CHANCE — MICHELLE — I was GONE for two minutes!"',
+        '"Every. Single. Time. I step away ONE second."',
+        '"I am writing BOTH of you up. I don\'t care that one of you is unconscious."',
+      ];
+      const jb = mkTxt(CX, CY-GH*0.38, Phaser.Math.RND.pick(jLines),
+        {fontSize:'11px', fill:'#aaccff', stroke:'#000', strokeThickness:3,
+         backgroundColor:'rgba(0,0,0,0.75)', padding:{x:9,y:5}, wordWrap:{width:GW*0.8}}, D+9);
+      this.tweens.add({targets:jb, alpha:1, duration:320});
+      if(james) STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 14);
+    });
+
+    // ── T+7700 : fade to black + cleanup ─────────────────────────────────────
+    this.time.delayedCall(7700, ()=>{
+      const blackout = reg(
+        this.add.rectangle(CX, CY, GW+10, GH+10, 0x000000).setAlpha(0).setScrollFactor(0).setDepth(D+20)
+      );
+      this.tweens.add({targets:blackout, alpha:1, duration:580, onComplete: cleanup });
+    });
+  }
+
+  _summonJamesToOffice(clerkId){
+    if(STATE.jamesOfficeSummonActive) return;
+    const james = this.npcs.find(n=>n.id==='james');
+    const clerk = this.npcs.find(n=>n.id===clerkId);
+    if(!james || !clerk) return;
+
+    STATE.jamesOfficeSummonActive = true;
+    STATE.jamesOfficeSummonTimer  = 88000 + Math.random()*62000; // reset for next time
+
+    // ── Clerk yells from office ───────────────────────────────────────────────
+    const callLines = clerkId === 'michelle'
+      ? ['"JAMES. My office. NOW. And bring your clipboard and your patience."',
+         '"JAMES — quick question. Nineteen parts. Come to my office immediately."',
+         '"James! Office! It will take five minutes. (It will take twenty minutes.)"',
+         '"JAMES. I am being very sweet right now. Do not make me use my other voice. Come."']
+      : ['"James. I need you in my office. BOL discrepancy. It is urgent and you will hate it."',
+         '"James — three unresolved dock items and a spreadsheet. My office. Now."',
+         '"James, I sent an email. You didn\'t reply. I am escalating to shouting. Office."'];
+    this.showBubble(clerk, Phaser.Math.RND.pick(callLines));
+    this.floatText(WW/2, 230, `📋 ${clerkId==='michelle'?'Michelle':'Christine'} is summoning James to the office`, '#cc99ff');
+
+    // ── James reacts ──────────────────────────────────────────────────────────
+    const jReact = ['"I — WHAT — right NOW?!"','"SERIOUSLY. I am ON THE DOCK."',
+      '"Every. Single. Day. I\'m coming. I\'m NOT happy about it."',
+      '"Fine. FINE. I\'m coming. Somebody watch the dock. Anyone. Please."'];
+    this.time.delayedCall(900, ()=> this.showBubble(james, Phaser.Math.RND.pick(jReact)));
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
+    this.nudgeEmotion('james','stressed', 22000);
+
+    // Clear any chase behavior so James can walk to office
+    james.chaseTarget = null;
+    STATE.beingChased  = false;
+
+    // ── James walks to office ─────────────────────────────────────────────────
+    const spot = this.clerkOfficeSpot(clerkId);
+    james.running  = true;
+    james.targetX  = spot.x + (clerkId==='michelle' ? 38 : -38);
+    james.targetY  = spot.y + 22;
+    james.moveTimer = 7000;
+
+    // ── Office questions (fired after James presumably arrives ~4.5s) ─────────
+    const officeQs = clerkId === 'michelle'
+      ? ['"James, where is the dock log form? It has been missing since Tuesday. Sweetly asking."',
+         '"James, explain why bay three was open four hours yesterday. Slowly. From the beginning."',
+         '"James, who approved this? When? Why? And do they know you\'re here? I have notes."',
+         '"James, I need you to sign THIS, initial HERE, and explain the rest over lunch that you\'re buying."',
+         '"James, real quick — why does the receiving sheet not match the BOL? Quick question. Quick."',
+         '"James you look stressed. Are you stressed? I\'m going to need you to not be stressed for this next part."']
+      : ['"James, I need the originals. Not copies. The originals. The paper ones."',
+         '"James, walk me through the receiving process for bay three. Step by step. I will time you."',
+         '"James, this report is missing three line items. Those three line items need to exist."',
+         '"James, who handles dock discrepancies? I need the chain of accountability in writing."',
+         '"James, I have nine tickets open. Two are yours. By yours I mean you caused them."'];
+    const jStuckReplies = [
+      '"The answer is... I\'m working on it."','"I am AWARE. Deeply aware. Moving on."',
+      '"Give me a second. Give me ONE second."','"Noted. Can I go now? No? Noted."',
+      '"I have been standing here for what feels like a full shift."',
+      '"I am fine. Everything is fine. Nothing is fine."'];
+
+    let qCount = 0;
+    const maxQ  = 3 + Math.floor(Math.random()*3);
+    const fireQ = () => {
+      if(!STATE.jamesOfficeSummonActive || qCount >= maxQ) return;
+      qCount++;
+      this.showBubble(clerk, Phaser.Math.RND.pick(officeQs));
+      this.time.delayedCall(1900, ()=> this.showBubble(james, Phaser.Math.RND.pick(jStuckReplies)));
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 7);
+      this.nudgeEmotion('james','stressed',14000);
+      this.time.delayedCall(5200 + Math.random()*3000, fireQ);
+    };
+    this.time.delayedCall(4600, fireQ);
+
+    // ── James escapes after 18-28s ────────────────────────────────────────────
+    const stayMs = 18000 + Math.random()*10000;
+    this.time.delayedCall(stayMs, ()=>{
+      if(!STATE.jamesOfficeSummonActive) return;
+      STATE.jamesOfficeSummonActive = false;
+      const escLines = [
+        '"I need air. I need THE DOCK. I need to NOT be in this office."',
+        '"Going back to the dock. The dock makes sense. PEOPLE don\'t."',
+        '"I aged three years in there. Back to work. Never speak of this."',
+        '"Thank you. I will see you in ten minutes when you call me back in."'];
+      this.showBubble(james, Phaser.Math.RND.pick(escLines));
+      james.running  = true;
+      james.targetX  = 560 + Math.random()*320;
+      james.targetY  = 270 + Math.random()*110;
+      james.moveTimer = 5000;
+      this.time.delayedCall(2800, ()=>{ james.running = false; });
+      this.floatText(WW/2, 250, '📋 James escaped the clerk office', '#aaaaff');
+    });
   }
 
   respawnChanceAfterMichelleLeaves(){
@@ -6827,6 +7108,7 @@ class GameScene extends Phaser.Scene {
   // ── UPDATE ─────────────────────────────────────────────────────────────────
   update(time, delta){
     if(STATE.miniGameActive){ return; }
+    if(STATE._fightScene){ return; }
 
     this.movePlayer(delta);
     STATE.currentZone = this.getCurrentZone();
