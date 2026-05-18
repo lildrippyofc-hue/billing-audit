@@ -177,6 +177,11 @@ const STATE = {
   jamesOfficeSummonTimer:  95000, // ms until clerks drag James into their office
   jamesOfficeSummonActive: false, // James is currently trapped in the clerk office
   _fightScene:         false,     // Michelle vs Chance fight cutscene is playing
+
+  // Jorie deathmatch — she randomly snaps and fights a coworker
+  jorieDeathMatchTimer: 35000,  // ms until Jorie picks her next victim (starts fast)
+  jorieKillCount:       0,      // total bodies she's dropped this shift
+  jorieVictim:          null,   // id of whoever she's currently targeting
 };
 
 // Zone layout
@@ -6105,6 +6110,9 @@ class GameScene extends Phaser.Scene {
             STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 8);
           }
         }
+        // Deathmatch ticker — Jorie randomly snaps and fights someone
+        this._updateJorieDeathmatch(npc, delta);
+
         // Random fight threat to nearby NPCs
         if(!suppressIdleBubbles && npc.bubbleTimer <= 0 && Math.random() < 0.00045){
           const fightTargets = this.npcs.filter(n =>
@@ -7213,6 +7221,293 @@ class GameScene extends Phaser.Scene {
         this.add.rectangle(CX, CY, GW+10, GH+10, 0x000000).setAlpha(0).setScrollFactor(0).setDepth(D+20)
       );
       this.tweens.add({targets:blackout, alpha:1, duration:580, onComplete: cleanup });
+    });
+  }
+
+  // ── JORIE DEATHMATCH TICKER ─────────────────────────────────────────────────
+  _updateJorieDeathmatch(jorie, delta){
+    if(!jorie) return;
+    if(STATE._fightScene || STATE.dialogueActive || STATE.miniGameActive) return;
+    if(STATE.smokeChatOpen || STATE.groupRoastActive || STATE.jamesEggrollScene) return;
+
+    STATE.jorieDeathMatchTimer -= delta;
+    if(STATE.jorieDeathMatchTimer > 0) return;
+
+    // Reset timer — 40-80s between fights so it happens constantly
+    STATE.jorieDeathMatchTimer = 40000 + Math.random() * 40000;
+
+    // Pick a victim — anyone who isn't protected
+    const IMMUNE = ['james','jeff','jorie','pam','lee','michelle','christine'];
+    const candidates = this.npcs.filter(n =>
+      !IMMUNE.includes(n.id) &&
+      n.sprite.visible &&
+      !STATE._fightScene
+    );
+    if(candidates.length === 0) return;
+
+    const victim = Phaser.Math.RND.pick(candidates);
+    STATE.jorieVictim = victim.id;
+
+    // Jorie announces she's locked in
+    const lockOnLines = [
+      `"${victim.name.toUpperCase()}. You. Me. Right now. I've been waiting on someone to try me all shift."`,
+      `"${victim.name}. I picked you. Specifically. Don't ask why. You KNOW why."`,
+      `"Alright ${victim.name}. I have been WARM since I clocked in and you just became the reason."`,
+      `"${victim.name} — I don't have to explain myself. Pregnant and still faster than you. LET'S GO."`,
+      `"You know what, ${victim.name}? Today's the day. I've made my decision. Stand still."`,
+      `"${victim.name}. My feet hurt, my back hurts, and I have chosen YOU as therapy."`,
+    ];
+    this.showBubble(jorie, Phaser.Math.RND.pick(lockOnLines), 3200);
+    this.floatText(jorie.sprite.x, jorie.sprite.y - 70, `🤰💥 JORIE HAS CHOSEN ${victim.name.toUpperCase()}`, '#ff6633');
+    this.cameras.main.shake(180, 0.008);
+
+    // Victim reacts in a panic
+    this.time.delayedCall(900, () => {
+      if(!victim.sprite.visible) return;
+      const panicLines = [
+        '"Wait — WAIT — I didn\'t even do anything—"',
+        '"Jorie please I have a FAMILY—"',
+        '"I\'m not — this is not — okay actually let me explain—"',
+        '"I respect you! I\'ve ALWAYS respected you! THIS IS A MISTAKE!"',
+        '"Can we talk about this?! CAN WE TALK?!"',
+        '"I\'m literally running. I\'m already running. Look at me go."',
+      ];
+      this.showBubble(victim, Phaser.Math.RND.pick(panicLines), 2600);
+    });
+
+    // Start the fight after victim finishes panicking
+    this.time.delayedCall(2800, () => {
+      if(!STATE._fightScene) this._jorieDeathMatch(jorie, victim);
+    });
+  }
+
+  // ── JORIE DEATHMATCH CUTSCENE ────────────────────────────────────────────────
+  _jorieDeathMatch(jorie, victim){
+    if(STATE._fightScene) return;
+    STATE._fightScene  = true;
+    STATE.jorieKillCount++;
+
+    jorie.sprite.setVelocity(0,0); jorie.running = false;
+    victim.sprite.setVelocity(0,0); victim.running = false;
+    this.physics.world.pause();
+
+    const D  = 260;
+    const CX = GW / 2;
+    const CY = GH / 2;
+    const _fo = [];
+    const reg = o => { _fo.push(o); return o; };
+
+    const mkRect = (x,y,w,h,col) =>
+      reg(this.add.rectangle(x,y,w,h,col).setAlpha(0).setScrollFactor(0).setDepth(D));
+    const mkTxt = (x,y,str,style,dep) =>
+      reg(this.add.text(x,y,str,{fontFamily:'monospace',...style})
+        .setOrigin(0.5).setScrollFactor(0).setDepth(dep||D+4).setAlpha(0));
+
+    // Victim respawns after a delay — they're not permanently dead
+    const cleanup = () => {
+      this.physics.world.resume();
+      victim.sprite.setAlpha(0);
+      victim.tag.setVisible(false);
+      if(victim.bubble)    victim.bubble.setVisible(false);
+      if(victim.bubbleGfx) victim.bubbleGfx.clear().setVisible(false);
+      _fo.forEach(o=>{ try{ o.destroy(); }catch(e){} });
+      STATE._fightScene  = false;
+      STATE.jorieVictim  = null;
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
+
+      // Victim crawls back after 12-18s
+      const respawnDelay = 12000 + Math.random() * 6000;
+      this.time.delayedCall(respawnDelay, () => {
+        if(!victim) return;
+        const vz = ZONES[victim.zone] || ZONES['floor'];
+        victim.sprite.setAlpha(1);
+        victim.sprite.setPosition(
+          vz.x + 60 + Math.random() * (vz.w - 120),
+          vz.y + 40 + Math.random() * (vz.h - 80)
+        );
+        victim.tag.setVisible(true);
+        victim.sprite.setAngle(0);
+        const crawlBackLines = [
+          '"...I\'m back. I\'m fine. I\'m DEFINITELY fine."',
+          '"Nobody saw that. I\'m back. We move on."',
+          '"Respect. That\'s all I\'m saying. Respect."',
+          '"I have learned. I have grown. I am returning."',
+          '"That was... educational. I\'m okay."',
+        ];
+        this.showBubble(victim, Phaser.Math.RND.pick(crawlBackLines), 3000);
+      });
+
+      // Achievements
+      this.awardAchievement('jorie_fights','Jorie Snapped — someone got deleted 🤰','#ff6633');
+      if(STATE.jorieKillCount >= 3)
+        this.awardAchievement('jorie_rampage','Jorie on a Rampage — 3 bodies this shift','#ff3300');
+      if(STATE.jorieKillCount >= 6)
+        this.awardAchievement('jorie_unstoppable','UNSTOPPABLE — Jorie dropped 6 people PREGNANT','#ff0000');
+    };
+
+    // Pick hit words themed around Jorie's energy
+    const hits = [
+      { word:'💥 BOOM!',   color:'#ff6633' },
+      { word:'👊 CRACK!',  color:'#ffdd00' },
+      { word:'🤰 WHAM!',   color:'#ff4400' },
+      { word:'💀 SNAP!',   color:'#ff0088' },
+      { word:'🔥 POW!!!',  color:'#ff8800' },
+    ];
+    Phaser.Utils.Array.Shuffle(hits);
+
+    // ── T+0 : overlay ────────────────────────────────────────────────────────
+    const overlay = mkRect(CX, CY, GW+10, GH+10, 0x000000);
+    overlay.setDepth(D-1);
+    this.tweens.add({targets:overlay, alpha:0.92, duration:300});
+
+    // ── T+140 : arena ────────────────────────────────────────────────────────
+    this.time.delayedCall(140, ()=>{
+      const panel = mkRect(CX, CY,         GW*0.94, GH*0.80, 0x100808); panel.setDepth(D+1);
+      const flr   = mkRect(CX, CY+GH*0.28, GW*0.94, 58,     0x200c0c); flr.setDepth(D+2);
+      const r1    = mkRect(CX, CY-GH*0.22, GW*0.90, 5, 0xff6633); r1.setDepth(D+2);
+      const r2    = mkRect(CX, CY-GH*0.10, GW*0.90, 3, 0xff6633); r2.setDepth(D+2);
+      [panel,flr,r1,r2].forEach(o=> this.tweens.add({targets:o, alpha:1, duration:240}));
+    });
+
+    // ── T+280 : title ─────────────────────────────────────────────────────────
+    this.time.delayedCall(280, ()=>{
+      const label = `🤰 JORIE  vs  ${victim.name.toUpperCase()} 💀`;
+      const t = mkTxt(CX, CY-GH*0.35, label,
+        {fontSize:'20px', fill:'#ff6633', fontStyle:'bold', stroke:'#000', strokeThickness:5}, D+6
+      ).setScale(0.2);
+      this.tweens.add({targets:t, alpha:1, scaleX:1, scaleY:1, duration:400, ease:'Back.Out'});
+      const sub = mkTxt(CX, CY-GH*0.28, '"I have been ready since I clocked in."',
+        {fontSize:'11px', fill:'#ffcc99', fontStyle:'italic', stroke:'#000', strokeThickness:2}, D+6);
+      this.tweens.add({targets:sub, alpha:1, duration:400, delay:300});
+    });
+
+    // ── T+520 : fighters slide in ─────────────────────────────────────────────
+    let jImg, vImg;
+    this.time.delayedCall(520, ()=>{
+      jImg = reg(this.add.image(-70, CY+18, 'npc_jorie').setScale(4.8).setScrollFactor(0).setDepth(D+5).setAlpha(1));
+      vImg = reg(this.add.image(GW+70, CY+18, `npc_${victim.id}`).setScale(4.8).setScrollFactor(0).setDepth(D+5).setAlpha(1).setFlipX(true));
+      this.tweens.add({targets:jImg, x:CX-165, duration:460, ease:'Power2'});
+      this.tweens.add({targets:vImg, x:CX+165, duration:460, ease:'Power2'});
+    });
+
+    // ── T+1150 : ROUND 1 ──────────────────────────────────────────────────────
+    this.time.delayedCall(1150, ()=>{
+      const rnd = mkTxt(CX, CY-GH*0.17, '⚡ ROUND 1 ⚡',
+        {fontSize:'24px', fill:'#ffffff', fontStyle:'bold', stroke:'#000', strokeThickness:4}, D+7
+      ).setScale(1.6);
+      this.tweens.add({targets:rnd, alpha:1, scaleX:1, scaleY:1, duration:0});
+      this.tweens.add({targets:rnd, alpha:0, duration:600, delay:380});
+    });
+
+    // ── T+1750 : Jorie charges — HIT 1 ───────────────────────────────────────
+    this.time.delayedCall(1750, ()=>{
+      if(jImg) this.tweens.add({targets:jImg, x:CX-80, duration:250, ease:'Power3'});
+    });
+    this.time.delayedCall(2020, ()=>{
+      this.cameras.main.shake(260, 0.025);
+      const h = mkTxt(CX+50, CY-50, hits[0].word,
+        {fontSize:'46px', fill:hits[0].color, fontStyle:'bold', stroke:'#000', strokeThickness:7}, D+8
+      ).setScale(0.15);
+      this.tweens.add({targets:h, alpha:1, scaleX:1, scaleY:1, duration:160, ease:'Back.Out',
+        onComplete:()=>this.tweens.add({targets:h, alpha:0, duration:460, delay:360})});
+      for(let i=0;i<6;i++){
+        const s = reg(this.add.text(
+          CX+100+Phaser.Math.Between(-50,50), CY-40+Phaser.Math.Between(-30,30),
+          '⭐',{fontSize:'16px'}).setScrollFactor(0).setDepth(D+8));
+        this.tweens.add({targets:s, y:s.y-50, alpha:0, duration:700+Math.random()*300});
+      }
+      if(vImg) this.tweens.add({targets:vImg, x:CX+225, angle:20, duration:300, ease:'Power2'});
+      if(jImg) this.tweens.add({targets:jImg, x:CX-165, duration:280, delay:180});
+    });
+
+    // ── T+2750 : HIT 2 ───────────────────────────────────────────────────────
+    this.time.delayedCall(2750, ()=>{
+      if(jImg) this.tweens.add({targets:jImg, x:CX-165, duration:180,
+        onComplete:()=> this.time.delayedCall(120, ()=>{
+          if(jImg) this.tweens.add({targets:jImg, x:CX-70, duration:220, ease:'Power3'});
+        })
+      });
+    });
+    this.time.delayedCall(3100, ()=>{
+      this.cameras.main.shake(230, 0.020);
+      const h = mkTxt(CX-10, CY-78, hits[1].word,
+        {fontSize:'42px', fill:hits[1].color, fontStyle:'bold', stroke:'#000', strokeThickness:7}, D+8
+      ).setScale(0.15);
+      this.tweens.add({targets:h, alpha:1, scaleX:1, scaleY:1, duration:160, ease:'Back.Out',
+        onComplete:()=>this.tweens.add({targets:h, alpha:0, duration:460, delay:360})});
+      if(vImg) this.tweens.add({targets:vImg, x:CX+295, angle:50, duration:320});
+      for(let i=0;i<4;i++){
+        const sw = reg(this.add.text(
+          CX+270+Phaser.Math.Between(-20,20), CY+Phaser.Math.Between(-25,10),
+          '💧',{fontSize:'13px'}).setScrollFactor(0).setDepth(D+8));
+        this.tweens.add({targets:sw, y:sw.y+28, alpha:0, duration:560+Math.random()*200});
+      }
+    });
+
+    // ── T+3850 : FINAL CHARGE — finishing move ────────────────────────────────
+    this.time.delayedCall(3850, ()=>{
+      if(jImg) this.tweens.add({targets:jImg, x:CX-52, duration:200, ease:'Power3'});
+    });
+    this.time.delayedCall(4060, ()=>{
+      this.cameras.main.shake(360, 0.032);
+      this.cameras.main.flash(220, 255, 80, 40);
+      const h = mkTxt(CX+62, CY-14, hits[2].word,
+        {fontSize:'56px', fill:hits[2].color, fontStyle:'bold', stroke:'#000000', strokeThickness:9}, D+8
+      ).setScale(0.1);
+      this.tweens.add({targets:h, alpha:1, scaleX:1, scaleY:1, duration:180, ease:'Back.Out',
+        onComplete:()=>this.tweens.add({targets:h, alpha:0, duration:680, delay:740})});
+      if(vImg) this.tweens.add({targets:vImg, x:CX+375, angle:95, y:CY+60, alpha:0.55, duration:400});
+    });
+
+    // ── T+4880 : K.O. ─────────────────────────────────────────────────────────
+    this.time.delayedCall(4880, ()=>{
+      const ko = mkTxt(CX, CY+10, 'K.O.',
+        {fontSize:'92px', fill:'#ffd700', fontStyle:'bold', stroke:'#000000', strokeThickness:13}, D+9
+      ).setScale(0.08);
+      this.tweens.add({targets:ko, alpha:1, scaleX:1, scaleY:1, duration:340, ease:'Back.Out'});
+      this.cameras.main.flash(260, 255, 200, 0);
+      if(jImg){ jImg.setFlipX(true); this.tweens.add({targets:jImg, x:CX-120, duration:280}); }
+    });
+
+    // ── T+5680 : Jorie victory quote ─────────────────────────────────────────
+    this.time.delayedCall(5680, ()=>{
+      const quotes = [
+        `"${victim.name}. I was pregnant the WHOLE time. Think about that."`,
+        `"${victim.name}. My doctor said reduce stress. You were the stress. You're welcome, baby."`,
+        `"${victim.name}. Eight months. EIGHT MONTHS pregnant and still running laps around you."`,
+        `"${victim.name}. I've been warming up since 6AM. That was for THIS."`,
+        `"${victim.name}. I didn't even break a sweat. The baby barely kicked. That's how easy that was."`,
+        `"${victim.name}. Tell the others. I am ALWAYS ready."`,
+      ];
+      const q = mkTxt(CX, CY+GH*0.30, Phaser.Math.RND.pick(quotes),
+        {fontSize:'12px', fill:'#ffcc99', fontStyle:'italic', stroke:'#000', strokeThickness:3,
+         backgroundColor:'rgba(0,0,0,0.75)', padding:{x:10,y:6}, wordWrap:{width:GW*0.82}}, D+9);
+      this.tweens.add({targets:q, alpha:1, duration:380});
+    });
+
+    // ── T+6480 : James absolutely loses it ───────────────────────────────────
+    this.time.delayedCall(6480, ()=>{
+      const james = this.npcs.find(n=>n.id==='james');
+      const jLines = [
+        `"JORIE — ${victim.name.toUpperCase()} — I WAS GONE FOR TWO MINUTES!!!"`,
+        `"I cannot — every single shift — JORIE PUT ${victim.name.toUpperCase()} DOWN."`,
+        `"I am SO tired. Jorie. JORIE. We have talked about this. EVERY. WEEK."`,
+        `"This is a WORKPLACE. With LAWS. JORIE. I am BEGGING you."`,
+      ];
+      const jb = mkTxt(CX, CY-GH*0.38, Phaser.Math.RND.pick(jLines),
+        {fontSize:'11px', fill:'#aaccff', stroke:'#000', strokeThickness:3,
+         backgroundColor:'rgba(0,0,0,0.75)', padding:{x:9,y:5}, wordWrap:{width:GW*0.8}}, D+9);
+      this.tweens.add({targets:jb, alpha:1, duration:300});
+      if(james) STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
+    });
+
+    // ── T+7500 : fade to black + cleanup ─────────────────────────────────────
+    this.time.delayedCall(7500, ()=>{
+      const blackout = reg(
+        this.add.rectangle(CX, CY, GW+10, GH+10, 0x000000)
+          .setAlpha(0).setScrollFactor(0).setDepth(D+20)
+      );
+      this.tweens.add({targets:blackout, alpha:1, duration:560, onComplete: cleanup});
     });
   }
 
