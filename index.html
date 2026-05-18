@@ -2266,7 +2266,7 @@
   <div id="loginOverlay" class="hidden" role="dialog" aria-modal="true" aria-label="Sign in">
     <div class="login-card">
       <div class="login-logo">James Hinna<span> Database</span></div>
-      <div class="login-sub">âš ï¸ Caution Before Proceeding</div>
+      <div class="login-sub">Caution Before Proceeding</div>
       <form id="loginForm" autocomplete="on">
         <div class="login-field" style="margin-bottom:14px">
           <label for="loginUser">Username</label>
@@ -2274,7 +2274,7 @@
         </div>
         <div class="login-field" style="margin-bottom:6px">
           <label for="loginPass">Password</label>
-          <input id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required>
+          <input id="loginPass" name="password" type="password" autocomplete="current-password" placeholder="Password" required>
         </div>
         <div id="loginError"></div>
         <button class="login-btn" type="submit" id="loginBtn">Sign In</button>
@@ -2377,7 +2377,7 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="flappyBird" data-menu-label="Flappy Bird">Flappy Bird</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="paperPlane" data-menu-label="Paper Plane">Paper Plane</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="jetpackJames" data-menu-label="Jetpack James">Jetpack James</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseSim" data-menu-label="Warehouse Sim">ðŸŽ® Warehouse Sim</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseSim" data-menu-label="Warehouse Rush">Warehouse Rush</button>
         </div>
       </div>
     </nav>
@@ -3825,10 +3825,10 @@
         </div>
       </section>
 <!-- WAREHOUSE SIM PANEL -->
-      <section id="warehouseSimPanel" class="tab-panel" aria-label="Warehouse Sim">
+      <section id="warehouseSimPanel" class="tab-panel" aria-label="Warehouse Rush">
         <div class="motivation-bar" id="motivBar_warehouseSim"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="game-frame-wrap">
-          <iframe id="warehouseSimFrame" src="" title="Warehouse Sim" allowfullscreen></iframe>
+          <iframe id="warehouseSimFrame" src="" title="Warehouse Rush" allowfullscreen></iframe>
         </div>
       </section>
 
@@ -4438,11 +4438,11 @@
         history:          [["LOG","This is the saved work record."],["DONE","Every entry here is documented."],["SAVE","Saved, logged, and ready."]],
         help:             [["HELP","Use this page when you need a reset."],["READ","Step-by-step instructions are here."],["LEARN","The best users keep learning."]],
         inOtherNews:      [["NEWS","Take a quick look."],["WORLD","Stay informed."],["BREAK","A few minutes to breathe."],["MOVE","The world keeps moving. So do you."]],
-        flappyBird:       [["ðŸ¦","Try not to die immediately."],["ðŸ’€","Flap or nap."],["ðŸ˜¤","The pipes have absolutely no chill."],["ðŸŽ®","One more run. Just one more."]],
-        paperPlane:       [["âœˆï¸","Let it fly, cowboy."],["ðŸŒ¬ï¸","Find the thermals. Ride them."],["ðŸ“„","Someone folded that with love."],["ðŸ†","Beat your best. Always."]],
-        jetpackJames:     [["ðŸš€","Hold to fly. Let go to fall."],["ðŸ’°","Grab every coin."],["âš¡","Dodge the zappers."],["ðŸƒ","Run. Fly. Repeat."]],
-        localWeather:     [["ðŸŒ¤ï¸","Check before you head out."],["ðŸŒ§ï¸","Better to know than to get soaked."],["ðŸŒ¡ï¸","Weather checked. Day planned."],["ðŸ’¨","Stay one step ahead of the forecast."]],
-        warehouseSim:     [["ðŸŽ®","Chandler is watching. Act natural."],["ðŸ‘€","Don't let Pam catch you slacking."],["ðŸ“¦","Unload fast. Bill accurately. Survive."],["ðŸ˜‚","Lee will say yes. Always ask Lee."]]
+        flappyBird:       [["BIRD","Try not to die immediately."],["PIPE","Flap or nap."],["FOCUS","The pipes have absolutely no chill."],["RUN","One more run. Just one more."]],
+        paperPlane:       [["PLANE","Let it fly, cowboy."],["WIND","Find the thermals. Ride them."],["FOLD","Someone folded that with love."],["BEST","Beat your best. Always."]],
+        jetpackJames:     [["JET","Hold to fly. Let go to fall."],["COIN","Grab every coin."],["ZAP","Dodge the zappers."],["RUN","Run. Fly. Repeat."]],
+        localWeather:     [["WX","Check before you head out."],["RAIN","Better to know than to get soaked."],["TEMP","Weather checked. Day planned."],["WIND","Stay one step ahead of the forecast."]],
+        warehouseSim:     [["RUSH","Chandler is watching. Act natural."],["EYES","Don't let Pam catch you slacking."],["WORK","Unload fast. Bill accurately. Survive."],["LEE","Lee will say yes. Always ask Lee."]]
       };
       var timers = {};
       function showMotiv(tab) {
@@ -4637,7 +4637,7 @@
         var pass = document.getElementById('loginPass').value;
         errEl.textContent = '';
         btn.disabled = true;
-        btn.textContent = 'Signing inâ€¦';
+        btn.textContent = 'Signing in...';
         fetch('/api/login', {
           method: 'POST',
           credentials: 'include',

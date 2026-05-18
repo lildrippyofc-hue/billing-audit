@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Warehouse Simulator</title>
+<title>Warehouse Rush</title>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;}
@@ -27,8 +27,8 @@
 <!-- MENU OVERLAY (HTML for easy name input) -->
 <div id="menu-overlay">
   <div class="menu-card">
-    <div style="font-size:56px">🏭</div>
-    <h1>WAREHOUSE<br>SIMULATOR</h1>
+    <div style="font-size:34px;font-weight:900;color:#ffa01e;letter-spacing:2px;">RUSH</div>
+    <h1>WAREHOUSE<br>RUSH</h1>
     <p>Clock in. Unload trucks. Avoid managers.<br>
     Annoy Chandler. Survive the shift.<br>
     <em style="color:#ffa01e">Your choices define your legend.</em></p>
@@ -41,19 +41,19 @@
       <input class="menu-input" id="playerNameInput" placeholder="First name" maxlength="12" value="">
     </div>
     <div style="width:100%;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <button class="menu-btn" id="goodWorkerBtn" style="font-size:15px;">😇 Good Worker<br><span style="font-size:11px;opacity:0.8">High score path</span></button>
-      <button class="menu-btn" id="chaosBtn" style="background:linear-gradient(135deg,#440088,#8800cc);font-size:15px;">😈 Chaos Mode<br><span style="font-size:11px;opacity:0.8">Slacker legend</span></button>
+      <button class="menu-btn" id="goodWorkerBtn" style="font-size:15px;">Good Worker<br><span style="font-size:11px;opacity:0.8">High score path</span></button>
+      <button class="menu-btn" id="chaosBtn" style="background:linear-gradient(135deg,#440088,#8800cc);font-size:15px;">Chaos Mode<br><span style="font-size:11px;opacity:0.8">Slacker legend</span></button>
     </div>
     <div style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,160,30,0.25);border-radius:10px;padding:10px 14px;">
-      <p style="color:#ffa01e;font-size:10px;font-weight:900;letter-spacing:1.5px;margin-bottom:7px;">📋 HOW TO PLAY</p>
+      <p style="color:#ffa01e;font-size:10px;font-weight:900;letter-spacing:1.5px;margin-bottom:7px;">HOW TO PLAY</p>
       <div style="display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11px;font-family:monospace;line-height:1.7;">
         <span style="color:#ffd700;white-space:nowrap;">WASD / Arrows</span><span style="color:#dddddd;">Move around the warehouse</span>
         <span style="color:#ffd700;">E</span><span style="color:#dddddd;">Talk to coworkers / interact</span>
         <span style="color:#ffd700;">M</span><span style="color:#dddddd;">Toggle minimap</span>
         <span style="color:#ffd700;">Q</span><span style="color:#dddddd;">Cancel truck unloading</span>
         <span style="color:#ffd700;">Timeclock</span><span style="color:#dddddd;">Punch out &amp; go off the clock</span>
-        <span style="color:#ffd700;">Smoke Area</span><span style="color:#dddddd;">Hang outside — risky but fun</span>
-        <span style="color:#ff7777;">⚠ James Meter</span><span style="color:#ffaaaa;">Hits 100% = you're fired. PO#s are 10 digits.</span>
+        <span style="color:#ffd700;">Smoke Area</span><span style="color:#dddddd;">Hang outside - risky but fun</span>
+        <span style="color:#ff7777;">James Meter</span><span style="color:#ffaaaa;">Hits 100% = you're fired. PO#s are 10 digits.</span>
       </div>
     </div>
   </div>
@@ -61,15 +61,15 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-//  WAREHOUSE SIMULATOR  —  Phaser 3 + Arcade Physics
+//  WAREHOUSE RUSH  —  Phaser 3 + Arcade Physics
 //  Top-down workplace comedy simulator
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ── SAVE DATA ───────────────────────────────────────────────────────────────
 const SAVE = (() => {
-  try { return JSON.parse(localStorage.getItem('wh_sim') || '{}'); } catch(e) { return {}; }
+  try { return JSON.parse(localStorage.getItem('warehouse_rush') || localStorage.getItem('wh_sim') || '{}'); } catch(e) { return {}; }
 })();
-function savePersist() { localStorage.setItem('wh_sim', JSON.stringify(SAVE)); }
+function savePersist() { localStorage.setItem('warehouse_rush', JSON.stringify(SAVE)); }
 SAVE.highScore = SAVE.highScore || 0;
 SAVE.shifts    = SAVE.shifts    || 0;
 document.getElementById('hsBadge').textContent    = (SAVE.highScore||0).toLocaleString();
@@ -2130,8 +2130,11 @@ class GameScene extends Phaser.Scene {
       fontSize:'10px', fill:'rgba(255,255,255,0.4)', fontFamily:'monospace'
     }).setOrigin(1,1).setScrollFactor(0).setDepth(82).setVisible(false);
     this.input.keyboard.on('keydown-ESC', ()=>{
+      if(STATE.smokeChatOpen){
+        this.leaveSmokeBreak();
+        return;
+      }
       this.closeDialogue();
-      if(STATE.smokeChatOpen) this.closeSmokeChat();
     });
   }
 
@@ -3885,6 +3888,17 @@ class GameScene extends Phaser.Scene {
     this.scLeaveTxt.on('pointerout',  ()=> this.scLeaveTxt.setStyle({ fill:'rgba(205,255,210,0.62)' }));
     this.scLeaveTxt.on('pointerdown', ()=> this.leaveSmokeBreak());
 
+    this.scStopBtn = this.add.text(PX + PW - 8, PY + 8, 'STOP BREAK', {
+      fontSize:'11px',
+      fill:'#ffdddd',
+      backgroundColor:'#7a1515',
+      padding:{ left:8, right:8, top:4, bottom:4 },
+      fontFamily:'monospace'
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(74).setVisible(false).setInteractive({ useHandCursor:true });
+    this.scStopBtn.on('pointerover', ()=> this.scStopBtn.setStyle({ backgroundColor:'#b32020', fill:'#ffffff' }));
+    this.scStopBtn.on('pointerout',  ()=> this.scStopBtn.setStyle({ backgroundColor:'#7a1515', fill:'#ffdddd' }));
+    this.scStopBtn.on('pointerdown', ()=> this.leaveSmokeBreak());
+
     this._scMessages = [];
     this._scParticleTimer = null;
   }
@@ -3925,6 +3939,7 @@ class GameScene extends Phaser.Scene {
     this.scWhoTxt.setText(hereNames.length ? `👥 ${hereNames.join('  ')}` : '👤 Just you out here.').setVisible(true);
     this.scHeaderTxt.setVisible(true);
     this.scLeaveTxt.setVisible(true);
+    if(this.scStopBtn) this.scStopBtn.setVisible(true);
 
     // Clear message pool
     this.scMsgPool.forEach(t => t.setText('').setVisible(false).setAlpha(0));
@@ -3956,6 +3971,7 @@ class GameScene extends Phaser.Scene {
     this.scHeaderTxt.setVisible(false);
     this.scWhoTxt.setVisible(false);
     this.scLeaveTxt.setVisible(false);
+    if(this.scStopBtn) this.scStopBtn.setVisible(false);
     this.scMsgPool.forEach(t => t.setVisible(false));
     // Restore camera
     this.cameras.main.stopFollow();
@@ -3970,9 +3986,14 @@ class GameScene extends Phaser.Scene {
 
   leaveSmokeBreak(){
     if(STATE.dialogueActive) this.closeDialogue();
+    if(STATE.groupRoastActive){
+      STATE.groupRoastActive = false;
+      STATE.miniGameActive = false;
+    }
     if(STATE.smokeChatOpen) this.closeSmokeChat();
     STATE.smokingNPCs = [];
     STATE.jamesSmokeParty = false;
+    if(this.clearAllBubbles) this.clearAllBubbles();
     this.floatText(this.player.x, this.player.y - 25, 'Smoke break over. Back to work.', '#aaffaa');
   }
 
