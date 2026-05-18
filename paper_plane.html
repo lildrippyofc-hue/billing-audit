@@ -48,6 +48,7 @@ canvas{display:block;}
     <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;">
       <div class="stat">Best: <span id="mBest">0 ft</span></div>
       <div class="stat">Coins: <span id="mCoins">0</span></div>
+      <div class="stat">Level: <span id="mLevel">1</span></div>
     </div>
     <button class="btn btn-primary" id="startBtn">▶ LAUNCH</button>
     <div class="btn-row">
@@ -84,7 +85,9 @@ canvas{display:block;}
       <div class="stat">Distance: <span id="rDist">0 ft</span></div>
       <div class="stat">Coins: <span id="rCoins">0</span></div>
       <div class="stat">Rings: <span id="rRings">0</span></div>
+      <div class="stat">XP: <span id="rXp">0</span></div>
     </div>
+    <div id="rLevelNote" style="color:#7eb8ff;font-weight:800;font-size:14px;text-align:center;"></div>
     <div id="rBest" style="color:#ffd700;font-weight:800;font-size:15px;display:none;">🏆 New Best!</div>
     <button class="btn btn-primary" id="rPlayBtn">▶ PLAY AGAIN</button>
     <button class="btn btn-secondary" id="rMenuBtn">Menu</button>
@@ -104,60 +107,87 @@ window.addEventListener('resize', resize);
 const MAPS = [
   { key:'backyard', name:'Backyard',    emoji:'🌳', cost:0,
     skyTop:'#1a6abf', skyBot:'#a8d8f0', groundColor:'#3a7d44', groundLine:'#4a9e55',
-    gravity:0.09, wind:0.012, thermals:8, coinBonus:1, horizon:0.78,
+    gravity:0.09, wind:0.012, gust:0.035, sink:0.000, weather:'Calm breeze', thermals:8, coinBonus:1, horizon:0.78,
     decoFn:'backyard', desc:'Classic. Forgiving.' },
   { key:'city',     name:'City',        emoji:'🏙', cost:500,
     skyTop:'#1a2030', skyBot:'#bbc8d8', groundColor:'#3a3a3a', groundLine:'#555',
-    gravity:0.10, wind:0.025, thermals:5, coinBonus:1.5, horizon:0.72,
+    gravity:0.10, wind:0.025, gust:0.075, sink:0.004, weather:'Crosswind between buildings', thermals:5, coinBonus:1.5, horizon:0.72,
     decoFn:'city', desc:'+50% coins, wind tunnels.' },
   { key:'desert',   name:'Desert',      emoji:'🌵', cost:1000,
     skyTop:'#7a3010', skyBot:'#f0a060', groundColor:'#c8a050', groundLine:'#e0b860',
-    gravity:0.10, wind:0.035, thermals:14, coinBonus:1.2, horizon:0.80,
+    gravity:0.10, wind:0.035, gust:0.095, sink:-0.002, weather:'Hot rising air', thermals:14, coinBonus:1.2, horizon:0.80,
     decoFn:'desert', desc:'Strong thermals, brutal crosswind.' },
   { key:'storm',    name:'Storm',       emoji:'⛈', cost:3000,
     skyTop:'#100820', skyBot:'#3a2850', groundColor:'#2a2a2a', groundLine:'#333',
-    gravity:0.095, wind:0.06, thermals:3, coinBonus:2.0, horizon:0.76,
+    gravity:0.095, wind:0.06, gust:0.22, sink:0.010, weather:'Heavy gusts and downdrafts', thermals:3, coinBonus:2.0, horizon:0.76,
     decoFn:'storm', desc:'Chaos. 2× coins. Lightning.' },
   { key:'moon',     name:'Moon',        emoji:'🌙', cost:5000,
     skyTop:'#000005', skyBot:'#0c0e22', groundColor:'#6a6a72', groundLine:'#9090a0',
-    gravity:0.038, wind:0, thermals:0, coinBonus:1.5, horizon:0.84,
+    gravity:0.038, wind:0, gust:0, sink:0, weather:'No atmosphere', thermals:0, coinBonus:1.5, horizon:0.84,
     decoFn:'moon', desc:'0.4× gravity. Huge distances.' },
 ];
 
 // ── UPGRADES ──────────────────────────────────────────────────────────────────
 const UPGRADES = [
-  { key:'flaps', name:'Flaps', icon:'🪁', desc:'More lift & stall resistance',
-    levels:[{cost:0,label:'Stock'},{cost:120,label:'Folded (+lift)'},{cost:280,label:'Pro Wings'},{cost:500,label:'Max Lift'}] },
-  { key:'nose',  name:'Nose Weight', icon:'🔩', desc:'Less drag, more distance',
-    levels:[{cost:0,label:'Stock'},{cost:100,label:'Taped (-drag)'},{cost:220,label:'Weighted'},{cost:420,label:'Aerodynamic'}] },
-  { key:'band',  name:'Launch Band', icon:'🎯', desc:'Faster launch speed',
-    levels:[{cost:0,label:'Rubber Band'},{cost:80,label:'+20% speed'},{cost:200,label:'+45% speed'},{cost:380,label:'Max Power'}] },
+  { key:'flaps', name:'Wing Fold', icon:'WG', desc:'Cleaner wing folds add stable lift',
+    levels:[{cost:0,label:'Loose notebook fold',unlock:1},{cost:120,label:'Sharp creased wings',unlock:2},{cost:300,label:'Symmetric glider fold',unlock:4},{cost:620,label:'Precision airfoil fold',unlock:7}] },
+  { key:'nose',  name:'Nose Crease', icon:'NC', desc:'Balanced nose reduces wobble and drag',
+    levels:[{cost:0,label:'Soft nose',unlock:1},{cost:110,label:'Pinched nose crease',unlock:2},{cost:260,label:'Tape-reinforced nose',unlock:5},{cost:560,label:'Balanced nose weight',unlock:8}] },
+  { key:'band',  name:'Launch Grip', icon:'LG', desc:'Better release gives more launch speed',
+    levels:[{cost:0,label:'Two-finger toss',unlock:1},{cost:90,label:'Consistent wrist snap',unlock:3},{cost:240,label:'Rubber-band launcher',unlock:6},{cost:520,label:'Calibrated launch rig',unlock:9}] },
+  { key:'paper', name:'Paper Stock', icon:'PS', desc:'Better paper holds shape longer',
+    levels:[{cost:0,label:'Printer paper',unlock:1},{cost:140,label:'Card-stock blend',unlock:4},{cost:340,label:'Waxed sheet',unlock:7},{cost:700,label:'Competition stock',unlock:10}] },
 ];
 const LIFT_K   = [0.40, 0.50, 0.62, 0.76];
 const DRAG_K   = [0.0018, 0.0014, 0.0010, 0.0007];
 const SPD_MULT = [1.0, 1.20, 1.45, 1.75];
+const PAPER_RES = [0.9992, 0.99935, 0.9995, 0.99965];
+
+const LEVELS = [
+  { lvl:1, xp:0, title:'Hallway Rookie' },
+  { lvl:2, xp:120, title:'Desk Pilot' },
+  { lvl:3, xp:300, title:'Backyard Glider' },
+  { lvl:4, xp:560, title:'Fold Technician' },
+  { lvl:5, xp:920, title:'Airflow Apprentice' },
+  { lvl:6, xp:1400, title:'Launch Specialist' },
+  { lvl:7, xp:2050, title:'Thermal Hunter' },
+  { lvl:8, xp:2900, title:'Distance Chaser' },
+  { lvl:9, xp:4000, title:'Precision Pilot' },
+  { lvl:10, xp:5400, title:'Paper Ace' },
+];
 
 // ── SAVE DATA ──────────────────────────────────────────────────────────────────
 let best    = +localStorage.getItem('pj_best')    || 0;
 let coins   = +localStorage.getItem('pj_coins')   || 0;
+let xp      = +localStorage.getItem('pj_xp')      || 0;
 let mapKey  =  localStorage.getItem('pj_map')     || 'backyard';
 let unlocked= (() => { try { return JSON.parse(localStorage.getItem('pj_unlocked') || '["backyard"]'); } catch(e){ return ['backyard']; }})();
-let upgs    = (() => { try { return JSON.parse(localStorage.getItem('pj_upgs') || '{"flaps":0,"nose":0,"band":0}'); } catch(e){ return {flaps:0,nose:0,band:0}; }})();
+let upgs    = (() => { try { return JSON.parse(localStorage.getItem('pj_upgs') || '{"flaps":0,"nose":0,"band":0,"paper":0}'); } catch(e){ return {flaps:0,nose:0,band:0,paper:0}; }})();
 
 function save(){
   localStorage.setItem('pj_best', best);
   localStorage.setItem('pj_coins', coins);
+  localStorage.setItem('pj_xp', xp);
   localStorage.setItem('pj_map', mapKey);
   localStorage.setItem('pj_unlocked', JSON.stringify(unlocked));
   localStorage.setItem('pj_upgs', JSON.stringify(upgs));
 }
 
 function currentMap(){ return MAPS.find(m=>m.key===mapKey) || MAPS[0]; }
+function currentLevel(){
+  let cur = LEVELS[0];
+  for(const lvl of LEVELS){ if(xp >= lvl.xp) cur = lvl; }
+  return cur;
+}
+function nextLevel(){
+  return LEVELS.find(lvl => lvl.xp > xp) || null;
+}
 function stats(){
   return {
     liftK:   LIFT_K[upgs.flaps   || 0],
     dragK:   DRAG_K[upgs.nose    || 0],
     spdMult: SPD_MULT[upgs.band  || 0],
+    airRes:  PAPER_RES[upgs.paper || 0],
   };
 }
 
@@ -242,10 +272,10 @@ function addMoonDeco(wx, gy){
 }
 
 // ── PLANE STATE ───────────────────────────────────────────────────────────────
-let plane={}, camX=0, dist=0, wind=0;
+let plane={}, camX=0, dist=0, wind=0, gust=0, stallWarn=0;
 let mouseX=0, mouseY=0;
 let isDragging=false, aimX=0, aimY=0, aimStartX=0, aimStartY=0;
-let coinsRun=0, ringsRun=0;
+let coinsRun=0, ringsRun=0, xpRun=0, runStartLevel=1;
 let msgText='', msgAlpha=0, msgTimer=0;
 
 const LAUNCH_X = 180;
@@ -253,7 +283,7 @@ const LAUNCH_X = 180;
 function resetPlane(){
   const map = currentMap();
   plane = { x:LAUNCH_X, y:H*0.42, vx:0, vy:0, angle:-0.15, trail:[], alive:true };
-  camX=0; dist=0; coinsRun=0; ringsRun=0; wind=0;
+  camX=0; dist=0; coinsRun=0; ringsRun=0; xpRun=0; runStartLevel=currentLevel().lvl; wind=0; gust=0; stallWarn=0;
   isDragging=false; mouseY=H*0.42;
   msgText=''; msgAlpha=0; msgTimer=0;
 }
@@ -268,12 +298,17 @@ function physics(){
   const gy = H * map.horizon;
   tik++;
 
-  // Wind drift
+  // Wind drift and weather gusts
   wind += (Math.random()-0.5) * map.wind * 0.3;
   wind = Math.max(-0.12, Math.min(0.12, wind * 0.97 + map.wind * 0.02));
+  gust *= 0.94;
+  if(map.gust && tik % 150 === 0){
+    gust += (Math.random()-0.5) * map.gust;
+    showMsg(pick(['Crosswind shift','Gust front','Weather changed','Trim the nose']));
+  }
 
   // Storm extra gusts
-  if(map.key==='storm' && tik%90===0){ wind += (Math.random()-0.5)*0.22; showMsg(pick(['GUST!','Hold on!','Turbulence!','Wind says no.'])); }
+  if(map.key==='storm' && tik%90===0){ gust += (Math.random()-0.5)*0.28; plane.vy += 0.45; showMsg(pick(['GUST!','Downdraft!','Turbulence!','Wind says no.'])); }
 
   // Steering — mouse Y controls pitch
   const norm = (mouseY / H) * 2 - 1; // -1 top, +1 bottom
@@ -285,21 +320,28 @@ function physics(){
   let speed = Math.hypot(plane.vx, plane.vy) || 0.001;
   const velAng = Math.atan2(plane.vy, plane.vx);
   const aoa = plane.angle - velAng;
+  const noseTooHigh = plane.angle < -0.34;
+  const stallRisk = noseTooHigh && speed < 6.2 && Math.abs(aoa) > 0.42;
+  stallWarn = stallRisk ? Math.min(1, stallWarn + 0.08) : Math.max(0, stallWarn - 0.05);
 
-  // Lift
-  const lift = speed * Math.sin(aoa) * s.liftK;
-  plane.vx += -lift * Math.sin(velAng);
-  plane.vy +=  lift * Math.cos(velAng);
+  // Lift. Canvas Y grows downward, so positive lift must push upward.
+  // Clamp angle-of-attack so max flaps cannot create endless hover.
+  const clampedAoa = Math.max(-0.55, Math.min(0.55, aoa));
+  const lift = speed * Math.sin(clampedAoa) * s.liftK;
+  plane.vx +=  lift * Math.sin(velAng);
+  plane.vy += -lift * Math.cos(velAng);
 
   // Drag
   const drag = speed * speed * s.dragK;
   plane.vx -= (plane.vx / speed) * drag;
   plane.vy -= (plane.vy / speed) * drag;
 
-  // Gravity + air resistance + wind
-  plane.vy += map.gravity;
-  plane.vx *= AIR_RES;
-  plane.vx += wind;
+  // Gravity + air resistance + wind. Slow planes sink harder so they cannot hang.
+  const stallSink = (speed < 3.2 ? (3.2 - speed) * 0.045 : 0) + (stallWarn > 0.55 ? 0.18 : 0);
+  plane.vy += map.gravity + stallSink + (map.sink || 0);
+  plane.vx *= s.airRes;
+  plane.vx += wind + gust;
+  if(stallWarn > 0.7 && tik % 34 === 0) showMsg('STALL WARNING - LOWER NOSE');
 
   // Thermals
   for(const t of thermals){
@@ -356,9 +398,24 @@ function physics(){
   // Crash
   if(plane.y >= gy+5 || plane.x < -300){
     plane.alive = false;
+    awardRunProgress();
     save();
     setTimeout(showResult, 700);
   }
+}
+
+function awardRunProgress(){
+  if(xpRun > 0) return;
+  const distFt = Math.floor(dist * 3.28084);
+  const baseCoins = Math.max(1, Math.floor(distFt / 250));
+  const ringBonus = ringsRun * 3;
+  const landingBonus = Math.abs(plane.vy) < 3.5 ? 4 : 0;
+  const earnedCoins = Math.round((baseCoins + ringBonus + landingBonus) * currentMap().coinBonus);
+  const earnedXp = Math.max(5, Math.floor(distFt / 40) + ringsRun * 20 + landingBonus * 5);
+  coinsRun += earnedCoins;
+  coins += earnedCoins;
+  xpRun = earnedXp;
+  xp += earnedXp;
 }
 
 function burst(x,y,color){
@@ -557,13 +614,18 @@ function drawParticles(){
 function drawHUD(){
   const distFt = Math.floor(dist * 3.28084);
   const map = currentMap();
+  const lvl = currentLevel();
   // Top-left: distance
   ctx.fillStyle='rgba(0,0,0,0.4)';
   rrect(12,12,210,55,10); ctx.fill();
   ctx.fillStyle='#fff'; ctx.font='bold 24px system-ui'; ctx.textAlign='left';
   ctx.fillText(distFt + ' ft', 22, 40);
   ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px system-ui';
-  ctx.fillText('Best: '+Math.floor(best*3.28084)+' ft  |  '+map.name, 22, 57);
+  ctx.fillText('Best: '+Math.floor(best*3.28084)+' ft  |  '+map.name+'  |  Lv '+lvl.lvl, 22, 57);
+  ctx.fillStyle='rgba(0,0,0,0.4)';
+  rrect(12,74,260,34,9); ctx.fill();
+  ctx.fillStyle='#d9ecff'; ctx.font='bold 12px system-ui'; ctx.textAlign='left';
+  ctx.fillText('Weather: '+(map.weather || 'Clear')+'  Wind '+wind.toFixed(2), 22, 96);
   // Top-right: coins
   ctx.fillStyle='rgba(0,0,0,0.4)';
   rrect(W-130,12,118,36,10); ctx.fill();
@@ -576,6 +638,18 @@ function drawHUD(){
     rrect(W/2-170,H*0.18,340,36,10); ctx.fill();
     ctx.fillStyle='#fff'; ctx.font='bold 14px system-ui'; ctx.textAlign='center';
     ctx.fillText(msgText, W/2, H*0.18+23);
+    ctx.restore();
+  }
+  if(stallWarn > 0.15){
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, 0.25 + stallWarn);
+    ctx.fillStyle='rgba(140,0,0,0.72)';
+    rrect(W/2-165, H*0.28, 330, 46, 12); ctx.fill();
+    ctx.strokeStyle='#ffcc44'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#fff4c2'; ctx.font='900 18px system-ui'; ctx.textAlign='center';
+    ctx.fillText('STALL WARNING', W/2, H*0.28+22);
+    ctx.font='bold 11px system-ui';
+    ctx.fillText('Lower the nose or gain speed', W/2, H*0.28+38);
     ctx.restore();
   }
 }
@@ -643,6 +717,7 @@ function hideAllScreens(){
 
 function showResult(){
   const distFt = Math.floor(dist*3.28084);
+  const lvl = currentLevel();
   const isNew = dist > best;
   if(dist > best){ best = dist; }
   save();
@@ -659,6 +734,10 @@ function showResult(){
   document.getElementById('rDist').textContent=distFt+' ft';
   document.getElementById('rCoins').textContent=coinsRun;
   document.getElementById('rRings').textContent=ringsRun;
+  document.getElementById('rXp').textContent=xpRun;
+  document.getElementById('rLevelNote').textContent = lvl.lvl > runStartLevel
+    ? ('LEVEL UP: ' + lvl.title)
+    : ('Level ' + lvl.lvl + ' - ' + lvl.title);
   document.getElementById('rBest').style.display=isNew?'':'none';
   document.getElementById('resultScreen').classList.add('active');
 }
@@ -741,8 +820,11 @@ function onUp(e){
 
 // ── UI WIRING ─────────────────────────────────────────────────────────────────
 function updateMenuUI(){
+  const lvl = currentLevel();
+  const nxt = nextLevel();
   document.getElementById('mBest').textContent  = Math.floor(best*3.28084)+' ft';
   document.getElementById('mCoins').textContent = coins;
+  document.getElementById('mLevel').textContent = lvl.lvl + ' - ' + lvl.title + (nxt ? ' (' + (nxt.xp - xp) + ' XP next)' : ' (max)');
 }
 
 document.getElementById('startBtn').onclick=()=>startGame();
@@ -784,18 +866,20 @@ function buildUpgsUI(){
   document.getElementById('uCoins').textContent=coins;
   const list=document.getElementById('upgList');
   list.innerHTML='';
+  const playerLevel = currentLevel().lvl;
   UPGRADES.forEach(u=>{
     const lvl=upgs[u.key]||0;
     const maxed=lvl>=u.levels.length-1;
     const next=u.levels[lvl+1];
+    const lockedByLevel = next && playerLevel < (next.unlock || 1);
     const div=document.createElement('div');
-    div.className='upg-item'+(maxed?' maxed':'');
+    div.className='upg-item'+((maxed || lockedByLevel)?' maxed':'');
     div.innerHTML=`<span class="upg-lvl">${u.icon}</span>
       <div style="flex:1"><div class="upg-name">${u.name} — Lvl ${lvl}/${u.levels.length-1}</div>
       <div class="upg-desc">${u.desc}</div>
       <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">${u.levels[lvl].label}</div></div>
-      <div class="upg-cost">${maxed?'MAX':('🪙 '+next.cost)}</div>`;
-    if(!maxed){
+      <div class="upg-cost">${maxed?'MAX':(lockedByLevel ? ('LV '+next.unlock) : ('Coins '+next.cost))}</div>`;
+    if(!maxed && !lockedByLevel){
       div.onclick=()=>{
         if(coins>=next.cost){ coins-=next.cost; upgs[u.key]=(upgs[u.key]||0)+1; save(); buildUpgsUI(); }
         else { div.style.background='rgba(255,50,50,0.15)'; setTimeout(()=>div.style.background='',400); }

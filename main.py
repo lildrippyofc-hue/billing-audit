@@ -641,16 +641,6 @@ def serve_jetpack2():
     return FileResponse(str(BASE_DIR / "jetpack2.html"))
 
 
-@app.get("/games/truck-tycoon")
-def serve_truck_tycoon():
-    return FileResponse(str(BASE_DIR / "truck_tycoon.html"))
-
-
-@app.get("/games/warehouse-life")
-def serve_warehouse_life():
-    return FileResponse(str(BASE_DIR / "warehouse_life.html"))
-
-
 @app.get("/games/warehouse-sim")
 def serve_warehouse_sim():
     return FileResponse(str(BASE_DIR / "warehouse_sim.html"))

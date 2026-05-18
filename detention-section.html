@@ -1,0 +1,1992 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DMS Detention Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --page: #f5f7f8;
+      --surface: #ffffff;
+      --soft: #f7faf9;
+      --ink: #172023;
+      --muted: #667478;
+      --line: #d9e1e3;
+      --primary: #0f6f63;
+      --primary-dark: #0a554c;
+      --driver: #dff4e5;
+      --driver-line: #2f9a55;
+      --clerk: #efe4ff;
+      --clerk-line: #7b4fc3;
+      --eclipse: #e0efff;
+      --eclipse-line: #2878bd;
+      --aldi: #ffe6dc;
+      --aldi-line: #d45532;
+      --shared: #ffe2e2;
+      --shared-line: #c33c3c;
+      --review: #fff2cf;
+      --review-line: #b77b12;
+      --neutral-line: #74868b;
+      --shadow: 0 14px 34px rgba(23, 32, 35, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, select, textarea { font: inherit; letter-spacing: 0; }
+
+    button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      min-height: 40px;
+      padding: 0 13px;
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) { border-color: #b7c5c8; background: #f9fbfb; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+    }
+
+    .primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+    }
+
+    .app {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 26px 22px 42px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    .eyebrow {
+      color: var(--primary);
+      margin: 0 0 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 4rem);
+      line-height: 0.96;
+      font-weight: 800;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1.12rem;
+      line-height: 1.25;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+      display: inline-grid;
+      place-items: center;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(230px, 1fr) auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .file-meta {
+      min-width: 0;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    label.control {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    select {
+      min-width: 170px;
+      min-height: 38px;
+      padding: 0 30px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    input[type="number"] {
+      min-width: 150px;
+      min-height: 38px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .tab {
+      min-height: 36px;
+      color: var(--muted);
+      background: transparent;
+    }
+
+    .tab.active {
+      color: #ffffff;
+      background: var(--ink);
+      border-color: var(--ink);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(128px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .summary-item {
+      min-height: 82px;
+      padding: 12px 13px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .summary-item strong {
+      display: block;
+      font-size: 1.65rem;
+      line-height: 1.08;
+      margin-bottom: 5px;
+    }
+
+    .summary-item span {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .summary-driver { border-left: 5px solid var(--driver-line); }
+    .summary-clerk { border-left: 5px solid var(--clerk-line); }
+    .summary-eclipse { border-left: 5px solid var(--eclipse-line); }
+    .summary-aldi { border-left: 5px solid var(--aldi-line); }
+    .summary-shared { border-left: 5px solid var(--shared-line); }
+
+    .client-note {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 15px;
+      margin-bottom: 14px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--primary);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .client-note strong { font-size: 0.95rem; }
+
+    .client-note span {
+      color: var(--muted);
+      line-height: 1.38;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      align-items: center;
+      gap: 9px;
+      min-height: 58px;
+      padding: 10px 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      border: 2px solid currentColor;
+    }
+
+    .swatch.driver { background: var(--driver); color: var(--driver-line); }
+    .swatch.clerk { background: var(--clerk); color: var(--clerk-line); }
+    .swatch.eclipse { background: var(--eclipse); color: var(--eclipse-line); }
+    .swatch.aldi { background: var(--aldi); color: var(--aldi-line); }
+    .swatch.shared { background: var(--shared); color: var(--shared-line); }
+    .swatch.review { background: var(--review); color: var(--review-line); }
+
+    .legend-text strong {
+      display: block;
+      font-size: 0.9rem;
+      line-height: 1.15;
+    }
+
+    .legend-text span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.25;
+    }
+
+    .table-section {
+      overflow: hidden;
+      margin-top: 12px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--soft);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-count {
+      color: var(--muted);
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .section-subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 1320px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 10px 11px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.88rem;
+    }
+
+    th {
+      color: var(--muted);
+      background: #fbfcfc;
+      font-size: 0.74rem;
+      text-transform: uppercase;
+    }
+
+    tbody tr.driver { background: var(--driver); box-shadow: inset 5px 0 0 var(--driver-line); }
+    tbody tr.clerk { background: var(--clerk); box-shadow: inset 5px 0 0 var(--clerk-line); }
+    tbody tr.eclipse { background: var(--eclipse); box-shadow: inset 5px 0 0 var(--eclipse-line); }
+    tbody tr.aldi { background: var(--aldi); box-shadow: inset 5px 0 0 var(--aldi-line); }
+    tbody tr.shared { background: var(--shared); box-shadow: inset 5px 0 0 var(--shared-line); }
+    tbody tr.review { background: var(--review); box-shadow: inset 5px 0 0 var(--review-line); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      padding: 4px 8px;
+      background: rgba(255, 255, 255, 0.48);
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.driver { color: #19733b; }
+    .pill.clerk { color: #6333aa; }
+    .pill.eclipse { color: #1f649d; }
+    .pill.aldi { color: #af3b1d; }
+    .pill.shared { color: #a62929; }
+    .pill.review { color: #91600a; }
+
+    .flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-width: 190px;
+    }
+
+    .flag {
+      display: inline-flex;
+      border-radius: 6px;
+      border: 1px solid rgba(23, 32, 35, 0.12);
+      padding: 3px 6px;
+      background: rgba(255, 255, 255, 0.58);
+      color: #384447;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+
+    .comments, .note {
+      max-width: 380px;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .note-cell { min-width: 300px; }
+
+    textarea {
+      width: 100%;
+      min-height: 78px;
+      resize: vertical;
+      border: 1px solid #c7d2d5;
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    .empty {
+      padding: 34px 18px;
+      color: var(--muted);
+      text-align: center;
+      background: #ffffff;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .chart-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .chart-panel h2 { margin-bottom: 12px; }
+
+    .chart-panel p {
+      margin: -4px 0 12px;
+      color: var(--muted);
+      font-size: 0.87rem;
+      line-height: 1.35;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(132px, 160px) 1fr minmax(70px, max-content);
+      align-items: center;
+      gap: 10px;
+      min-height: 34px;
+      margin: 7px 0;
+    }
+
+    .bar-track {
+      height: 18px;
+      background: #edf2f3;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .bar {
+      height: 100%;
+      min-width: 3px;
+      border-radius: 999px;
+    }
+
+    .bar.driver { background: var(--driver-line); }
+    .bar.clerk { background: var(--clerk-line); }
+    .bar.eclipse { background: var(--eclipse-line); }
+    .bar.aldi { background: var(--aldi-line); }
+    .bar.shared { background: var(--shared-line); }
+    .bar.review { background: var(--review-line); }
+    .bar.neutral { background: var(--neutral-line); }
+
+    .money {
+      font-weight: 800;
+      color: var(--primary-dark);
+    }
+
+    .pie-layout {
+      display: grid;
+      grid-template-columns: minmax(180px, 240px) 1fr;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .pie-chart {
+      width: min(240px, 100%);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--pie-gradient, #edf2f3);
+      border: 1px solid var(--line);
+      box-shadow: inset 0 0 0 18px rgba(255, 255, 255, 0.58);
+    }
+
+    .pie-legend {
+      display: grid;
+      gap: 8px;
+    }
+
+    .pie-legend-row {
+      display: grid;
+      grid-template-columns: 14px 1fr auto;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 0.9rem;
+    }
+
+    .pie-key {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      max-width: min(580px, calc(100vw - 32px));
+      padding: 11px 14px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: #ffffff;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease;
+      text-align: center;
+      z-index: 20;
+    }
+
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 980px) {
+      .app-header { align-items: flex-start; flex-direction: column; }
+      .actions { justify-content: flex-start; width: 100%; }
+      .toolbar { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(128px, 1fr)); }
+      .legend { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .pie-layout, .client-note { grid-template-columns: 1fr; }
+      label.control, select, button { width: 100%; }
+      label.control { justify-content: space-between; }
+    }
+
+    @media (max-width: 560px) {
+      .app { padding: 20px 12px 34px; }
+      .summary-grid, .legend { grid-template-columns: 1fr; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Receiving audit</p>
+        <h1>DMS Detention Report</h1>
+      </div>
+      <div class="actions">
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv,.txt" hidden>
+        <button id="attachButton" class="primary" type="button"><span class="icon" aria-hidden="true">+</span>Attach DMS truck report</button>
+        <button id="exportButton" type="button" disabled>Export PDF report</button>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Report controls">
+      <div id="fileMeta" class="file-meta">No report attached</div>
+      <label class="control" for="sheetSelect">
+        <span>Sheet</span>
+        <select id="sheetSelect" disabled></select>
+      </label>
+      <label class="control" for="sortSelect">
+        <span>Sort</span>
+        <select id="sortSelect">
+          <option value="fault">Fault</option>
+          <option value="finishDelayDesc">Longest detention</option>
+          <option value="apptAsc">Appointment time</option>
+          <option value="truckAsc">Truck / load</option>
+        </select>
+      </label>
+    </section>
+
+    <nav class="tabs" aria-label="Report views">
+      <button class="tab active" type="button" data-view="dataView">Data</button>
+      <button class="tab" type="button" data-view="detentionView">Detention</button>
+    </nav>
+
+    <main>
+      <section id="dataView" class="view active">
+        <section class="client-note">
+          <strong>Executive summary</strong>
+          <span>This dashboard shows how many loads hit detention, where the likely responsibility falls, and the estimated cost impact at $100 per payable detention hour.</span>
+        </section>
+        <section id="dataSummary" class="summary-grid" aria-label="Data summary"></section>
+        <section class="chart-grid">
+          <div class="chart-panel">
+            <h2>Total Loads vs Faults</h2>
+            <p>Starts with every load in the report, then separates the loads that were assigned to a fault category.</p>
+            <div id="loadPieChart"></div>
+          </div>
+          <div class="chart-panel">
+            <h2>Fault Breakdown</h2>
+            <p>Shows the detention loads that have a clear likely fault based on the appointment and receiving stamps.</p>
+            <div id="faultChart"></div>
+          </div>
+          <div class="chart-panel">
+            <h2>Estimated Detention Cost</h2>
+            <p>Uses $100 per hour and counts only time after the 2-hour detention threshold.</p>
+            <div id="costFaultChart"></div>
+          </div>
+          <div class="chart-panel">
+            <h2>Payable Hours By Fault</h2>
+            <p>Shows which fault category drove the most payable detention time.</p>
+            <div id="costHoursChart"></div>
+          </div>
+          <div class="chart-panel">
+            <h2>Detention Delay Buckets</h2>
+            <p>Groups detention loads by how far Finish Receiving landed after the appointment time.</p>
+            <div id="delayChart"></div>
+          </div>
+          <div class="chart-panel">
+            <h2>Review Context</h2>
+            <p>Flags rows that may need a second look before sharing final responsibility or billing decisions.</p>
+            <div id="reviewChart"></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="detentionView" class="view">
+        <section id="summaryGrid" class="summary-grid" aria-label="Summary"></section>
+
+        <section class="legend" aria-label="Color code legend">
+          <div class="legend-item"><span class="swatch driver" aria-hidden="true"></span><span class="legend-text"><strong>Green</strong><span>Driver marked late or spill</span></span></div>
+          <div class="legend-item"><span class="swatch clerk" aria-hidden="true"></span><span class="legend-text"><strong>Purple</strong><span>Door delay outside 20-min grace</span></span></div>
+          <div class="legend-item"><span class="swatch eclipse" aria-hidden="true"></span><span class="legend-text"><strong>Blue</strong><span>Start late; Aldi time shorter</span></span></div>
+          <div class="legend-item"><span class="swatch aldi" aria-hidden="true"></span><span class="legend-text"><strong>Orange</strong><span>SP / SPA / space in comments</span></span></div>
+          <div class="legend-item"><span class="swatch shared" aria-hidden="true"></span><span class="legend-text"><strong>Red</strong><span>Aldi time matches/exceeds Eclipse delay</span></span></div>
+          <div class="legend-item"><span class="swatch review" aria-hidden="true"></span><span class="legend-text"><strong>Yellow</strong><span>Needs manual review</span></span></div>
+        </section>
+
+        <nav class="tabs" aria-label="Fault filters">
+          <button class="tab fault-tab active" type="button" data-filter="all">All</button>
+          <button class="tab fault-tab" type="button" data-filter="driver">Driver</button>
+          <button class="tab fault-tab" type="button" data-filter="clerk">Clerk</button>
+          <button class="tab fault-tab" type="button" data-filter="eclipse">Eclipse</button>
+          <button class="tab fault-tab" type="button" data-filter="aldi">Aldi</button>
+          <button class="tab fault-tab" type="button" data-filter="shared">Eclipse + Aldi</button>
+        </nav>
+
+        <section class="table-section">
+          <div class="section-head">
+            <h2>Detention Results</h2>
+            <span id="resultCount" class="section-count">0 rows</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Truck / load</th>
+                  <th>Excel row</th>
+                  <th>Original appt</th>
+                  <th>Driver check in</th>
+                  <th>Driver at door</th>
+                  <th>Start receiving</th>
+                  <th>Finished receiving</th>
+                  <th>Finish delay</th>
+                  <th>Payable detention</th>
+                  <th>Est. cost</th>
+                  <th>Fault</th>
+                  <th>Flags</th>
+                  <th>Comments</th>
+                  <th>Auto note</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody">
+                <tr><td class="empty" colspan="14">Attach a report to begin.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="spaceSection" class="table-section" hidden>
+          <div class="section-head">
+            <h2>Aldi Space Review</h2>
+            <span id="spaceCount" class="section-count">0 rows</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Truck / load</th>
+                  <th>Excel row</th>
+                  <th>Original appt</th>
+                  <th>Finished receiving</th>
+                  <th>Fault</th>
+                  <th>Comments</th>
+                  <th>Auto note</th>
+                </tr>
+              </thead>
+              <tbody id="spaceBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const DETENTION_MINUTES = 120;
+    const START_LATE_MINUTES = 60;
+    const CLERK_GRACE_MINUTES = 20;
+    const DETENTION_RATE_PER_HOUR = 100;
+
+    const faultMeta = {
+      driver: { label: "Driver fault", className: "driver", order: 1 },
+      clerk: { label: "Clerk fault", className: "clerk", order: 2 },
+      eclipse: { label: "Eclipse fault", className: "eclipse", order: 3 },
+      aldi: { label: "Aldi fault", className: "aldi", order: 4 },
+      shared: { label: "Eclipse + Aldi fault", className: "shared", order: 5 },
+      review: { label: "Not categorized", className: "review", order: 9 },
+      none: { label: "No detention", className: "none", order: 10 }
+    };
+
+    const eventAliases = {
+      appt: ["original appt", "orig appt", "appointment", "appointment time", "appt", "appt time", "scheduled", "scheduled arrival", "schedule time", "sched time"],
+      checkIn: ["driver check in", "driver checked in", "driver check-in", "driver checkin", "check in", "checked in", "check-in", "checkin", "driver arrival"],
+      door: ["driver at door", "driver door", "at door", "door time", "door stamp", "arrived door", "arrival door", "driver dock"],
+      start: ["start receiving", "start recieving", "receiving start", "recieving start", "start recv", "recv start", "started receiving", "started recieving", "begin receiving", "begin recieving", "start unload", "unload start"],
+      finish: ["finished receiving", "finished recieving", "finish receiving", "finish recieving", "receiving finish", "recieving finish", "receiving complete", "recieving complete", "complete receiving", "complete recieving", "end receiving", "end recieving", "finish unload", "unload finish"]
+    };
+
+    const commentAliases = ["comment", "comments", "note", "notes", "remark", "remarks"];
+    const primaryCommentAliases = ["comment", "comments"];
+    const backupCommentAliases = ["note", "notes", "remark", "remarks"];
+    const lateAliases = ["driver status", "delivery status", "driver late", "late driver", "late", "arrival status", "status"];
+    const idAliases = ["truck", "truck number", "truck #", "tractor", "trailer", "trailer number", "trailer #", "load", "load number", "load #", "po", "po number", "asn", "carrier", "vendor"];
+
+    const state = {
+      fileName: "",
+      activeSheet: "",
+      sheets: [],
+      parsed: [],
+      filter: "all",
+      sort: "fault"
+    };
+
+    const fileInput = document.getElementById("fileInput");
+    const attachButton = document.getElementById("attachButton");
+    const exportButton = document.getElementById("exportButton");
+    const sheetSelect = document.getElementById("sheetSelect");
+    const sortSelect = document.getElementById("sortSelect");
+    const fileMeta = document.getElementById("fileMeta");
+    const summaryGrid = document.getElementById("summaryGrid");
+    const dataSummary = document.getElementById("dataSummary");
+    const resultsBody = document.getElementById("resultsBody");
+    const resultCount = document.getElementById("resultCount");
+    const spaceSection = document.getElementById("spaceSection");
+    const spaceBody = document.getElementById("spaceBody");
+    const spaceCount = document.getElementById("spaceCount");
+    const loadPieChart = document.getElementById("loadPieChart");
+    const faultChart = document.getElementById("faultChart");
+    const delayChart = document.getElementById("delayChart");
+    const reviewChart = document.getElementById("reviewChart");
+    const costFaultChart = document.getElementById("costFaultChart");
+    const costHoursChart = document.getElementById("costHoursChart");
+    const toast = document.getElementById("toast");
+
+    attachButton.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) loadFile(file);
+    });
+
+    sheetSelect.addEventListener("change", () => {
+      state.activeSheet = sheetSelect.value;
+      processActiveSheet();
+    });
+
+    sortSelect.addEventListener("change", () => {
+      state.sort = sortSelect.value;
+      renderResults();
+    });
+
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.querySelectorAll("[data-view]").forEach((tab) => tab.classList.toggle("active", tab === button));
+        document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === button.dataset.view));
+      });
+    });
+
+    document.querySelectorAll(".fault-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.filter = button.dataset.filter;
+        document.querySelectorAll(".fault-tab").forEach((tab) => tab.classList.toggle("active", tab === button));
+        renderResults();
+      });
+    });
+
+    exportButton.addEventListener("click", exportReport);
+
+    async function loadFile(file) {
+      state.fileName = file.name;
+      state.activeSheet = "";
+      state.sheets = [];
+      state.parsed = [];
+      exportButton.disabled = true;
+      fileMeta.textContent = `Loading ${file.name}`;
+      render();
+
+      try {
+        const extension = file.name.split(".").pop().toLowerCase();
+        if (extension === "csv" || extension === "txt") {
+          state.sheets = [{ name: "CSV", rows: parseCsv(await file.text()) }];
+        } else {
+          if (!window.XLSX) throw new Error("The Excel reader did not load. Save the report as CSV or check your internet connection and try again.");
+          const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true, raw: true });
+          state.sheets = workbook.SheetNames.map((name) => ({
+            name,
+            rows: XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1, defval: "", blankrows: false, raw: true })
+          }));
+        }
+
+        if (!state.sheets.length) throw new Error("No sheets were found in that report.");
+
+        populateSheetSelect();
+        state.activeSheet = state.sheets[0].name;
+        sheetSelect.value = state.activeSheet;
+        processActiveSheet();
+        showMessage(`${file.name} loaded`);
+      } catch (error) {
+        state.parsed = [];
+        fileMeta.textContent = "No report attached";
+        render();
+        showMessage(error.message || "The report could not be read.");
+      }
+    }
+
+    function populateSheetSelect() {
+      sheetSelect.innerHTML = "";
+      state.sheets.forEach((sheet) => {
+        const option = document.createElement("option");
+        option.value = sheet.name;
+        option.textContent = sheet.name;
+        sheetSelect.appendChild(option);
+      });
+      sheetSelect.disabled = state.sheets.length <= 1;
+    }
+
+    function processActiveSheet() {
+      const sheet = state.sheets.find((item) => item.name === state.activeSheet) || state.sheets[0];
+      if (!sheet) {
+        state.parsed = [];
+        render();
+        return;
+      }
+
+      const parsed = parseMatrix(sheet.rows || []);
+      state.parsed = parsed.rows;
+      fileMeta.textContent = `${state.fileName} | ${sheet.name} | ${parsed.columns.total} columns matched`;
+      exportButton.disabled = !state.parsed.length;
+      render();
+    }
+
+    function parseMatrix(matrix) {
+      const headerRowIndex = findHeaderRow(matrix);
+      const headers = makeUniqueHeaders((matrix[headerRowIndex] || []).map((value, index) => cleanCell(value) || `Column ${index + 1}`));
+      const columns = detectColumns(headers);
+      const rows = [];
+
+      for (let index = headerRowIndex + 1; index < matrix.length; index += 1) {
+        const values = matrix[index] || [];
+        if (!values.some((value) => cleanCell(value) !== "")) continue;
+        rows.push(parseTruckRow({ values, headers, excelRow: index + 1, columns }));
+      }
+
+      return {
+        rows,
+        columns: {
+          total: Object.values(columns.events).filter((event) => event.index !== -1 || event.dateIndex !== -1 || event.timeIndex !== -1).length
+        }
+      };
+    }
+
+    function findHeaderRow(matrix) {
+      let bestIndex = 0;
+      let bestScore = -1;
+      const limit = Math.min(matrix.length, 25);
+
+      for (let index = 0; index < limit; index += 1) {
+        let score = 0;
+        (matrix[index] || []).forEach((value) => {
+          const header = cleanCell(value);
+          if (!header) return;
+          score += Math.min(header.length, 20) / 100;
+          if (scoreHeader(header, eventAliases.appt) >= 5) score += 4;
+          if (scoreHeader(header, eventAliases.checkIn) >= 5) score += 2;
+          if (scoreHeader(header, eventAliases.door) >= 5) score += 3;
+          if (scoreHeader(header, eventAliases.start) >= 5) score += 3;
+          if (scoreHeader(header, eventAliases.finish) >= 5) score += 4;
+          if (scoreHeader(header, commentAliases) >= 5) score += 2;
+          if (scoreHeader(header, idAliases) >= 5) score += 1;
+        });
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+
+      return bestIndex;
+    }
+
+    function detectColumns(headers) {
+      const events = {};
+      Object.keys(eventAliases).forEach((key) => {
+        events[key] = detectEventColumns(headers, eventAliases[key], key);
+      });
+      const primaryCommentIndexes = findAllColumns(headers, primaryCommentAliases, 5);
+      const backupCommentIndexes = findAllColumns(headers, backupCommentAliases, 5);
+
+      return {
+        events,
+        commentIndexes: primaryCommentIndexes.length ? primaryCommentIndexes : backupCommentIndexes,
+        lateIndexes: findAllColumns(headers, lateAliases, 5),
+        idIndex: findBestColumn(headers, idAliases, 5),
+        genericDateIndex: findBestColumn(headers, ["date", "report date", "bus date", "business date", "appt date", "appointment date", "scheduled date", "arrival date"], 5)
+      };
+    }
+
+    function detectEventColumns(headers, aliases, key) {
+      let any = { index: -1, score: 0 };
+      let date = { index: -1, score: 0 };
+      let time = { index: -1, score: 0 };
+
+      headers.forEach((header, index) => {
+        const normalized = normalize(header);
+        const baseScore = scoreHeader(header, aliases);
+        if (baseScore < 4) return;
+        const score = baseScore + eventColumnPreference(key, normalized);
+        const hasDate = /\bdate\b/.test(normalized);
+        const hasTime = /\b(time|stamp|datetime|date time)\b/.test(normalized);
+        if (score > any.score) any = { index, score };
+        if (hasDate && score + 1 > date.score) date = { index, score: score + 1 };
+        if ((hasTime || !hasDate) && score + (hasTime ? 1 : 0) > time.score) time = { index, score: score + (hasTime ? 1 : 0) };
+      });
+
+      return { index: any.index, dateIndex: date.index, timeIndex: time.index };
+    }
+
+    function eventColumnPreference(key, normalized) {
+      let score = 0;
+      if (key === "start" || key === "finish") {
+        if (/\b(receiving|recieving|recv)\b/.test(normalized)) score += 4;
+        if (/\bunload\b/.test(normalized)) score -= 3;
+      }
+      if ((key === "door" || key === "checkIn") && /\bdriver\b/.test(normalized)) score += 2;
+      if (key === "appt" && /\b(appointment|appt)\b/.test(normalized)) score += 2;
+      return score;
+    }
+
+    function findBestColumn(headers, aliases, minimum) {
+      let best = { index: -1, score: 0 };
+      headers.forEach((header, index) => {
+        const score = scoreHeader(header, aliases);
+        if (score > best.score) best = { index, score };
+      });
+      return best.score >= minimum ? best.index : -1;
+    }
+
+    function findAllColumns(headers, aliases, minimum) {
+      return headers
+        .map((header, index) => ({ index, score: scoreHeader(header, aliases) }))
+        .filter((item) => item.score >= minimum)
+        .map((item) => item.index);
+    }
+
+    function scoreHeader(header, aliases) {
+      const normalized = normalize(header);
+      if (!normalized) return 0;
+      let best = 0;
+      aliases.forEach((alias) => {
+        const normalizedAlias = normalize(alias);
+        if (normalized === normalizedAlias) best = Math.max(best, 10);
+        else if (normalized.includes(normalizedAlias)) best = Math.max(best, 7);
+        else {
+          const words = normalizedAlias.split(" ").filter(Boolean);
+          const matches = words.filter((word) => normalized.includes(word)).length;
+          if (matches === words.length && words.length > 1) best = Math.max(best, 5 + matches);
+          else if (matches > 0 && words.length > 1) best = Math.max(best, matches * 2);
+        }
+      });
+      return best;
+    }
+
+    function parseTruckRow({ values, headers, excelRow, columns }) {
+      const genericBaseDate = columns.genericDateIndex !== -1 ? parseDateOnly(values[columns.genericDateIndex]) : null;
+      const appt = getEventDate(values, columns.events.appt, genericBaseDate);
+      let checkIn = getEventDate(values, columns.events.checkIn, appt || genericBaseDate);
+      let door = getEventDate(values, columns.events.door, appt || genericBaseDate);
+      let start = getEventDate(values, columns.events.start, appt || genericBaseDate);
+      let finish = getEventDate(values, columns.events.finish, appt || genericBaseDate);
+      const checkInHasFullDate = eventHasFullDate(values, columns.events.checkIn);
+      const doorHasFullDate = eventHasFullDate(values, columns.events.door);
+      const startHasFullDate = eventHasFullDate(values, columns.events.start);
+      const finishHasFullDate = eventHasFullDate(values, columns.events.finish);
+
+      checkIn = moveAfterIfNeeded(checkIn, appt, !checkInHasFullDate);
+      door = moveAfterIfNeeded(door, appt, !doorHasFullDate);
+      start = moveAfterIfNeeded(start, door || appt, !startHasFullDate);
+      finish = moveAfterIfNeeded(finish, start || door || appt, !finishHasFullDate);
+
+      const finishDelay = appt && finish ? diffMinutes(finish, appt) : null;
+      const startDelay = appt && start ? diffMinutes(start, appt) : null;
+      const doorDelay = appt && door ? diffMinutes(door, appt) : null;
+      const checkInDelay = appt && checkIn ? diffMinutes(checkIn, appt) : null;
+      const receivingDuration = typeof finishDelay === "number" && typeof startDelay === "number" ? finishDelay - startDelay : null;
+      const detention = typeof finishDelay === "number" && finishDelay >= DETENTION_MINUTES;
+      const comments = getJoinedValues(values, columns.commentIndexes);
+      const allText = headers.map((header, index) => `${header}: ${cleanCell(values[index])}`).join(" | ");
+      const rowComments = comments || getLikelyComments(allText);
+      const driverLate = hasLateMark(values, columns.lateIndexes) || looksLateValue(comments);
+      const spill = /\bspill(?:ed|age|s)?\b/i.test(comments);
+      const space = hasAldiSpaceComment(rowComments);
+      const truckId = getTruckId(values, columns.idIndex, excelRow);
+      const fault = classifyFault({ detention, driverLate, spill, space, checkInDelay, doorDelay, startDelay, finishDelay, receivingDuration });
+
+      const row = {
+        key: makeRowKey(truckId, excelRow),
+        truckId,
+        excelRow,
+        appt,
+        checkIn,
+        door,
+        start,
+        finish,
+        finishDelay,
+        startDelay,
+        doorDelay,
+        checkInDelay,
+        receivingDuration,
+        detention,
+        comments: rowComments,
+        driverLate,
+        spill,
+        space,
+        fault,
+        missing: { appt: !appt, checkIn: !checkIn, door: !door, start: !start, finish: !finish }
+      };
+      row.autoNote = makeAutoNote(row);
+      return row;
+    }
+
+    function classifyFault(item) {
+      if (!item.detention) return "none";
+      if (item.space) return "aldi";
+      if (item.driverLate || item.spill) return "driver";
+      if (typeof item.doorDelay === "number" && item.doorDelay > 0 && !isWithinClerkGrace(item)) return "clerk";
+      if (typeof item.startDelay === "number" && item.startDelay >= START_LATE_MINUTES) {
+        if (typeof item.receivingDuration === "number" && item.receivingDuration >= item.startDelay) return "shared";
+        return "eclipse";
+      }
+      return "review";
+    }
+
+    function hasAldiSpaceComment(value) {
+      const text = cleanCell(value).toLowerCase();
+      if (!text) return false;
+      return /\bspace\b/.test(text)
+        || /\bsp(?:a\w*)?\b/.test(text)
+        || /s[\s/._-]*p[\s/._-]*a/.test(text);
+    }
+
+    function isWithinClerkGrace(item) {
+      return typeof item.checkInDelay === "number"
+        && typeof item.doorDelay === "number"
+        && Math.abs(item.checkInDelay) <= CLERK_GRACE_MINUTES
+        && item.doorDelay > 0
+        && item.doorDelay <= CLERK_GRACE_MINUTES;
+    }
+
+    function makeAutoNote(row) {
+      const noteParts = [];
+      if (row.detention) noteParts.push(`Hit detention because Finish Receiving was ${delayText(row.finishDelay)}, meeting the 2-hour rule.`);
+      if (row.fault === "driver") noteParts.push(driverFaultNote(row));
+      else if (row.fault === "clerk") noteParts.push(`Clerk fault because the truck was put on the door ${delayText(row.doorDelay)}, outside the 20-minute grace rule.`);
+      else if (row.fault === "eclipse") noteParts.push(`Eclipse fault because Start Receiving began ${delayText(row.startDelay)}, and Aldi receiving time (${durationText(row.receivingDuration)}) was shorter than the Eclipse delay.`);
+      else if (row.fault === "aldi") noteParts.push("Aldi fault because the comment indicates a space-related issue.");
+      else if (row.fault === "shared") noteParts.push(`Eclipse + Aldi fault because Eclipse delayed the start by ${durationText(row.startDelay)}, and Aldi receiving time matched or exceeded that delay at ${durationText(row.receivingDuration)}.`);
+      if (row.space && row.fault !== "aldi") noteParts.push("Space was mentioned, so review whether warehouse space changed the cause before finalizing.");
+      return noteParts.join(" ");
+    }
+
+    function driverFaultNote(row) {
+      if (row.driverLate && row.spill) return "Driver fault because the report marks the driver late and includes a spill-related issue.";
+      if (row.driverLate) return "Driver fault because the report marks the driver late.";
+      if (row.spill) return "Driver fault because a spill-related issue was noted.";
+      return "Driver fault because the report points to a driver-side cause.";
+    }
+
+    function render() {
+      renderSummary();
+      renderResults();
+      renderSpaceReview();
+      renderData();
+    }
+
+    function renderSummary() {
+      const counts = getCounts();
+      summaryGrid.innerHTML = [
+        summaryCard(counts.total, "Total trucks"),
+        summaryCard(counts.highlighted, "Highlighted hits"),
+        summaryCard(counts.driver, "Driver fault", "summary-driver"),
+        summaryCard(counts.clerk, "Clerk fault", "summary-clerk"),
+        summaryCard(counts.eclipse, "Eclipse fault", "summary-eclipse"),
+        summaryCard(counts.aldi, "Aldi fault", "summary-aldi"),
+        summaryCard(counts.shared, "Eclipse + Aldi fault", "summary-shared")
+      ].join("");
+    }
+
+    function summaryCard(value, label, className = "") {
+      return `<div class="summary-item ${className}"><strong>${value}</strong><span>${escapeHtml(label)}</span></div>`;
+    }
+
+    function getCounts() {
+      const detentionRows = state.parsed.filter((row) => row.detention);
+      const highlightedRows = detentionRows.filter((row) => isCategorizedFault(row.fault));
+      return {
+        total: state.parsed.length,
+        detention: detentionRows.length,
+        highlighted: highlightedRows.length,
+        driver: highlightedRows.filter((row) => row.fault === "driver").length,
+        clerk: highlightedRows.filter((row) => row.fault === "clerk").length,
+        eclipse: highlightedRows.filter((row) => row.fault === "eclipse").length,
+        aldi: highlightedRows.filter((row) => row.fault === "aldi").length,
+        shared: highlightedRows.filter((row) => row.fault === "shared").length,
+        review: detentionRows.filter((row) => row.fault === "review").length,
+        clear: Math.max(0, state.parsed.length - highlightedRows.length),
+        space: state.parsed.filter((row) => row.space).length,
+        needsReview: detentionRows.filter((row) => row.fault === "review").length
+      };
+    }
+
+    function getVisibleRows() {
+      const rows = state.parsed.filter((row) => {
+        if (!row.detention || !isCategorizedFault(row.fault)) return false;
+        if (state.filter !== "all" && row.fault !== state.filter) return false;
+        return true;
+      });
+      return sortRows(rows);
+    }
+
+    function sortRows(rows) {
+      const sorted = [...rows];
+      sorted.sort((a, b) => {
+        if (state.sort === "finishDelayDesc") return compareNumbers(b.finishDelay, a.finishDelay) || compareNumbers(a.excelRow, b.excelRow);
+        if (state.sort === "apptAsc") return compareDates(a.appt, b.appt) || compareNumbers(a.excelRow, b.excelRow);
+        if (state.sort === "truckAsc") return String(a.truckId).localeCompare(String(b.truckId), undefined, { numeric: true }) || compareNumbers(a.excelRow, b.excelRow);
+        return compareNumbers(faultMeta[a.fault]?.order ?? 99, faultMeta[b.fault]?.order ?? 99)
+          || compareNumbers(b.finishDelay, a.finishDelay)
+          || compareNumbers(a.excelRow, b.excelRow);
+      });
+      return sorted;
+    }
+
+    function renderResults() {
+      const rows = getVisibleRows();
+      resultCount.textContent = `${rows.length} ${rows.length === 1 ? "row" : "rows"}`;
+      if (!state.parsed.length) {
+        resultsBody.innerHTML = `<tr><td class="empty" colspan="14">Attach a report to begin.</td></tr>`;
+        return;
+      }
+      if (!rows.length) {
+        resultsBody.innerHTML = `<tr><td class="empty" colspan="14">No categorized detention rows found.</td></tr>`;
+        return;
+      }
+      resultsBody.innerHTML = rows.map(renderDetentionRow).join("");
+      attachNoteListeners(resultsBody);
+    }
+
+    function renderDetentionRow(row) {
+      const fault = faultMeta[row.fault] || faultMeta.review;
+      const payableMinutes = getPayableMinutes(row);
+      return `<tr class="${fault.className}">
+        <td>${escapeHtml(row.truckId)}</td>
+        <td>${row.excelRow}</td>
+        <td>${formatDate(row.appt, row.missing.appt)}</td>
+        <td>${formatDate(row.checkIn, row.missing.checkIn)}</td>
+        <td>${formatDate(row.door, row.missing.door)}</td>
+        <td>${formatDate(row.start, row.missing.start)}</td>
+        <td>${formatDate(row.finish, row.missing.finish)}</td>
+        <td>${formatDelay(row.finishDelay)}</td>
+        <td>${escapeHtml(formatHours(payableMinutes))}</td>
+        <td class="money">${escapeHtml(formatMoney((payableMinutes / 60) * DETENTION_RATE_PER_HOUR))}</td>
+        <td>${faultPill(row)}</td>
+        <td><div class="flags">${renderFlags(row)}</div></td>
+        <td class="comments">${escapeHtml(row.comments || "")}</td>
+        <td class="note-cell"><textarea data-note-key="${escapeAttribute(row.key)}" aria-label="Auto note for ${escapeAttribute(row.truckId)}">${escapeHtml(getRowNote(row))}</textarea></td>
+      </tr>`;
+    }
+
+    function renderSpaceReview() {
+      const rows = state.parsed.filter((row) => row.space);
+      spaceSection.hidden = rows.length === 0;
+      spaceCount.textContent = `${rows.length} ${rows.length === 1 ? "row" : "rows"}`;
+      spaceBody.innerHTML = rows.map((row) => {
+        const fault = faultMeta[row.fault] || faultMeta.review;
+        const rowClass = row.detention && isCategorizedFault(row.fault) ? fault.className : "review";
+        return `<tr class="${rowClass}">
+          <td>${escapeHtml(row.truckId)}</td>
+          <td>${row.excelRow}</td>
+          <td>${formatDate(row.appt, row.missing.appt)}</td>
+          <td>${formatDate(row.finish, row.missing.finish)}</td>
+          <td>${faultPill(row)}</td>
+          <td class="comments">${escapeHtml(row.comments || "")}</td>
+          <td class="note-cell"><textarea data-note-key="${escapeAttribute(row.key)}" aria-label="Auto note for ${escapeAttribute(row.truckId)}">${escapeHtml(getRowNote(row))}</textarea></td>
+        </tr>`;
+      }).join("");
+      attachNoteListeners(spaceBody);
+    }
+
+    function renderData() {
+      const counts = getCounts();
+      const costData = getCostData();
+      dataSummary.innerHTML = [
+        summaryCard(counts.total, "Total loads reviewed"),
+        summaryCard(counts.detention, "Detention loads"),
+        summaryCard(counts.highlighted, "Assigned fault loads"),
+        summaryCard(formatHours(costData.totalMinutes), "Payable detention"),
+        summaryCard(formatMoney(costData.totalCost), "Estimated cost"),
+        summaryCard(counts.needsReview, "Needs review")
+      ].join("");
+      renderPieChart(loadPieChart, getLoadPieData(counts));
+      renderBarChart(faultChart, [
+        ["Driver", counts.driver, "driver"],
+        ["Clerk", counts.clerk, "clerk"],
+        ["Eclipse", counts.eclipse, "eclipse"],
+        ["Aldi", counts.aldi, "aldi"],
+        ["Eclipse + Aldi", counts.shared, "shared"]
+      ]);
+      renderBarChart(costFaultChart, costData.buckets.map((bucket) => [
+        bucket.shortLabel,
+        bucket.cost,
+        bucket.className,
+        formatMoney(bucket.cost)
+      ]));
+      renderBarChart(costHoursChart, costData.buckets.map((bucket) => [
+        bucket.shortLabel,
+        bucket.minutes,
+        bucket.className,
+        formatHours(bucket.minutes)
+      ]));
+      renderBarChart(delayChart, getDelayBuckets());
+      renderBarChart(reviewChart, getReviewRows(counts));
+    }
+
+    function getCostData() {
+      const rate = DETENTION_RATE_PER_HOUR;
+      const bucketsByKey = new Map([
+        ["driver", makeCostBucket("driver", "Driver fault", "Driver", "driver")],
+        ["clerk", makeCostBucket("clerk", "Clerk fault", "Clerk", "clerk")],
+        ["eclipse", makeCostBucket("eclipse", "Eclipse fault", "Eclipse", "eclipse")],
+        ["aldi", makeCostBucket("aldi", "Aldi fault", "Aldi", "aldi")],
+        ["shared", makeCostBucket("shared", "Eclipse + Aldi fault", "Eclipse + Aldi", "shared")],
+        ["review", makeCostBucket("review", "Needs review", "Review", "review")]
+      ]);
+      const rows = sortRows(state.parsed.filter((row) => row.detention && typeof row.finishDelay === "number"));
+
+      rows.forEach((row) => {
+        const key = isCategorizedFault(row.fault) ? row.fault : "review";
+        const bucket = bucketsByKey.get(key);
+        const minutes = getPayableMinutes(row);
+        bucket.loads += 1;
+        bucket.minutes += minutes;
+        bucket.cost += (minutes / 60) * rate;
+      });
+
+      const buckets = Array.from(bucketsByKey.values());
+      const totalMinutes = buckets.reduce((sum, bucket) => sum + bucket.minutes, 0);
+      const totalCost = buckets.reduce((sum, bucket) => sum + bucket.cost, 0);
+      const reviewBucket = bucketsByKey.get("review");
+      return {
+        rate,
+        rows,
+        buckets,
+        detentionLoads: rows.length,
+        totalMinutes,
+        totalCost,
+        reviewCost: reviewBucket ? reviewBucket.cost : 0
+      };
+    }
+
+    function makeCostBucket(key, label, shortLabel, className) {
+      return { key, label, shortLabel, className, loads: 0, minutes: 0, cost: 0 };
+    }
+
+    function getPayableMinutes(row) {
+      if (!row.detention || typeof row.finishDelay !== "number") return 0;
+      return Math.max(0, row.finishDelay - DETENTION_MINUTES);
+    }
+
+    function renderBarChart(container, rows) {
+      const max = Math.max(1, ...rows.map((row) => row[1]));
+      container.innerHTML = rows.map(([label, value, className, displayValue]) => {
+        const width = Math.max(0, Math.round((value / max) * 100));
+        return `<div class="bar-row">
+          <span>${escapeHtml(label)}</span>
+          <div class="bar-track"><div class="bar ${className}" style="width:${width}%"></div></div>
+          <strong>${escapeHtml(displayValue ?? value)}</strong>
+        </div>`;
+      }).join("");
+    }
+
+    function renderPieChart(container, rows) {
+      const total = rows.reduce((sum, row) => sum + row.value, 0);
+      if (!total) {
+        container.innerHTML = `<div class="empty">Attach a report to populate the chart.</div>`;
+        return;
+      }
+
+      let cursor = 0;
+      const slices = rows.map((row) => {
+        const start = cursor;
+        cursor += (row.value / total) * 100;
+        return `${row.color} ${start.toFixed(2)}% ${cursor.toFixed(2)}%`;
+      }).join("");
+
+      container.innerHTML = `<div class="pie-layout">
+        <div class="pie-chart" style="--pie-gradient: conic-gradient(${slices})" aria-label="Total loads versus fault categories"></div>
+        <div class="pie-legend">
+          ${rows.map((row) => `<div class="pie-legend-row">
+            <span class="pie-key" style="background:${row.color}"></span>
+            <span>${escapeHtml(row.label)}</span>
+            <strong>${row.value}</strong>
+          </div>`).join("")}
+        </div>
+      </div>`;
+    }
+
+    function getLoadPieData(counts) {
+      return [
+        { label: "No assigned fault", value: counts.clear, color: "#74868b" },
+        { label: "Driver fault", value: counts.driver, color: "#2f9a55" },
+        { label: "Clerk fault", value: counts.clerk, color: "#7b4fc3" },
+        { label: "Eclipse fault", value: counts.eclipse, color: "#2878bd" },
+        { label: "Aldi fault", value: counts.aldi, color: "#d45532" },
+        { label: "Eclipse + Aldi fault", value: counts.shared, color: "#c33c3c" }
+      ];
+    }
+
+    function getDelayBuckets() {
+      const rows = state.parsed.filter((row) => row.detention && typeof row.finishDelay === "number");
+      return [
+        ["2-3 hours", rows.filter((row) => row.finishDelay >= 120 && row.finishDelay <= 180).length, "eclipse"],
+        ["3-4 hours", rows.filter((row) => row.finishDelay > 180 && row.finishDelay <= 240).length, "shared"],
+        ["4+ hours", rows.filter((row) => row.finishDelay > 240).length, "shared"]
+      ];
+    }
+
+    function getReviewRows(counts) {
+      return [
+        ["Aldi space comments", counts.space, "aldi"],
+        ["Uncategorized detention", counts.review, "review"],
+        ["Driver fault", counts.driver, "driver"],
+        ["Non-driver fault", counts.clerk + counts.eclipse + counts.aldi + counts.shared, "eclipse"]
+      ];
+    }
+
+    function attachNoteListeners(parent) {
+      parent.querySelectorAll("textarea[data-note-key]").forEach((textarea) => {
+        textarea.addEventListener("input", () => saveNote(textarea.dataset.noteKey, textarea.value));
+      });
+    }
+
+    function renderFlags(row) {
+      return getFlagList(row).map((flag) => `<span class="flag">${escapeHtml(flag)}</span>`).join("");
+    }
+
+    function getFlagList(row) {
+      const flags = [];
+      if (row.driverLate) flags.push("Late");
+      if (row.spill) flags.push("Spill");
+      if (row.space) flags.push("Space");
+      if (row.detention) flags.push("Detention");
+      if (!row.appt || !row.finish) flags.push("Missing stamps");
+      return flags.length ? flags : ["None"];
+    }
+
+    function faultPill(row) {
+      const fault = faultMeta[row.fault] || faultMeta.review;
+      if (!row.detention) return `<span class="pill">No detention</span>`;
+      return `<span class="pill ${fault.className}">${escapeHtml(fault.label)}</span>`;
+    }
+
+    function isCategorizedFault(fault) {
+      return fault === "driver" || fault === "clerk" || fault === "eclipse" || fault === "aldi" || fault === "shared";
+    }
+
+    function getNote(key) {
+      try { return localStorage.getItem(`dms-det-note:${key}`) || ""; } catch (error) { return ""; }
+    }
+
+    function getRowNote(row) {
+      const saved = getNote(row.key);
+      if (/^(Context:|DMS status:|Other stamps:)/.test(saved) || /\bDMS status:|\bOther stamps:|\bProduct:|\bPhone:|\bCab:/.test(saved)) return row.autoNote || "";
+      return saved || row.autoNote || "";
+    }
+
+    function saveNote(key, value) {
+      try { localStorage.setItem(`dms-det-note:${key}`, value); } catch (error) { showMessage("Notes could not be saved in this browser."); }
+    }
+
+    function exportReport() {
+      syncNotesFromTextareas();
+      const highlighted = sortRows(state.parsed.filter((row) => row.detention && isCategorizedFault(row.fault)));
+      const spaceRows = state.parsed.filter((row) => row.space);
+      if (!highlighted.length && !spaceRows.length) {
+        showMessage("There are no results to export.");
+        return;
+      }
+      openPdfReport(buildExportHtml(highlighted, spaceRows));
+    }
+
+    function syncNotesFromTextareas() {
+      document.querySelectorAll("textarea[data-note-key]").forEach((textarea) => saveNote(textarea.dataset.noteKey, textarea.value));
+    }
+
+    function buildExportHtml(highlighted, spaceRows) {
+      const counts = getCounts();
+      return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DMS Detention Report Export</title>
+  <style>${exportCss()}</style>
+</head>
+<body>
+  <div class="report">
+    <section class="print-actions">
+      <strong>PDF export</strong>
+      <span>Use Save as PDF in the print window, then email that PDF to the customer.</span>
+      <button type="button" onclick="window.print()">Print / Save PDF</button>
+    </section>
+
+    <header class="header">
+      <div>
+        <p class="eyebrow">Client detention review</p>
+        <h1>DMS Detention Report</h1>
+        <div class="meta">${escapeHtml(state.fileName || "Report")} | ${escapeHtml(state.activeSheet || "Sheet")} | Exported ${escapeHtml(new Date().toLocaleString())}</div>
+      </div>
+      <div class="meta">${escapeHtml(fileMeta.textContent || "")}</div>
+    </header>
+
+    <section class="client-note">
+      <strong>Report focus</strong>
+      <span>This view summarizes total loads, detention hits, likely fault categories, and rows that may need follow-up review.</span>
+    </section>
+
+    <section class="summary">${summaryCard(counts.total, "Total loads")}${summaryCard(counts.detention, "Detention hits")}${summaryCard(counts.highlighted, "Assigned faults")}${summaryCard(counts.driver, "Driver fault", "summary-driver")}${summaryCard(counts.aldi, "Aldi fault", "summary-aldi")}${summaryCard(counts.needsReview, "Needs review")}</section>
+    ${exportClientDashboard(counts)}
+    ${exportLegend()}
+
+    <section class="table-section">
+      <div class="section-head">
+        <div>
+          <h2>Fault Review</h2>
+          <p class="section-subtitle">Filter or sort the populated detention rows without changing the report.</p>
+        </div>
+        <span id="exportResultCount" class="section-count">${highlighted.length} ${highlighted.length === 1 ? "row" : "rows"}</span>
+      </div>
+      <div class="control-row">
+        <label>Fault <select id="exportFaultFilter"><option value="all">All faults</option><option value="driver">Driver</option><option value="clerk">Clerk</option><option value="eclipse">Eclipse</option><option value="aldi">Aldi</option><option value="shared">Eclipse + Aldi</option></select></label>
+        <label>Sort <select id="exportSortSelect"><option value="fault">Fault</option><option value="finishDelayDesc">Longest detention</option><option value="apptAsc">Appointment time</option><option value="truckAsc">Truck / load</option></select></label>
+      </div>
+      <div class="table-wrap">
+        <table id="exportDetentionTable">
+          <thead><tr>${exportDetentionHeaders().map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead>
+          <tbody id="exportDetentionBody">${highlighted.map(exportDetentionExportRow).join("")}</tbody>
+        </table>
+      </div>
+    </section>
+
+    ${spaceRows.length ? exportTableSection("Aldi Space Review", spaceRows, exportSpaceHeaders(), exportSpaceExportRow) : ""}
+  </div>
+  <script>${exportInteractionScript()}${exportPrintScript()}<\/script>
+</body>
+</html>`;
+    }
+
+    function exportCss() {
+      return `*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;padding:24px;background:#f5f7f8;color:#172023;font-family:Arial,Helvetica,sans-serif;letter-spacing:0}.report{max-width:1500px;margin:0 auto}.print-actions{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;background:#fff;border:1px solid #d9e1e3;border-left:5px solid #0f6f63;border-radius:8px;padding:12px 14px;margin-bottom:16px}.print-actions span{color:#667478}.print-actions button{min-height:36px;border:1px solid #0f6f63;border-radius:8px;background:#0f6f63;color:#fff;padding:0 12px;cursor:pointer}.header{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:18px}.eyebrow{margin:0 0 6px;color:#0f6f63;font-size:.78rem;font-weight:700;text-transform:uppercase}h1{margin:0;font-size:2.35rem;line-height:1}.meta{color:#667478;margin-top:8px;font-size:.9rem}.client-note{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #d9e1e3;border-left:5px solid #0f6f63;border-radius:8px;padding:13px 15px;margin-bottom:14px}.client-note span{color:#4c5a5e;line-height:1.35}.summary{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:10px;margin:14px 0}.summary-item{background:#fff;border:1px solid #d9e1e3;border-radius:8px;padding:12px 14px;min-height:78px}.summary-item strong{display:block;font-size:1.6rem;line-height:1.1;margin-bottom:6px}.summary-item span{color:#667478;font-size:.84rem}.summary-driver{border-left:5px solid #2f9a55}.summary-clerk{border-left:5px solid #7b4fc3}.summary-eclipse{border-left:5px solid #2878bd}.summary-aldi{border-left:5px solid #d45532}.summary-shared{border-left:5px solid #c33c3c}.chart-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:12px;margin:14px 0}.chart-panel{background:#fff;border:1px solid #d9e1e3;border-radius:8px;padding:15px}.chart-panel h2{margin:0 0 12px;font-size:1.05rem}.chart-panel p{margin:0 0 12px;color:#667478;font-size:.88rem;line-height:1.3}.pie-layout{display:grid;grid-template-columns:minmax(190px,240px) 1fr;gap:16px;align-items:center}.pie-svg{width:min(240px,100%);height:auto;display:block}.pie-total{font-size:28px;font-weight:800;fill:#172023}.pie-label{font-size:12px;fill:#667478;text-transform:uppercase}.pie-legend{display:grid;gap:8px}.pie-legend-row{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:8px;font-size:.9rem}.pie-key{width:14px;height:14px;border-radius:4px}.bar-svg{width:100%;height:auto;display:block}.bar-label{font-size:13px;fill:#172023}.bar-value{font-size:13px;font-weight:700;fill:#172023}.legend{display:grid;grid-template-columns:repeat(6,minmax(150px,1fr));gap:10px;margin-bottom:14px}.legend-item{display:grid;grid-template-columns:18px 1fr;align-items:center;gap:9px;min-height:58px;padding:10px 12px;background:#fff;border:1px solid #d9e1e3;border-radius:8px}.swatch{width:18px;height:18px;border-radius:5px;border:2px solid currentColor}.swatch.driver{background:#dff4e5;color:#2f9a55}.swatch.clerk{background:#efe4ff;color:#7b4fc3}.swatch.eclipse{background:#e0efff;color:#2878bd}.swatch.aldi{background:#ffe6dc;color:#d45532}.swatch.shared{background:#ffe2e2;color:#c33c3c}.swatch.review{background:#fff2cf;color:#b77b12}.legend-text strong{display:block;font-size:.9rem;line-height:1.15}.legend-text span{display:block;color:#667478;font-size:.76rem;line-height:1.25;margin-top:2px}.table-section{background:#fff;border:1px solid #d9e1e3;border-radius:8px;overflow:hidden;margin-top:12px}.section-head{display:flex;justify-content:space-between;gap:12px;padding:14px 16px;border-bottom:1px solid #d9e1e3;background:#f7faf9}.section-head h2{margin:0;font-size:1.1rem}.section-subtitle{margin:4px 0 0;color:#667478;font-size:.84rem}.section-count{color:#667478;font-size:.9rem;white-space:nowrap}.control-row{display:flex;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #d9e1e3;background:#fbfcfc}.control-row label{display:inline-flex;align-items:center;gap:8px;color:#667478;font-size:.9rem}.control-row select{min-height:34px;border:1px solid #d9e1e3;border-radius:8px;background:#fff;color:#172023;padding:0 28px 0 9px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:1180px}th,td{text-align:left;vertical-align:top;padding:10px 11px;border-bottom:1px solid #d9e1e3;font-size:.88rem}th{color:#667478;font-size:.74rem;text-transform:uppercase;background:#fbfcfc}tr.driver{background:#dff4e5;box-shadow:inset 5px 0 0 #2f9a55}tr.clerk{background:#efe4ff;box-shadow:inset 5px 0 0 #7b4fc3}tr.eclipse{background:#e0efff;box-shadow:inset 5px 0 0 #2878bd}tr.aldi{background:#ffe6dc;box-shadow:inset 5px 0 0 #d45532}tr.shared{background:#ffe2e2;box-shadow:inset 5px 0 0 #c33c3c}tr.review{background:#fff2cf;box-shadow:inset 5px 0 0 #b77b12}.pill{display:inline-block;border-radius:999px;border:1px solid currentColor;padding:4px 8px;background:rgba(255,255,255,.48);font-size:.78rem;font-weight:700;white-space:nowrap}.pill.driver{color:#19733b}.pill.clerk{color:#6333aa}.pill.eclipse{color:#1f649d}.pill.aldi{color:#af3b1d}.pill.shared{color:#a62929}.pill.review{color:#91600a}.flags{display:flex;gap:5px;flex-wrap:wrap}.flag{display:inline-block;border-radius:6px;padding:3px 6px;background:rgba(255,255,255,.58);color:#384447;font-size:.75rem;font-weight:700;border:1px solid rgba(23,32,35,.12)}.comments,.note{max-width:380px;white-space:normal;word-break:break-word}@media(max-width:900px){.summary,.legend,.chart-grid{grid-template-columns:1fr 1fr}.pie-layout,.client-note,.print-actions{grid-template-columns:1fr}}@media(max-width:560px){body{padding:14px}.summary,.legend,.chart-grid{grid-template-columns:1fr}.header,.section-head{align-items:flex-start;flex-direction:column}}@page{size:landscape;margin:.35in}@media print{body{background:#fff;padding:0}.report{max-width:none}.print-actions,.control-row{display:none}.table-section,.summary-item,.legend-item,.chart-panel{break-inside:avoid}}`;
+    }
+
+    function exportClientDashboard(counts) {
+      return `<section class="chart-grid" aria-label="Data charts">
+        <div class="chart-panel">
+          <h2>Total Loads vs Faults</h2>
+          <p>Starts with every load in the report, then separates the loads that were assigned to a fault category.</p>
+          ${exportPieHtml(getLoadPieData(counts))}
+        </div>
+        <div class="chart-panel">
+          <h2>Fault Breakdown</h2>
+          <p>Shows the detention loads that have a clear likely fault based on the appointment and receiving stamps.</p>
+          ${exportBarHtml([
+            ["Driver", counts.driver, "driver"],
+            ["Clerk", counts.clerk, "clerk"],
+            ["Eclipse", counts.eclipse, "eclipse"],
+            ["Aldi", counts.aldi, "aldi"],
+            ["Eclipse + Aldi", counts.shared, "shared"]
+          ])}
+        </div>
+        <div class="chart-panel">
+          <h2>Detention Delay Buckets</h2>
+          <p>Groups detention loads by how far Finish Receiving landed after the appointment time.</p>
+          ${exportBarHtml(getDelayBuckets())}
+        </div>
+        <div class="chart-panel">
+          <h2>Review Context</h2>
+          <p>Flags rows that may need a second look before sharing final responsibility or billing decisions.</p>
+          ${exportBarHtml(getReviewRows(counts))}
+        </div>
+      </section>`;
+    }
+
+    function exportPieHtml(rows) {
+      const total = rows.reduce((sum, row) => sum + row.value, 0);
+      if (!total) return `<div class="empty">No data available.</div>`;
+      let cursor = 0;
+      const slices = rows.filter((row) => row.value > 0).map((row) => {
+        const percent = (row.value / total) * 100;
+        const slice = `<circle cx="110" cy="110" r="70" fill="none" stroke="${escapeAttribute(row.color)}" stroke-width="42" pathLength="100" stroke-dasharray="${percent.toFixed(3)} ${(100 - percent).toFixed(3)}" stroke-dashoffset="${(-cursor).toFixed(3)}" transform="rotate(-90 110 110)"></circle>`;
+        cursor += percent;
+        return slice;
+      }).join("");
+      return `<div class="pie-layout">
+        <svg class="pie-svg" viewBox="0 0 220 220" role="img" aria-label="Total loads versus fault categories">
+          <circle cx="110" cy="110" r="70" fill="none" stroke="#edf2f3" stroke-width="42"></circle>
+          ${slices}
+          <circle cx="110" cy="110" r="44" fill="#ffffff" stroke="#d9e1e3"></circle>
+          <text x="110" y="105" text-anchor="middle" class="pie-total">${total}</text>
+          <text x="110" y="125" text-anchor="middle" class="pie-label">loads</text>
+        </svg>
+        <div class="pie-legend">
+          ${rows.map((row) => `<div class="pie-legend-row"><span class="pie-key" style="background:${row.color}"></span><span>${escapeHtml(row.label)}</span><strong>${row.value}</strong></div>`).join("")}
+        </div>
+      </div>`;
+    }
+
+    function exportBarHtml(rows) {
+      const max = Math.max(1, ...rows.map((row) => row[1]));
+      const rowHeight = 34;
+      const width = 620;
+      const height = Math.max(40, rows.length * rowHeight + 8);
+      const bars = rows.map(([label, value, className, displayValue], index) => {
+        const y = index * rowHeight + 8;
+        const barWidth = value > 0 ? Math.max(2, Math.round((value / max) * 310)) : 0;
+        return `<g>
+          <text x="0" y="${y + 16}" class="bar-label">${escapeHtml(label)}</text>
+          <rect x="150" y="${y}" width="310" height="18" rx="9" fill="#edf2f3" stroke="#d9e1e3"></rect>
+          <rect x="150" y="${y}" width="${barWidth}" height="18" rx="9" fill="${exportColorForClass(className)}"></rect>
+          <text x="476" y="${y + 15}" class="bar-value">${escapeHtml(displayValue ?? value)}</text>
+        </g>`;
+      }).join("");
+      return `<svg class="bar-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Bar chart">${bars}</svg>`;
+    }
+
+    function exportColorForClass(className) {
+      const colors = {
+        driver: "#2f9a55",
+        clerk: "#7b4fc3",
+        eclipse: "#2878bd",
+        aldi: "#d45532",
+        shared: "#c33c3c",
+        review: "#b77b12",
+        neutral: "#74868b"
+      };
+      return colors[className] || colors.neutral;
+    }
+
+    function exportLegend() {
+      return `<section class="legend" aria-label="Color code legend">
+        ${exportLegendItem("driver", "Green", "Driver marked late or spill")}
+        ${exportLegendItem("clerk", "Purple", "Door delay outside 20-min grace")}
+        ${exportLegendItem("eclipse", "Blue", "Start late; Aldi time shorter")}
+        ${exportLegendItem("aldi", "Orange", "SP / SPA / space in comments")}
+        ${exportLegendItem("shared", "Red", "Aldi time matches/exceeds Eclipse delay")}
+        ${exportLegendItem("review", "Yellow", "Needs manual review")}
+      </section>`;
+    }
+
+    function exportLegendItem(className, color, description) {
+      return `<div class="legend-item"><span class="swatch ${className}"></span><span class="legend-text"><strong>${escapeHtml(color)}</strong><span>${escapeHtml(description)}</span></span></div>`;
+    }
+
+    function exportTableSection(title, rows, headers, rowRenderer) {
+      return `<section class="table-section"><div class="section-head"><h2>${escapeHtml(title)}</h2><span class="section-count">${rows.length} ${rows.length === 1 ? "row" : "rows"}</span></div><div class="table-wrap"><table><thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${rows.map(rowRenderer).join("")}</tbody></table></div></section>`;
+    }
+
+    function exportDetentionHeaders() {
+      return ["Truck / load", "Excel row", "Original appt", "Driver check in", "Driver at door", "Start receiving", "Finished receiving", "Finish delay", "Fault", "Flags", "Comments", "Auto note"];
+    }
+
+    function exportSpaceHeaders() {
+      return ["Truck / load", "Excel row", "Original appt", "Finished receiving", "Fault", "Comments", "Auto note"];
+    }
+
+    function exportDetentionExportRow(row) {
+      const fault = faultMeta[row.fault] || faultMeta.review;
+      const apptTime = row.appt instanceof Date ? row.appt.getTime() : 0;
+      const finishDelay = typeof row.finishDelay === "number" ? row.finishDelay : -1;
+      return `<tr class="${fault.className}" data-fault="${escapeAttribute(row.fault)}" data-fault-order="${fault.order}" data-finish-delay="${finishDelay}" data-appt-ts="${apptTime}" data-truck="${escapeAttribute(row.truckId)}"><td>${escapeHtml(row.truckId)}</td><td>${row.excelRow}</td><td>${escapeHtml(formatDatePlain(row.appt))}</td><td>${escapeHtml(formatDatePlain(row.checkIn))}</td><td>${escapeHtml(formatDatePlain(row.door))}</td><td>${escapeHtml(formatDatePlain(row.start))}</td><td>${escapeHtml(formatDatePlain(row.finish))}</td><td>${escapeHtml(formatDelayPlain(row.finishDelay))}</td><td>${faultPill(row)}</td><td><div class="flags">${renderFlags(row)}</div></td><td class="comments">${escapeHtml(sanitizeClientText(row.comments || ""))}</td><td class="note">${escapeHtml(sanitizeClientText(getRowNote(row)))}</td></tr>`;
+    }
+
+    function exportSpaceExportRow(row) {
+      const fault = faultMeta[row.fault] || faultMeta.review;
+      const rowClass = row.detention && isCategorizedFault(row.fault) ? fault.className : "review";
+      return `<tr class="${rowClass}"><td>${escapeHtml(row.truckId)}</td><td>${row.excelRow}</td><td>${escapeHtml(formatDatePlain(row.appt))}</td><td>${escapeHtml(formatDatePlain(row.finish))}</td><td>${faultPill(row)}</td><td class="comments">${escapeHtml(sanitizeClientText(row.comments || ""))}</td><td class="note">${escapeHtml(sanitizeClientText(getRowNote(row)))}</td></tr>`;
+    }
+
+    function sanitizeClientText(value) {
+      return cleanCell(value)
+        .replace(/@\s*\$\s*\d+(?:,\d{3})*(?:\.\d+)?/g, "")
+        .replace(/\$\s*\d+(?:,\d{3})*(?:\.\d+)?/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
+
+    function exportInteractionScript() {
+      return `
+        const faultFilter = document.getElementById("exportFaultFilter");
+        const sortSelect = document.getElementById("exportSortSelect");
+        const body = document.getElementById("exportDetentionBody");
+        const count = document.getElementById("exportResultCount");
+        const rows = Array.from(body.querySelectorAll("tr[data-fault]"));
+
+        function applyExportView() {
+          const fault = faultFilter.value;
+          const sort = sortSelect.value;
+          const visible = rows.filter((row) => fault === "all" || row.dataset.fault === fault);
+
+          visible.sort((a, b) => {
+            if (sort === "finishDelayDesc") return Number(b.dataset.finishDelay) - Number(a.dataset.finishDelay);
+            if (sort === "apptAsc") return Number(a.dataset.apptTs) - Number(b.dataset.apptTs);
+            if (sort === "truckAsc") return a.dataset.truck.localeCompare(b.dataset.truck, undefined, { numeric: true });
+            return Number(a.dataset.faultOrder) - Number(b.dataset.faultOrder) || Number(b.dataset.finishDelay) - Number(a.dataset.finishDelay);
+          });
+
+          rows.forEach((row) => { row.style.display = "none"; });
+          visible.forEach((row) => {
+            row.style.display = "";
+            body.appendChild(row);
+          });
+          count.textContent = visible.length + (visible.length === 1 ? " row" : " rows");
+        }
+
+        faultFilter.addEventListener("change", applyExportView);
+        sortSelect.addEventListener("change", applyExportView);
+        applyExportView();
+      `;
+    }
+
+    function exportPrintScript() {
+      return `
+        window.addEventListener("load", () => {
+          setTimeout(() => {
+            window.focus();
+            window.print();
+          }, 500);
+        });
+      `;
+    }
+
+    function openPdfReport(html) {
+      const reportWindow = window.open("", "_blank");
+      if (!reportWindow) {
+        showMessage("The PDF window was blocked. Allow pop-ups for this file, then try Export PDF report again.");
+        return;
+      }
+      reportWindow.document.open();
+      reportWindow.document.write(html);
+      reportWindow.document.close();
+      showMessage("PDF report opened. In the print window, choose Save as PDF.");
+    }
+
+    function getEventDate(values, event, baseDate) {
+      if (!event) return null;
+      const directValue = event.index !== -1 ? values[event.index] : "";
+      const dateValue = event.dateIndex !== -1 ? values[event.dateIndex] : "";
+      const timeValue = event.timeIndex !== -1 ? values[event.timeIndex] : "";
+      if (event.dateIndex !== -1 && event.timeIndex !== -1 && event.dateIndex !== event.timeIndex) {
+        const combined = combineDateAndTime(dateValue, timeValue, baseDate);
+        if (combined) return combined;
+      }
+      const dateBase = parseDateOnly(dateValue) || baseDate;
+      let parsed = parseDateTime(directValue, dateBase);
+      if (parsed && event.timeIndex !== -1 && event.timeIndex !== event.index) {
+        const combined = combineDateAndTime(parsed, timeValue, dateBase || parsed);
+        if (combined) parsed = combined;
+      }
+      if (!parsed && timeValue) parsed = parseDateTime(timeValue, dateBase);
+      return parsed;
+    }
+
+    function parseDateTime(value, baseDate) {
+      if (value === null || value === undefined || cleanCell(value) === "") return null;
+      if (value instanceof Date) {
+        if (Number.isNaN(value.getTime())) return null;
+        if (value.getFullYear() < 1950 && baseDate) return mergeDateAndTime(baseDate, value);
+        return new Date(value.getTime());
+      }
+      if (typeof value === "number") {
+        if (value > 0 && value < 1 && baseDate) return mergeDateAndTime(baseDate, excelSerialToDate(value));
+        if (value > 1) {
+          const parsed = excelSerialToDate(value);
+          if (parsed.getFullYear() < 1950 && baseDate) return mergeDateAndTime(baseDate, parsed);
+          return parsed;
+        }
+      }
+      const text = cleanCell(value);
+      const timeParts = parseTimeParts(text);
+      if (timeParts && baseDate) return new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), timeParts.hours, timeParts.minutes, timeParts.seconds);
+      const custom = parseKnownDate(text);
+      if (custom) return custom;
+      const parsed = new Date(text.replace(/\bat\b/i, " "));
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function parseDateOnly(value) {
+      const parsed = parseDateTime(value, null);
+      return parsed && parsed.getFullYear() >= 1950 ? new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()) : null;
+    }
+
+    function combineDateAndTime(dateValue, timeValue, fallbackDate) {
+      const date = parseDateOnly(dateValue) || fallbackDate;
+      if (!date) return parseDateTime(timeValue, null);
+      const time = parseDateTime(timeValue, date);
+      if (!time) return parseDateTime(dateValue, fallbackDate);
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes(), time.getSeconds());
+    }
+
+    function parseKnownDate(text) {
+      const normalized = text.trim().replace(/\s+/g, " ");
+      const match = normalized.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})(?:\s+|T|@)?(.*)$/);
+      if (!match) return null;
+      let year = Number(match[3]);
+      if (year < 100) year += year >= 70 ? 1900 : 2000;
+      const timeParts = parseTimeParts(match[4]) || { hours: 0, minutes: 0, seconds: 0 };
+      const date = new Date(year, Number(match[1]) - 1, Number(match[2]), timeParts.hours, timeParts.minutes, timeParts.seconds);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function parseTimeParts(text) {
+      const cleaned = cleanCell(text).toLowerCase().replace(/\./g, "").replace(/\s+/g, " ").trim();
+      if (!cleaned) return null;
+      const compact = cleaned.replace(/\s/g, "");
+      let match = compact.match(/^(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?(am|pm)?$/);
+      if (!match && /^\d{3,4}$/.test(compact)) {
+        const hourText = compact.length === 3 ? compact.slice(0, 1) : compact.slice(0, 2);
+        const minuteText = compact.length === 3 ? compact.slice(1) : compact.slice(2);
+        match = ["", hourText, minuteText, "0", ""];
+      }
+      if (!match) return null;
+      let hours = Number(match[1]);
+      const minutes = Number(match[2] || 0);
+      const seconds = Number(match[3] || 0);
+      const meridiem = match[4] || "";
+      if (Number.isNaN(hours) || Number.isNaN(minutes) || Number.isNaN(seconds)) return null;
+      if (meridiem === "pm" && hours < 12) hours += 12;
+      if (meridiem === "am" && hours === 12) hours = 0;
+      if (hours > 23 || minutes > 59 || seconds > 59) return null;
+      return { hours, minutes, seconds };
+    }
+
+    function excelSerialToDate(serial) {
+      const wholeDays = Math.floor(serial);
+      const milliseconds = Math.round((serial - wholeDays) * 86400000);
+      const utc = new Date(Date.UTC(1899, 11, 30 + wholeDays) + milliseconds);
+      return new Date(utc.getUTCFullYear(), utc.getUTCMonth(), utc.getUTCDate(), utc.getUTCHours(), utc.getUTCMinutes(), utc.getUTCSeconds());
+    }
+
+    function mergeDateAndTime(date, time) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate(), time.getHours(), time.getMinutes(), time.getSeconds());
+    }
+
+    function eventHasFullDate(values, event) {
+      if (!event) return false;
+      return [event.index, event.dateIndex].filter((index) => index !== -1).some((index) => valueHasFullDate(values[index]));
+    }
+
+    function valueHasFullDate(value) {
+      if (value instanceof Date) return !Number.isNaN(value.getTime()) && value.getFullYear() >= 1950;
+      if (typeof value === "number") return value >= 1;
+      const text = cleanCell(value);
+      return /\b\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}\b/.test(text) || /\b\d{4}[\/.-]\d{1,2}[\/.-]\d{1,2}\b/.test(text);
+    }
+
+    function moveAfterIfNeeded(date, anchor, canAdjust) {
+      if (!date || !anchor || !canAdjust) return date;
+      const adjusted = new Date(date.getTime());
+      let guard = 0;
+      while (diffMinutes(adjusted, anchor) < -60 && guard < 3) {
+        adjusted.setDate(adjusted.getDate() + 1);
+        guard += 1;
+      }
+      return adjusted;
+    }
+
+    function diffMinutes(later, earlier) {
+      return Math.round((later.getTime() - earlier.getTime()) / 60000);
+    }
+
+    function hasLateMark(values, indexes) {
+      return indexes.some((index) => looksLateValue(values[index]));
+    }
+
+    function looksLateValue(value) {
+      const text = normalize(cleanCell(value));
+      if (!text || /\b(no|not|never)\s+late\b/.test(text) || /\bon\s*time\b/.test(text)) return false;
+      return /^(y|yes|true|1|late|driver late)$/.test(text) || /\blate\b/.test(text);
+    }
+
+    function getJoinedValues(values, indexes) {
+      return indexes.map((index) => cleanCell(values[index])).filter(Boolean).join(" | ");
+    }
+
+    function getLikelyComments(text) {
+      const spillMatch = text.match(/[^|]*(spill[^|]*)/i);
+      const spaceMatch = text.match(/[^|]*(\bspace\b|\bsp(?:a\w*)?\b|s[\s/._-]*p[\s/._-]*a)[^|]*/i);
+      return cleanCell((spillMatch && spillMatch[0]) || (spaceMatch && spaceMatch[0]) || "");
+    }
+
+    function getTruckId(values, idIndex, excelRow) {
+      if (idIndex !== -1) {
+        const value = cleanCell(values[idIndex]);
+        if (value) return value;
+      }
+      return values.map(cleanCell).find((value) => value && value.length <= 24) || `Row ${excelRow}`;
+    }
+
+    function makeRowKey(truckId, excelRow) {
+      return `${state.fileName}::${state.activeSheet}::${excelRow}::${truckId}`;
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const next = text[index + 1];
+        if (char === "\"" && inQuotes && next === "\"") {
+          cell += "\"";
+          index += 1;
+        } else if (char === "\"") {
+          inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+          row.push(cell);
+          cell = "";
+        } else if ((char === "\n" || char === "\r") && !inQuotes) {
+          if (char === "\r" && next === "\n") index += 1;
+          row.push(cell);
+          if (row.some((value) => cleanCell(value) !== "")) rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += char;
+        }
+      }
+      row.push(cell);
+      if (row.some((value) => cleanCell(value) !== "")) rows.push(row);
+      return rows;
+    }
+
+    function normalize(value) {
+      return cleanCell(value).toLowerCase().replace(/[#_]/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+    }
+
+    function cleanCell(value) {
+      if (value === null || value === undefined) return "";
+      if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : value.toLocaleString();
+      return String(value).trim();
+    }
+
+    function makeUniqueHeaders(headers) {
+      const counts = new Map();
+      return headers.map((header) => {
+        const base = header || "Column";
+        const count = counts.get(base) || 0;
+        counts.set(base, count + 1);
+        return count === 0 ? base : `${base} ${count + 1}`;
+      });
+    }
+
+    function compareNumbers(a, b) {
+      const left = typeof a === "number" ? a : Number.NEGATIVE_INFINITY;
+      const right = typeof b === "number" ? b : Number.NEGATIVE_INFINITY;
+      return left - right;
+    }
+
+    function compareDates(a, b) {
+      const left = a instanceof Date ? a.getTime() : Number.MAX_SAFE_INTEGER;
+      const right = b instanceof Date ? b.getTime() : Number.MAX_SAFE_INTEGER;
+      return left - right;
+    }
+
+    function formatDate(date, missing) {
+      if (!date) return missing ? `<span class="pill review">Missing</span>` : "";
+      return escapeHtml(formatDatePlain(date));
+    }
+
+    function formatDatePlain(date) {
+      return date ? date.toLocaleString([], { month: "numeric", day: "numeric", year: "2-digit", hour: "numeric", minute: "2-digit" }) : "Missing";
+    }
+
+    function formatDelay(minutes) {
+      return escapeHtml(formatDelayPlain(minutes));
+    }
+
+    function formatDelayPlain(minutes) {
+      if (typeof minutes !== "number") return "Missing";
+      const sign = minutes < 0 ? "-" : "";
+      const absolute = Math.abs(minutes);
+      const hours = Math.floor(absolute / 60);
+      const mins = absolute % 60;
+      return `${sign}${hours}h ${String(mins).padStart(2, "0")}m`;
+    }
+
+    function formatMoney(value) {
+      const amount = Number.isFinite(Number(value)) ? Number(value) : 0;
+      return amount.toLocaleString([], { style: "currency", currency: "USD" });
+    }
+
+    function formatHours(minutes) {
+      const hours = (Math.max(0, Number(minutes) || 0) / 60);
+      return `${hours.toLocaleString([], { minimumFractionDigits: hours % 1 ? 2 : 0, maximumFractionDigits: 2 })} hr${hours === 1 ? "" : "s"}`;
+    }
+
+    function delayText(minutes) {
+      if (typeof minutes !== "number") return "missing";
+      if (minutes === 0) return "at appointment time";
+      return `${durationText(Math.abs(minutes))} ${minutes > 0 ? "after" : "before"} appointment`;
+    }
+
+    function durationText(minutes) {
+      if (typeof minutes !== "number") return "missing";
+      const absolute = Math.abs(minutes);
+      const hours = Math.floor(absolute / 60);
+      const mins = absolute % 60;
+      if (hours && mins) return `${hours}h ${String(mins).padStart(2, "0")}m`;
+      if (hours) return `${hours}h`;
+      return `${mins}m`;
+    }
+
+    function sanitizeFileName(name) {
+      return cleanCell(name).replace(/[<>:"/\\|?*\x00-\x1F]/g, "-") || "detention-report";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
+    }
+
+    let toastTimer = null;
+    function showMessage(message) {
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.add("show");
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+    }
+
+    render();
+  </script>
+</body>
+</html>

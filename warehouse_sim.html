@@ -147,6 +147,23 @@ const STATE = {
   peopleAnnoyed:        [], // ids of NPCs pissed off this shift
   toddFreezerRetreats:  0,  // count of Todd freezer retreats
   chandlerQuitCount:    0,  // "updating my resume" count
+
+  // Clerks (Michelle + Christine)
+  clerkOnDock:         null,  // 'michelle' | 'christine' | null
+  clerkOnDockTimer:    0,     // ms remaining for current dock visit
+  clerkDockNextTimer:  38000, // ms until next clerk-on-dock visit
+  clerkPesterTimer:    0,     // ms until clerk asks James another question
+  michelleFoodTimer:   65000, // ms until Michelle randomly asks player for food
+  michelleAskingFood:  false, // currently out asking for food (separate from dock complaint)
+  michelleFoodAccepts: 0,     // times you bought her food (achievement)
+  michelleFoodDeclines:0,     // times you walked away
+  michelleAnnoyance:   0,     // 0-100 — when full, she snaps and kills Chance
+  michelleChanceTimer: 0,     // ms until Chance pesters Michelle again
+  michelleKillCount:   0,     // total Chance murders this shift (achievement)
+  chanceDead:          false, // Chance flatlined, awaiting respawn
+  chanceRespawnTimer:  0,     // ms until Chance can respawn (after Michelle leaves dock)
+  truckDelayTimer:     0,     // ms current assigned truck has been sitting
+  clerkVisitReason:    null,  // delay | random | food
 };
 
 // Zone layout
@@ -154,6 +171,7 @@ const ZONES = {
   outside:    { x:0,    y:0,    w:WW,   h:170,  color:0x1e3a10, name:'Outside / Smoking Area' },
   dock:       { x:0,    y:170,  w:WW,   h:300,  color:0x2a2a2a, name:'Dock Area' },
   floor:      { x:0,    y:470,  w:WW,   h:300,  color:0x383838, name:'Warehouse Floor' },
+  clerkOffice:{ x:1500, y:480,  w:290,  h:280,  color:0x4a2a55, name:'Clerk Office 📋' },
   breakRoom:  { x:0,    y:770,  w:420,  h:330,  color:0x2a1a1a, name:'Break Room' },
   restroom:   { x:420,  y:770,  w:280,  h:330,  color:0x1a2a2a, name:'Restroom' },
   dryStorage: { x:700,  y:770,  w:400,  h:330,  color:0x2a2a1a, name:'Dry Storage' },
@@ -397,6 +415,50 @@ const NPC_DEFS = [
     ],
     choices:['Suck up to him 😇', 'Tell him to mind his business 😤', 'Throw Chandler under the bus 🍞', 'BOLT 🏃'],
   },
+  { id:'michelle', name:'Michelle', title:'(Clerk · Sweet & Rude)', color:0xff66cc, zone:'clerkOffice', patrol:false,
+    appearance:{ shirt:0xff80d0, pants:0x441a55, skin:0xe8b8a0, hair:0x2a1a08, ponytail:true },
+    lines:[
+      "Hi sweetie. Now move out of my way please.",
+      "Aww you look TIRED. That's so sad for you.",
+      "I love you guys! ...I mean — individually I have opinions.",
+      "Did you buy me food yet? No? Then I don't know you.",
+      "Smile! ...That looks fake. Try again.",
+      "I run this office. I just look small. Don't get it twisted.",
+      "I'd say good morning but it's noon and you look BAD.",
+      "Yes I'm short. No I won't get the top shelf. Be useful.",
+      "Aww you're trying. That's the important part I guess.",
+      "I have a candy drawer. You can't have any.",
+      "If I asked who's bringing me lunch and you said nobody, I'd cry. So who's bringing me lunch?",
+      "Hi! I need a favor. No it's not little. Yes you have to do it.",
+      "I'm the nicest mean person you'll ever meet. Cherish me.",
+      "Are you BUSY busy or busy enough to walk to the gas station for me?",
+      "Christine says I'm rude. Christine says a LOT of things.",
+      "Chance better stay AWAY from this office today. I'm serious.",
+      "James told me he's stressed. I told him stress is a CHOICE. He didn't laugh.",
+    ],
+    choices:["Hey Michelle 👋","Need anything? 🥡","Buy her food 💸","Snitch on Chance 😈"],
+  },
+  { id:'christine', name:'Christine', title:'(Clerk · Serious)', color:0x8866cc, zone:'clerkOffice', patrol:false,
+    appearance:{ shirt:0x6644aa, pants:0x2a223a, skin:0xd8b888, hair:0x6a4a2a, ponytail:true },
+    lines:[
+      "Did this truck get logged? Be specific.",
+      "Where is the BOL? I need the BOL.",
+      "I'm not annoyed. I'm just... done. There's a difference.",
+      "If James asks, I never said it. But he's stressing me out.",
+      "I came to work to do paperwork, not host a circus.",
+      "Why is the dock loud? Why is the dock ALWAYS loud?",
+      "I have nine open tickets. Don't add to them. PLEASE.",
+      "Michelle is wonderful. She is also a LOT. Both are true.",
+      "I will fix it. I always fix it. I'm just letting you know I'm tired of fixing it.",
+      "Where is the paperwork? The paperwork I asked for. THIS MORNING.",
+      "You want me to file what now? Repeat that slower.",
+      "Coffee is the only thing keeping this office functional today.",
+      "I have a spreadsheet for that. I have a spreadsheet for everything.",
+      "Pam emailed me. I haven't opened it. I won't open it.",
+      "Chance was in here earlier. I asked him to leave. Politely. Twice.",
+    ],
+    choices:["Hey Christine 👋","Apologize for the dock 🙏","Ask about James 😬","Help with paperwork 📋"],
+  },
   { id:'pam', name:'Pam', title:'(The Manager)', color:0xcc3333, zone:'dock', patrol:true,
     appearance:{ shirt:0xcc2222, pants:0x221122, skin:0xf0c890, hair:0xddcc88, blazer:true, clipboard:true },
     lines:[
@@ -472,6 +534,18 @@ const NPC_EMOTIONS = {
     { id:'reporting', label:'Reporting', icon:'📋', color:0xff6600, lines:['"This is going in the log."', '"James needs to know about this immediately."'] },
     { id:'smug', label:'Smug', icon:'😏', color:0xffdd44, lines:['"I knew it. I always know."', '"I do this job well. Not everyone can say that."'] },
     { id:'nervous', label:'Nervous', icon:'😰', color:0xaaddff, lines:['"I hope James thinks I\'m doing well."', '"Am I being too aggressive? No. I\'m being appropriately thorough."'] },
+  ],
+  michelle: [
+    { id:'sweet',  label:'Sweet',   icon:'🥰', color:0xff99dd, lines:['"You\'re my FAVORITE today."', '"Aww. I love you. Now do me a favor."'] },
+    { id:'rude',   label:'Snippy',  icon:'😏', color:0xff66aa, lines:['"That\'s a YOU problem."', '"Mhm. Not my business. Not my MONEY. Not my issue."'] },
+    { id:'hungry', label:'Hungry',  icon:'🍔', color:0xffcc66, lines:['"WHO is bringing me food? Speak up."', '"I will WALK off this dock unless somebody buys me lunch."'] },
+    { id:'furious',label:'Furious', icon:'🔥', color:0xff2244, lines:['"I am going to END someone today."', '"CHANCE. I have HAD IT."', '"I am SHORT. I am QUICK. And I have NOTHING to lose."'] },
+  ],
+  christine: [
+    { id:'focused',  label:'Heads Down', icon:'📑', color:0x9988dd, lines:['"Filing. Don\'t talk to me. Filing."', '"I have a system. The system is fragile."'] },
+    { id:'annoyed',  label:'Annoyed',    icon:'😒', color:0xb088cc, lines:['"Really? Right now? Okay."', '"I love it when the dock makes my job harder. Love it."'] },
+    { id:'frazzled', label:'Frazzled',   icon:'🌪️', color:0xff8844, lines:['"Nine tickets. NINE. And it\'s 10AM."', '"James is in a MOOD and I can feel it through the walls."'] },
+    { id:'done',     label:'Done',       icon:'☕', color:0xccaa88, lines:['"I am at coffee number four. Do NOT push me."', '"I clocked out emotionally an hour ago. The body is still here."'] },
   ],
 };
 
@@ -1175,6 +1249,96 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(0x888888, 1); g.fillRoundedRect(344, 544, 8, 10, 2);
     g.fillStyle(0xeeaa00, 1); g.fillRect(396, 542, 14, 5); g.fillRect(396, 551, 14, 5);
     g.fillStyle(0x222222, 1); g.fillCircle(358, 559, 5); g.fillCircle(390, 559, 5);
+
+    // ════════════════════════════════════════════════════════
+    //  CLERK OFFICE (right side of warehouse floor)
+    // ════════════════════════════════════════════════════════
+    {
+      const ox = 1500, oy = 480, ow = 290, oh = 280;
+      // Office floor (warm purple/beige tile)
+      g.fillStyle(0x3a2a48, 1); g.fillRect(ox, oy, ow, oh);
+      // Subtle carpet tile pattern
+      g.lineStyle(1, 0x4a3458, 0.65);
+      for(let x=ox; x<ox+ow; x+=40){ g.lineBetween(x, oy, x, oy+oh); }
+      for(let y=oy; y<oy+oh; y+=40){ g.lineBetween(ox, y, ox+ow, y); }
+      // Outer walls (drywall beige)
+      g.lineStyle(8, 0xddc8a0, 1);
+      g.strokeRect(ox, oy, ow, oh);
+      // Door cut-out on left wall (gap in wall, facing the floor)
+      g.lineStyle(8, 0x3a2a48, 1);
+      g.lineBetween(ox, oy+oh-90, ox, oy+oh-40);
+      // Doorway threshold
+      g.fillStyle(0x886644, 1);
+      g.fillRect(ox-2, oy+oh-90, 6, 50);
+      // OFFICE sign above door (gold plate)
+      g.fillStyle(0xffd700, 1);
+      g.fillRoundedRect(ox+18, oy+8, 130, 22, 4);
+      g.lineStyle(2, 0x886622, 1);
+      g.strokeRoundedRect(ox+18, oy+8, 130, 22, 4);
+      // Sign text — we draw with a text object below; just the plate here
+
+      // Michelle's desk (pink, near top of office)
+      g.fillStyle(0x665566, 1); g.fillRect(ox+30, oy+50, 110, 60);
+      g.fillStyle(0x9088a0, 1); g.fillRect(ox+30, oy+50, 110, 6); // desk top edge highlight
+      // Computer monitor on Michelle's desk
+      g.fillStyle(0x111111, 1); g.fillRect(ox+58, oy+58, 56, 38);
+      g.fillStyle(0x66ddff, 0.7); g.fillRect(ox+62, oy+62, 48, 30);
+      g.fillStyle(0x222222, 1); g.fillRect(ox+78, oy+96, 16, 6);
+      // Pink coffee mug
+      g.fillStyle(0xff66cc, 1); g.fillCircle(ox+48, oy+72, 6);
+      g.fillStyle(0x000000, 1); g.fillCircle(ox+48, oy+71, 3);
+      // Candy jar (with candy)
+      g.fillStyle(0xcceeff, 0.7); g.fillRoundedRect(ox+120, oy+62, 14, 22, 3);
+      g.fillStyle(0xff3399, 1); g.fillCircle(ox+125, oy+76, 2);
+      g.fillStyle(0xffff00, 1); g.fillCircle(ox+129, oy+78, 2);
+      g.fillStyle(0x33cc66, 1); g.fillCircle(ox+126, oy+82, 2);
+
+      // Christine's desk (purple, lower-right area)
+      g.fillStyle(0x554466, 1); g.fillRect(ox+150, oy+150, 110, 60);
+      g.fillStyle(0x7766aa, 1); g.fillRect(ox+150, oy+150, 110, 6);
+      // Stack of paperwork
+      g.fillStyle(0xeeeec0, 1);
+      g.fillRect(ox+160, oy+158, 32, 26);
+      g.fillRect(ox+162, oy+155, 32, 26);
+      g.fillRect(ox+164, oy+152, 32, 26);
+      g.lineStyle(1, 0x888866, 0.7);
+      g.strokeRect(ox+164, oy+152, 32, 26);
+      // Christine's computer (more serious — bigger monitor)
+      g.fillStyle(0x111111, 1); g.fillRect(ox+208, oy+155, 48, 36);
+      g.fillStyle(0x44aaff, 0.6); g.fillRect(ox+211, oy+158, 42, 30);
+      g.fillStyle(0x222222, 1); g.fillRect(ox+224, oy+191, 16, 5);
+      // Coffee mug (boring black)
+      g.fillStyle(0x222222, 1); g.fillCircle(ox+165, oy+138, 6);
+      // Filing cabinet
+      g.fillStyle(0x554433, 1); g.fillRect(ox+220, oy+45, 50, 80);
+      g.fillStyle(0x886644, 1); g.fillRect(ox+220, oy+45, 50, 4); // top
+      g.lineStyle(1, 0x332211, 1);
+      g.strokeRect(ox+220, oy+45, 50, 26);
+      g.strokeRect(ox+220, oy+71, 50, 26);
+      g.strokeRect(ox+220, oy+97, 50, 28);
+      // Drawer handles
+      g.fillStyle(0xaaaaaa, 1);
+      g.fillRect(ox+238, oy+57, 14, 3);
+      g.fillRect(ox+238, oy+83, 14, 3);
+      g.fillRect(ox+238, oy+110, 14, 3);
+
+      // Wall calendar
+      g.fillStyle(0xffffff, 1); g.fillRect(ox+170, oy+18, 36, 28);
+      g.fillStyle(0xcc2244, 1); g.fillRect(ox+170, oy+18, 36, 8);
+      g.lineStyle(1, 0xaaaaaa, 1);
+      for(let i=1; i<5; i++){ g.lineBetween(ox+170, oy+18+8+i*5, ox+206, oy+18+8+i*5); }
+
+      // Office text labels (drawn as text objects so they always render on top)
+      this.add.text(ox+ow/2, oy+19, 'CLERK OFFICE', {
+        fontSize:'10px', fill:'#5a3a1a', fontFamily:'monospace', fontStyle:'bold'
+      }).setOrigin(0.5).setDepth(2);
+      this.add.text(ox+85, oy+115, 'Michelle', {
+        fontSize:'8px', fill:'#ff99dd', fontFamily:'monospace', fontStyle:'bold'
+      }).setOrigin(0.5).setDepth(2);
+      this.add.text(ox+205, oy+215, 'Christine', {
+        fontSize:'8px', fill:'#bb99dd', fontFamily:'monospace', fontStyle:'bold'
+      }).setOrigin(0.5).setDepth(2);
+    }
 
     // ════════════════════════════════════════════════════════
     //  BREAK ROOM
@@ -2567,6 +2731,56 @@ class GameScene extends Phaser.Scene {
         });
       }
     }
+    else if(npc.id === 'michelle'){
+      if(idx===0){
+        response = '"Hi sweetie. That was friendly. Suspicious, but friendly."';
+        scoreChange = 10;
+        STATE.michelleAnnoyance = Math.max(0, STATE.michelleAnnoyance - 8);
+      } else if(idx===1){
+        response = '"Yes. Bring me food, make Chance stop talking, and tell James I need a real update."';
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 5);
+        suspChange = 3;
+        const james = this.npcs.find(n=>n.id==='james');
+        if(james) this.time.delayedCall(800, ()=> this.showBubble(james, '"Why is Michelle asking through you now? Great. Perfect."'));
+      } else if(idx===2){
+        response = '"Aww. See? Useful AND sweet. Do not let it go to your head."';
+        scoreChange = -20;
+        energyChange = 8;
+        STATE.michelleFoodAccepts++;
+        STATE.michelleAnnoyance = Math.max(0, STATE.michelleAnnoyance - 30);
+        this.floatText(this.player.x, this.player.y - 35, 'Bought Michelle food. Peace restored briefly.', '#ff99dd');
+        if(STATE.michelleAskingFood) this.sendClerkBackToOffice('michelle');
+      } else {
+        response = '"Chance said WHAT? Say less. I am going to handle that tiny emergency."';
+        STATE.michelleAnnoyance = Math.min(100, STATE.michelleAnnoyance + 35);
+        const chance = this.npcs.find(n=>n.id==='chance');
+        if(chance){
+          npc.targetX = chance.sprite.x - 40;
+          npc.targetY = chance.sprite.y;
+          npc.running = true;
+        }
+      }
+    }
+    else if(npc.id === 'christine'){
+      if(idx===0){
+        response = '"Hi. Please tell me you have paperwork and not a problem."';
+        scoreChange = 5;
+      } else if(idx===1){
+        response = '"Thank you. That does not fix it, but I appreciate the rare accountability."';
+        suspChange = -8;
+        scoreChange = 15;
+      } else if(idx===2){
+        response = '"James is answering questions with noises now. That is where we are as an operation."';
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 8);
+        const james = this.npcs.find(n=>n.id==='james');
+        if(james) this.time.delayedCall(900, ()=> this.showBubble(james, '"Christine, I heard my name and I am already tired."'));
+      } else {
+        response = '"Good. File this, stamp that, and pretend the dock is a normal place."';
+        scoreChange = 35;
+        energyChange = -4;
+        STATE.suspicion = Math.max(0, STATE.suspicion - 8);
+      }
+    }
     else if(npc.id === 'pam'){
       if(idx===0){ // Pretend to work
         response = '"I\'m watching you. Very carefully."'; suspChange = -5;
@@ -2597,6 +2811,8 @@ class GameScene extends Phaser.Scene {
     if(npc.id === 'pam' && idx === 2) this.nudgeEmotion('chandler', 'angry', 22000);
     if(npc.id === 'chance' && idx === 2) this.nudgeEmotion('drew', 'panicked', 22000);
     if(npc.id === 'marcus') this.nudgeEmotion('marcus', idx === 0 ? 'smug' : idx === 1 ? 'reporting' : idx === 2 ? 'smug' : 'suspicious');
+    if(npc.id === 'michelle') this.nudgeEmotion('michelle', idx === 2 ? 'sweet' : idx === 3 ? 'furious' : 'rude');
+    if(npc.id === 'christine') this.nudgeEmotion('christine', idx === 1 ? 'focused' : idx === 2 ? 'annoyed' : idx === 3 ? 'done' : 'focused');
 
     // Show response
     this.dlgText.setText(npc.name+': '+response);
@@ -2851,7 +3067,7 @@ class GameScene extends Phaser.Scene {
     this.mgBar.fillStyle(0x44ff44,1); this.mgBar.fillRect(bx,by+24,bw*pp,8);
   }
 
-  endMiniGame(success){
+  endMiniGame(success, opts = {}){
     if(!STATE.miniGameActive) return;
     STATE.miniGameActive = false;
     if(this.mgLoop){ this.mgLoop.remove(); this.mgLoop=null; }
@@ -2862,7 +3078,7 @@ class GameScene extends Phaser.Scene {
     if(this._bayUpdateLoop){ this._bayUpdateLoop.remove(); this._bayUpdateLoop = null; }
     if(this._bayKeyHandler){ window.removeEventListener('keydown', this._bayKeyHandler); this._bayKeyHandler = null; }
     if(this._bayKeyUpHandler){ window.removeEventListener('keyup', this._bayKeyUpHandler); this._bayKeyUpHandler = null; }
-    ['_bayBg','_bayMid','_bayFg','_bayTitle','_bayPrompt','_bayPalletTxt','_bayQuit','_bayTapE','_bayDimOverlay'].forEach(k=>{
+    ['_bayBg','_bayMid','_bayFg','_bayTitle','_bayPrompt','_bayPalletTxt','_bayQuit','_bayRageQuit','_bayJamesTxt','_bayTapE','_bayDimOverlay'].forEach(k=>{
       if(this[k] && this[k].destroy){ this[k].destroy(); }
       this[k] = null;
     });
@@ -2877,7 +3093,7 @@ class GameScene extends Phaser.Scene {
     else        SFX.miss();
 
     const truck = this.trucks[STATE.currentTruck];
-    if(truck){
+    if(truck && !opts.skipScore){
       const ratio = this.mgHits / this.mgPalletsTotal;
       const bonus = Math.floor(ratio * 100);
       STATE.score += bonus;
@@ -2900,7 +3116,9 @@ class GameScene extends Phaser.Scene {
     STATE.currentTruck = null;
 
     // Check next assignment
-    this.time.delayedCall(1500, ()=>{ if(!STATE.dialogueActive) this.showAssignment(); });
+    if(!opts.skipAssignment){
+      this.time.delayedCall(1500, ()=>{ if(!STATE.dialogueActive) this.showAssignment(); });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2920,7 +3138,9 @@ class GameScene extends Phaser.Scene {
       palletInTrailer: this.mgPalletsTotal,
       palletInForklift: false,
       palletsStored: 0,
-      promptFlash: 0
+      promptFlash: 0,
+      jamesHeckleTimer: 900,
+      jamesHeckleIndex: 0
     };
 
     // Dim overlay so the bay scene reads as separate from the world
@@ -2956,6 +3176,21 @@ class GameScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(106).setInteractive();
     this._bayQuit.on('pointerdown', ()=> this.endMiniGame(false));
 
+    this._bayRageQuit = this.add.text(14, 42, '[F] Tell James to fuck off', {
+      fontSize:'10px', fill:'#ff9b6a', fontFamily:'monospace', fontStyle:'bold',
+      backgroundColor:'rgba(40,10,0,0.55)', padding:{ x:6, y:3 }
+    }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(106).setInteractive({ useHandCursor:true });
+    this._bayRageQuit.on('pointerover', ()=> this._bayRageQuit.setStyle({ fill:'#ffffff' }));
+    this._bayRageQuit.on('pointerout',  ()=> this._bayRageQuit.setStyle({ fill:'#ff9b6a' }));
+    this._bayRageQuit.on('pointerdown', ()=> this.rageQuitUnload());
+
+    this._bayJamesTxt = this.add.text(GW/2, 48, 'James: I am watching this unload.', {
+      fontSize:'12px', fill:'#ffd36a', fontFamily:'monospace', fontStyle:'bold',
+      stroke:'#000', strokeThickness:4, align:'center',
+      wordWrap:{ width:GW-220 }, backgroundColor:'rgba(0,0,0,0.35)',
+      padding:{ x:8, y:4 }
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(106);
+
     // Mobile: tap zone for E
     this._bayTapE = this.add.text(GW-14, GH-22, '🅴 ACTION', {
       fontSize:'13px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold',
@@ -2976,6 +3211,7 @@ class GameScene extends Phaser.Scene {
       if(k==='e')                    this._bayKeys.e = true;
       if(k===' ')                    this._bayKeys.space = true;
       if(k==='q')                    this.endMiniGame(false);
+      if(k==='f')                    this.rageQuitUnload();
       // Prevent page scroll on arrows/space
       if(['arrowup','arrowdown','arrowleft','arrowright',' '].indexOf(k) !== -1) e.preventDefault && e.preventDefault();
     };
@@ -3003,6 +3239,22 @@ class GameScene extends Phaser.Scene {
   _updateBayScene(dtMs){
     const b = this._bay; if(!b) return;
     const dt = dtMs / 1000;
+
+    b.jamesHeckleTimer -= dtMs;
+    if(b.jamesHeckleTimer <= 0 && this._bayJamesTxt){
+      const heckles = [
+        'James: That forklift does have brakes. Try forming a relationship with them.',
+        'James: I have seen shopping carts with better lane discipline.',
+        'James: The pallet is not scared of you. Pick it up.',
+        'James: If you unload any slower, payroll is going to invoice the calendar.',
+        'James: Safety first. Competence would be a close second.',
+        'James: That truck has been here so long it is starting to get mail.'
+      ];
+      this._bayJamesTxt.setText(heckles[b.jamesHeckleIndex % heckles.length]);
+      b.jamesHeckleIndex++;
+      b.jamesHeckleTimer = 4200 + Math.random() * 2600;
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 1);
+    }
 
     if(b.phase === 'walking'){
       // Auto-walk in from off-screen left, animate stride
@@ -3100,6 +3352,37 @@ class GameScene extends Phaser.Scene {
 
     if(b.promptFlash > 0) b.promptFlash -= dt;
     this._drawBayScene();
+  }
+
+  rageQuitUnload(){
+    if(!STATE.miniGameActive) return;
+    const james = this.npcs.find(n=>n.id==='james');
+    this.endMiniGame(false, { skipScore:true, skipAssignment:true, rageQuit:true });
+    STATE.suspicion = Math.min(100, STATE.suspicion + 18);
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 28);
+    STATE.beingChased = true;
+    STATE.playerRunBoost = 4500;
+    if(this.player){
+      this.player.setVisible(true);
+      this.player.setPosition(520, 610);
+    }
+    if(james){
+      james.running = true;
+      james.chaseTarget = 'playerNoBreakroom';
+      james.targetX = this.player.x;
+      james.targetY = this.player.y;
+      this.showBubble(james, '"WHAT DID YOU JUST SAY TO ME?!"');
+    }
+    this.floatText(this.player.x, this.player.y - 35, 'Run to the breakroom. James will not enter it.', '#ff6644');
+    this.cameras.main.shake(300, 0.012);
+    this.time.delayedCall(12000, ()=>{
+      if(STATE.beingChased){
+        STATE.beingChased = false;
+        STATE.playerRunBoost = 0;
+        const j = this.npcs.find(n=>n.id==='james');
+        if(j){ j.running = false; j.chaseTarget = null; }
+      }
+    });
   }
 
   _drawBayScene(){
@@ -3266,6 +3549,23 @@ class GameScene extends Phaser.Scene {
       this._bayMid.fillStyle(0x44ff66, 0.08);
       this._bayMid.fillCircle(b.truck.x, b.truck.y+90, 90);
     }
+
+    // James on the dock, supervising too closely
+    const jx = 74, jy = 154;
+    this._bayMid.fillStyle(0x000000, 0.35);
+    this._bayMid.fillEllipse(jx, jy+28, 30, 8);
+    this._bayMid.fillStyle(0x233f7a, 1);
+    this._bayMid.fillRoundedRect(jx-12, jy-18, 24, 28, 4);
+    this._bayMid.fillStyle(0x1b2b55, 1);
+    this._bayMid.fillRect(jx-10, jy+8, 8, 24);
+    this._bayMid.fillRect(jx+2, jy+8, 8, 24);
+    this._bayMid.fillStyle(0xe1a878, 1);
+    this._bayMid.fillCircle(jx, jy-27, 9);
+    this._bayMid.fillStyle(0x2b1b10, 1);
+    this._bayMid.fillEllipse(jx, jy-33, 18, 9);
+    this._bayMid.lineStyle(2, 0xffd36a, 0.95);
+    this._bayMid.lineBetween(jx-18, jy-6, jx-32, jy+4 + Math.sin(t*0.01)*5);
+    this._bayMid.lineBetween(jx+18, jy-6, jx+34, jy-14 + Math.sin(t*0.012)*5);
 
     // Worker (only visible before mounting)
     if(b.phase === 'walking' || b.phase === 'atForklift'){
@@ -3578,9 +3878,12 @@ class GameScene extends Phaser.Scene {
       this.scMsgPool.push(t);
     }
 
-    this.scLeaveTxt = this.add.text(PX + PW/2, GH - 14, '[ESC] Leave smoke area', {
+    this.scLeaveTxt = this.add.text(PX + PW/2, GH - 14, '[ESC] Leave smoke area  |  Click here', {
       fontSize:'9px', fill:'rgba(205,255,210,0.62)', fontFamily:'monospace'
-    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(73).setVisible(false);
+    }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(73).setVisible(false).setInteractive({ useHandCursor:true });
+    this.scLeaveTxt.on('pointerover', ()=> this.scLeaveTxt.setStyle({ fill:'#ffffff' }));
+    this.scLeaveTxt.on('pointerout',  ()=> this.scLeaveTxt.setStyle({ fill:'rgba(205,255,210,0.62)' }));
+    this.scLeaveTxt.on('pointerdown', ()=> this.leaveSmokeBreak());
 
     this._scMessages = [];
     this._scParticleTimer = null;
@@ -3663,6 +3966,14 @@ class GameScene extends Phaser.Scene {
       this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
     });
     if(this._scParticleTimer){ this._scParticleTimer.remove(); this._scParticleTimer = null; }
+  }
+
+  leaveSmokeBreak(){
+    if(STATE.dialogueActive) this.closeDialogue();
+    if(STATE.smokeChatOpen) this.closeSmokeChat();
+    STATE.smokingNPCs = [];
+    STATE.jamesSmokeParty = false;
+    this.floatText(this.player.x, this.player.y - 25, 'Smoke break over. Back to work.', '#aaffaa');
   }
 
   postSmokeChat(id, text){
@@ -3769,27 +4080,22 @@ class GameScene extends Phaser.Scene {
     const roastAlmostReady = !chandlerHere && (jamesHere || chanceHere || leeHere);
     const partyMode = STATE.jamesSmokeParty; // crew was called — always show party options
 
-    // Build dynamic choices — roast options always available when crew is here
+    // Build dynamic choices. Smoke breaks now begin with a scenario menu so
+    // conversations are readable and feel like real break-room moments.
     const choices = [];
     if(partyMode){
-      // Full crew assembled — show the rowdy options + more
-      choices.push({ label:'🍞 Talk shit about Chandler',   id:'partyChandler',   hot:true });
-      choices.push({ label:'🍔 Call Drew fat',              id:'partyDrewFat',    hot:true });
-      choices.push({ label:'🥡 Scream EGGROLL at Lee 😈',  id:'partyLeeEggroll', hot:true });
-      choices.push({ label:'🤰 Put Jorie on Todd',         id:'partyJorieTold',  hot:true });
+      choices.push({ label:'Talk about slow trucks', id:'scenarioSlowTruck' });
+      choices.push({ label:'Office drama',           id:'scenarioOfficeDrama' });
+      choices.push({ label:'James stress check',     id:'scenarioJamesStress' });
+      choices.push({ label:'Chaos / roast menu',     id:'scenarioRoastMenu', hot:true });
     } else {
-      // Solo or partial crew — can still start roasts + call people out
-      if(roastReady) choices.push({ label:'🔥 GROUP ROAST — DO IT NOW',    id:'groupRoast',    hot:true });
-      if(chandlerHere || partyMode) choices.push({ label:'🍞 Roast Chandler',       id:'partyChandler', hot:true });
-      if(leeHere      || partyMode) choices.push({ label:'🥡 Scream EGGROLL at Lee', id:'partyLeeEggroll', hot:true });
-      if(!chandlerHere) choices.push({ label:'📞 Call Chandler out here',  id:'callChandler' });
-      if(!jamesHere)    choices.push({ label:'📞 Call James out here',     id:'callJames'    });
-      if(!chanceHere)   choices.push({ label:'📞 Call Chance out here',    id:'callChance'   });
-      if(!leeHere)      choices.push({ label:'📞 Call Lee out here',       id:'callLee'      });
-      choices.push({ label:'💨 Just chill (+energy)',       id:'chill' });
+      choices.push({ label:'Talk about slow trucks', id:'scenarioSlowTruck' });
+      choices.push({ label:'Office drama',           id:'scenarioOfficeDrama' });
+      choices.push({ label:'Food run conversation',  id:'scenarioFoodRun' });
+      choices.push({ label:'Invite someone out',     id:'scenarioInviteMenu' });
     }
 
-    // ── BUILD THE DIALOGUE UI ──
+    // Build the dialogue UI
     STATE.dialogueActive = true;
 
     // Draw dialogue box
@@ -3819,8 +4125,8 @@ class GameScene extends Phaser.Scene {
     if(leeHere)      hereList.push('Lee 💕');
     if(jorieHere)    hereList.push('Jorie 🤰');
     const hereTxt = partyMode
-      ? '🔥 The whole crew is out here. What you tryna do? 🔥'
-      : (hereList.length ? 'Here now: '+hereList.join(', ') : 'Just you out here.');
+      ? 'Pick a smoke-break conversation. The chat panel keeps it readable.'
+      : (hereList.length ? 'Here now: '+hereList.join(', ')+' - choose a scenario.' : 'Just you out here. Choose a scenario or invite someone.');
     this.dlgText.setText(hereTxt).setStyle({fill: partyMode ? '#ff6a00' : '#aaffaa'}).setVisible(true);
 
     // Hide unused buttons first
@@ -3850,13 +4156,40 @@ class GameScene extends Phaser.Scene {
       npc.targetX = sx + (Math.random()-0.5)*80;
       npc.targetY = sy + (Math.random()-0.5)*40;
       if(!STATE.smokeCalledNPCs.includes(id)) STATE.smokeCalledNPCs.push(id);
-      this.time.delayedCall(300, ()=>{ this.showBubble(npc, line); });
       this.floatText(this.player.x, this.player.y, `📞 ${npc.name} is heading out!`, '#aaffaa');
-      // Also log to smoke chat
       this.time.delayedCall(320, ()=> this.postSmokeChat(id, line));
     };
 
-    if(choiceId === 'callChandler'){
+    if(choiceId === 'scenarioSlowTruck'){
+      this.startSmokeScenario('slowTruck');
+    }
+    else if(choiceId === 'scenarioOfficeDrama'){
+      this.startSmokeScenario('officeDrama');
+    }
+    else if(choiceId === 'scenarioJamesStress'){
+      this.startSmokeScenario('jamesStress');
+    }
+    else if(choiceId === 'scenarioFoodRun'){
+      this.startSmokeScenario('foodRun');
+    }
+    else if(choiceId === 'scenarioInviteMenu'){
+      this.showSmokeSubMenu('Invite Who?', 'Pick who you want to pull into the smoke break.', [
+        { label:'Call Chandler', id:'callChandler' },
+        { label:'Call James',    id:'callJames' },
+        { label:'Call Chance',   id:'callChance' },
+        { label:'Call Lee',      id:'callLee' },
+      ]);
+    }
+    else if(choiceId === 'scenarioRoastMenu'){
+      this.showSmokeSubMenu('Chaos Menu', 'Pick the conversation you want to start.', [
+        { label:'Roast Chandler',    id:'partyChandler', hot:true },
+        { label:'Call Drew thick',   id:'partyDrewFat', hot:true },
+        { label:'Eggroll at Lee',    id:'partyLeeEggroll', hot:true },
+        { label:'Put Jorie on Todd', id:'partyJorieTold', hot:true },
+      ]);
+    }
+    else if(choiceId === 'callChandler'){
+
       const lines = [
         '"...why? Why do you need me outside specifically."',
         '"I\'m not going outside just because you asked. ...Fine."',
@@ -3927,6 +4260,99 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  showSmokeSubMenu(title, text, choices){
+    if(!STATE.smokeChatOpen) this.openSmokeChat();
+    STATE.dialogueActive = true;
+    const boxY = GH - 145;
+    this.dlgBg.setVisible(true);
+    this.dlgBg.clear()
+      .fillStyle(0x0a0f18, 0.95).fillRoundedRect(5, boxY-5, GW-10, 145, 10)
+      .lineStyle(2, 0x44ff88, 0.85).strokeRoundedRect(5, boxY-5, GW-10, 145, 10);
+    this.dlgPortrait.setFillStyle(0x116611).setVisible(true);
+    this.dlgPortraitTxt.setText(title).setStyle({fill:'#aaffaa', fontSize:'11px'}).setVisible(true);
+    this.dlgText.setText(text).setStyle({fill:'#c8ffd2'}).setVisible(true);
+    this.dlgChoiceBtns.forEach(b=>b.setVisible(false));
+    this.choiceKeys = [];
+    choices.slice(0,4).forEach((ch, i)=>{
+      const btn = this.dlgChoiceBtns[i];
+      btn.setText(`${i+1}. ${ch.label}`).setPosition(130, boxY+30+i*26)
+         .setStyle({fill:ch.hot ? '#ff8844' : '#aaffaa'}).setVisible(true);
+      btn.removeAllListeners('pointerdown');
+      btn.on('pointerdown', ()=> this.handleSmokeAreaChoice(ch.id, 160, 90));
+      const k = this.input.keyboard.addKey(49+i);
+      k.once('down', ()=>{ if(STATE.dialogueActive) this.handleSmokeAreaChoice(ch.id, 160, 90); });
+      this.choiceKeys.push(k);
+    });
+    this.dlgCloseTxt.setText('[ESC] Back out').setVisible(true);
+  }
+
+  smokeScenarioBeat(ms, id, text){
+    const SMOKE_SCENE_PACE = 1.9;
+    this.time.delayedCall(ms * SMOKE_SCENE_PACE, ()=>{
+      this.clearAllBubbles();
+      this.postSmokeChat(id, text);
+    });
+  }
+
+  startSmokeScenario(kind){
+    if(!STATE.smokeChatOpen) this.openSmokeChat();
+    this.clearAllBubbles();
+    const invite = (id, x=0, y=0) => {
+      const n = this.npcs.find(p=>p.id===id);
+      if(!n) return;
+      n.targetX = 160 + x;
+      n.targetY = 90 + y;
+      STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, id])];
+    };
+    ['james','chance','lee','chandler','drew','christine','michelle'].forEach((id, i)=> invite(id, -75 + i*25, i%2 ? 22 : -6));
+
+    if(kind === 'slowTruck'){
+      this.postSmokeChat('player', 'Scenario: slow truck. You ask what is taking so long.');
+      this.smokeScenarioBeat(900,  'james',    '"Because everyone waits until the truck is late to discover urgency."');
+      this.smokeScenarioBeat(2300, 'christine','"If the door time is wrong, the paperwork becomes fiction. I hate fiction."');
+      this.smokeScenarioBeat(3700, 'chance',   '"The truck has been there so long it should get a locker."');
+      this.smokeScenarioBeat(5100, 'lee',      '"Real question: is the truck slow, or is the entire building emotionally tired?"');
+      this.smokeScenarioBeat(6500, 'chandler', '"I am not emotionally tired. I am professionally exhausted."');
+      this.smokeScenarioBeat(7900, 'james',    '"Good talk. Somebody clear the door before Christine asks me another question."');
+      STATE.energy = Math.min(100, STATE.energy + 12);
+      STATE.suspicion = Math.max(0, STATE.suspicion - 6);
+    }
+    else if(kind === 'officeDrama'){
+      this.postSmokeChat('player', 'Scenario: office drama. You ask what the clerks are mad about.');
+      this.smokeScenarioBeat(900,  'lee',      '"Michelle said she is being nice today, which means someone is in danger."');
+      this.smokeScenarioBeat(2300, 'chance',   '"Christine looked at the dock and sighed like the printer jammed inside her soul."');
+      this.smokeScenarioBeat(3700, 'james',    '"They ask good questions. Too many. In a row. To me."');
+      this.smokeScenarioBeat(5100, 'drew',     '"Michelle asked me to buy food. I said I was broke. She said that was a personality issue."');
+      this.smokeScenarioBeat(6500, 'chandler', '"That sounds accurate. Mean, but structurally accurate."');
+      STATE.score += 20;
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 4);
+    }
+    else if(kind === 'jamesStress'){
+      this.postSmokeChat('player', 'Scenario: James stress check. You ask James if he is good.');
+      this.smokeScenarioBeat(800,  'james',   '"No. But I have converted the stress into operational awareness."');
+      this.smokeScenarioBeat(2200, 'chance',  '"That is the most manager sentence ever spoken near a cigarette."');
+      this.smokeScenarioBeat(3600, 'lee',     '"James, blink twice if the clipboard is controlling you."');
+      this.smokeScenarioBeat(5000, 'james',   '"The clipboard and I have a professional partnership."');
+      this.smokeScenarioBeat(6400, 'chandler','"I actually believe that."');
+      STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 10);
+      STATE.energy = Math.min(100, STATE.energy + 10);
+    }
+    else if(kind === 'foodRun'){
+      this.postSmokeChat('player', 'Scenario: food run. Michelle gets brought up immediately.');
+      this.smokeScenarioBeat(800,  'drew',     '"I cannot buy food. I can emotionally support someone buying food."');
+      this.smokeScenarioBeat(2100, 'chance',   '"Michelle does not ask for food. She issues a purchase order with eye contact."');
+      this.smokeScenarioBeat(3400, 'lee',      '"One time she said please and I got scared."');
+      this.smokeScenarioBeat(4700, 'james',    '"Nobody expense this. Do not even think about expensing this."');
+      this.smokeScenarioBeat(6000, 'chandler', '"I brought bread. Nobody gets any."');
+      STATE.energy = Math.min(100, STATE.energy + 15);
+      STATE.score += 10;
+    }
+
+    this.time.delayedCall(17000, ()=>{
+      if(STATE.smokeChatOpen && !STATE.dialogueActive) this.showSmokeAreaMenu();
+    });
+  }
+
   triggerGroupRoast(){
     if(STATE.groupRoastDone || STATE.groupRoastActive) return;
     STATE.groupRoastActive = true;
@@ -3947,7 +4373,7 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.shake(250, 0.008);
 
     // ── THE ROAST SEQUENCE ─────────────────────────────────────────────────
-    const SLOW = 1.55; // breathing room between lines so jokes land
+    const SLOW = 2.2; // breathing room between lines so jokes land
     const beat = (ms, npc, text, floatTxt='', floatCol='#ff6a00') => {
       this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
@@ -4008,7 +4434,7 @@ class GameScene extends Phaser.Scene {
     // Walk-in beats go to chat log only — NPCs are still scattered across the
     // map while the camera is already zoomed on the smoke area, so world bubbles
     // would be off-screen anyway. Chat panel tells the story cleanly.
-    const SLOW = 1.5; // pace the walk-in chatter so you can read each line
+    const SLOW = 2.15; // pace the walk-in chatter so you can read each line
     const beat = (ms, npcId, text) => {
       this.time.delayedCall(ms * SLOW, ()=>{
         this.postSmokeChat(npcId, text);
@@ -4120,10 +4546,10 @@ class GameScene extends Phaser.Scene {
     }
 
     // Everyone's headed out — then auto-open the smoke session with party options
-    this.time.delayedCall(7000, ()=>{
+    this.time.delayedCall(7000 * SLOW, ()=>{
       this.floatText(SX, 50, '🚬 THE WHOLE CREW IS HEADING OUTSIDE', '#ffd700');
     });
-    this.time.delayedCall(9800, ()=>{
+    this.time.delayedCall(9800 * SLOW, ()=>{
       // Everyone has arrived — show a world bubble from the initiator (they're at the area now)
       const lastLine = {
         james:   '"This is a one-time thing. Nobody mention this in the building."',
@@ -4146,20 +4572,20 @@ class GameScene extends Phaser.Scene {
       }
       // Show the party options — smokeChatOpen is already true so openSmokeChat skips;
       // showSmokeAreaMenu just builds the dialogue box with party choices
-      this.time.delayedCall(1800, ()=>{ this.showSmokeAreaMenu(); });
+      this.time.delayedCall(1800 * SLOW, ()=>{ this.showSmokeAreaMenu(); });
     });
 
     // Achievement
     if(!STATE.achievements.includes('james_crew')){
       STATE.achievements.push('james_crew');
-      this.time.delayedCall(12000, ()=>
+      this.time.delayedCall(12000 * SLOW, ()=>
         this.floatText(SX, 88, '🏆 ACHIEVEMENT: The Inner Circle!', '#ffd700'));
     }
   }
 
   // ── PARTY OPTION: Talk shit about Chandler ─────────────────────────────────
   triggerPartyChandler(){
-    const SLOW = 1.5;
+    const SLOW = 2.15;
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles(); // one speaker at a time
@@ -4203,7 +4629,7 @@ class GameScene extends Phaser.Scene {
 
   // ── PARTY OPTION: Call Drew fat ────────────────────────────────────────────
   triggerPartyDrewFat(){
-    const SLOW = 1.5;
+    const SLOW = 2.15;
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
@@ -4240,7 +4666,7 @@ class GameScene extends Phaser.Scene {
 
   // ── PARTY OPTION: Yell EGGROLL at Lee ─────────────────────────────────────
   triggerPartyLeeEggroll(){
-    const SLOW = 1.5;
+    const SLOW = 2.15;
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
@@ -4284,7 +4710,7 @@ class GameScene extends Phaser.Scene {
 
   // ── PARTY OPTION: Sic Jorie on Todd ──────────────────────────────────────
   triggerPartyJorieTold(){
-    const SLOW = 1.5;
+    const SLOW = 2.15;
     const beat = (ms, id, text) => {
       this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
@@ -4692,6 +5118,18 @@ class GameScene extends Phaser.Scene {
       if(npc.interacting) return;
       this.updateNpcEmotion(npc, delta);
 
+      if(npc.id === 'chance' && STATE.chanceDead){
+        npc.sprite.setVelocity(0, 0);
+        npc.sprite.setVisible(false);
+        npc.tag.setVisible(false);
+        npc.bubble.setVisible(false);
+        npc.bubbleGfx.clear().setVisible(false);
+        return;
+      } else if(npc.id === 'chance' && !npc.sprite.visible){
+        npc.sprite.setVisible(true);
+        npc.tag.setVisible(true);
+      }
+
       // ── LEE CLINGY CHECK-IN — she walks up unprompted ────────────────────
       if(npc.id === 'lee'){
         this._updateLeeCheckIn(npc, delta);
@@ -4776,14 +5214,30 @@ class GameScene extends Phaser.Scene {
       // ── SMOKE FOLLOW MODE ────────────────────────────────────────────────
       const isLeeFollow = npc.id === 'lee' && STATE.leeFollowing;
       const isSmokeFollow = STATE.smokingNPCs.includes(npc.id);
-      if(isLeeFollow || isSmokeFollow){
+      const isActiveClerk = npc.id === STATE.clerkOnDock;
+      if(isActiveClerk){
+        npc.running = true;
+        npc.moveTimer = 1200;
+        if(npc.id === 'michelle' && STATE.clerkVisitReason === 'food'){
+          npc.targetX = this.player.x + 48;
+          npc.targetY = this.player.y + 20;
+          if(npc.bubbleTimer <= 0 && Math.random() < 0.003){
+            this.showBubble(npc, '"Food. Please. I am small but my appetite has seniority."');
+          }
+        } else if(npc.bubbleTimer <= 0 && Math.random() < 0.0015){
+          this.showBubble(npc, npc.id === 'michelle'
+            ? '"I came out here smiling. Do not make me regret that."'
+            : '"I am only asking because the paperwork will ask me later."');
+        }
+      }
+      else if(isLeeFollow || isSmokeFollow){
         const atSmoke = STATE.currentZone === 'outside';
         if(atSmoke){
           // Arrived — hang around player in the smoking corner
           npc.targetX = this.player.x + 40 + Math.sin(this.gameTimer*0.001)*20;
           npc.targetY = this.player.y + 20;
           // Occasional idle chatter while smoking
-          if(npc.bubbleTimer <= 0 && Math.random() < 0.002){
+      if(!STATE.smokeChatOpen && npc.bubbleTimer <= 0 && Math.random() < 0.002){
             const smokeLines = [
               '"This is so good. I needed this."',
               '"Don\'t look now but... okay look. See that?"',
@@ -4797,7 +5251,7 @@ class GameScene extends Phaser.Scene {
           // Still walking to outside — follow player with slight offset
           npc.targetX = this.player.x - 35;
           npc.targetY = this.player.y + 15;
-          if(npc.bubbleTimer <= 0 && Math.random() < 0.001){
+          if(!STATE.smokeChatOpen && npc.bubbleTimer <= 0 && Math.random() < 0.001){
             this.showBubble(npc, '"Keep walking, keep walking..."');
           }
         }
@@ -4863,6 +5317,20 @@ class GameScene extends Phaser.Scene {
       if(npc.id === 'james'){
         // Chase player when beingChased or very high suspicion
         if((STATE.beingChased || STATE.suspicion >= 75) && !STATE.smokeChatOpen){
+          if(npc.chaseTarget === 'playerNoBreakroom' && STATE.currentZone === 'breakRoom'){
+            npc.running = false;
+            npc.chaseTarget = null;
+            STATE.beingChased = false;
+            STATE.playerRunBoost = 0;
+            const zone = ZONES.breakRoom;
+            npc.targetX = zone.x + zone.w + 60;
+            npc.targetY = zone.y + 40;
+            if(npc.bubbleTimer <= 0){
+              this.showBubble(npc, '"I am NOT going in the breakroom. But this is not over."');
+              this.floatText(this.player.x, this.player.y - 35, 'Hidden in the breakroom.', '#aaffaa');
+            }
+            return;
+          }
           npc.running = true;
           npc.targetX = this.player.x;
           npc.targetY = this.player.y;
@@ -4870,6 +5338,7 @@ class GameScene extends Phaser.Scene {
           if(catchDist < 60 && !STATE.dialogueActive && npc.bubbleTimer <= 0){
             npc.running = false;
             STATE.beingChased = false;
+            npc.chaseTarget = null;
             const jCaughtLines = [
               '"STOP. Right there. We are having a conversation RIGHT NOW."',
               '"I have been CHASING you. On my DOCK. This is your fault."',
@@ -5656,7 +6125,6 @@ class GameScene extends Phaser.Scene {
             if(chance) this.showBubble(chance, '"This is why I love it here. Genuinely."');
           });
           STATE.jamesAnnoyance=Math.min(100,STATE.jamesAnnoyance+12);
-          scoreChange=40;
           STATE.score=Math.max(0,STATE.score+40);
         }
       },
@@ -5997,6 +6465,190 @@ class GameScene extends Phaser.Scene {
   }
 
   // ── SHIFT END ──────────────────────────────────────────────────────────────
+  clerkOfficeSpot(id){
+    const z = ZONES.clerkOffice;
+    if(id === 'michelle') return { x:z.x + 86, y:z.y + 124 };
+    return { x:z.x + 205, y:z.y + 215 };
+  }
+
+  startClerkDockVisit(id, reason='random'){
+    if(STATE.clerkOnDock || STATE.michelleAskingFood || STATE.chanceDead) return;
+    const clerk = this.npcs.find(n=>n.id===id);
+    if(!clerk) return;
+    STATE.clerkOnDock = id;
+    STATE.clerkVisitReason = reason;
+    STATE.clerkOnDockTimer = reason === 'food' ? 24000 : 20000 + Math.random()*9000;
+    STATE.clerkPesterTimer = 1800;
+    STATE.michelleChanceTimer = id === 'michelle' ? 2600 : 0;
+    if(id === 'michelle' && reason === 'food') STATE.michelleAskingFood = true;
+
+    clerk.running = true;
+    clerk.moveTimer = 2500;
+    clerk.targetX = reason === 'food' ? this.player.x + 48 : 620 + Math.random()*260;
+    clerk.targetY = reason === 'food' ? this.player.y + 20 : 260 + Math.random()*120;
+
+    const line = reason === 'food'
+      ? '"Hi sweetie. Who is buying me food today? And do not say nobody."'
+      : id === 'michelle'
+        ? '"This truck is taking forever. I am being nice about it, which is generous."'
+        : '"I need an update. Not a vibe. An actual update."';
+    this.showBubble(clerk, line);
+    this.floatText(clerk.sprite.x, clerk.sprite.y - 40, id === 'michelle' ? 'Michelle is on the dock' : 'Christine is on the dock', id === 'michelle' ? '#ff80cc' : '#aa88ff');
+  }
+
+  sendClerkBackToOffice(id){
+    const clerk = this.npcs.find(n=>n.id===id);
+    if(!clerk) return;
+    const home = this.clerkOfficeSpot(id);
+    clerk.running = false;
+    clerk.targetX = home.x;
+    clerk.targetY = home.y;
+    clerk.moveTimer = 4500;
+    if(id === 'michelle'){
+      STATE.michelleAskingFood = false;
+      if(STATE.chanceDead) this.respawnChanceAfterMichelleLeaves();
+    }
+    if(STATE.clerkOnDock === id){
+      STATE.clerkOnDock = null;
+      STATE.clerkVisitReason = null;
+      STATE.clerkOnDockTimer = 0;
+      STATE.clerkPesterTimer = 0;
+      STATE.clerkDockNextTimer = 42000 + Math.random()*28000;
+    }
+  }
+
+  updateClerkEvents(delta){
+    if(!this.npcs || STATE.dialogueActive || STATE.miniGameActive) return;
+
+    const assignedTruckLate = STATE.currentTruckObj && !STATE.currentTruckObj.done;
+    if(assignedTruckLate) STATE.truckDelayTimer += delta;
+    else STATE.truckDelayTimer = Math.max(0, STATE.truckDelayTimer - delta*2);
+
+    if(!STATE.clerkOnDock && !STATE.michelleAskingFood){
+      STATE.clerkDockNextTimer -= delta;
+      STATE.michelleFoodTimer -= delta;
+
+      if(STATE.truckDelayTimer > 42000){
+        STATE.truckDelayTimer = 0;
+        this.startClerkDockVisit(Math.random() < 0.55 ? 'christine' : 'michelle', 'delay');
+      } else if(STATE.michelleFoodTimer <= 0){
+        STATE.michelleFoodTimer = 70000 + Math.random()*50000;
+        this.startClerkDockVisit('michelle', 'food');
+      } else if(STATE.clerkDockNextTimer <= 0){
+        this.startClerkDockVisit(Math.random() < 0.5 ? 'christine' : 'michelle', 'random');
+      }
+      return;
+    }
+
+    const activeId = STATE.clerkOnDock;
+    const clerk = this.npcs.find(n=>n.id===activeId);
+    const james = this.npcs.find(n=>n.id==='james');
+    if(!clerk) return;
+
+    STATE.clerkOnDockTimer -= delta;
+    STATE.clerkPesterTimer -= delta;
+    if(STATE.clerkPesterTimer <= 0){
+      STATE.clerkPesterTimer = 4300 + Math.random()*2800;
+      if(james){
+        clerk.targetX = james.sprite.x + (activeId === 'michelle' ? -52 : 52);
+        clerk.targetY = james.sprite.y + 12;
+      }
+      const questions = activeId === 'michelle'
+        ? [
+            '"James, why is that truck still open? I am asking sweetly before I get rude."',
+            '"James, can somebody buy me food or clear this dock? Preferably both."',
+            '"James. James. James. Quick question. Why is everything like this?"'
+          ]
+        : [
+            '"James, I need the actual door status. Not a hand wave."',
+            '"James, who owns this delay? I need a name."',
+            '"James, are we logging this or pretending it is fine?"'
+          ];
+      this.showBubble(clerk, Phaser.Math.RND.pick(questions));
+      if(james && james.bubbleTimer <= 0){
+        this.showBubble(james, activeId === 'michelle'
+          ? '"Michelle, I am trying to manage the dock and my blood pressure."'
+          : '"Christine, I am aware. Deeply, painfully aware."');
+      }
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + (activeId === 'michelle' ? 7 : 5));
+      this.nudgeEmotion('james', 'stressed', 14000);
+    }
+
+    if(activeId === 'michelle') this.updateMichelleChanceDrama(delta);
+
+    if(STATE.clerkOnDockTimer <= 0){
+      this.sendClerkBackToOffice(activeId);
+    }
+  }
+
+  updateMichelleChanceDrama(delta){
+    if(STATE.chanceDead) return;
+    const michelle = this.npcs.find(n=>n.id==='michelle');
+    const chance = this.npcs.find(n=>n.id==='chance');
+    if(!michelle || !chance) return;
+
+    STATE.michelleChanceTimer -= delta;
+    chance.targetX = michelle.sprite.x + 44;
+    chance.targetY = michelle.sprite.y + 8;
+    chance.running = true;
+    chance.moveTimer = 1200;
+
+    if(STATE.michelleChanceTimer <= 0){
+      STATE.michelleChanceTimer = 3600 + Math.random()*2400;
+      const chanceLines = [
+        '"Michelle, serious question: is the attitude company-issued?"',
+        '"You are short, sweet, and somehow still the final boss."',
+        '"I heard you asked for food. I brought emotional support. It is me."',
+        '"Christine said you are rude. I said respectfully, obviously."'
+      ];
+      this.showBubble(chance, Phaser.Math.RND.pick(chanceLines));
+      STATE.michelleAnnoyance = Math.min(100, STATE.michelleAnnoyance + 24);
+      this.nudgeEmotion('michelle', STATE.michelleAnnoyance > 65 ? 'furious' : 'rude', 16000);
+      this.floatText(michelle.sprite.x, michelle.sprite.y - 45, 'Michelle annoyance ' + STATE.michelleAnnoyance + '%', '#ff66cc');
+      if(STATE.michelleAnnoyance >= 100) this.michelleKillsChance();
+    }
+  }
+
+  michelleKillsChance(){
+    const michelle = this.npcs.find(n=>n.id==='michelle');
+    const chance = this.npcs.find(n=>n.id==='chance');
+    if(!michelle || !chance || STATE.chanceDead) return;
+    STATE.chanceDead = true;
+    STATE.michelleKillCount++;
+    STATE.michelleAnnoyance = 0;
+    chance.running = false;
+    chance.sprite.setVelocity(0, 0);
+    chance.sprite.setVisible(false);
+    chance.tag.setVisible(false);
+    chance.bubble.setVisible(false);
+    chance.bubbleGfx.clear().setVisible(false);
+    this.showBubble(michelle, '"Chance. I warned you. Take a lap in the afterlife."');
+    this.floatText(michelle.sprite.x, michelle.sprite.y - 50, 'Michelle removed Chance from the dock.', '#ff2266');
+    this.cameras.main.shake(350, 0.012);
+    this.awardAchievement('michelle_snap', 'Michelle Snapped - Chance got deleted', '#ff66cc');
+  }
+
+  respawnChanceAfterMichelleLeaves(){
+    if(!STATE.chanceDead || STATE.chanceRespawnTimer > 0) return;
+    STATE.chanceRespawnTimer = 2600;
+    this.time.delayedCall(2600, ()=>{
+      const chance = this.npcs.find(n=>n.id==='chance');
+      if(!chance) return;
+      const z = ZONES.dock;
+      chance.sprite.setPosition(z.x + 900, z.y + 180);
+      chance.targetX = chance.sprite.x;
+      chance.targetY = chance.sprite.y;
+      chance.sprite.setVisible(true);
+      chance.tag.setVisible(true);
+      chance.running = false;
+      chance.chaseTarget = null;
+      STATE.chanceDead = false;
+      STATE.chanceRespawnTimer = 0;
+      this.showBubble(chance, '"I lived. No notes. I will learn nothing."');
+      this.floatText(chance.sprite.x, chance.sprite.y - 45, 'Chance respawned after Michelle left.', '#ff6a00');
+    });
+  }
+
   endShift(reason='normal'){
     STATE.miniGameActive = false; STATE.dialogueActive = false;
     const final = STATE.score;
@@ -6014,6 +6666,8 @@ class GameScene extends Phaser.Scene {
     if(STATE.miniGameActive){ return; }
 
     this.movePlayer(delta);
+    STATE.currentZone = this.getCurrentZone();
+    this.updateClerkEvents(delta);
     this.updateNPCs(delta);
 
     // James random EGGROLL outburst — rare, glorious event
