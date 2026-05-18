@@ -3550,13 +3550,13 @@ class GameScene extends Phaser.Scene {
       fontSize:'9px', fill:'#8fdc9b', fontFamily:'monospace', wordWrap:{ width: PW - 16 }
     }).setScrollFactor(0).setDepth(73).setVisible(false);
 
-    // Pre-allocate message slots (10 slots)
+    // Pre-allocate message slots (14 slots — positions are set dynamically in _redrawSmokeChat)
     this.scMsgPool = [];
-    for(let i = 0; i < 10; i++){
-      const t = this.add.text(PX + 10, PY + 48 + i * 41, '', {
+    for(let i = 0; i < 14; i++){
+      const t = this.add.text(PX + 11, PY + 48, '', {
         fontSize:'11px', fill:'#ffffff', fontFamily:'monospace',
-        wordWrap:{ width: PW - 20 }, lineSpacing: 2
-      }).setScrollFactor(0).setDepth(73).setVisible(false).setAlpha(0);
+        wordWrap:{ width: PW - 22 }, lineSpacing: 3
+      }).setScrollFactor(0).setDepth(73).setVisible(false).setAlpha(0).setOrigin(0, 1);
       this.scMsgPool.push(t);
     }
 
@@ -3659,30 +3659,52 @@ class GameScene extends Phaser.Scene {
     const color = NPC_SC_COLORS[id] || '#cccccc';
 
     this._scMessages.push({ name, color, text });
-    if(this._scMessages.length > 10) this._scMessages.shift();
+    if(this._scMessages.length > 30) this._scMessages.shift(); // keep more history so you can scroll up mentally
     this._redrawSmokeChat();
 
-    // Animate newest slot sliding in
-    const newest = this.scMsgPool[this._scMessages.length - 1];
+    // Animate the newest message sliding in (it's always slot 0 in the dynamic layout)
+    const newest = this.scMsgPool[0];
     if(newest){
       newest.setAlpha(0);
-      this.tweens.add({ targets: newest, alpha: 1, duration: 280, ease: 'Quad.Out' });
+      this.tweens.add({ targets: newest, alpha: 1, duration: 380, ease: 'Quad.Out' });
     }
   }
 
   _redrawSmokeChat(){
-    this.scMsgPool.forEach(t => t.setVisible(false).setAlpha(0));
+    // Dynamic bottom-stacking layout — no overlaps, every message readable
     const msgs = this._scMessages;
-    msgs.forEach((msg, i) => {
-      const slot = this.scMsgPool[i];
-      if(!slot) return;
-      const age = msgs.length - 1 - i; // 0 = newest
-      const alpha = Math.max(0.35, 1 - age * 0.11);
-      slot.setText(`${msg.name}\n${msg.text}`)
-          .setStyle({ fill: msg.color, fontSize:'11px', fontFamily:'monospace', fontStyle:'bold', wordWrap:{ width: this._scPW - 20 }, lineSpacing:2 })
-          .setAlpha(alpha)
-          .setVisible(true);
-    });
+    const panelTop    = this._scPY + 48;
+    const panelBottom = GH - 26;
+    const gap = 7;
+
+    // Hide all slots first
+    this.scMsgPool.forEach(t => t.setVisible(false).setAlpha(0));
+
+    // Render newest message first, stacking upward from the bottom
+    let y = panelBottom;
+    let slotIdx = 0;
+    for(let i = msgs.length - 1; i >= 0 && slotIdx < this.scMsgPool.length; i--){
+      const msg  = msgs[i];
+      const slot = this.scMsgPool[slotIdx++];
+      const age  = msgs.length - 1 - i; // 0 = newest
+      const alpha = Math.max(0.45, 1 - age * 0.07);
+
+      slot.setOrigin(0, 1); // bottom-left anchor so y = bottom of this message
+      slot.setStyle({
+        fill: msg.color, fontSize:'11px', fontFamily:'monospace',
+        fontStyle:'bold', wordWrap:{ width: this._scPW - 22 }, lineSpacing:3
+      });
+      slot.setText(`${msg.name}\n${msg.text}`);
+      slot.setAlpha(alpha);
+      slot.setPosition(this._scPX + 11, y);
+      slot.setVisible(true);
+
+      // Move cursor up by this message's actual rendered height + gap
+      y -= slot.height + gap;
+
+      // Stop drawing once we've climbed above the panel top
+      if(y < panelTop) break;
+    }
   }
 
   _spawnSmokeParticle(){
@@ -3907,10 +3929,11 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.shake(250, 0.008);
 
     // ── THE ROAST SEQUENCE ─────────────────────────────────────────────────
+    const SLOW = 1.55; // breathing room between lines so jokes land
     const beat = (ms, npc, text, floatTxt='', floatCol='#ff6a00') => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
-        if(npc){ this.showBubble(npc, text, 1600); this.postSmokeChat(npc.id, text); }
+        if(npc){ this.showBubble(npc, text, 2400); this.postSmokeChat(npc.id, text); }
         if(floatTxt) this.floatText(160, 50, floatTxt, floatCol);
       });
     };
@@ -3935,8 +3958,8 @@ class GameScene extends Phaser.Scene {
     beat(29000, chance,   '"He says that every week."');
     beat(30000, james,    '"...it WAS good bread though. Genuinely."');
 
-    // Score + end
-    this.time.delayedCall(32000, ()=>{
+    // Score + end (slowed to match the beat pacing so the panel doesn't close mid-roast)
+    this.time.delayedCall(32000 * SLOW, ()=>{
       STATE.miniGameActive   = false;
       STATE.groupRoastActive = false;
       if(STATE.smokeChatOpen) this.closeSmokeChat();
@@ -3967,13 +3990,14 @@ class GameScene extends Phaser.Scene {
     // Walk-in beats go to chat log only — NPCs are still scattered across the
     // map while the camera is already zoomed on the smoke area, so world bubbles
     // would be off-screen anyway. Chat panel tells the story cleanly.
+    const SLOW = 1.5; // pace the walk-in chatter so you can read each line
     const beat = (ms, npcId, text) => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         this.postSmokeChat(npcId, text);
       });
     };
     const toSmoke = (ms, npcId, ox=0, oy=0) => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         const n = this.npcs.find(x=>x.id===npcId);
         if(!n) return;
         n.targetX = SX + ox;
@@ -4117,11 +4141,12 @@ class GameScene extends Phaser.Scene {
 
   // ── PARTY OPTION: Talk shit about Chandler ─────────────────────────────────
   triggerPartyChandler(){
+    const SLOW = 1.5;
     const beat = (ms, id, text) => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles(); // one speaker at a time
         const n = this.npcs.find(x=>x.id===id);
-        if(n) this.showBubble(n, text, 1600);
+        if(n) this.showBubble(n, text, 2400);
         this.postSmokeChat(id, text);
       });
     };
@@ -4142,24 +4167,25 @@ class GameScene extends Phaser.Scene {
 
     STATE.score += 80; STATE.chandlerCallCount += 2;
     STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 15);
-    this.time.delayedCall(1000, ()=>
+    this.time.delayedCall(1000 * SLOW, ()=>
       this.floatText(160, 70, '🍞 +80 pts — Chandler roasted by the whole crew!', '#ffd700'));
 
     if(!STATE.achievements.includes('crew_roast')){
       STATE.achievements.push('crew_roast');
-      this.time.delayedCall(15500, ()=>
+      this.time.delayedCall(15500 * SLOW, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: Crew Mentality!', '#ffa01e'));
     }
-    this.time.delayedCall(20000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.time.delayedCall(22000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── PARTY OPTION: Call Drew fat ────────────────────────────────────────────
   triggerPartyDrewFat(){
+    const SLOW = 1.5;
     const beat = (ms, id, text) => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
         const n = this.npcs.find(x=>x.id===id);
-        if(n) this.showBubble(n, text, 1600);
+        if(n) this.showBubble(n, text, 2400);
         this.postSmokeChat(id, text);
       });
     };
@@ -4180,18 +4206,19 @@ class GameScene extends Phaser.Scene {
     beat(15800,'james',   '"It\'s on my clipboard. That\'s paper enough."');
 
     STATE.score += 60; STATE.drawerDebt += 5;
-    this.time.delayedCall(1200, ()=>
+    this.time.delayedCall(1200 * SLOW, ()=>
       this.floatText(160, 70, '🍔 +60 pts — Drew is having an actual breakdown', '#9955cc'));
-    this.time.delayedCall(21000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.time.delayedCall(24000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── PARTY OPTION: Yell EGGROLL at Lee ─────────────────────────────────────
   triggerPartyLeeEggroll(){
+    const SLOW = 1.5;
     const beat = (ms, id, text) => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
         const n = this.npcs.find(x=>x.id===id);
-        if(n) this.showBubble(n, text, 1600);
+        if(n) this.showBubble(n, text, 2400);
         this.postSmokeChat(id, text);
       });
     };
@@ -4214,25 +4241,26 @@ class GameScene extends Phaser.Scene {
     beat(17800,'lee',      '"I\'m getting you back. I don\'t know when or how. But I AM."');
 
     STATE.score += 100;
-    this.time.delayedCall(1000, ()=>
+    this.time.delayedCall(1000 * SLOW, ()=>
       this.floatText(160, 70, '🥡 +100 pts — ABSOLUTE CHAOS. LEE IS UNHINGED.', '#ffaa00'));
     this.cameras.main.flash(200, 255, 170, 0);
 
     if(!STATE.achievements.includes('eggroll')){
       STATE.achievements.push('eggroll');
-      this.time.delayedCall(19000, ()=>
+      this.time.delayedCall(19000 * SLOW, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: EGGROLLLLL!!! 🥡', '#ffaa00'));
     }
-    this.time.delayedCall(23000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.time.delayedCall(26000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── PARTY OPTION: Sic Jorie on Todd ──────────────────────────────────────
   triggerPartyJorieTold(){
+    const SLOW = 1.5;
     const beat = (ms, id, text) => {
-      this.time.delayedCall(ms, ()=>{
+      this.time.delayedCall(ms * SLOW, ()=>{
         this.clearAllBubbles();
         const n = this.npcs.find(x=>x.id===id);
-        if(n) this.showBubble(n, text, 1800);
+        if(n) this.showBubble(n, text, 2600);
         this.postSmokeChat(id, text);
       });
     };
@@ -4261,16 +4289,16 @@ class GameScene extends Phaser.Scene {
     STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
     this.nudgeEmotion('jorie', 'unbothered');
     this.nudgeEmotion('todd',  'haunted');
-    this.time.delayedCall(1500, ()=>
+    this.time.delayedCall(1500 * SLOW, ()=>
       this.floatText(160, 70, '💥 +120 pts — Todd DESTROYED by Jorie from across the dock', '#ff6633'));
     this.cameras.main.flash(180, 255, 100, 50);
 
     if(!STATE.achievements.includes('jorie_todd')){
       STATE.achievements.push('jorie_todd');
-      this.time.delayedCall(23000, ()=>
+      this.time.delayedCall(23000 * SLOW, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: Pregnant and DANGEROUS!', '#ff6633'));
     }
-    this.time.delayedCall(25000, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.time.delayedCall(28000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
   }
 
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
