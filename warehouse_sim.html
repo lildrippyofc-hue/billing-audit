@@ -240,7 +240,7 @@ const NPC_DEFS = [
       "I have a system. It's just temporarily broken.",
       "My card got declined but that's a whole other situation.",
     ],
-    choices:["Lend $5","Refuse","Ask for last week's $5 back"],
+    choices:["Lend $5","Refuse","Ask for last week's $5 back","Aye let's go smoke 🚬"],
   },
   { id:'chance', name:'Chance', title:'(The Instigator)', color:0xff6a00, zone:'floor', patrol:false,
     appearance:{ shirt:0xff5500, pants:0x1a1a2e, skin:0xd49060, hair:0x111111, cap:true, capColor:0x111111 },
@@ -283,7 +283,7 @@ const NPC_DEFS = [
       '"If this place were a show it\'d have 6 seasons and a movie."',
       '"Honestly? I could leave. Better offers exist. But then who would watch all this?"',
     ],
-    choices:["Laugh along 😂","Defend Chandler 🛡️","Sic him on Drew 💸","Tell him to chill 🙄"],
+    choices:["Laugh along 😂","Defend Chandler 🛡️","Sic him on Drew 💸","Yo let's all go smoke 🚬"],
   },
   { id:'jeff', name:'Jeff', title:'(Chill Lead 🌿)', color:0x44bb44, zone:'dock', patrol:false,
     appearance:{ shirt:0x2a5c2a, pants:0x1a2e1a, skin:0xd4956a, hair:0x2a1c08 },
@@ -1766,19 +1766,19 @@ class GameScene extends Phaser.Scene {
         this.floatText(npc.sprite.x, npc.sprite.y, '+'+scoreChange+' pts 🍞', '#ffd700');
       } else if(idx===1){
         response = '"..."'; suspChange = -5;
-      } else { // Go smoke
-        if(STATE.smokingNPCs.includes('chandler')){
-          response = '"I\'m already following you! Stop looking back at me, it\'s weird."';
+      } else { // Go smoke — Chandler drags the whole crew
+        if(STATE.jamesSmokeParty){
+          response = '"I\'m already out there — stop calling me back in, it\'s weird."';
         } else {
           const chandlerSmokeLines = [
-            '"...fine. But I\'m not talking to anyone out there."',
-            '"I guess. It\'s not like I\'m doing anything important. Which I was. But fine."',
-            '"Sure. If someone calls me Bread Boy I\'m coming straight back inside."',
+            '"Fine. I\'m going. And since I\'m going, EVERYONE is going. That way it\'s less weird for me."',
+            '"Outside. Now. I\'m not going alone so I\'m taking all of you with me."',
+            '"Sure. But I\'m making everyone come. Strength in numbers. Don\'t argue with me on this."',
           ];
           response = Phaser.Math.RND.pick(chandlerSmokeLines);
-          STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'chandler'])];
           energyChange = 5;
-          this.floatText(this.player.x, this.player.y, 'Chandler is reluctantly following 🚬', '#c8a050');
+          this.floatText(this.player.x, this.player.y, '🍞 Chandler is rallying the whole crew! 🚬', '#c8a050');
+          this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
         }
       }
     }
@@ -1818,54 +1818,21 @@ class GameScene extends Phaser.Scene {
         suspChange = 8; STATE.jamesAnnoyance += 15;
         this.floatText(npc.sprite.x, npc.sprite.y-40, '😠 +15 annoyance', '#ff6600');
       }
-      else if(idx===2){ // Go smoke
-        if(STATE.smokingNPCs.includes('james')){
+      else if(idx===2){ // Go smoke — James pulls the whole crew
+        if(STATE.jamesSmokeParty){
           response = '"I\'m already out there! What are you doing still in here?! GO."';
-        } else if(STATE.rapportJames >= 1 || STATE.jamesAnnoyance <= 10){
-          if(Math.random() < 0.65){
-            // ── 50% YES — James goes AND drags the whole crew ─────────────────
-            const smokeYes = [
-              '"...yeah okay. Five minutes. Nobody saw this. This never happened. Actually — hold on."',
-              '"You know what? Fine. FIVE minutes. And I\'m pulling everyone. Don\'t ask why."',
-              '"Off the record — yes. And I\'m making it a whole thing. Just because."',
-              '"Sure. I\'m going. And everybody else is going. I don\'t know why I\'m doing this."',
-              '"...I said I wouldn\'t. But I am. And I\'m bringing the entire crew. Don\'t question it."',
-            ];
-            response = Phaser.Math.RND.pick(smokeYes);
-            energyChange = 20; scoreChange = 75; STATE.rapportJames++;
-            STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 25);
-            if(!STATE.jamesSmokeParty){
-              this.floatText(this.player.x, this.player.y, '🔥 +75 pts! JAMES IS PULLING THE WHOLE CREW! 🚬', '#ffa01e');
-              this.time.delayedCall(2600, ()=> this.triggerJamesSmokeCrew(npc));
-            } else {
-              STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, 'james'])];
-              this.floatText(this.player.x, this.player.y, '🔥 +75 pts! James is rolling! 🚬', '#ffa01e');
-            }
-          } else {
-            // ── 50% NOT TODAY ─────────────────────────────────────────────────
-            const smokeMaybe = [
-              '"...not today. Ask me again. I\'m never in a better mood, but ask anyway."',
-              '"I have sixteen things on this clipboard. \'Smoke break\' is not one of them. Not today."',
-              '"I WOULD. I genuinely would right now. But the dock — look, not today."',
-              '"Not this shift. Don\'t ask me why. Just... not this one."',
-              '"I\'ll pretend you didn\'t ask. You pretend I didn\'t almost say yes. Deal."',
-              '"The answer is no today. Tomorrow\'s different. Probably not. But could be."',
-            ];
-            response = Phaser.Math.RND.pick(smokeMaybe);
-            scoreChange = 5;
-            this.floatText(npc.sprite.x, npc.sprite.y-40, '🎲 Not today... try again!', '#aaaaff');
-          }
         } else {
-          // James hasn't warmed up yet — give the player a hint
-          const smokeNo = [
-            '"Who ARE you? I don\'t even know you. Say hi first. Like a normal person."',
-            '"You want to smoke with me. With ME. The manager. Say hi to me first maybe."',
-            '"I appreciate the confidence but no. Talk to me more. Build something here."',
-            '"Hard no. We\'ve barely spoken. Say hi, compliment the dock, THEN we\'ll talk."',
+          const smokeYes = [
+            '"...yeah okay. Five minutes. Nobody saw this. Actually — hold on. EVERYBODY. OUT."',
+            '"You know what? Fine. FIVE minutes. I\'m pulling the whole crew. Don\'t ask why."',
+            '"Sure. I\'m going. And everybody else is going. That\'s just how this works now."',
+            '"Off the record — yes. And I\'m making it a whole thing. Move."',
           ];
-          response = Phaser.Math.RND.pick(smokeNo);
-          suspChange = 8; STATE.jamesAnnoyance += 10;
-          this.floatText(npc.sprite.x, npc.sprite.y-40, '💡 Try saying hi to James first!', '#aaaaff');
+          response = Phaser.Math.RND.pick(smokeYes);
+          energyChange = 20; scoreChange = 75; STATE.rapportJames++;
+          STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 25);
+          this.floatText(this.player.x, this.player.y, '🔥 +75 pts! JAMES IS PULLING THE WHOLE CREW! 🚬', '#ffa01e');
+          this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
         }
       }
       else { // idx===3: Ask what he does all day
@@ -1919,22 +1886,16 @@ class GameScene extends Phaser.Scene {
           this.floatText(this.player.x, this.player.y, '🎭 Lee is distracting James! Suspicion -20', '#ff80c0');
         }
       }
-      else { // Go smoke
+      else { // Go smoke — Lee drags the whole crew
         if(STATE.leeDistractingJames){
-          response = '"I can\'t right now — I\'m literally keeping James busy! Go WITHOUT me and I\'ll catch you after!"';
-        } else if(STATE.leeFollowing){
-          response = '"I\'m already on my way! You don\'t have to walk with me — just MEET me there!"';
+          response = '"I can\'t right now — I\'m keeping James busy! Meet you out there after!"';
+        } else if(STATE.jamesSmokeParty){
+          response = '"I\'m already on my way! Just MEET me there — I\'m not waiting!"';
         } else {
-          STATE.leeFollowing = true;
-          response = '"Oh my GOD yes. I have been WAITING for someone to ask me that. I\'ll meet you there!"';
+          response = '"Oh my GOD yes. I have been WAITING. And you know what — EVERYONE is coming. I\'m not going alone."';
           scoreChange = 5;
-          // Lee goes DIRECTLY to smoke area — player doesn't need to lead her
-          npc.targetX = 150;
-          npc.targetY = 80;
-          this.floatText(this.player.x, this.player.y, '🚬 Lee is heading to the smoke spot!', '#ff80c0');
-          this.time.delayedCall(400, ()=>{
-            this.showBubble(npc, '"I\'ll be out front. Don\'t make it weird."');
-          });
+          this.floatText(this.player.x, this.player.y, '🚬 Lee is dragging the WHOLE CREW outside!', '#ff80c0');
+          this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
         }
       }
     }
@@ -1976,13 +1937,27 @@ class GameScene extends Phaser.Scene {
         this.floatText(this.player.x, this.player.y, '-$5 (never seeing that again)', '#ff6666');
       } else if(idx===1){
         response = '"Man... okay fine. Respect."'; scoreChange = 5;
-      } else { // Ask for last week's $5
+      } else if(idx===2){ // Ask for last week's $5
         if(STATE.drewLends > 0){
           response = `"Last week's $5?! Bro I... look I'll get you back... eventually."`;
           scoreChange = 20;
           this.floatText(this.player.x, this.player.y, 'He owes you $'+(STATE.drewLends*5)+'!', '#ffd700');
         } else {
           response = '"What $5? We never did that."';
+        }
+      } else { // Let's go smoke — Drew somehow rallies everyone
+        if(STATE.jamesSmokeParty){
+          response = '"We out here already! Come ON bro!"';
+        } else {
+          const drewRally = [
+            '"Forget the $5. EVERYBODY. Outside. Right now. Trust me on this one."',
+            '"Bro yes. This is FREE. This costs nothing. Everybody come on."',
+            '"Okay I\'m calling it. Crew smoke. I\'m organizing something for once in my life."',
+          ];
+          response = Phaser.Math.RND.pick(drewRally);
+          scoreChange = 20; energyChange = 5;
+          this.floatText(this.player.x, this.player.y, '💸 Drew just organized something for once! 🚬', '#cc88ff');
+          this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
         }
       }
     }
@@ -2060,19 +2035,20 @@ class GameScene extends Phaser.Scene {
           }
         });
       }
-      else { // Tell him to chill
-        const noChill = [
-          '"Chill? I AM chilling. This is my chill face. This is as chill as I get."',
-          '"You want me to chill. In HERE. With ALL of this happening. Respectfully, no."',
-          '"I\'ll chill when Chandler stops being Bread Boy. So... never."',
-          '"Chill is a concept I respect but cannot currently implement."',
-          '"I\'m very calm. I\'m calm and I\'m observing and I\'m narrating. That\'s not not-chill."',
-          '"Nah. But I appreciate the suggestion. Genuinely."',
-          '"Have you MET this place? \'Chill\' is not a survival strategy here."',
-        ];
-        response = Phaser.Math.RND.pick(noChill);
-        scoreChange = 10;
-        this.floatText(this.player.x, this.player.y, '🙄 Chance has zero chill. None.', '#ff6a00');
+      else { // Let's all go smoke — Chance rallies the crew
+        if(STATE.jamesSmokeParty){
+          response = '"We already OUT here bro — where have YOU been?!"';
+        } else {
+          const chanceRally = [
+            '"YOOO. Say less. EVERYBODY. Outside. RIGHT NOW. Not a request, not a suggestion."',
+            '"Okay I\'ve been waiting for this moment all shift. EVERYBODY OUT. We\'re doing this."',
+            '"Let\'s GO. I\'m calling it. Crew smoke. Everyone included. No debate."',
+          ];
+          response = Phaser.Math.RND.pick(chanceRally);
+          scoreChange = 30; energyChange = 10;
+          this.floatText(this.player.x, this.player.y, '🔥 Chance is calling the WHOLE CREW outside! 🚬', '#ff6a00');
+          this.time.delayedCall(2200, ()=> this.triggerCrewSmokeFrom(npc));
+        }
       }
     }
     else if(npc.id === 'jeff'){
@@ -2988,63 +2964,125 @@ class GameScene extends Phaser.Scene {
     });
   }
 
-  // ── JAMES PULLS THE WHOLE CREW ─────────────────────────────────────────────
-  triggerJamesSmokeCrew(jamesNPC){
+  // ── ANY CHARACTER CAN PULL THE WHOLE CREW ────────────────────────────────
+  triggerCrewSmokeFrom(initiatorNpc){
     if(STATE.jamesSmokeParty) return;
     STATE.jamesSmokeParty = true;
 
-    const SX = 160, SY = 90; // smoke area centre
+    const SX = 160, SY = 90;
+    const id = initiatorNpc.id;
 
-    // Helper: schedule a bubble on an NPC
-    const beat = (ms, id, text) => {
+    const beat = (ms, npcId, text) => {
       this.time.delayedCall(ms, ()=>{
-        const n = this.npcs.find(x=>x.id===id);
+        const n = this.npcs.find(x=>x.id===npcId);
         if(n) this.showBubble(n, text);
-        this.postSmokeChat(id, text);
+        this.postSmokeChat(npcId, text);
       });
     };
-    // Helper: send an NPC walking to smoke
-    const toSmoke = (ms, id, ox=0, oy=0) => {
+    const toSmoke = (ms, npcId, ox=0, oy=0) => {
       this.time.delayedCall(ms, ()=>{
-        const n = this.npcs.find(x=>x.id===id);
+        const n = this.npcs.find(x=>x.id===npcId);
         if(!n) return;
         n.targetX = SX + ox;
         n.targetY = SY + oy;
-        STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, id])];
+        STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, npcId])];
       });
     };
 
-    // James announces it
-    this.cameras.main.shake(300, 0.01);
-    this.floatText(this.player.x, this.player.y - 50, '🔥 JAMES IS CALLING EVERYONE OUT 🔥', '#ff6600');
+    this.cameras.main.shake(280, 0.009);
 
-    beat(400,  'james',    '"Alright. EVERYBODY. Outside. NOW. Don\'t ask questions."');
-    beat(2000, 'lee',      '"...Wait — is James actually— OH MY GOD I\'M COMING."');
-    beat(2900, 'chance',   '"Did James just— bro. I\'ve been WAITING for this day."');
-    beat(3900, 'chandler', '"...when James says outside, do I have to go? I feel like I have to go."');
-    beat(4900, 'drew',     '"Wait is there food outside?? I\'m going either way."');
-    beat(6000, 'james',    '"I said NOW. Why are you all still standing INSIDE."');
+    if(id === 'james'){
+      this.floatText(this.player.x, this.player.y-50, '🔥 JAMES IS CALLING EVERYONE OUT 🔥', '#ffa01e');
+      beat(400,  'james',    '"Alright. EVERYBODY. Outside. NOW. Don\'t ask questions."');
+      beat(1900, 'lee',      '"...Wait — is James actually — OH MY GOD I\'M COMING."');
+      beat(2800, 'chance',   '"Did James just — bro. I\'ve been WAITING for this day."');
+      beat(3800, 'chandler', '"...when James says outside, do I have to go? I feel like I have to go."');
+      beat(4800, 'drew',     '"Wait is there food outside?? I\'m going either way."');
+      beat(5900, 'james',    '"I said NOW. Why are you all still standing INSIDE."');
+      toSmoke(0,    'james',     32,  18);
+      toSmoke(2300, 'lee',      -45,  12);
+      toSmoke(3200, 'chance',    55,  -8);
+      toSmoke(4200, 'chandler',  10,  32);
+      toSmoke(5200, 'drew',     -22,  26);
 
-    // Send them all walking
-    toSmoke(2400, 'lee',      -45,  12);
-    toSmoke(3300, 'chance',    55,  -8);
-    toSmoke(4300, 'chandler',  10,  32);
-    toSmoke(5300, 'drew',     -22,  26);
-    toSmoke(0,    'james',     32,  18);
+    } else if(id === 'chance'){
+      this.floatText(this.player.x, this.player.y-50, '🔥 CHANCE IS CALLING EVERYONE OUT 🔥', '#ff6a00');
+      beat(400,  'chance',   '"ALRIGHT. Everybody. Outside. RIGHT NOW. Not a request."');
+      beat(1800, 'lee',      '"CHANCE declared a smoke break?! I have NEVER moved this fast in my life."');
+      beat(3000, 'james',    '"...I have zero authority right now apparently. Fine. FIVE MINUTES. GO."');
+      beat(4100, 'chandler', '"Is this mandatory? ...Yes. I need this. I\'m going."');
+      beat(5200, 'drew',     '"Wait — someone\'s paying right? No? Still going."');
+      beat(6300, 'chance',   '"That\'s what I thought. Every. Body. MOVE."');
+      toSmoke(500,  'chance',    55,  -8);
+      toSmoke(1800, 'lee',      -45,  12);
+      toSmoke(3200, 'james',     32,  18);
+      toSmoke(4300, 'chandler',  10,  32);
+      toSmoke(5400, 'drew',     -22,  26);
 
-    this.time.delayedCall(7200, ()=>{
+    } else if(id === 'chandler'){
+      this.floatText(this.player.x, this.player.y-50, '🍞 CHANDLER IS CALLING EVERYONE OUT 🍞', '#c8a050');
+      beat(400,  'chandler', '"Okay. OUTSIDE. I need air. Everyone is coming. I didn\'t ask."');
+      beat(1900, 'chance',   '"CHANDLER just called a smoke break?! CHANDLER?! I\'m writing this down."');
+      beat(3100, 'lee',      '"DID CHANDLER TAKE CHARGE?! Greatest shift I\'ve had all year!"');
+      beat(4300, 'james',    '"I can\'t explain what\'s happening. ...EVERYBODY OUT. Now."');
+      beat(5500, 'drew',     '"Wait is Chandler okay? I\'m going either way."');
+      toSmoke(1000, 'chandler',  10,  32);
+      toSmoke(2300, 'chance',    55,  -8);
+      toSmoke(3500, 'lee',      -45,  12);
+      toSmoke(4700, 'james',     32,  18);
+      toSmoke(5800, 'drew',     -22,  26);
+
+    } else if(id === 'lee'){
+      this.floatText(this.player.x, this.player.y-50, '🔥 LEE IS CALLING EVERYONE OUT 🔥', '#ff80c0');
+      beat(400,  'lee',      '"NO. THAT\'S IT. EVERYBODY OUTSIDE. I NEED this. RIGHT NOW."');
+      beat(1800, 'chance',   '"Lee just snapped. This is BEAUTIFUL. I am THERE. Don\'t start without me."');
+      beat(3000, 'james',    '"...Lee has made a command decision. ...I\'ll allow it. Five minutes."');
+      beat(4100, 'chandler', '"Lee said everyone which means me specifically. I\'m going."');
+      beat(5200, 'drew',     '"LEE IS MAD?! I don\'t know what\'s happening but I\'m IN."');
+      toSmoke(500,  'lee',      -45,  12);
+      toSmoke(1800, 'chance',    55,  -8);
+      toSmoke(3200, 'james',     32,  18);
+      toSmoke(4300, 'chandler',  10,  32);
+      toSmoke(5400, 'drew',     -22,  26);
+
+    } else if(id === 'drew'){
+      this.floatText(this.player.x, this.player.y-50, '💸 DREW IS CALLING EVERYONE OUT 💸', '#cc88ff');
+      beat(400,  'drew',     '"Forget the $5. EVERYBODY. Outside. Right now. Trust me."');
+      beat(1800, 'chance',   '"DREW called a smoke break? Bro is rich in spirit today."');
+      beat(3000, 'lee',      '"Drew is organizing something?! I don\'t know but I\'m IN."');
+      beat(4200, 'james',    '"...Drew is doing this. I refuse to analyze it. Let\'s just go."');
+      beat(5400, 'chandler', '"Drew has never organized a thing in his life. And yet. Here we all are."');
+      toSmoke(1200, 'drew',     -22,  26);
+      toSmoke(2400, 'chance',    55,  -8);
+      toSmoke(3600, 'lee',      -45,  12);
+      toSmoke(4800, 'james',     32,  18);
+      toSmoke(5900, 'chandler',  10,  32);
+    }
+
+    // Everyone's headed out — then auto-open the smoke session with party options
+    this.time.delayedCall(7000, ()=>{
       this.floatText(SX, 50, '🚬 THE WHOLE CREW IS HEADING OUTSIDE', '#ffd700');
     });
-    this.time.delayedCall(9500, ()=>{
-      beat(0, 'james', '"This is a one-time thing. Nobody mention this in the building."');
-      this.floatText(SX, 70, '🔥 James\'s Crew assembled! New smoke options now available!', '#ff6600');
+    this.time.delayedCall(9800, ()=>{
+      // Last arrival line + auto-open party menu
+      const lastLine = {
+        james:   '"This is a one-time thing. Nobody mention this in the building."',
+        chance:  '"Okay we\'re all out here. Now what? ...I have ideas."',
+        chandler:'"I don\'t know why I did that. But here we all are."',
+        lee:     '"OKAY. We\'re all outside. This is what I needed. This is everything."',
+        drew:    '"I can\'t believe that worked. I organized something. Write it down."',
+      }[id] || '"Alright. We\'re here."';
+      beat(0, id, lastLine);
+      this.floatText(SX, 68, '🔥 The whole crew is assembled! Choose your move!', '#ff6600');
+      // Auto-open the smoke session if not already open
+      this.time.delayedCall(1400, ()=>{ this.showSmokeAreaMenu(); });
     });
 
     // Achievement
     if(!STATE.achievements.includes('james_crew')){
       STATE.achievements.push('james_crew');
-      this.time.delayedCall(11000, ()=>
-        this.floatText(SX, 90, '🏆 ACHIEVEMENT: James\'s Inner Circle!', '#ffd700'));
+      this.time.delayedCall(12000, ()=>
+        this.floatText(SX, 88, '🏆 ACHIEVEMENT: The Inner Circle!', '#ffd700'));
     }
   }
 
