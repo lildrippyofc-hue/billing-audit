@@ -823,148 +823,429 @@ class GameScene extends Phaser.Scene {
   createMap(){
     const g = this.add.graphics();
 
-    // Draw each zone
+    // ════════════════════════════════════════════════════════
+    //  OUTSIDE / PARKING LOT
+    // ════════════════════════════════════════════════════════
+    // Asphalt base
+    g.fillStyle(0x252525, 1); g.fillRect(0, 0, WW, 170);
+    // Asphalt texture – subtle lighter patches
+    g.fillStyle(0x2b2b2b, 1);
+    for(let x=0; x<WW; x+=140){ for(let y=0; y<170; y+=90){
+      g.fillRoundedRect(x+Math.sin(x*0.1)*12, y+Math.cos(y*0.1)*10, 110, 65, 3);
+    }}
+    // Asphalt cracks
+    g.lineStyle(1, 0x1a1a1a, 0.7);
+    g.lineBetween(120, 30, 180, 90); g.lineBetween(180, 90, 160, 140);
+    g.lineBetween(450, 10, 490, 60); g.lineBetween(800, 50, 860, 100);
+    g.lineBetween(1200, 20, 1260, 80); g.lineBetween(1600, 40, 1640, 100);
+    // Parking stripes (faded white)
+    g.lineStyle(2, 0xffffff, 0.12);
+    for(let x=50; x<WW; x+=95){ g.lineBetween(x, 0, x, 155); }
+    // Curb – building perimeter line (bold yellow)
+    g.lineStyle(5, 0xffcc00, 0.75);
+    g.lineBetween(0, 163, WW, 163);
+    // Curb hazard hash
+    g.lineStyle(2, 0xffcc00, 0.22);
+    for(let x=0; x<WW; x+=18){ g.lineBetween(x, 157, x+14, 170); }
+    // Drain grates in parking lot
+    g.fillStyle(0x1a1a1a, 0.8);
+    [300,700,1100,1500].forEach(x=>{ g.fillRoundedRect(x, 140, 30, 18, 2); g.lineStyle(1,0x333333,0.6); g.strokeRoundedRect(x,140,30,18,2); });
+
+    // ════════════════════════════════════════════════════════
+    //  DOCK AREA
+    // ════════════════════════════════════════════════════════
+    // Concrete base (dark)
+    g.fillStyle(0x363636, 1); g.fillRect(0, 170, WW, 300);
+    // Concrete expansion joints (subtle grid)
+    g.lineStyle(1, 0x2c2c2c, 1);
+    for(let x=0; x<WW; x+=150){ g.lineBetween(x, 170, x, 470); }
+    for(let y=170; y<470; y+=120){ g.lineBetween(0, y, WW, y); }
+    // Concrete wear scuffs / tire marks
+    g.fillStyle(0x2e2e2e, 1);
+    [[80,260,180,6],[400,310,220,4],[620,380,150,5],[900,240,200,4],[1100,350,160,5],[1400,280,180,6],[1650,400,200,4]].forEach(([x,y,w,h])=>g.fillRect(x,y,w,h));
+    // Black tire skid streaks
+    g.lineStyle(3, 0x111111, 0.5);
+    [[150,200,320,220],[500,350,650,370],[900,250,1050,275],[1300,320,1450,340]].forEach(([x1,y1,x2,y2])=>g.lineBetween(x1,y1,x2,y2));
+
+    // Yellow safety stripe along the dock/outside wall edge
+    g.lineStyle(7, 0xffcc00, 0.85); g.lineBetween(0, 174, WW, 174);
+
+    // Hazard stripes at each bay opening (yellow-black diagonal)
+    for(let i=0; i<6; i++){
+      const bx = i*300;
+      for(let s=0; s<8; s++){
+        g.fillStyle(s%2===0 ? 0xffcc00 : 0x111111, 0.72);
+        g.fillRect(bx+s*37, 170, 37, 16);
+      }
+    }
+
+    // Dock leveler plates at each bay (metal ribbed plates)
+    for(let i=0; i<6; i++){
+      const bx = i*300+15;
+      g.fillStyle(0x4a4a4a, 1); g.fillRoundedRect(bx, 170, 270, 22, 2);
+      // Ribs
+      g.lineStyle(1, 0x5a5a5a, 0.8);
+      for(let r=0; r<14; r++) g.lineBetween(bx+r*19, 173, bx+r*19, 190);
+      // Edge bumpers
+      g.fillStyle(0xffcc00, 0.85);
+      g.fillRect(bx, 170, 12, 22); g.fillRect(bx+258, 170, 12, 22);
+      // Dock seal shadow at top edge
+      g.fillStyle(0x111111, 0.4); g.fillRect(bx, 170, 270, 6);
+    }
+
+    // Bay floor numbers (large painted letters)
+    for(let i=0; i<6; i++){
+      this.add.text(i*300+150, 435, `${i+1}`, {
+        fontSize:'48px', fill:'rgba(255,200,0,0.10)', fontFamily:'monospace', fontStyle:'bold'
+      }).setOrigin(0.5);
+    }
+
+    // Forklift traffic arrows (painted yellow on dock floor)
+    for(let i=0; i<6; i++){
+      const ax = i*300+150, ay = 380;
+      // Arrow shaft
+      g.fillStyle(0xffcc00, 0.14); g.fillRect(ax-5, ay-55, 10, 75);
+      // Arrow head
+      g.fillStyle(0xffcc00, 0.14); g.fillTriangle(ax-16, ay-55, ax+16, ay-55, ax, ay-82);
+    }
+
+    // Overhead dock lights (bright ceiling fixtures – cone effect)
+    for(let i=0; i<6; i++){
+      // Fixture housing
+      g.fillStyle(0x888888, 0.5); g.fillRect(i*300+130, 172, 40, 8);
+      // Light cone
+      g.fillStyle(0xffffcc, 0.07); g.fillTriangle(i*300+150, 180, i*300+90, 350, i*300+210, 350);
+      g.fillStyle(0xffffcc, 0.04); g.fillCircle(i*300+150, 200, 70);
+    }
+
+    // Bay dividers (wall columns)
+    for(let i=0; i<=6; i++){
+      const bx = i*300;
+      g.fillStyle(0x4a4a4a, 1); g.fillRect(bx-3, 170, 6, 300);
+      g.fillStyle(0xffffff, 0.06); g.fillRect(bx-1, 170, 2, 300);
+    }
+
+    // Dock safety cones
+    const conePositions = [[50,430],[290,430],[600,430],[870,430],[1150,430],[1450,430],[1730,430]];
+    conePositions.forEach(([cx,cy])=>{
+      g.fillStyle(0xff5500, 0.8); g.fillTriangle(cx, cy-16, cx-8, cy+4, cx+8, cy+4);
+      g.fillStyle(0xffffff, 0.5); g.fillRect(cx-6, cy-8, 12, 3);
+      g.fillStyle(0x333333, 0.6); g.fillEllipse(cx, cy+4, 18, 6);
+    });
+
+    // ════════════════════════════════════════════════════════
+    //  WAREHOUSE FLOOR
+    // ════════════════════════════════════════════════════════
+    // Polished concrete base (lighter than dock)
+    g.fillStyle(0x3e3e3e, 1); g.fillRect(0, 470, WW, 300);
+    // Sheen effect (alternating lighter strips — simulates polished floor)
+    g.fillStyle(0x424242, 0.4);
+    for(let x=0; x<WW; x+=220){ g.fillRect(x, 470, 110, 300); }
+    // Expansion joints
+    g.lineStyle(1, 0x363636, 1);
+    for(let x=0; x<WW; x+=150){ g.lineBetween(x, 470, x, 770); }
+    for(let y=470; y<770; y+=150){ g.lineBetween(0, y, WW, y); }
+
+    // Painted aisle lines – bold yellow
+    g.lineStyle(4, 0xffcc00, 0.30);
+    [400, 800, 1200, 1600].forEach(x=>{ g.lineBetween(x,470,x,770); });
+    g.lineStyle(4, 0xffcc00, 0.30); g.lineBetween(0, 620, WW, 620);
+    // Aisle arrows (painted direction indicators)
+    [[200,560],[600,560],[1000,560],[1400,560],[200,700],[600,700],[1000,700],[1400,700]].forEach(([ax,ay])=>{
+      g.fillStyle(0xffcc00, 0.10);
+      g.fillTriangle(ax, ay-12, ax-8, ay+4, ax+8, ay+4);
+    });
+
+    // Pallet staging zones (dashed boxes on floor)
+    [[50,490,160,100],[220,490,160,100],[1600,490,160,100]].forEach(([x,y,w,h])=>{
+      g.lineStyle(2, 0xffcc00, 0.20);
+      g.strokeRect(x,y,w,h);
+      this.add.text(x+w/2, y+h/2, 'STAGING', {fontSize:'9px',fill:'rgba(255,200,0,0.18)',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
+    });
+
+    // Forklift charging station
+    g.fillStyle(0x1a2a3a, 0.8); g.fillRoundedRect(1590, 490, 200, 90, 6);
+    g.lineStyle(2, 0x44aaff, 0.5); g.strokeRoundedRect(1590, 490, 200, 90, 6);
+    g.fillStyle(0x44aaff, 0.15); g.fillRect(1594, 494, 192, 82);
+    this.add.text(1690, 535, '⚡ CHARGING\nSTATION', {fontSize:'9px',fill:'rgba(68,170,255,0.6)',fontFamily:'monospace',align:'center'}).setOrigin(0.5);
+
+    // Emergency exit path (green dashed line)
+    g.lineStyle(2, 0x44cc44, 0.20);
+    g.lineBetween(0, 750, 1800, 750);
+    this.add.text(1780, 742, '🚨 EXIT', {fontSize:'8px',fill:'rgba(0,200,0,0.25)',fontFamily:'monospace'}).setOrigin(1,1);
+
+    // Safety corner markers
+    g.fillStyle(0xcc2222, 0.35);
+    [[0,470],[WW-60,470],[0,760],[WW-60,760]].forEach(([cx,cy])=>{
+      for(let s=0;s<4;s++){ g.fillStyle(s%2===0?0xcc2222:0xffffff, 0.30); g.fillRect(cx+s*15,cy,15,8); }
+    });
+
+    // Parked pallet jack (permanent prop on floor)
+    g.fillStyle(0xffcc00, 0.85); g.fillRoundedRect(350, 540, 50, 18, 3);
+    g.fillStyle(0x888888, 1); g.fillRoundedRect(344, 544, 8, 10, 2);
+    g.fillStyle(0xeeaa00, 1); g.fillRect(396, 542, 14, 5); g.fillRect(396, 551, 14, 5);
+    g.fillStyle(0x222222, 1); g.fillCircle(358, 559, 5); g.fillCircle(390, 559, 5);
+
+    // ════════════════════════════════════════════════════════
+    //  BREAK ROOM
+    // ════════════════════════════════════════════════════════
+    g.fillStyle(0x281616, 1); g.fillRect(0, 770, 420, 330);
+    // Tile floor (warm colored tiles)
+    g.lineStyle(1, 0x321818, 1);
+    for(let x=0; x<420; x+=35){ g.lineBetween(x, 770, x, 1100); }
+    for(let y=770; y<1100; y+=35){ g.lineBetween(0, y, 420, y); }
+    // Tile highlight on alternating tiles
+    g.fillStyle(0x2e1818, 0.4);
+    for(let x=0; x<420; x+=70){ for(let y=770; y<1100; y+=70){ g.fillRect(x, y, 35, 35); }}
+
+    // Kitchen counter (back wall)
+    g.fillStyle(0x3a2020, 1); g.fillRoundedRect(5, 780, 410, 32, 4);
+    g.fillStyle(0x4a3030, 1); g.fillRoundedRect(7, 782, 406, 28, 3);
+    // Counter highlight
+    g.fillStyle(0xffffff, 0.07); g.fillRect(7, 782, 406, 5);
+    // Counter edge
+    g.lineStyle(1, 0x552020, 0.8); g.strokeRoundedRect(5, 780, 410, 32, 4);
+    // Sink
+    g.fillStyle(0x557788, 0.9); g.fillRoundedRect(340, 783, 60, 24, 3);
+    g.fillStyle(0x1a2a33, 1); g.fillRoundedRect(344, 787, 52, 16, 2);
+    g.fillStyle(0x888888, 1); g.fillRect(368, 783, 4, 8);
+    // Microwave
+    g.fillStyle(0x222233, 0.95); g.fillRoundedRect(200, 783, 80, 24, 3);
+    g.fillStyle(0x1a1a22, 1); g.fillRoundedRect(202, 785, 55, 20, 2);
+    g.fillStyle(0x44ff44, 0.6); g.fillRect(260, 787, 15, 16);
+    // Coffee maker
+    g.fillStyle(0x222222, 1); g.fillRoundedRect(100, 783, 36, 24, 3);
+    g.fillStyle(0x663300, 1); g.fillRoundedRect(104, 785, 20, 20, 2);
+    g.fillStyle(0xcc4400, 0.6); g.fillRect(125, 788, 9, 14);
+
+    // Tables and chairs (improved 3D-ish look)
+    [[30,830],[165,830],[300,830]].forEach(([tx,ty])=>{
+      // Table shadow
+      g.fillStyle(0x000000, 0.25); g.fillRoundedRect(tx+4, ty+4, 100, 58, 5);
+      // Table top
+      g.fillStyle(0x5a3520, 1); g.fillRoundedRect(tx, ty, 100, 55, 5);
+      // Table highlight
+      g.fillStyle(0xffffff, 0.08); g.fillRoundedRect(tx+2, ty+2, 96, 12, 3);
+      // Table edge shading
+      g.fillStyle(0x000000, 0.25); g.fillRect(tx+2, ty+45, 96, 9);
+      // Chairs (above + below table)
+      [[tx+10,ty-20],[tx+68,ty-20],[tx+10,ty+58],[tx+68,ty+58]].forEach(([cx,cy])=>{
+        g.fillStyle(0x000000, 0.2); g.fillRoundedRect(cx+2, cy+2, 22, 18, 3);
+        g.fillStyle(0x4a2a14, 1); g.fillRoundedRect(cx, cy, 22, 18, 3);
+        g.fillStyle(0xffffff, 0.06); g.fillRect(cx+1, cy+1, 20, 5);
+      });
+    });
+    // Break room TV on wall
+    g.fillStyle(0x111111, 1); g.fillRoundedRect(150, 1040, 120, 70, 4);
+    g.fillStyle(0x001133, 0.9); g.fillRoundedRect(153, 1043, 114, 60, 3);
+    g.fillStyle(0x0044aa, 0.3); g.fillRect(155, 1045, 110, 56);
+    this.add.text(210, 1073, '📺 NEWS', {fontSize:'9px',fill:'rgba(100,180,255,0.35)',fontFamily:'monospace'}).setOrigin(0.5);
+
+    // ════════════════════════════════════════════════════════
+    //  RESTROOM
+    // ════════════════════════════════════════════════════════
+    g.fillStyle(0x181f22, 1); g.fillRect(420, 770, 280, 330);
+    // Small square tiles
+    g.lineStyle(1, 0x1e2a2e, 1);
+    for(let x=420; x<700; x+=28){ g.lineBetween(x, 770, x, 1100); }
+    for(let y=770; y<1100; y+=28){ g.lineBetween(420, y, 700, y); }
+    // Tile grout highlight
+    g.fillStyle(0x222e32, 0.3);
+    for(let x=420; x<700; x+=56){ for(let y=770; y<1100; y+=56){ g.fillRect(x, y, 28, 28); }}
+    // Stalls (proper look)
+    for(let i=0; i<3; i++){
+      // Stall back wall
+      g.fillStyle(0x28404a, 1); g.fillRect(430+i*80, 820, 70, 130);
+      // Stall dividers
+      g.fillStyle(0x1e3038, 1); g.fillRect(430+i*80, 818, 4, 135);
+      g.fillRect(496+i*80, 818, 4, 135);
+      // Stall door
+      g.fillStyle(0x22383f, 1); g.fillRoundedRect(434+i*80, 823, 62, 88, 2);
+      g.fillStyle(0xffffff, 0.05); g.fillRect(434+i*80, 823, 62, 8);
+      // Door frame
+      g.lineStyle(1, 0x2a4a55, 1); g.strokeRoundedRect(434+i*80, 823, 62, 88, 2);
+      // Handle
+      g.fillStyle(0xaaaaaa, 1); g.fillRoundedRect(480+i*80, 863, 6, 14, 2);
+      // Number
+      this.add.text(465+i*80, 880, `${i+1}`, {fontSize:'18px',fill:'rgba(68,170,190,0.4)',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
+    }
+    // Sink area on wall
+    g.fillStyle(0x1a2a2e, 1); g.fillRect(430, 975, 250, 50);
+    g.fillStyle(0x557788, 0.7); g.fillRoundedRect(450, 980, 55, 35, 4);
+    g.fillStyle(0x1a2a33, 1); g.fillRoundedRect(454, 984, 47, 27, 3);
+    g.fillStyle(0x888888, 1); g.fillRect(476, 978, 4, 8);
+    g.fillStyle(0x557788, 0.7); g.fillRoundedRect(560, 980, 55, 35, 4);
+    g.fillStyle(0x1a2a33, 1); g.fillRoundedRect(564, 984, 47, 27, 3);
+    g.fillStyle(0x888888, 1); g.fillRect(586, 978, 4, 8);
+
+    // ════════════════════════════════════════════════════════
+    //  DRY STORAGE
+    // ════════════════════════════════════════════════════════
+    g.fillStyle(0x272714, 1); g.fillRect(700, 770, 400, 330);
+    g.lineStyle(1, 0x2e2e16, 1);
+    for(let x=700; x<1100; x+=45){ g.lineBetween(x, 770, x, 1100); }
+    for(let y=770; y<1100; y+=45){ g.lineBetween(700, y, 1100, y); }
+    // Heavy-duty metal shelving units
+    [[720,800],[840,800],[960,800]].forEach(([sx,sy])=>{
+      // Shelf frame shadow
+      g.fillStyle(0x000000, 0.3); g.fillRect(sx+3, sy+3, 90, 150);
+      // Upright posts
+      g.fillStyle(0x555540, 1); g.fillRect(sx, sy, 8, 150); g.fillRect(sx+82, sy, 8, 150);
+      // Cross bracing
+      g.lineStyle(1, 0x444430, 0.8);
+      g.lineBetween(sx+4, sy+30, sx+86, sy+80); g.lineBetween(sx+86, sy+30, sx+4, sy+80);
+      // Shelf boards
+      [0,38,76,114].forEach(sh=>{
+        g.fillStyle(0x6a6448, 1); g.fillRect(sx+4, sy+sh, 84, 10);
+        g.fillStyle(0xffffff, 0.05); g.fillRect(sx+4, sy+sh, 84, 3);
+      });
+      // Items on shelves (varied boxes/cans)
+      const cols = [0x8a7040, 0x6a8244, 0x4a6282, 0x824a4a, 0x7a5a88, 0xaa7a44];
+      [0,38,76].forEach((sh,row)=>{
+        for(let b=0;b<4;b++){
+          g.fillStyle(cols[(row*4+b)%cols.length], 0.85);
+          g.fillRoundedRect(sx+5+b*20, sy+sh+2, 18, 24, 2);
+          g.fillStyle(0xffffff, 0.08); g.fillRect(sx+5+b*20, sy+sh+2, 18, 5);
+        }
+      });
+    });
+
+    // ════════════════════════════════════════════════════════
+    //  FREEZER
+    // ════════════════════════════════════════════════════════
+    g.fillStyle(0x080e18, 1); g.fillRect(1100, 770, 700, 330);
+    // Frost floor
+    g.fillStyle(0x88ccff, 0.03);
+    for(let x=1110; x<1800; x+=65){ for(let y=790; y<1090; y+=65){ g.fillRect(x,y,55,55); }}
+    // Wall frost buildup
+    g.fillStyle(0xaaddff, 0.06);
+    g.fillRect(1100, 770, 700, 22); g.fillRect(1100, 770, 18, 330); g.fillRect(1782, 770, 18, 330);
+    // Freezer floor condensation lines
+    g.lineStyle(1, 0x1a2a3a, 0.9);
+    for(let x=1110; x<1800; x+=90){ g.lineBetween(x,770,x,1100); }
+    for(let y=780; y<1100; y+=90){ g.lineBetween(1100,y,1800,y); }
+    // Heavy freezer racking (5 bays)
+    for(let i=0; i<5; i++){
+      const rx = 1125+i*120;
+      // Shadow
+      g.fillStyle(0x000000, 0.4); g.fillRect(rx+3, 800, 90, 190);
+      // Frame uprights
+      g.fillStyle(0x1e3040, 1); g.fillRect(rx, 800, 8, 190); g.fillRect(rx+82, 800, 8, 190);
+      // Shelves
+      [0,48,96,144].forEach(sh=>{
+        g.fillStyle(0x1a2a38, 1); g.fillRect(rx+4, 800+sh, 84, 8);
+        g.fillStyle(0xaaddff, 0.05); g.fillRect(rx+4, 800+sh, 84, 3);
+      });
+      // Frozen product (blue-tinted boxes)
+      [0,48,96].forEach((sh,row)=>{
+        for(let b=0;b<3;b++){
+          g.fillStyle(0x1a3a5a, 0.9); g.fillRoundedRect(rx+5+b*26, 800+sh+2, 24, 28, 2);
+          g.fillStyle(0xaaddff, 0.12); g.fillRect(rx+5+b*26, 800+sh+2, 24, 6);
+          // Ice frost on top
+          g.fillStyle(0xffffff, 0.06); g.fillRect(rx+5+b*26, 800+sh+2, 24, 2);
+        }
+      });
+    }
+    // Freezer temperature display on wall
+    g.fillStyle(0x0a1a28, 1); g.fillRoundedRect(1720, 800, 65, 40, 4);
+    g.lineStyle(1, 0x2244aa, 0.7); g.strokeRoundedRect(1720, 800, 65, 40, 4);
+    this.add.text(1752, 820, '❄ -18°C', {fontSize:'9px',fill:'rgba(100,180,255,0.7)',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
+    // Ice crystals on floor
+    g.lineStyle(1, 0x88ccff, 0.12);
+    [[1130,810,22],[1250,880,18],[1400,830,25],[1550,900,20],[1650,810,16],[1750,870,22]].forEach(([ix,iy,il])=>{
+      for(let a=0;a<6;a++){ g.lineBetween(ix,iy, ix+il*Math.cos(a*1.05), iy+il*Math.sin(a*1.05)); }
+    });
+
+    // ════════════════════════════════════════════════════════
+    //  WALL BETWEEN OUTSIDE AND DOCK (building facade)
+    // ════════════════════════════════════════════════════════
+    // Left wall section
+    g.fillStyle(0x484848, 1); g.fillRect(0, 158, 200, 16);
+    // Right wall section
+    g.fillStyle(0x484848, 1); g.fillRect(800, 158, 1000, 16);
+    // Brick texture on visible wall sections
+    g.fillStyle(0x404040, 0.6);
+    for(let x=0; x<200; x+=40){ for(let r=0; r<2; r++){ g.fillRect(x+(r%2)*20, 158+r*8, 38, 7); }}
+    for(let x=800; x<1800; x+=40){ for(let r=0; r<2; r++){ g.fillRect(x+(r%2)*20, 158+r*8, 38, 7); }}
+    // Dock door opening (dark recessed)
+    g.fillStyle(0x0a0a0a, 0.95); g.fillRect(200, 157, 600, 18);
+    g.fillStyle(0xffffff, 0.04); g.fillRect(200, 157, 600, 4);
+
+    // ════════════════════════════════════════════════════════
+    //  ZONE LABELS (on top of everything)
+    // ════════════════════════════════════════════════════════
     for(const [key, z] of Object.entries(ZONES)){
-      g.fillStyle(z.color, 1);
-      g.fillRect(z.x, z.y, z.w, z.h);
-      // Zone border
-      g.lineStyle(2, 0xffa01e, 0.3);
-      g.strokeRect(z.x, z.y, z.w, z.h);
-      // Zone label
-      this.add.text(z.x + z.w/2, z.y + 16, z.name, {
-        fontSize:'13px', fill:'#ffa01e', fontFamily:'monospace',
-        stroke:'#000', strokeThickness:3, alpha:0.6
+      this.add.text(z.x + z.w/2, z.y + 18, z.name, {
+        fontSize:'12px', fill:'#ffa01e', fontFamily:'monospace',
+        stroke:'#000000', strokeThickness:4, alpha:0.55
       }).setOrigin(0.5, 0);
     }
 
-    // Floor grid lines (just dock and floor)
-    g.lineStyle(1, 0xffffff, 0.05);
+    // ════════════════════════════════════════════════════════
+    //  FLOOR GRID (dock + warehouse overlay — subtle)
+    // ════════════════════════════════════════════════════════
+    g.lineStyle(1, 0xffffff, 0.025);
     for(let x=0; x<WW; x+=60){ g.lineBetween(x, 170, x, 770); }
     for(let y=170; y<770; y+=60){ g.lineBetween(0, y, WW, y); }
 
-    // Bay dividers in dock
-    g.lineStyle(3, 0xffa01e, 0.4);
-    for(let i=0;i<=6;i++){
-      const bx = 0 + i * 300;
-      g.lineBetween(bx, 170, bx, 470);
-    }
-
-    // Outside detail (parking lot lines)
-    g.lineStyle(1, 0xffffff, 0.08);
-    for(let x=0; x<WW; x+=80){ g.lineBetween(x, 0, x, 170); }
-
-    // Break room detail (tables)
-    g.fillStyle(0x3a2010, 1);
-    for(let i=0;i<3;i++){
-      g.fillRoundedRect(40 + i*130, 820, 100, 50, 8);
-    }
-
-    // Restroom stalls
-    g.fillStyle(0x1a3a4a, 1);
-    for(let i=0;i<3;i++){
-      g.fillRect(430+i*80, 820, 70, 120);
-    }
-    g.lineStyle(2, 0x2a6a8a, 0.5);
-    for(let i=0;i<3;i++){
-      g.strokeRect(430+i*80, 820, 70, 120);
-      this.add.text(465+i*80, 880, `Stall\n${i+1}`, {fontSize:'10px', fill:'#4aa', fontFamily:'monospace'}).setOrigin(0.5);
-    }
-
-    // Freezer ice detail
-    g.fillStyle(0x88ccff, 0.05);
-    for(let x=1110;x<WW-10;x+=60) for(let y=790;y<1090;y+=60){
-      g.fillRect(x,y,50,50);
-    }
-
-    // ── SMOKING AREA (proper defined zone) ──────────────────────────────────
-    // Ground fill — slightly different green
-    g.fillStyle(0x1a4a18, 1);
-    g.fillRect(30, 8, 260, 148);
-    // Inner area highlight
-    g.fillStyle(0x22ff66, 0.06);
-    g.fillRect(30, 8, 260, 148);
-
-    // Fence — top, left, right sides (open toward dock entrance)
+    // ════════════════════════════════════════════════════════
+    //  SMOKING AREA  (preserved from original, enhanced)
+    // ════════════════════════════════════════════════════════
+    // Ground
+    g.fillStyle(0x1a4a18, 1); g.fillRect(30, 8, 260, 148);
+    g.fillStyle(0x22ff66, 0.04); g.fillRect(30, 8, 260, 148);
+    // Patio concrete
+    g.fillStyle(0x2a3a28, 0.5); g.fillRect(30, 8, 260, 148);
+    g.lineStyle(1, 0x2a3020, 0.7);
+    for(let x=30; x<290; x+=40){ g.lineBetween(x, 8, x, 156); }
+    for(let y=8; y<156; y+=40){ g.lineBetween(30, y, 290, y); }
+    // Fence
     g.lineStyle(4, 0x885533, 0.9);
-    g.lineBetween(30, 8, 290, 8);      // top
-    g.lineBetween(30, 8, 30, 156);     // left
-    g.lineBetween(290, 8, 290, 156);   // right
+    g.lineBetween(30, 8, 290, 8); g.lineBetween(30, 8, 30, 156); g.lineBetween(290, 8, 290, 156);
     // Fence posts
     g.lineStyle(5, 0x664422, 1);
     for(let fx=30; fx<=290; fx+=40){ g.lineBetween(fx, 4, fx, 14); }
-    for(let fy=30; fy<=150; fy+=40){
-      g.lineBetween(28, fy, 34, fy);
-      g.lineBetween(288, fy, 294, fy);
-    }
-
-    // SMOKING AREA sign
-    g.fillStyle(0x116611, 1);
-    g.fillRoundedRect(80, 12, 130, 24, 4);
-    g.lineStyle(2, 0x44ff44, 0.8);
-    g.strokeRoundedRect(80, 12, 130, 24, 4);
-    this.add.text(145, 24, '🚬 SMOKE AREA 🚬', {
-      fontSize:'10px', fill:'#aaffaa', fontFamily:'monospace', fontStyle:'bold',
-      stroke:'#003300', strokeThickness:2
-    }).setOrigin(0.5, 0.5);
-
-    // Picnic table 1 (left bench area)
-    g.fillStyle(0x8b5e3c, 1);
-    g.fillRoundedRect(50, 75, 80, 10, 3);   // table top
-    g.fillStyle(0x6b4a2e, 1);
-    g.fillRect(60, 85, 8, 18);              // left leg
-    g.fillRect(112, 85, 8, 18);             // right leg
-    g.fillStyle(0x7a5234, 1);
-    g.fillRoundedRect(45, 92, 90, 7, 2);    // bench left
-    g.fillRoundedRect(45, 103, 90, 7, 2);   // bench right (other side)
-
-    // Picnic table 2 (right)
-    g.fillStyle(0x8b5e3c, 1);
-    g.fillRoundedRect(160, 75, 80, 10, 3);
-    g.fillStyle(0x6b4a2e, 1);
-    g.fillRect(170, 85, 8, 18);
-    g.fillRect(222, 85, 8, 18);
-    g.fillStyle(0x7a5234, 1);
-    g.fillRoundedRect(155, 92, 90, 7, 2);
-    g.fillRoundedRect(155, 103, 90, 7, 2);
-
-    // Ashtray / standing can between tables
-    g.fillStyle(0x888888, 1);
-    g.fillRect(143, 78, 14, 20);
-    g.fillStyle(0x555555, 1);
-    g.fillRect(141, 76, 18, 6);
-    g.fillStyle(0x333333, 1);
-    g.fillRect(143, 76, 14, 4);
-
-    // Cigarette butts on ground
+    for(let fy=30; fy<=150; fy+=40){ g.lineBetween(28,fy,34,fy); g.lineBetween(288,fy,294,fy); }
+    // Fence chain link texture
+    g.lineStyle(1, 0x775522, 0.25);
+    for(let fy=10; fy<155; fy+=10){ g.lineBetween(31,fy,289,fy); }
+    // Sign
+    g.fillStyle(0x116611, 1); g.fillRoundedRect(80, 12, 130, 24, 4);
+    g.lineStyle(2, 0x44ff44, 0.8); g.strokeRoundedRect(80, 12, 130, 24, 4);
+    this.add.text(145, 24, '🚬 SMOKE AREA 🚬', {fontSize:'10px',fill:'#aaffaa',fontFamily:'monospace',fontStyle:'bold',stroke:'#003300',strokeThickness:2}).setOrigin(0.5);
+    // Picnic table 1
+    g.fillStyle(0x8b5e3c, 1); g.fillRoundedRect(50, 75, 80, 10, 3);
+    g.fillStyle(0x6b4a2e, 1); g.fillRect(60,85,8,18); g.fillRect(112,85,8,18);
+    g.fillStyle(0x7a5234, 1); g.fillRoundedRect(45,92,90,7,2); g.fillRoundedRect(45,103,90,7,2);
+    // Picnic table 2
+    g.fillStyle(0x8b5e3c, 1); g.fillRoundedRect(160, 75, 80, 10, 3);
+    g.fillStyle(0x6b4a2e, 1); g.fillRect(170,85,8,18); g.fillRect(222,85,8,18);
+    g.fillStyle(0x7a5234, 1); g.fillRoundedRect(155,92,90,7,2); g.fillRoundedRect(155,103,90,7,2);
+    // Ashtray
+    g.fillStyle(0x888888, 1); g.fillRect(143,78,14,20);
+    g.fillStyle(0x555555, 1); g.fillRect(141,76,18,6);
+    g.fillStyle(0x333333, 1); g.fillRect(143,76,14,4);
+    // Cigarette butts
     g.fillStyle(0xffd080, 0.5);
-    for(let i=0;i<8;i++){
-      g.fillRect(50+i*25, 140+Math.sin(i)*4, 10, 3);
-    }
+    for(let i=0;i<12;i++){ g.fillRect(48+i*18, 140+Math.sin(i)*4, 10, 3); }
+    // No smoking sign
+    g.fillStyle(0xcc2222, 1); g.fillRoundedRect(32,155,140,16,3);
+    this.add.text(102, 163, '⛔ NO SMOKING INSIDE', {fontSize:'7px',fill:'#fff',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
 
-    // "NO SMOKING INSIDE →" sign on fence opening
-    g.fillStyle(0xcc2222, 1);
-    g.fillRoundedRect(32, 155, 140, 16, 3);
-    this.add.text(102, 163, '⛔ NO SMOKING INSIDE', {
-      fontSize:'7px', fill:'#fff', fontFamily:'monospace', fontStyle:'bold'
-    }).setOrigin(0.5, 0.5);
-
-    // Door openings on bottom zone walls (yellow highlight so player can see them)
+    // ════════════════════════════════════════════════════════
+    //  DOOR OPENINGS (warehouse to sub-zones)
+    // ════════════════════════════════════════════════════════
     const doorColor = 0xffd700;
     const doors = [
-      { x:140, y:762, w:120, label:'🚪 Break\nRoom' },
-      { x:490, y:762, w:95,  label:'🚪 Rest\nroom' },
-      { x:830, y:762, w:120, label:'🚪 Dry\nStorage' },
-      { x:1220,y:762, w:200, label:'🚪 Freezer' },
+      { x:140, y:762, w:120, label:'🚪 Break Room' },
+      { x:490, y:762, w:95,  label:'🚪 Restroom' },
+      { x:830, y:762, w:120, label:'🚪 Dry Storage' },
+      { x:1220, y:762, w:200, label:'🚪 Freezer' },
     ];
     doors.forEach(d=>{
-      g.fillStyle(doorColor, 0.18);
-      g.fillRect(d.x, d.y, d.w, 14);
-      g.lineStyle(1.5, doorColor, 0.5);
-      g.strokeRect(d.x, d.y, d.w, 14);
-      this.add.text(d.x + d.w/2, d.y - 2, d.label, {
-        fontSize:'9px', fill:'#ffd700', fontFamily:'monospace',
-        stroke:'#000', strokeThickness:2, align:'center'
-      }).setOrigin(0.5, 1);
+      g.fillStyle(doorColor, 0.20); g.fillRect(d.x, d.y, d.w, 14);
+      g.lineStyle(1.5, doorColor, 0.55); g.strokeRect(d.x, d.y, d.w, 14);
+      this.add.text(d.x+d.w/2, d.y-2, d.label, {fontSize:'9px',fill:'#ffd700',fontFamily:'monospace',stroke:'#000',strokeThickness:2,align:'center'}).setOrigin(0.5,1);
     });
   }
 
@@ -1181,20 +1462,104 @@ class GameScene extends Phaser.Scene {
   createTrucks(){
     this.trucks = [];
     const g = this.add.graphics();
-    BAYS.forEach((bay, i) => {
-      // Truck body
-      g.fillStyle(Phaser.Math.Between(0x446688, 0x886644), 1);
-      g.fillRect(bay.x - bay.w/2, bay.y - bay.h/2, bay.w, bay.h);
-      g.lineStyle(2, 0xffa01e, 0.5);
-      g.strokeRect(bay.x - bay.w/2, bay.y - bay.h/2, bay.w, bay.h);
 
-      // Truck label
-      const lbl = this.add.text(bay.x, bay.y, `🚛 Truck ${i+1}\n${bay.pallets} pallets`, {
+    BAYS.forEach((bay, i)=>{
+      // Truck color scheme (varied fleet)
+      const truckColors = [0x446688, 0x664444, 0x446644, 0x664466, 0x556644, 0x445566];
+      const cabColors   = [0x334d66, 0x4d3333, 0x334d33, 0x4d3344, 0x3d4d33, 0x333d4d];
+      const stripeColors= [0xffcc00, 0xff6633, 0x66cc66, 0xcc66cc, 0x99cc44, 0x66aacc];
+      const tc = truckColors[i%6];
+      const cc = cabColors[i%6];
+      const sc = stripeColors[i%6];
+
+      const tx = bay.x - bay.w/2, ty = bay.y - bay.h/2;
+      const tw = bay.w, th = bay.h;
+
+      // ── Trailer shadow
+      g.fillStyle(0x000000, 0.3);
+      g.fillRoundedRect(tx+5, ty+5, tw, th, 4);
+
+      // ── Trailer body
+      g.fillStyle(tc, 1);
+      g.fillRoundedRect(tx, ty, tw, th, 4);
+      // Trailer shading (left/right walls darker)
+      g.fillStyle(0x000000, 0.20);
+      g.fillRect(tx, ty+4, 6, th-8);
+      g.fillRect(tx+tw-6, ty+4, 6, th-8);
+      // Trailer roof highlight
+      g.fillStyle(0xffffff, 0.08);
+      g.fillRoundedRect(tx+2, ty+2, tw-4, 14, 3);
+
+      // ── Trailer side stripe (company livery)
+      g.fillStyle(sc, 0.5);
+      g.fillRect(tx+8, ty+th/2-6, tw-16, 12);
+
+      // ── Rear doors (the part facing the dock)
+      g.fillStyle(0x333333, 1);
+      g.fillRect(tx+4, ty, tw-8, 20);
+      g.fillStyle(0x444444, 1);
+      g.fillRect(tx+6, ty+2, (tw-14)/2, 16);
+      g.fillRect(tx+8+(tw-14)/2, ty+2, (tw-14)/2, 16);
+      // Door handles
+      g.fillStyle(0x888888, 1);
+      g.fillRect(tx+tw/2-6, ty+6, 4, 8);
+      g.fillRect(tx+tw/2+2, ty+6, 4, 8);
+      // Door hinges
+      g.fillStyle(0x666666, 1);
+      [[8,3],[8,13],[tw-12,3],[tw-12,13]].forEach(([hx,hy])=> g.fillCircle(tx+hx, ty+hy, 2));
+
+      // ── Dock seal (rubber gasket between trailer & building)
+      g.fillStyle(0x222222, 1); g.fillRect(tx-4, ty-4, tw+8, 10);
+      g.fillStyle(0x111111, 0.6); g.fillRect(tx, ty-2, tw, 8);
+      // Dock seal foam strips
+      g.fillStyle(0x333333, 0.8);
+      g.fillRect(tx-4, ty-4, 8, 12); g.fillRect(tx+tw-4, ty-4, 8, 12);
+
+      // ── Rear underride guard & lights
+      g.fillStyle(0x555555, 1); g.fillRect(tx+4, ty+th-8, tw-8, 6);
+      // Rear reflectors
+      [[8,th-6],[tw-14,th-6]].forEach(([rx,ry])=>{
+        g.fillStyle(0xff3300, 1); g.fillRoundedRect(tx+rx, ty+ry, 10, 5, 1);
+        g.fillStyle(0xff8800, 1); g.fillRoundedRect(tx+rx+10, ty+ry, 6, 5, 1);
+      });
+
+      // ── Cab (at rear of image = far end from dock, smaller section)
+      const cabH = 28;
+      g.fillStyle(cc, 1); g.fillRoundedRect(tx+4, ty+th, tw-8, cabH, 3);
+      // Cab windshield
+      g.fillStyle(0x223344, 0.9);
+      g.fillRoundedRect(tx+14, ty+th+4, tw-28, 16, 2);
+      g.fillStyle(0xaaddff, 0.12); g.fillRect(tx+16, ty+th+5, tw-32, 7);
+      // Cab hood
+      g.fillStyle(cc, 1); g.fillRoundedRect(tx+8, ty+th+cabH, tw-16, 16, 3);
+      // Exhaust stacks
+      g.fillStyle(0x444444, 1);
+      g.fillRect(tx+tw-22, ty+th+2, 6, 30); g.fillRect(tx+16, ty+th+2, 6, 30);
+      // Cab lights
+      g.fillStyle(0xffffaa, 0.8); g.fillCircle(tx+22, ty+th+6, 4);
+      g.fillStyle(0xffffaa, 0.8); g.fillCircle(tx+tw-22, ty+th+6, 4);
+
+      // ── Wheels (visible from above on each side)
+      g.fillStyle(0x1a1a1a, 1);
+      // Front axle wheels
+      g.fillEllipse(tx+8,  ty+th+10, 14, 22);
+      g.fillEllipse(tx+tw-8, ty+th+10, 14, 22);
+      // Drive axle wheels (duals)
+      g.fillEllipse(tx+4,  ty+th-20, 10, 18);
+      g.fillEllipse(tx+14, ty+th-20, 10, 18);
+      g.fillEllipse(tx+tw-14, ty+th-20, 10, 18);
+      g.fillEllipse(tx+tw-4, ty+th-20, 10, 18);
+      // Wheel highlights
+      g.fillStyle(0x555555, 0.6);
+      g.fillCircle(tx+8, ty+th+10, 3); g.fillCircle(tx+tw-8, ty+th+10, 3);
+
+      // ── Truck label
+      const lbl = this.add.text(bay.x, bay.y+20, `🚛 Truck ${i+1}\n${bay.pallets} pallets`, {
         fontSize:'11px', fill:'#fff', fontFamily:'monospace',
-        stroke:'#000', strokeThickness:2, align:'center'
+        stroke:'#000', strokeThickness:3, align:'center'
       }).setOrigin(0.5);
 
-      // Invisible interactive body
+      // ── Interactive body
       const body = this.add.rectangle(bay.x, bay.y, bay.w, bay.h, 0, 0);
       this.physics.add.existing(body, true);
       body.interactId = 'truck_'+i;
@@ -1449,8 +1814,8 @@ class GameScene extends Phaser.Scene {
       else if(idx===2){ // Go smoke
         if(STATE.smokingNPCs.includes('james')){
           response = '"I\'m already out there! What are you doing still in here?! GO."';
-        } else if(STATE.rapportJames >= 2){
-          if(Math.random() < 0.5){
+        } else if(STATE.rapportJames >= 1 || STATE.jamesAnnoyance <= 10){
+          if(Math.random() < 0.65){
             // ── 50% YES — James goes AND drags the whole crew ─────────────────
             const smokeYes = [
               '"...yeah okay. Five minutes. Nobody saw this. This never happened. Actually — hold on."',
@@ -1484,17 +1849,16 @@ class GameScene extends Phaser.Scene {
             this.floatText(npc.sprite.x, npc.sprite.y-40, '🎲 Not today... try again!', '#aaaaff');
           }
         } else {
+          // James hasn't warmed up yet — give the player a hint
           const smokeNo = [
-            '"Excuse me?! EXCUSE ME?! Back to work."',
-            '"I don\'t smoke. I also don\'t take unauthorized breaks. Weird how both apply here."',
-            '"Do you know what I was doing at YOUR age? Working. Working so hard. Go do that."',
-            '"You\'re asking ME — the MANAGER — to leave the dock? Right now? No."',
-            '"Build some rapport first. Or just go do your job. Either works."',
-            '"I don\'t even know how to respond to that. Back to work."',
+            '"Who ARE you? I don\'t even know you. Say hi first. Like a normal person."',
+            '"You want to smoke with me. With ME. The manager. Say hi to me first maybe."',
+            '"I appreciate the confidence but no. Talk to me more. Build something here."',
+            '"Hard no. We\'ve barely spoken. Say hi, compliment the dock, THEN we\'ll talk."',
           ];
           response = Phaser.Math.RND.pick(smokeNo);
-          suspChange = 15; STATE.jamesAnnoyance += 18;
-          this.floatText(npc.sprite.x, npc.sprite.y-40, '😠 James is NOT amused', '#ff4400');
+          suspChange = 8; STATE.jamesAnnoyance += 10;
+          this.floatText(npc.sprite.x, npc.sprite.y-40, '💡 Try saying hi to James first!', '#aaaaff');
         }
       }
       else { // idx===3: Ask what he does all day
@@ -2779,7 +3143,7 @@ class GameScene extends Phaser.Scene {
         else npc.sprite.setVelocity(0,0);
         if(Math.abs(dxL) > 5) npc.sprite.scaleX = dxL < 0 ? -1 : 1;
         npc.tag.setPosition(npc.sprite.x, npc.sprite.y - 58);
-        const bcyL = npc.sprite.y - 70;
+        const bcyL = npc.sprite.y < 180 ? npc.sprite.y + 28 : npc.sprite.y - 70;
         npc.bubble.setPosition(npc.sprite.x, bcyL);
         if(npc.bubble.visible) drawSpeechBubble(npc.bubbleGfx, npc.sprite.x, bcyL, npc.bubble.text, npc.bubble);
         if(npc.bubbleTimer>0){ npc.bubbleTimer-=delta; if(npc.bubbleTimer<=0){ npc.bubble.setVisible(false); npc.bubbleGfx.clear().setVisible(false); } }
@@ -2854,7 +3218,8 @@ class GameScene extends Phaser.Scene {
       npc.tag.setPosition(npc.sprite.x, npc.sprite.y - 58);
 
       // Update speech bubble position + redraw graphics
-      const bcy = npc.sprite.y - 70;
+      // In the smoke area (top of world) flip bubble below head so HUD doesn't cover it
+      const bcy = npc.sprite.y < 180 ? npc.sprite.y + 28 : npc.sprite.y - 70;
       npc.bubble.setPosition(npc.sprite.x, bcy);
       if(npc.bubble.visible){
         drawSpeechBubble(npc.bubbleGfx, npc.sprite.x, bcy, npc.bubble.text, npc.bubble);
