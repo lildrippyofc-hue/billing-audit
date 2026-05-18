@@ -164,6 +164,8 @@ const STATE = {
   chanceRespawnTimer:  0,     // ms until Chance can respawn (after Michelle leaves dock)
   truckDelayTimer:     0,     // ms current assigned truck has been sitting
   clerkVisitReason:    null,  // delay | random | food
+  michelleWanderTimer: 5000,  // ms until Michelle walks to a random dock worker
+  michelleDockPesterCount: 0, // how many times she's bothered James this visit
 };
 
 // Zone layout
@@ -435,6 +437,14 @@ const NPC_DEFS = [
       "Christine says I'm rude. Christine says a LOT of things.",
       "Chance better stay AWAY from this office today. I'm serious.",
       "James told me he's stressed. I told him stress is a CHOICE. He didn't laugh.",
+      "I'm 5 foot nothing and I have MORE authority than half this dock.",
+      "You know what I said when they gave me this job? I said 'finally, somebody smart.'",
+      "Don't look at me like that. I'm delightful.",
+      "My lunch order is not complicated. It has eleven items. Pick wisely.",
+      "I am NOT in a bad mood. This is just my face when I'm right.",
+      "I told James three times this morning. Three. And yet. HERE I AM.",
+      "Do I look like I have time for this? I do not. I'm here anyway. Appreciate it.",
+      "I'm sweet, I'm kind, I'm patient — and I have exactly ONE nerve left and you're ON IT.",
     ],
     choices:["Hey Michelle 👋","Need anything? 🥡","Buy her food 💸","Snitch on Chance 😈"],
   },
@@ -2752,6 +2762,10 @@ class GameScene extends Phaser.Scene {
         STATE.michelleFoodAccepts++;
         STATE.michelleAnnoyance = Math.max(0, STATE.michelleAnnoyance - 30);
         this.floatText(this.player.x, this.player.y - 35, 'Bought Michelle food. Peace restored briefly.', '#ff99dd');
+        this.awardAchievement('michelle_food_yes', 'Fed The Beast — bought Michelle food', '#ff99dd');
+        if(STATE.michelleFoodAccepts >= 5){
+          this.awardAchievement('michelle_food_5x', 'Personal Chef — bought Michelle food 5 times', '#ff66cc');
+        }
         if(STATE.michelleAskingFood) this.sendClerkBackToOffice('michelle');
       } else {
         response = '"Chance said WHAT? Say less. I am going to handle that tiny emergency."';
@@ -6507,9 +6521,11 @@ class GameScene extends Phaser.Scene {
     if(!clerk) return;
     STATE.clerkOnDock = id;
     STATE.clerkVisitReason = reason;
-    STATE.clerkOnDockTimer = reason === 'food' ? 24000 : 20000 + Math.random()*9000;
+    STATE.clerkOnDockTimer = reason === 'food' ? 24000 : 22000 + Math.random()*12000;
     STATE.clerkPesterTimer = 1800;
     STATE.michelleChanceTimer = id === 'michelle' ? 2600 : 0;
+    STATE.michelleDockPesterCount = 0;
+    STATE.michelleWanderTimer = 4500 + Math.random()*3000;
     if(id === 'michelle' && reason === 'food') STATE.michelleAskingFood = true;
 
     clerk.running = true;
@@ -6517,13 +6533,33 @@ class GameScene extends Phaser.Scene {
     clerk.targetX = reason === 'food' ? this.player.x + 48 : 620 + Math.random()*260;
     clerk.targetY = reason === 'food' ? this.player.y + 20 : 260 + Math.random()*120;
 
-    const line = reason === 'food'
-      ? '"Hi sweetie. Who is buying me food today? And do not say nobody."'
-      : id === 'michelle'
-        ? '"This truck is taking forever. I am being nice about it, which is generous."'
-        : '"I need an update. Not a vibe. An actual update."';
-    this.showBubble(clerk, line);
-    this.floatText(clerk.sprite.x, clerk.sprite.y - 40, id === 'michelle' ? 'Michelle is on the dock' : 'Christine is on the dock', id === 'michelle' ? '#ff80cc' : '#aa88ff');
+    if(id === 'michelle'){
+      const entryLines = reason === 'food'
+        ? ['"Hi sweetie. Who is buying me food today? And do not say nobody."',
+           '"Okay I stepped OUT because nobody brought me anything. This is your fault collectively."',
+           '"I am on the DOCK. This means someone failed. Who failed? We will find out."']
+        : reason === 'delay'
+        ? ['"This truck is taking forever. I am being nice about it, which is generous of me."',
+           '"I left my desk — MY DESK — to come ask why this is still happening. SOMEBODY explain."',
+           '"Do you know how long I have been watching that bay from my window? Too long. TOO LONG."']
+        : ['"I decided to come out. Don\'t make me regret it."',
+           '"Surprise. It\'s me. Your favorite problem."',
+           '"I told Christine I\'d be right back. I lied. I\'m here now. Deal with it."'];
+      this.showBubble(clerk, Phaser.Math.RND.pick(entryLines));
+      this.cameras.main.shake(180, 0.006);
+      this.floatText(WW/2, 230, '⚡ MICHELLE IS ON THE DOCK ⚡', '#ff66cc');
+      this.time.delayedCall(1200, ()=>{
+        this.floatText(WW/2, 260, '"Watch your backs. And buy her food."', '#ffaadd');
+      });
+    } else {
+      const christineLines = [
+        '"I need an update. Not a vibe. An actual update."',
+        '"BOL status. Door status. Who is responsible. Go."',
+        '"I am not upset. I am \'collecting information.\' Big difference."',
+      ];
+      this.showBubble(clerk, Phaser.Math.RND.pick(christineLines));
+      this.floatText(WW/2, 230, '📋 Christine is on the dock', '#aa88ff');
+    }
   }
 
   sendClerkBackToOffice(id){
@@ -6577,36 +6613,124 @@ class GameScene extends Phaser.Scene {
 
     STATE.clerkOnDockTimer -= delta;
     STATE.clerkPesterTimer -= delta;
+
+    // ── James pester loop ──────────────────────────────────────────────────────
     if(STATE.clerkPesterTimer <= 0){
-      STATE.clerkPesterTimer = 4300 + Math.random()*2800;
+      STATE.clerkPesterTimer = 3800 + Math.random()*2400;
+      STATE.michelleDockPesterCount++;
       if(james){
         clerk.targetX = james.sprite.x + (activeId === 'michelle' ? -52 : 52);
         clerk.targetY = james.sprite.y + 12;
       }
-      const questions = activeId === 'michelle'
+      const jamesQuestions = activeId === 'michelle'
         ? [
             '"James, why is that truck still open? I am asking sweetly before I get rude."',
             '"James, can somebody buy me food or clear this dock? Preferably both."',
-            '"James. James. James. Quick question. Why is everything like this?"'
+            '"James. James. James. Quick question. Why is everything like this?"',
+            '"James I need you to explain this dock to me like I\'m five and furious."',
+            '"James, be honest — who broke the schedule? I will not tell Pam. I will 100% tell Pam."',
+            '"James, I left my CANDY DRAWER unattended to be out here. This better be worth it."',
+            '"James, this is the third time I\'ve walked out this week. I want a raise just for the steps."',
+            '"James, I have nine open tickets and a headache and YOU are not helping either."',
+            '"James, I am SWEET right now. Do not make me become the other thing."',
           ]
         : [
             '"James, I need the actual door status. Not a hand wave."',
             '"James, who owns this delay? I need a name."',
-            '"James, are we logging this or pretending it is fine?"'
+            '"James, are we logging this or pretending it is fine?"',
+            '"James, this is the second time I\'ve flagged this. I have it documented."',
+            '"James, I need a real ETA. Not an estimate. A commitment."',
           ];
-      this.showBubble(clerk, Phaser.Math.RND.pick(questions));
+      this.showBubble(clerk, Phaser.Math.RND.pick(jamesQuestions));
       if(james && james.bubbleTimer <= 0){
-        this.showBubble(james, activeId === 'michelle'
-          ? '"Michelle, I am trying to manage the dock and my blood pressure."'
-          : '"Christine, I am aware. Deeply, painfully aware."');
+        const jamesReplies = activeId === 'michelle'
+          ? [
+              '"Michelle, I am trying to manage the dock and my blood pressure at the same time."',
+              '"Michelle. I hear you. I always hear you. EVERYONE hears you."',
+              '"I\'m handling it Michelle. I am handling it WITH MY WHOLE BODY."',
+              '"Michelle I will get you food, clear the dock, AND meditate — just GIVE ME A MINUTE."',
+            ]
+          : [
+              '"Christine, I am aware. Deeply, painfully aware."',
+              '"Working on it Christine. Have been working on it. Will continue working on it."',
+              '"It is being logged, Christine. Everything is being logged."',
+            ];
+        this.showBubble(james, Phaser.Math.RND.pick(jamesReplies));
       }
-      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + (activeId === 'michelle' ? 7 : 5));
+      const annoyanceAdd = activeId === 'michelle' ? 8 : 5;
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + annoyanceAdd);
       this.nudgeEmotion('james', 'stressed', 14000);
+
+      // Pester achievement
+      if(STATE.michelleDockPesterCount >= 5){
+        this.awardAchievement('clerk_pester_5x', 'James Has No Peace — clerks asked 5+ questions', '#ff80cc');
+      }
     }
 
-    if(activeId === 'michelle') this.updateMichelleChanceDrama(delta);
+    // ── Michelle wander — she drifts to random dock workers ───────────────────
+    if(activeId === 'michelle'){
+      STATE.michelleWanderTimer -= delta;
+      if(STATE.michelleWanderTimer <= 0){
+        STATE.michelleWanderTimer = 5500 + Math.random()*4000;
+        const dockNPCIds = ['lee','chandler','chance','drew','pam'];
+        const wanderTargets = this.npcs.filter(n=>dockNPCIds.includes(n.id) && n.sprite.alpha >= 0.5 && n.sprite.visible);
+        // 30% chance wander to player instead
+        const goToPlayer = Math.random() < 0.3;
+        if(goToPlayer){
+          clerk.targetX = this.player.x + (Math.random()<0.5?-55:55);
+          clerk.targetY = this.player.y + 10;
+        } else if(wanderTargets.length){
+          const target = Phaser.Math.RND.pick(wanderTargets);
+          clerk.targetX = target.sprite.x + (Math.random()<0.5?-48:48);
+          clerk.targetY = target.sprite.y + 8;
+        }
+        clerk.running = true;
+        clerk.moveTimer = 2000;
+
+        const wanderLines = [
+          '"Somebody on this dock is buying me lunch today. I have not decided who yet."',
+          '"Why does it smell like stress out here? Oh wait. It\'s the dock. It\'s always the dock."',
+          '"I am just standing here being cute and observing the chaos. This is fine."',
+          '"Whoever is responsible for this truck being late — I KNOW YOUR FACE NOW."',
+          '"James told me five minutes. That was fourteen minutes ago. I have been counting."',
+          '"I left a WARM CHAIR to come out here. A WARM CHAIR. Someone owes me."',
+          '"Is anyone else hungry or is it just me? ...It\'s just me? That\'s a YOU problem."',
+          '"I am NOT moving until someone gives me an update OR a meal. Choose wisely."',
+          '"Don\'t mind me. I\'m just doing a vibe check. The dock is FAILING."',
+          '"If one more person shrugs at me I am going directly to Pam. Directly."',
+          '"The truck is OPEN. The dock is OPEN. My patience? CLOSED."',
+          '"I love this team so much. I just want to make that clear before I yell."',
+          '"Somebody here has DoorDash. I know because I can smell your lunch choices."',
+          '"This is me being patient. I know. It doesn\'t look like it. It is."',
+          '"I asked Christine to come too but she said no because she has \'standards.\' Okay Christine."',
+        ];
+        this.showBubble(clerk, Phaser.Math.RND.pick(wanderLines));
+
+        // Random chance she fires a float accusation at someone on dock
+        if(Math.random() < 0.4){
+          const accuseTargetId = Phaser.Math.RND.pick(['lee','chandler','drew']);
+          const accuseTarget = this.npcs.find(n=>n.id===accuseTargetId);
+          if(accuseTarget){
+            const accuseLines = {
+              lee:      ['"LEE. You look like someone who eats lunch. Buy mine."', '"Lee, you\'re sweet. Sweet people buy food. Go."'],
+              chandler: ['"CHANDLER. Is that bread? Is that BREAD? Give me something."', '"Chandler, I swear if you say one word about bread I will scream."'],
+              drew:     ['"Drew, baby, please. I need five dollars and your will to live."', '"Drew, don\'t panic — I just need you to Venmo me for Chick-fil-A. NOW."'],
+            };
+            const lines = accuseLines[accuseTargetId] || ['"Hey YOU. Yes you. Food. Now. Please."'];
+            this.time.delayedCall(1400, ()=>{ this.showBubble(accuseTarget, '...'); });
+            this.floatText(accuseTarget.sprite.x, accuseTarget.sprite.y-40, Phaser.Math.RND.pick(lines), '#ffaadd');
+          }
+        }
+      }
+
+      this.updateMichelleChanceDrama(delta);
+    }
 
     if(STATE.clerkOnDockTimer <= 0){
+      // Chance survived a full Michelle visit without getting killed — achievement
+      if(activeId === 'michelle' && !STATE.chanceDead){
+        this.awardAchievement('chance_survives', 'Chance Lived — somehow Michelle showed mercy', '#ff9900');
+      }
       this.sendClerkBackToOffice(activeId);
     }
   }
