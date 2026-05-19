@@ -3947,7 +3947,7 @@ class GameScene extends Phaser.Scene {
   // ── SMOKE CHAT SESSION ────────────────────────────────────────────────────
   // Bottom-tray layout: game visible in the top ~52%, chat fills the rest.
   createSmokeChat(){
-    const PY = Math.floor(GH * 0.50); // tray starts at midpoint
+    const PY = Math.floor(GH * 0.70); // tray at bottom 30% — outdoor scene owns top 70%
     const PX = 6, PW = GW - 12;
     this._scPX = PX; this._scPY = PY; this._scPW = PW;
 
@@ -3975,9 +3975,9 @@ class GameScene extends Phaser.Scene {
     this.scStopBtn.on('pointerout',  ()=> this.scStopBtn.setStyle({ backgroundColor:'#7a1515', fill:'#ffdddd' }));
     this.scStopBtn.on('pointerdown', ()=> this.leaveSmokeBreak());
 
-    // Message pool — 12 slots, origins set in _redrawSmokeChat
+    // Message pool — 8 slots (tray is now bottom 30%)
     this.scMsgPool = [];
-    for(let i = 0; i < 12; i++){
+    for(let i = 0; i < 8; i++){
       const t = this.add.text(PX + 12, GH - 38, '', {
         fontSize:'12px', fill:'#ffffff', fontFamily:'monospace',
         wordWrap:{ width: PW - 24 }, lineSpacing: 2
@@ -4045,15 +4045,9 @@ class GameScene extends Phaser.Scene {
     this.scMsgPool.forEach(t => t.setText('').setVisible(false).setAlpha(0));
     this.time.delayedCall(50, ()=>{ this.clearAllBubbles(); });
 
-    // ── camera: gentler zoom, stays out so the tray is readable ──────────────
+    // ── stop following player, build the outdoor visual scene ────────────────
     this.cameras.main.stopFollow();
-    this.cameras.main.zoomTo(1.25, 600, 'Quad.easeInOut');
-    this.cameras.main.pan(165, 72, 600, 'Quad.easeInOut');
-
-    if(this._scParticleTimer) this._scParticleTimer.remove();
-    this._scParticleTimer = this.time.addEvent({
-      delay: 650, callback: this._spawnSmokeParticle, callbackScope: this, loop: true
-    });
+    this._buildOutdoorScene();
 
     this.time.delayedCall(800, ()=>{
       this.postSmokeChat('player', '*steps outside and lights up* 💨');
@@ -4063,6 +4057,7 @@ class GameScene extends Phaser.Scene {
   closeSmokeChat(){
     if(!STATE.smokeChatOpen) return;
     STATE.smokeChatOpen = false;
+    this._destroyOutdoorScene();
     this.scBg.setVisible(false);
     this.scHeaderTxt.setVisible(false);
     this.scWhoTxt.setVisible(false);
@@ -4103,8 +4098,26 @@ class GameScene extends Phaser.Scene {
     const color = NPC_SC_COLORS[id] || '#cccccc';
 
     this._scMessages.push({ name, color, text });
-    if(this._scMessages.length > 30) this._scMessages.shift(); // keep more history so you can scroll up mentally
+    if(this._scMessages.length > 30) this._scMessages.shift();
     this._redrawSmokeChat();
+
+    // Show speech bubble above the character sprite in the outdoor scene
+    if(this._outdoorNpcImages && this._outdoorNpcImages[id]){
+      const { x, bubY } = this._outdoorNpcImages[id];
+      const short = text.length > 52 ? text.slice(0,50)+'…' : text;
+      const bub = this.add.text(x, bubY, short, {
+        fontSize:'10px', fontFamily:'monospace', fill:color,
+        stroke:'#000000', strokeThickness:3,
+        backgroundColor:'rgba(0,0,0,0.82)',
+        padding:{ left:7, right:7, top:4, bottom:4 },
+        wordWrap:{ width: Math.min(180, GW*0.36) }, align:'center'
+      }).setOrigin(0.5, 1).setScrollFactor(0).setDepth(222).setAlpha(0);
+      this.tweens.add({ targets:bub, alpha:1, y: bubY - 6, duration:220 });
+      this.time.delayedCall(3200, ()=>{
+        this.tweens.add({ targets:bub, alpha:0, duration:380,
+          onComplete:()=>{ try{ bub.destroy(); }catch(e){} } });
+      });
+    }
 
     // Animate the newest message sliding in (it's always slot 0 in the dynamic layout)
     const newest = this.scMsgPool[0];
@@ -4173,6 +4186,183 @@ class GameScene extends Phaser.Scene {
       duration: 2800 + Math.random() * 1400, ease: 'Quad.Out',
       onComplete: ()=> gfx.destroy()
     });
+  }
+
+  // ── OUTDOOR PARKING LOT SCENE ────────────────────────────────────────────
+  // Full-screen overlay showing everyone actually outside. Sits at depth 68-71
+  // so the smoke chat tray (depth 72-74) renders on top at the bottom strip.
+  _buildOutdoorScene(){
+    this._destroyOutdoorScene();
+    this._outdoorObj = [];
+    this._outdoorNpcImages = {};
+    const O = o => { this._outdoorObj.push(o); return o; };
+    const BD = 68;
+    const CX = GW / 2;
+
+    // ── full-screen blackout — hides the warehouse behind the overlay ─────────
+    O(this.add.rectangle(CX, GH/2, GW+10, GH+10, 0x000000)
+      .setScrollFactor(0).setDepth(BD).setAlpha(1));
+
+    // ── night sky ─────────────────────────────────────────────────────────────
+    O(this.add.rectangle(CX, GH*0.20, GW, GH*0.44, 0x06091a)
+      .setScrollFactor(0).setDepth(BD+1));
+    // horizon warmth from parking lot lights
+    O(this.add.rectangle(CX, GH*0.42, GW, 32, 0xff7700)
+      .setScrollFactor(0).setDepth(BD+1).setAlpha(0.09));
+
+    // stars
+    for(let i=0;i<55;i++){
+      const ss = Math.random()<0.25?2:1;
+      O(this.add.rectangle(Math.random()*GW, Math.random()*GH*0.36, ss, ss, 0xffffff)
+        .setScrollFactor(0).setDepth(BD+2).setAlpha(0.45+Math.random()*0.55));
+    }
+
+    // moon
+    O(this.add.ellipse(GW*0.82, GH*0.07, 36, 36, 0xfff4cc)
+      .setScrollFactor(0).setDepth(BD+2).setAlpha(0.85));
+
+    // ── brick back wall ───────────────────────────────────────────────────────
+    const wallTop = GH*0.36, wallBot = GH*0.50, wallMid = (wallTop+wallBot)/2;
+    O(this.add.rectangle(CX, wallMid, GW, wallBot-wallTop, 0x1a100c)
+      .setScrollFactor(0).setDepth(BD+2));
+    for(let by=wallTop; by<wallBot; by+=13)
+      O(this.add.rectangle(CX, by, GW, 1, 0x2e1812).setScrollFactor(0).setDepth(BD+3).setAlpha(0.85));
+    let row=0;
+    for(let by=wallTop+6; by<wallBot; by+=13,row++){
+      const off=(row%2)*32;
+      for(let bx=off; bx<GW; bx+=64)
+        O(this.add.rectangle(bx, by, 1, 11, 0x2e1812).setScrollFactor(0).setDepth(BD+3).setAlpha(0.6));
+    }
+    O(this.add.text(CX, wallMid-2, 'ECLIPSE ADVANTAGE WAREHOUSE',
+      {fontSize:'8px',fontFamily:'monospace',fill:'#7a4a30',fontStyle:'bold',letterSpacing:3})
+      .setOrigin(0.5).setScrollFactor(0).setDepth(BD+4));
+    // roof fascia
+    O(this.add.rectangle(CX, wallTop-3, GW, 8, 0x0c0604).setScrollFactor(0).setDepth(BD+4));
+
+    // wall-mounted lights
+    for(const lx of [GW*0.18, GW*0.50, GW*0.82]){
+      O(this.add.rectangle(lx, wallBot-18, 4, 30, 0x554433).setScrollFactor(0).setDepth(BD+3));
+      O(this.add.rectangle(lx, wallBot-34, 20, 7, 0x665544).setScrollFactor(0).setDepth(BD+4));
+      O(this.add.rectangle(lx, wallBot-12, 100, 60, 0xff8800).setScrollFactor(0).setDepth(BD+2).setAlpha(0.07));
+    }
+
+    // ── asphalt ground ────────────────────────────────────────────────────────
+    const groundY = GH*0.50;
+    O(this.add.rectangle(CX, (groundY+GH*0.70)*0.5, GW, GH*0.20, 0x0d0d0d)
+      .setScrollFactor(0).setDepth(BD+3));
+    O(this.add.rectangle(CX, groundY+2, GW, 6, 0x555555).setScrollFactor(0).setDepth(BD+4)); // curb
+    for(let px=90; px<GW-40; px+=140)
+      O(this.add.rectangle(px, groundY+GH*0.13, 3, GH*0.09, 0x2e2e2e)
+        .setScrollFactor(0).setDepth(BD+4).setAlpha(0.9));
+
+    // ── parked cars ───────────────────────────────────────────────────────────
+    const carY = groundY-6;
+    const cars = [
+      {x:72,      w:90, h:42, body:0x18304a, win:0x1c3050},
+      {x:222,     w:82, h:38, body:0x3a1414, win:0x2a1818},
+      {x:GW-88,   w:92, h:44, body:0x182418, win:0x1c2c1c},
+      {x:GW-248,  w:78, h:36, body:0x2c2c14, win:0x222210},
+    ];
+    for(const c of cars){
+      O(this.add.rectangle(c.x, carY-c.h*0.14, c.w, c.h, c.body).setScrollFactor(0).setDepth(BD+5));
+      O(this.add.rectangle(c.x, carY-c.h*0.52, c.w*0.62, c.h*0.44, c.body).setScrollFactor(0).setDepth(BD+5));
+      O(this.add.rectangle(c.x, carY-c.h*0.52, c.w*0.50, c.h*0.28, c.win).setScrollFactor(0).setDepth(BD+6).setAlpha(0.9));
+      O(this.add.rectangle(c.x-c.w*0.46, carY-c.h*0.10, 7,5, 0xff2200).setScrollFactor(0).setDepth(BD+6).setAlpha(0.85));
+      O(this.add.rectangle(c.x+c.w*0.46, carY-c.h*0.10, 7,5, 0xff2200).setScrollFactor(0).setDepth(BD+6).setAlpha(0.85));
+    }
+
+    // ── concrete pad + bench ──────────────────────────────────────────────────
+    const padY = groundY+10;
+    O(this.add.rectangle(CX, padY, GW, 24, 0x1e1e1e).setScrollFactor(0).setDepth(BD+5));
+    O(this.add.rectangle(CX-GW*0.14, padY+16, 170, 10, 0x3c3c3c).setScrollFactor(0).setDepth(BD+6));
+    O(this.add.rectangle(CX-GW*0.14-74, padY+21, 6,16, 0x2e2e2e).setScrollFactor(0).setDepth(BD+6));
+    O(this.add.rectangle(CX-GW*0.14+74, padY+21, 6,16, 0x2e2e2e).setScrollFactor(0).setDepth(BD+6));
+    // ashtray / butt can
+    O(this.add.rectangle(CX+GW*0.22, padY+14, 8,22, 0x554444).setScrollFactor(0).setDepth(BD+6));
+    O(this.add.rectangle(CX+GW*0.22, padY+5, 14,6, 0x665555).setScrollFactor(0).setDepth(BD+6));
+
+    // ── NPC characters ────────────────────────────────────────────────────────
+    const atSmoke = id => {
+      const n = this.npcs.find(p=>p.id===id);
+      if(!n) return false;
+      const z = ZONES.outside;
+      return n.sprite.x>=z.x && n.sprite.x<=z.x+z.w && n.sprite.y>=z.y && n.sprite.y<=z.y+z.h;
+    };
+    const presentIds = ['player',
+      ...['james','lee','chance','chandler','drew','jeff','jorie','marcus','todd']
+         .filter(id => atSmoke(id) || STATE.smokingNPCs.includes(id))
+    ].slice(0,7);
+
+    const charY  = padY + 4;    // feet land on the concrete pad
+    const SCALE  = 3.4;
+    const count  = presentIds.length;
+    const spread = Math.min(GW*0.86, count*105);
+    const x0     = count>1 ? CX - spread/2 : CX;
+    const step   = count>1 ? spread/(count-1) : 0;
+
+    const NPC_COLORS = {
+      james:'#5588ff',lee:'#ff80c0',chance:'#ff9944',chandler:'#cccccc',
+      drew:'#cc88ff',jeff:'#44dd44',jorie:'#ff6633',marcus:'#ffaa22',
+      todd:'#88bbff',player:'#aaffaa'
+    };
+
+    for(let i=0;i<count;i++){
+      const id  = presentIds[i];
+      const cx  = count===1 ? CX : x0 + i*step;
+      const key = id==='player' ? 'player_tex' : `npc_${id}`;
+      const npc = this.npcs.find(n=>n.id===id);
+      const displayName = id==='player'
+        ? (STATE.playerName||'You')
+        : (npc ? npc.name : id);
+      const col = NPC_COLORS[id] || '#cccccc';
+
+      if(this.textures.exists(key)){
+        const img = O(this.add.image(cx, charY+50, key)
+          .setScale(SCALE).setScrollFactor(0).setDepth(BD+7).setAlpha(0));
+        // bubble Y is above the character's head
+        this._outdoorNpcImages[id] = { x:cx, bubY: charY - 58 };
+        this.tweens.add({targets:img, alpha:1, y:charY, duration:380, delay:260+i*110, ease:'Back.Out'});
+      } else {
+        this._outdoorNpcImages[id] = { x:cx, bubY: charY - 58 };
+      }
+
+      // name tag below feet
+      const tag = O(this.add.text(cx, charY+54, displayName,
+        {fontSize:'9px',fontFamily:'monospace',fill:col,fontStyle:'bold'})
+        .setOrigin(0.5).setScrollFactor(0).setDepth(BD+8).setAlpha(0));
+      this.tweens.add({targets:tag, alpha:1, duration:400, delay:500+i*110});
+    }
+
+    // ── floating smoke puffs above the group ──────────────────────────────────
+    const smokeTick = () => {
+      if(!STATE.smokeChatOpen) return;
+      const sx = CX*0.5 + Math.random()*CX;
+      const sy = charY - 30 - Math.random()*20;
+      const g  = this.add.graphics().setScrollFactor(0).setDepth(BD+9);
+      g.fillStyle(0xaaccaa, 0.18);
+      g.fillCircle(0,0, 4+Math.random()*5);
+      g.setPosition(sx, sy);
+      this.tweens.add({targets:g, y:sy-55, alpha:0, scaleX:3, scaleY:3,
+        duration:2600+Math.random()*1200, ease:'Quad.Out',
+        onComplete:()=>{ try{g.destroy();}catch(e){} }});
+    };
+    if(this._scParticleTimer) this._scParticleTimer.remove();
+    this._scParticleTimer = this.time.addEvent({delay:700, callback:smokeTick, loop:true});
+
+    // ── title banner ─────────────────────────────────────────────────────────
+    const title = O(this.add.text(CX, 12, '🚬  SMOKE BREAK  🚬',
+      {fontSize:'15px',fontFamily:'monospace',fill:'#77ff99',fontStyle:'bold',
+       stroke:'#000000',strokeThickness:4})
+      .setOrigin(0.5,0).setScrollFactor(0).setDepth(BD+8).setAlpha(0));
+    this.tweens.add({targets:title, alpha:1, duration:500, delay:150});
+  }
+
+  _destroyOutdoorScene(){
+    if(!this._outdoorObj) return;
+    this._outdoorObj.forEach(o=>{ try{ o.destroy(); }catch(e){} });
+    this._outdoorObj = null;
+    this._outdoorNpcImages = {};
+    if(this._scParticleTimer){ this._scParticleTimer.remove(); this._scParticleTimer=null; }
   }
 
   // ── SMOKE AREA MENU ───────────────────────────────────────────────────────
