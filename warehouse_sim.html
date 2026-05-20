@@ -1863,8 +1863,8 @@ class GameScene extends Phaser.Scene {
     let picked = null;
 
     if(npc.id === 'james'){
-      if(STATE.jamesAnnoyance >= 80) picked = pool.find(e => e.id === 'stressed');
-      else if(STATE.jamesAnnoyance >= 45) picked = pool.find(e => e.id === 'annoyed');
+      if(STATE.jamesAnnoyance >= 90) picked = pool.find(e => e.id === 'stressed');
+      else if(STATE.jamesAnnoyance >= 60) picked = pool.find(e => e.id === 'annoyed');
       else if(reason === 'goodWork') picked = pool.find(e => e.id === 'proud');
     }
     if(npc.id === 'chandler' && STATE.chandlerRageLevel >= 3) picked = pool.find(e => e.id === 'angry');
@@ -1881,7 +1881,7 @@ class GameScene extends Phaser.Scene {
     npc.emotionTimer -= delta;
     npc.emotionNextAt -= delta;
 
-    if(npc.id === 'james' && STATE.jamesAnnoyance >= 80 && npc.emotion?.id !== 'stressed'){
+    if(npc.id === 'james' && STATE.jamesAnnoyance >= 90 && npc.emotion?.id !== 'stressed'){
       this.randomizeNpcEmotion(npc, 'stress');
       return;
     }
@@ -2358,7 +2358,7 @@ class GameScene extends Phaser.Scene {
           '"OFF. THE. CLOCK. Those words. In that order. You said them to MY FACE."',
         ];
         response = Phaser.Math.RND.pick(offLines);
-        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 24);
+        STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 14);
         STATE.suspicion = Math.min(100, STATE.suspicion + 20);
         this.floatText(this.player.x, this.player.y, '🚫 YOU\'RE OFF THE CLOCK — James is LOSING IT', '#ff4400');
         this.cameras.main.shake(350, 0.014);
@@ -3534,7 +3534,7 @@ class GameScene extends Phaser.Scene {
     const james = this.npcs.find(n=>n.id==='james');
     this.endMiniGame(false, { skipScore:true, skipAssignment:true, rageQuit:true });
     STATE.suspicion = Math.min(100, STATE.suspicion + 18);
-    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 28);
+    STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 16);
     STATE.beingChased = true;
     STATE.playerRunBoost = 4500;
     if(this.player){
@@ -7752,7 +7752,7 @@ class GameScene extends Phaser.Scene {
         {fontSize:'11px', fill:'#aaccff', stroke:'#000', strokeThickness:3,
          backgroundColor:'rgba(0,0,0,0.75)', padding:{x:9,y:5}, wordWrap:{width:GW*0.8}}, D+9);
       this.tweens.add({targets:jb, alpha:1, duration:320});
-      if(james) STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 14);
+      if(james) STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 8);
     });
 
     // ── T+7700 : fade to black + cleanup ─────────────────────────────────────
@@ -7853,7 +7853,7 @@ class GameScene extends Phaser.Scene {
       _fo.forEach(o=>{ try{ o.destroy(); }catch(e){} });
       STATE._fightScene  = false;
       STATE.jorieVictim  = null;
-      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
+      STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
 
       // Victim crawls back after 12-18s
       const respawnDelay = 12000 + Math.random() * 6000;
@@ -8038,7 +8038,7 @@ class GameScene extends Phaser.Scene {
         {fontSize:'11px', fill:'#aaccff', stroke:'#000', strokeThickness:3,
          backgroundColor:'rgba(0,0,0,0.75)', padding:{x:9,y:5}, wordWrap:{width:GW*0.8}}, D+9);
       this.tweens.add({targets:jb, alpha:1, duration:300});
-      if(james) STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 18);
+      if(james) STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 10);
     });
 
     // ── T+7500 : fade to black + cleanup ─────────────────────────────────────
@@ -8236,13 +8236,13 @@ class GameScene extends Phaser.Scene {
 
     // James annoyance passive decay (he calms down when you're working)
     STATE.jamesAnnoyanceTimer += delta;
-    if(STATE.jamesAnnoyanceTimer > 12000){
+    if(STATE.jamesAnnoyanceTimer > 7000){
       STATE.jamesAnnoyanceTimer = 0;
       if(STATE.currentZone === 'dock' || STATE.currentZone === 'floor'){
-        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 5);
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 7);
       } else {
         // Slower decay elsewhere — he forgets you exist but not fast
-        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 2);
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 3);
       }
     }
 
