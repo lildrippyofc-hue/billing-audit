@@ -7473,12 +7473,42 @@ class GameScene extends Phaser.Scene {
         this.showBubble(gustavo, Phaser.Math.RND.pick(flirtLines), 3200);
         this.time.delayedCall(1200, ()=>{
           if(!STATE.dialogueActive && michelle.bubbleTimer <= 0){
-            this.showBubble(michelle, Phaser.Math.RND.pick([
-              '"Gustavo, I need food, not poetry."',
-              '"Aww. Cute. Still move."',
-              '"You are sweet. You are also blocking my path."',
-              '"Bring me a drink and maybe I will pretend this worked."'
-            ]), 3200);
+            if(Math.random() < 0.40){
+              // Michelle flirts back
+              this.showBubble(michelle, Phaser.Math.RND.pick([
+                '"Okay Gustavo. You are kind of adorable. Don\'t make it weird."',
+                '"Aww. I said what I said. Now go back to work before I change my mind."',
+                '"...you know what, that was actually smooth. Points."',
+                '"Gustavo. Stop smiling like that. It is unprofessional and it is working."',
+                '"I am not saying yes. I am saying... not no. Go do your job."',
+                '"Fine. You can bring me lunch. That is the most romantic thing I will say today."',
+                '"I like your energy. I will not be telling anyone that."',
+                '"You are James\'s roommate which is a red flag but you are cute so. Fifty fifty."',
+              ]), 3200);
+              this.floatText(michelle.sprite.x, michelle.sprite.y - 55, '💕 Michelle is feeling it', '#ff66cc');
+              STATE.michellePressure = Math.max(0, STATE.michellePressure - 12);
+              STATE.michelleAnnoyance = Math.max(0, STATE.michelleAnnoyance - 8);
+              // Gustavo's reaction
+              this.time.delayedCall(2800, ()=>{
+                if(gustavo && gustavo.bubbleTimer <= 0)
+                  this.showBubble(gustavo, Phaser.Math.RND.pick([
+                    '"I need to go tell James. Actually no. I need to never tell James."',
+                    '"Okay. Okay okay okay. I am going to walk normal now."',
+                    '"This is the best shift I have ever worked."',
+                    '"She said adorable. I have to call my mom."',
+                  ]), 3000);
+              });
+            } else {
+              // Michelle shoots him down
+              this.showBubble(michelle, Phaser.Math.RND.pick([
+                '"Gustavo, I need food, not poetry."',
+                '"Aww. Cute. Still move."',
+                '"You are sweet. You are also blocking my path."',
+                '"Bring me a drink and maybe I will pretend this worked."',
+                '"Gustavo. Sweetie. No."',
+                '"I have a headset and zero time for this right now."',
+              ]), 3200);
+            }
           }
         });
       }
