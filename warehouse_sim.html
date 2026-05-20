@@ -163,13 +163,15 @@ const STATE = {
   // Clerks (Michelle + Christine)
   clerkOnDock:         null,  // 'michelle' | 'christine' | null
   clerkOnDockTimer:    0,     // ms remaining for current dock visit
-  clerkDockNextTimer:  38000, // ms until next clerk-on-dock visit
+  clerkDockNextTimer:  26000, // ms until next clerk-on-dock visit
   clerkPesterTimer:    0,     // ms until clerk asks James another question
-  michelleFoodTimer:   65000, // ms until Michelle randomly asks player for food
+  michelleFoodTimer:   42000, // ms until Michelle randomly asks player for food
   michelleAskingFood:  false, // currently out asking for food (separate from dock complaint)
   michelleFoodAccepts: 0,     // times you bought her food (achievement)
   michelleFoodDeclines:0,     // times you walked away
   michelleAnnoyance:   0,     // 0-100 — when full, she snaps and kills Chance
+  michellePressure:    28,    // 0-100: when high, Michelle becomes the main dock problem
+  michelleDemandCount: 0,     // how many times Michelle has interrupted the shift
   michelleChanceTimer: 0,     // ms until Chance pesters Michelle again
   michelleKillCount:   0,     // total Chance murders this shift (achievement)
   chanceDead:          false, // Chance flatlined, awaiting respawn
@@ -2820,6 +2822,7 @@ class GameScene extends Phaser.Scene {
         response = '"Hi sweetie. That was friendly. Suspicious, but friendly."';
         scoreChange = 10;
         STATE.michelleAnnoyance = Math.max(0, STATE.michelleAnnoyance - 8);
+        STATE.michellePressure = Math.max(0, STATE.michellePressure - 10);
       } else if(idx===1){
         response = '"Yes. Bring me food, make Chance stop talking, and tell James I need a real update."';
         STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 5);
@@ -2832,6 +2835,7 @@ class GameScene extends Phaser.Scene {
         energyChange = 8;
         STATE.michelleFoodAccepts++;
         STATE.michelleAnnoyance = Math.max(0, STATE.michelleAnnoyance - 30);
+        STATE.michellePressure = Math.max(0, STATE.michellePressure - 45);
         this.floatText(this.player.x, this.player.y - 35, 'Bought Michelle food. Peace restored briefly.', '#ff99dd');
         this.awardAchievement('michelle_food_yes', 'Fed The Beast — bought Michelle food', '#ff99dd');
         if(STATE.michelleFoodAccepts >= 5){
@@ -2841,6 +2845,7 @@ class GameScene extends Phaser.Scene {
       } else {
         response = '"Chance said WHAT? Say less. I am going to handle that tiny emergency."';
         STATE.michelleAnnoyance = Math.min(100, STATE.michelleAnnoyance + 35);
+        STATE.michellePressure = Math.min(100, STATE.michellePressure + 25);
         const chance = this.npcs.find(n=>n.id==='chance');
         if(chance){
           npc.targetX = chance.sprite.x - 40;
@@ -4020,7 +4025,13 @@ class GameScene extends Phaser.Scene {
   openSmokeChat(){
     if(STATE.smokeChatOpen) return;
     STATE.smokeChatOpen = true;
+    this._smokeSessionToken = (this._smokeSessionToken || 0) + 1;
+    const token = this._smokeSessionToken;
     this._scMessages = [];
+    this._smokeBreakStartedAt = this.gameTimer || 0;
+
+    // Smoke break is a real location, not just a camera trick.
+    if(this.player) this.player.setPosition(160, 90);
 
     const PX = this._scPX, PY = this._scPY, PW = this._scPW;
 
@@ -4063,20 +4074,30 @@ class GameScene extends Phaser.Scene {
     this.scStopBtn.setVisible(true);
 
     this.scMsgPool.forEach(t => t.setText('').setVisible(false).setAlpha(0));
-    this.time.delayedCall(50, ()=>{ this.clearAllBubbles(); });
+    this.time.delayedCall(50, ()=>{
+      if(!this.isSmokeSessionActive(token)) return;
+      this.clearAllBubbles();
+    });
 
     // ── stop following player, build the outdoor visual scene ────────────────
     this.cameras.main.stopFollow();
     this._buildOutdoorScene();
 
     this.time.delayedCall(800, ()=>{
-      this.postSmokeChat('player', '*steps outside and lights up* 💨');
+      if(!this.isSmokeSessionActive(token)) return;
+      this.postSmokeChat('player', '*steps outside and takes a breath*');
+    });
+    this.time.delayedCall(45000, ()=>{
+      if(!this.isSmokeSessionActive(token) || STATE.dialogueActive) return;
+      this.postSmokeChat('james', '"Wrap it up. Five minutes turns into twenty around here."');
+      STATE.suspicion = Math.min(99, STATE.suspicion + 4);
     });
   }
 
   closeSmokeChat(){
     if(!STATE.smokeChatOpen) return;
     STATE.smokeChatOpen = false;
+    this._smokeSessionToken = (this._smokeSessionToken || 0) + 1;
     this._destroyOutdoorScene();
     this.scBg.setVisible(false);
     this.scHeaderTxt.setVisible(false);
@@ -4104,6 +4125,18 @@ class GameScene extends Phaser.Scene {
     STATE.jamesSmokeParty = false;
     if(this.clearAllBubbles) this.clearAllBubbles();
     this.floatText(this.player.x, this.player.y - 25, 'Smoke break over. Back to work.', '#aaffaa');
+  }
+
+  isSmokeSessionActive(token){
+    return STATE.smokeChatOpen && token === this._smokeSessionToken;
+  }
+
+  smokeDelay(ms, fn){
+    const token = this._smokeSessionToken || 0;
+    this.time.delayedCall(ms, ()=>{
+      if(!this.isSmokeSessionActive(token)) return;
+      fn();
+    });
   }
 
   postSmokeChat(id, text){
@@ -4137,6 +4170,7 @@ class GameScene extends Phaser.Scene {
         this.tweens.add({ targets:bub, alpha:0, duration:380,
           onComplete:()=>{ try{ bub.destroy(); }catch(e){} } });
       });
+      if(this._outdoorObj) this._outdoorObj.push(bub);
     }
 
     // Animate the newest message sliding in (it's always slot 0 in the dynamic layout)
@@ -4622,7 +4656,7 @@ class GameScene extends Phaser.Scene {
 
   smokeScenarioBeat(ms, id, text){
     const SMOKE_SCENE_PACE = 1.9;
-    this.time.delayedCall(ms * SMOKE_SCENE_PACE, ()=>{
+    this.smokeDelay(ms * SMOKE_SCENE_PACE, ()=>{
       this.clearAllBubbles();
       this.postSmokeChat(id, text);
     });
@@ -4682,8 +4716,8 @@ class GameScene extends Phaser.Scene {
       STATE.score += 10;
     }
 
-    this.time.delayedCall(17000, ()=>{
-      if(STATE.smokeChatOpen && !STATE.dialogueActive) this.showSmokeAreaMenu();
+    this.smokeDelay(17000, ()=>{
+      if(!STATE.dialogueActive) this.showSmokeAreaMenu();
     });
   }
 
@@ -4770,16 +4804,17 @@ class GameScene extends Phaser.Scene {
     // would be off-screen anyway. Chat panel tells the story cleanly.
     const SLOW = 2.15; // pace the walk-in chatter so you can read each line
     const beat = (ms, npcId, text) => {
-      this.time.delayedCall(ms * SLOW, ()=>{
+      this.smokeDelay(ms * SLOW, ()=>{
         this.postSmokeChat(npcId, text);
       });
     };
     const toSmoke = (ms, npcId, ox=0, oy=0) => {
-      this.time.delayedCall(ms * SLOW, ()=>{
+      this.smokeDelay(ms * SLOW, ()=>{
         const n = this.npcs.find(x=>x.id===npcId);
         if(!n) return;
         n.targetX = SX + ox;
         n.targetY = SY + oy;
+        n.sprite.setPosition(SX + ox, SY + oy);
         STATE.smokingNPCs = [...new Set([...STATE.smokingNPCs, npcId])];
       });
     };
@@ -4880,10 +4915,10 @@ class GameScene extends Phaser.Scene {
     }
 
     // Everyone's headed out — then auto-open the smoke session with party options
-    this.time.delayedCall(7000 * SLOW, ()=>{
-      this.floatText(SX, 50, '🚬 THE WHOLE CREW IS HEADING OUTSIDE', '#ffd700');
+    this.smokeDelay(7000 * SLOW, ()=>{
+      this.floatText(SX, 50, 'The whole crew is heading outside', '#ffd700');
     });
-    this.time.delayedCall(9800 * SLOW, ()=>{
+    this.smokeDelay(9800 * SLOW, ()=>{
       // Everyone has arrived — show a world bubble from the initiator (they're at the area now)
       const lastLine = {
         james:   '"This is a one-time thing. Nobody mention this in the building."',
@@ -4906,14 +4941,14 @@ class GameScene extends Phaser.Scene {
       }
       // Show the party options — smokeChatOpen is already true so openSmokeChat skips;
       // showSmokeAreaMenu just builds the dialogue box with party choices
-      this.time.delayedCall(1800 * SLOW, ()=>{ this.showSmokeAreaMenu(); });
+      this.smokeDelay(1800 * SLOW, ()=>{ this.showSmokeAreaMenu(); });
     });
 
     // Achievement
     if(!STATE.achievements.includes('james_crew')){
       STATE.achievements.push('james_crew');
-      this.time.delayedCall(12000 * SLOW, ()=>
-        this.floatText(SX, 88, '🏆 ACHIEVEMENT: The Inner Circle!', '#ffd700'));
+      this.smokeDelay(12000 * SLOW, ()=>
+        this.floatText(SX, 88, 'Achievement: The Inner Circle!', '#ffd700'));
     }
   }
 
@@ -4958,7 +4993,7 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(15500 * SLOW, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: Crew Mentality!', '#ffa01e'));
     }
-    this.time.delayedCall(22000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.smokeDelay(22000 * SLOW, ()=>{ this.leaveSmokeBreak(); });
   }
 
   // ── PARTY OPTION: Call Drew fat ────────────────────────────────────────────
@@ -4995,7 +5030,7 @@ class GameScene extends Phaser.Scene {
     }
     this.time.delayedCall(1200 * SLOW, ()=>
       this.floatText(160, 70, '🍔 +60 pts — Drew is having an actual breakdown', '#9955cc'));
-    this.time.delayedCall(24000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.smokeDelay(24000 * SLOW, ()=>{ this.leaveSmokeBreak(); });
   }
 
   // ── PARTY OPTION: Yell EGGROLL at Lee ─────────────────────────────────────
@@ -5039,7 +5074,7 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(19000 * SLOW, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: EGGROLLLLL!!! 🥡', '#ffaa00'));
     }
-    this.time.delayedCall(26000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.smokeDelay(26000 * SLOW, ()=>{ this.leaveSmokeBreak(); });
   }
 
   // ── PARTY OPTION: Sic Jorie on Todd ──────────────────────────────────────
@@ -5093,7 +5128,7 @@ class GameScene extends Phaser.Scene {
       this.time.delayedCall(23000 * SLOW, ()=>
         this.floatText(160, 80, '🏆 ACHIEVEMENT: Pregnant and DANGEROUS!', '#ff6633'));
     }
-    this.time.delayedCall(28000 * SLOW, ()=>{ if(STATE.smokeChatOpen) this.closeSmokeChat(); });
+    this.smokeDelay(28000 * SLOW, ()=>{ this.leaveSmokeBreak(); });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -5549,11 +5584,17 @@ class GameScene extends Phaser.Scene {
       main = 'All trucks cleared. Punch out or survive until shift review.';
     }
 
-    let side = 'Keep James below 50% rage.';
-    if(STATE.shiftPhase === 'Clock In') side = 'Learn the dock: talk once, then get moving.';
-    if(STATE.shiftPhase === 'Morning Rush') side = 'Clear trucks fast. Smoke breaks are risky during rush.';
-    if(STATE.shiftPhase === 'Lunch Chaos') side = 'Handle one weird event without hitting 75% suspicion.';
-    if(STATE.shiftPhase === 'Afternoon Push') side = 'Finish strong: keep energy above 25%.';
+    let side = STATE.michellePressure >= 65
+      ? 'Michelle is the main problem. Feed her, answer her, or keep trucks moving.'
+      : 'Keep James below 50% rage.';
+    if(STATE.michellePressure < 65){
+      if(STATE.shiftPhase === 'Clock In') side = 'Learn the dock: talk once, then get moving.';
+      if(STATE.shiftPhase === 'Morning Rush') side = 'Clear trucks fast. Smoke breaks are risky during rush.';
+      if(STATE.shiftPhase === 'Lunch Chaos') side = 'Handle one weird event without hitting 75% suspicion.';
+      if(STATE.shiftPhase === 'Afternoon Push') side = 'Finish strong: keep energy above 25%.';
+    }
+    if(STATE.clerkOnDock === 'michelle') side = 'Michelle is on the dock. Handle her before James melts down.';
+    if(STATE.michellePressure >= 85) side = 'Michelle is at critical pressure. Buy food or clear the truck now.';
     if(STATE.mode === 'chaos') side += ' Chaos mode pays more, but mistakes hit harder.';
 
     if(force || STATE.objectiveMain !== main || STATE.objectiveSide !== side){
@@ -7075,7 +7116,12 @@ class GameScene extends Phaser.Scene {
     if(!clerk) return;
     STATE.clerkOnDock = id;
     STATE.clerkVisitReason = reason;
-    STATE.clerkOnDockTimer = reason === 'food' ? 24000 : 22000 + Math.random()*12000;
+    STATE.clerkOnDockTimer = reason === 'food' ? 30000 : 26000 + Math.random()*14000;
+    if(id === 'michelle'){
+      STATE.michelleDemandCount++;
+      STATE.michellePressure = Math.min(100, STATE.michellePressure + (reason === 'delay' ? 24 : reason === 'food' ? 18 : 14));
+      STATE.objectiveSide = 'Michelle is on the dock. Handle her before James melts down.';
+    }
     STATE.clerkPesterTimer = 1800;
     STATE.michelleChanceTimer = id === 'michelle' ? 2600 : 0;
     STATE.michelleDockPesterCount = 0;
@@ -7133,7 +7179,7 @@ class GameScene extends Phaser.Scene {
       STATE.clerkVisitReason = null;
       STATE.clerkOnDockTimer = 0;
       STATE.clerkPesterTimer = 0;
-      STATE.clerkDockNextTimer = 42000 + Math.random()*28000;
+      STATE.clerkDockNextTimer = 30000 + Math.random()*26000;
     }
   }
 
@@ -7145,18 +7191,23 @@ class GameScene extends Phaser.Scene {
     else STATE.truckDelayTimer = Math.max(0, STATE.truckDelayTimer - delta*2);
 
     if(!STATE.clerkOnDock && !STATE.michelleAskingFood){
+      STATE.michellePressure = Math.max(0, STATE.michellePressure - delta * 0.0015);
+      if(assignedTruckLate) STATE.michellePressure = Math.min(100, STATE.michellePressure + delta * 0.003);
       STATE.clerkDockNextTimer -= delta;
       STATE.michelleFoodTimer  -= delta;
       if(!STATE.jamesOfficeSummonActive) STATE.jamesOfficeSummonTimer -= delta;
 
-      if(STATE.truckDelayTimer > 42000){
+      if(STATE.michellePressure >= 90){
+        STATE.michellePressure = 72;
+        this.startClerkDockVisit('michelle', 'food');
+      } else if(STATE.truckDelayTimer > 36000){
         STATE.truckDelayTimer = 0;
-        this.startClerkDockVisit(Math.random() < 0.55 ? 'christine' : 'michelle', 'delay');
+        this.startClerkDockVisit(Math.random() < 0.75 ? 'michelle' : 'christine', 'delay');
       } else if(STATE.michelleFoodTimer <= 0){
-        STATE.michelleFoodTimer = 70000 + Math.random()*50000;
+        STATE.michelleFoodTimer = 52000 + Math.random()*38000;
         this.startClerkDockVisit('michelle', 'food');
       } else if(STATE.clerkDockNextTimer <= 0){
-        this.startClerkDockVisit(Math.random() < 0.5 ? 'christine' : 'michelle', 'random');
+        this.startClerkDockVisit(Math.random() < 0.68 ? 'michelle' : 'christine', 'random');
       } else if(!STATE.jamesOfficeSummonActive && STATE.jamesOfficeSummonTimer <= 0){
         this._summonJamesToOffice(Math.random() < 0.55 ? 'michelle' : 'christine');
       }
@@ -7214,8 +7265,12 @@ class GameScene extends Phaser.Scene {
             ];
         this.showBubble(james, Phaser.Math.RND.pick(jamesReplies));
       }
-      const annoyanceAdd = activeId === 'michelle' ? 5 : 3;
+      const annoyanceAdd = activeId === 'michelle' ? 7 : 3;
       STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + annoyanceAdd);
+      if(activeId === 'michelle'){
+        STATE.michellePressure = Math.min(100, STATE.michellePressure + 7);
+        if(STATE.michellePressure >= 75) STATE.suspicion = Math.min(99, STATE.suspicion + 2);
+      }
       this.nudgeEmotion('james', 'stressed', 14000);
 
       // Pester achievement
@@ -7228,11 +7283,11 @@ class GameScene extends Phaser.Scene {
     if(activeId === 'michelle'){
       STATE.michelleWanderTimer -= delta;
       if(STATE.michelleWanderTimer <= 0){
-        STATE.michelleWanderTimer = 5500 + Math.random()*4000;
+        STATE.michelleWanderTimer = 3600 + Math.random()*2800;
         const dockNPCIds = ['lee','chandler','chance','drew','pam'];
         const wanderTargets = this.npcs.filter(n=>dockNPCIds.includes(n.id) && n.sprite.alpha >= 0.5 && n.sprite.visible);
         // 30% chance wander to player instead
-        const goToPlayer = Math.random() < 0.3;
+        const goToPlayer = Math.random() < (STATE.michellePressure >= 70 ? 0.62 : 0.4);
         if(goToPlayer){
           clerk.targetX = this.player.x + (Math.random()<0.5?-55:55);
           clerk.targetY = this.player.y + 10;
@@ -7264,7 +7319,7 @@ class GameScene extends Phaser.Scene {
         this.showBubble(clerk, Phaser.Math.RND.pick(wanderLines));
 
         // Random chance she fires a float accusation at someone on dock
-        if(Math.random() < 0.4){
+        if(Math.random() < (STATE.michellePressure >= 70 ? 0.7 : 0.45)){
           const accuseTargetId = Phaser.Math.RND.pick(['lee','chandler','drew']);
           const accuseTarget = this.npcs.find(n=>n.id===accuseTargetId);
           if(accuseTarget){
@@ -7313,7 +7368,8 @@ class GameScene extends Phaser.Scene {
         '"Christine said you are rude. I said respectfully, obviously."'
       ];
       this.showBubble(chance, Phaser.Math.RND.pick(chanceLines));
-      STATE.michelleAnnoyance = Math.min(100, STATE.michelleAnnoyance + 24);
+      STATE.michelleAnnoyance = Math.min(100, STATE.michelleAnnoyance + 26);
+      STATE.michellePressure = Math.min(100, STATE.michellePressure + 8);
       this.nudgeEmotion('michelle', STATE.michelleAnnoyance > 65 ? 'furious' : 'rude', 16000);
       this.floatText(michelle.sprite.x, michelle.sprite.y - 45, 'Michelle annoyance ' + STATE.michelleAnnoyance + '%', '#ff66cc');
       if(STATE.michelleAnnoyance >= 100) this.michelleKillsChance();
@@ -7939,7 +7995,7 @@ class GameScene extends Phaser.Scene {
     if(STATE.miniGameActive){ return; }
     if(STATE._fightScene){ return; }
 
-    this.movePlayer(delta);
+    if(!STATE.smokeChatOpen) this.movePlayer(delta);
     STATE.currentZone = this.getCurrentZone();
     this.updateShiftStructure(delta);
     this.refreshObjectives();
@@ -8133,11 +8189,7 @@ class GameScene extends Phaser.Scene {
     // Mini map (update if visible)
     if(this.miniMapVisible) this.drawMiniMap();
 
-    // Auto-close smoke session when player walks away
-    if(STATE.smokeChatOpen && !STATE.dialogueActive && !STATE.miniGameActive){
-      const _sd = Phaser.Math.Distance.Between(this.player.x, this.player.y, 160, 90);
-      if(_sd > 290) this.closeSmokeChat();
-    }
+    // Smoke breaks are ended by the menu/END BREAK button, not hidden movement.
 
     // Peak rush score bonus
     if(this._peakRush && this.player.body.speed > 50) STATE.score++;
