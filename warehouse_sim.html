@@ -5683,7 +5683,11 @@ class GameScene extends Phaser.Scene {
   updateNPCs(delta){
     // During smoke sessions suppress all autonomous idle bubbles so the chat log
     // is the only voice and nothing overlaps on screen.
-    const suppressIdleBubbles = STATE.smokeChatOpen;
+    const suppressIdleBubbles = STATE.smokeChatOpen
+      || STATE.dialogueActive
+      || STATE.miniGameActive
+      || STATE._fightScene
+      || (STATE.currentTruckObj && !STATE.currentTruckObj.done);
 
     this.npcs.forEach(npc=>{
       if(npc.interacting) return;
@@ -6501,6 +6505,20 @@ class GameScene extends Phaser.Scene {
   showBubble(npc, text, duration=3200){
     if(!npc) return;
     const cleanText = String(text || '').replace(/\s+/g, ' ').trim();
+    if(!cleanText) return;
+
+    // Keep the screen readable: world dialogue uses one visible bubble lane.
+    // Smoke scenes and scripted bits already call clearAllBubbles, so this
+    // mainly prevents idle/random chatter from stacking over active play.
+    if(this.npcs){
+      this.npcs.forEach(n=>{
+        if(n === npc) return;
+        n.bubbleTimer = 0;
+        if(n.bubble) n.bubble.setVisible(false);
+        if(n.bubbleGfx) n.bubbleGfx.clear().setVisible(false);
+      });
+    }
+
     const longLine = cleanText.length > 95;
     npc.bubble._bubbleAccentColor = npc.color || 0xffa01e;
     npc.bubble.setStyle({
@@ -6514,7 +6532,7 @@ class GameScene extends Phaser.Scene {
     });
     npc.bubble.setText(cleanText).setVisible(true);
     npc.bubbleGfx.setVisible(true);
-    npc.bubbleTimer = Math.max(duration, cleanText.length > 120 ? 4600 : duration);
+    npc.bubbleTimer = Math.min(Math.max(duration, cleanText.length > 120 ? 4300 : duration), 4300);
   }
 
   // Clear every NPC bubble — call before showing a new one so only one is visible
@@ -8091,10 +8109,12 @@ class GameScene extends Phaser.Scene {
 
     // NPC chatter
     this.npcChatterTimer += delta;
-    if(this.npcChatterTimer > 18000){
+    if(this.npcChatterTimer > 30000){
       this.npcChatterTimer = 0;
-      const npc = Phaser.Math.RND.pick(this.npcs);
-      this.showBubble(npc, this.getNpcLine(npc));
+      if(!STATE.dialogueActive && !STATE.smokeChatOpen && !(STATE.currentTruckObj && !STATE.currentTruckObj.done)){
+        const npc = Phaser.Math.RND.pick(this.npcs);
+        this.showBubble(npc, this.getNpcLine(npc), 2600);
+      }
     }
 
     // Player name tag (above head — origin is at feet so offset by full height)
