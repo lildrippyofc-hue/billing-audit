@@ -189,6 +189,10 @@ const STATE = {
   jorieKillCount:       0,      // total bodies she's dropped this shift
   jorieVictim:          null,   // id of whoever she's currently targeting
 
+  // Cooler crew checks on Todd periodically
+  coolerToddCheckTimer: 55000,   // ms until someone from the cooler goes check on Todd
+  coolerToddChecker:    null,     // id of who is walking to freezer right now
+
   // Gustavo: restroom runner, office sneaker, James roommate loyalist
   gustavoRestroomTimer: 18000,
   gustavoOfficeTimer:   26000,
@@ -204,8 +208,9 @@ const ZONES = {
   clerkOffice:{ x:1500, y:480,  w:290,  h:280,  color:0x4a2a55, name:'Clerk Office ðŸ“‹' },
   breakRoom:  { x:0,    y:770,  w:420,  h:330,  color:0x2a1a1a, name:'Break Room' },
   restroom:   { x:420,  y:770,  w:280,  h:330,  color:0x1a2a2a, name:'Restroom' },
-  dryStorage: { x:700,  y:770,  w:400,  h:330,  color:0x2a2a1a, name:'Dry Storage' },
-  freezer:    { x:1100, y:770,  w:700,  h:330,  color:0x0d1a2a, name:'Freezer Area â„ï¸' },
+  dryStorage: { x:700,  y:770,  w:250,  h:330,  color:0x2a2a1a, name:'Dry Storage' },
+  cooler:     { x:950,  y:770,  w:350,  h:330,  color:0x182030, name:'Cooler' },
+  freezer:    { x:1300, y:770,  w:500,  h:330,  color:0x0d1a2a, name:'Freezer Area' },
 };
 
 // Truck bays (6 bays along dock top)
@@ -407,7 +412,7 @@ const NPC_DEFS = [
     ],
     choices:["Laugh along ðŸ˜‚","Defend Chandler ðŸ›¡ï¸","Sic him on Drew ðŸ’¸","Yo let's all go smoke ðŸš¬"],
   },
-  { id:'jeff', name:'Jeff', title:'(Chill Lead ðŸŒ¿)', color:0x44bb44, zone:'dock', patrol:false,
+  { id:'jeff', name:'Jeff', title:'(Chill Lead ðŸŒ¿)', color:0x44bb44, zone:'cooler', patrol:false,
     appearance:{ shirt:0x2a5c2a, pants:0x1a2e1a, skin:0xd4956a, hair:0x2a1c08 },
     lines:[
       '"Hey... you wanna smoke real quick? Like right now."',
@@ -432,7 +437,7 @@ const NPC_DEFS = [
     ],
     choices:['Smoke with Jeff ðŸŒ¿', 'Nah I\'m good ðŸš«', 'Tell James ðŸ˜ˆ', 'What are you even on? ðŸ¤”'],
   },
-  { id:'jorie', name:'Jorie', title:'(Ready to Fight ðŸ¤°)', color:0xff6633, zone:'dock', patrol:false,
+  { id:'jorie', name:'Jorie', title:'(Ready to Fight ðŸ¤°)', color:0xff6633, zone:'cooler', patrol:false,
     appearance:{ shirt:0xcc3300, pants:0x2a1a2a, skin:0xc87840, hair:0x1a0a04, pregnant:true, bun:true },
     lines:[
       '"I\'m not on my period, I\'m PREGNANT, there is a difference and neither one is your business."',
@@ -454,7 +459,7 @@ const NPC_DEFS = [
     ],
     choices:['Wassup ðŸ‘‹', 'You good? ðŸ˜¬', 'Warn about Todd ðŸ’€', 'Let\'s go smoke ðŸš¬'],
   },
-  { id:'marcus', name:'Marcus', title:'(Asst. Supervisor ðŸ—’ï¸)', color:0xcc7700, zone:'floor', patrol:true,
+  { id:'marcus', name:'Marcus', title:'(Asst. Supervisor ðŸ—’ï¸)', color:0xcc7700, zone:'cooler', patrol:true,
     appearance:{ shirt:0xd4a844, pants:0x554433, skin:0xf0d0b0, hair:0x6b4423, clipboard:true, badge:true },
     lines:[
       '"I\'m going to need to document that."',
@@ -1520,12 +1525,12 @@ class GameScene extends Phaser.Scene {
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  DRY STORAGE
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    g.fillStyle(0x272714, 1); g.fillRect(700, 770, 400, 330);
+    g.fillStyle(0x272714, 1); g.fillRect(700, 770, 250, 330);
     g.lineStyle(1, 0x2e2e16, 1);
-    for(let x=700; x<1100; x+=45){ g.lineBetween(x, 770, x, 1100); }
-    for(let y=770; y<1100; y+=45){ g.lineBetween(700, y, 1100, y); }
-    // Heavy-duty metal shelving units
-    [[720,800],[840,800],[960,800]].forEach(([sx,sy])=>{
+    for(let x=700; x<950; x+=45){ g.lineBetween(x, 770, x, 1100); }
+    for(let y=770; y<1100; y+=45){ g.lineBetween(700, y, 950, y); }
+    // Heavy-duty metal shelving units (2 fit in the narrower dry storage)
+    [[720,800],[820,800]].forEach(([sx,sy])=>{
       // Shelf frame shadow
       g.fillStyle(0x000000, 0.3); g.fillRect(sx+3, sy+3, 90, 150);
       // Upright posts
@@ -1552,46 +1557,99 @@ class GameScene extends Phaser.Scene {
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  FREEZER
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    g.fillStyle(0x080e18, 1); g.fillRect(1100, 770, 700, 330);
+        // ══════════════════════════════════════════════════════════════════════════
+    //  COOLER (x:950-1300) — Marcus, Jeff, and Jorie are stationed here
+    // ══════════════════════════════════════════════════════════════════════════
+    g.fillStyle(0x131e28, 1); g.fillRect(950, 770, 350, 330);
+    // Blue-gray tile grid
+    g.lineStyle(1, 0x1c2a38, 1);
+    for(let x=950; x<1300; x+=40){ g.lineBetween(x, 770, x, 1100); }
+    for(let y=770; y<1100; y+=40){ g.lineBetween(950, y, 1300, y); }
+    // Light condensation mist on floor
+    g.fillStyle(0x88bbdd, 0.025);
+    for(let x=960; x<1290; x+=55){ for(let y=785; y<1090; y+=55){ g.fillRect(x,y,45,45); }}
+    // Insulated wall separators
+    g.fillStyle(0x222222, 1); g.fillRect(948, 770, 6, 330);
+    g.fillStyle(0x333333, 0.5); g.fillRect(954, 770, 3, 330);
+    g.fillStyle(0x222222, 1); g.fillRect(1296, 770, 8, 330);
+    g.fillStyle(0x334455, 0.4); g.fillRect(1296, 770, 4, 330);
+    // Light frost on top wall
+    g.fillStyle(0xaaddff, 0.04); g.fillRect(950, 770, 350, 14);
+    // Cooler racking — 3 units for refrigerated product
+    [[968,800],[1068,800],[1180,800]].forEach(([sx,sy])=>{
+      g.fillStyle(0x000000, 0.35); g.fillRect(sx+3, sy+3, 95, 160);
+      g.fillStyle(0x2a3a4a, 1); g.fillRect(sx, sy, 8, 160); g.fillRect(sx+87, sy, 8, 160);
+      g.lineStyle(1, 0x1e2e3e, 0.9);
+      g.lineBetween(sx+4, sy+35, sx+91, sy+85); g.lineBetween(sx+91, sy+35, sx+4, sy+85);
+      [0,40,80,120].forEach(sh=>{
+        g.fillStyle(0x22334a, 1); g.fillRect(sx+4, sy+sh, 89, 9);
+        g.fillStyle(0x88bbdd, 0.07); g.fillRect(sx+4, sy+sh, 89, 3);
+      });
+      const coolCols = [0x2a5a3a, 0x1a3a5a, 0x3a4a2a, 0x2a3a5a, 0x1a4a3a, 0x445566];
+      [0,40,80].forEach((sh,row)=>{
+        for(let b=0;b<4;b++){
+          g.fillStyle(coolCols[(row*4+b)%coolCols.length], 0.88);
+          g.fillRoundedRect(sx+5+b*21, sy+sh+2, 19, 26, 2);
+          g.fillStyle(0xaaddff, 0.09); g.fillRect(sx+5+b*21, sy+sh+2, 19, 5);
+        }
+      });
+    });
+    // Pallet hangout spots for the crew
+    [[965,980],[1060,990],[1160,975],[1240,985]].forEach(([px,py])=>{
+      g.fillStyle(0x8b6914, 0.5); g.fillRoundedRect(px, py, 55, 34, 2);
+      g.lineStyle(1, 0xaa8820, 0.4); g.strokeRoundedRect(px, py, 55, 34, 2);
+    });
+    // Cooler temp display
+    g.fillStyle(0x0a1828, 1); g.fillRoundedRect(1240, 785, 50, 34, 4);
+    g.lineStyle(1, 0x336699, 0.8); g.strokeRoundedRect(1240, 785, 50, 34, 4);
+    this.add.text(1265, 802, '35F / 2C', {fontSize:'8px',fill:'rgba(120,200,255,0.85)',fontFamily:'monospace',fontStyle:'bold',align:'center'}).setOrigin(0.5, 0);
+    // COOLER sign
+    g.fillStyle(0x1a2a3a, 1); g.fillRoundedRect(1020, 774, 130, 18, 3);
+    g.lineStyle(1, 0x446688, 0.7); g.strokeRoundedRect(1020, 774, 130, 18, 3);
+    this.add.text(1085, 783, 'COOLER - AUTHORIZED CREW ONLY', {fontSize:'7px',fill:'rgba(150,210,255,0.8)',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
+    // Fan vent strip
+    g.fillStyle(0x1a2a38, 1); g.fillRect(1090, 770, 40, 6);
+    g.lineStyle(1, 0x446688, 0.5);
+    for(let fx=1094; fx<1128; fx+=8){ g.lineBetween(fx, 770, fx+4, 776); }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  FREEZER (x:1300-1800, shifted right to make room for Cooler)
+    // ══════════════════════════════════════════════════════════════════════════
+    g.fillStyle(0x080e18, 1); g.fillRect(1300, 770, 500, 330);
     // Frost floor
     g.fillStyle(0x88ccff, 0.03);
-    for(let x=1110; x<1800; x+=65){ for(let y=790; y<1090; y+=65){ g.fillRect(x,y,55,55); }}
+    for(let x=1310; x<1800; x+=65){ for(let y=790; y<1090; y+=65){ g.fillRect(x,y,55,55); }}
     // Wall frost buildup
     g.fillStyle(0xaaddff, 0.06);
-    g.fillRect(1100, 770, 700, 22); g.fillRect(1100, 770, 18, 330); g.fillRect(1782, 770, 18, 330);
+    g.fillRect(1300, 770, 500, 22); g.fillRect(1300, 770, 18, 330); g.fillRect(1782, 770, 18, 330);
     // Freezer floor condensation lines
     g.lineStyle(1, 0x1a2a3a, 0.9);
-    for(let x=1110; x<1800; x+=90){ g.lineBetween(x,770,x,1100); }
-    for(let y=780; y<1100; y+=90){ g.lineBetween(1100,y,1800,y); }
-    // Heavy freezer racking (5 bays)
-    for(let i=0; i<5; i++){
-      const rx = 1125+i*120;
-      // Shadow
+    for(let x=1310; x<1800; x+=90){ g.lineBetween(x,770,x,1100); }
+    for(let y=780; y<1100; y+=90){ g.lineBetween(1300,y,1800,y); }
+    // Heavy freezer racking (4 bays)
+    for(let i=0; i<4; i++){
+      const rx = 1320+i*110;
       g.fillStyle(0x000000, 0.4); g.fillRect(rx+3, 800, 90, 190);
-      // Frame uprights
       g.fillStyle(0x1e3040, 1); g.fillRect(rx, 800, 8, 190); g.fillRect(rx+82, 800, 8, 190);
-      // Shelves
       [0,48,96,144].forEach(sh=>{
         g.fillStyle(0x1a2a38, 1); g.fillRect(rx+4, 800+sh, 84, 8);
         g.fillStyle(0xaaddff, 0.05); g.fillRect(rx+4, 800+sh, 84, 3);
       });
-      // Frozen product (blue-tinted boxes)
       [0,48,96].forEach((sh,row)=>{
         for(let b=0;b<3;b++){
           g.fillStyle(0x1a3a5a, 0.9); g.fillRoundedRect(rx+5+b*26, 800+sh+2, 24, 28, 2);
           g.fillStyle(0xaaddff, 0.12); g.fillRect(rx+5+b*26, 800+sh+2, 24, 6);
-          // Ice frost on top
           g.fillStyle(0xffffff, 0.06); g.fillRect(rx+5+b*26, 800+sh+2, 24, 2);
         }
       });
     }
-    // Freezer temperature display on wall
-    g.fillStyle(0x0a1a28, 1); g.fillRoundedRect(1720, 800, 65, 40, 4);
-    g.lineStyle(1, 0x2244aa, 0.7); g.strokeRoundedRect(1720, 800, 65, 40, 4);
-    this.add.text(1752, 820, 'â„ -18Â°C', {fontSize:'9px',fill:'rgba(100,180,255,0.7)',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
+    // Freezer temp display
+    g.fillStyle(0x0a1a28, 1); g.fillRoundedRect(1730, 800, 58, 40, 4);
+    g.lineStyle(1, 0x2244aa, 0.7); g.strokeRoundedRect(1730, 800, 58, 40, 4);
+    this.add.text(1759, 820, '-18C', {fontSize:'9px',fill:'rgba(100,180,255,0.7)',fontFamily:'monospace',fontStyle:'bold'}).setOrigin(0.5);
     // Ice crystals on floor
     g.lineStyle(1, 0x88ccff, 0.12);
-    [[1130,810,22],[1250,880,18],[1400,830,25],[1550,900,20],[1650,810,16],[1750,870,22]].forEach(([ix,iy,il])=>{
+    [[1330,810,22],[1440,880,18],[1540,830,25],[1640,900,20],[1710,810,16],[1760,870,22]].forEach(([ix,iy,il])=>{
       for(let a=0;a<6;a++){ g.lineBetween(ix,iy, ix+il*Math.cos(a*1.05), iy+il*Math.sin(a*1.05)); }
     });
 
@@ -6493,6 +6551,9 @@ class GameScene extends Phaser.Scene {
             STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 8);
           }
         }
+        // Cooler crew Todd check-in
+        this._updateCoolerToddCheck(delta);
+
         // Deathmatch ticker â€” Jorie randomly snaps and fights someone
         this._updateJorieDeathmatch(npc, delta);
 
