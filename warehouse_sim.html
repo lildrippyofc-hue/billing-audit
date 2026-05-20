@@ -99,6 +99,10 @@ const STATE = {
   score: 0,
   gameMinutes: 7*60,  // 7:00 AM
   shiftEnd: 15*60,    // 3:00 PM
+  shiftPhase: 'Clock In',
+  shiftComplete: false,
+  objectiveMain: 'Wait for James to assign your first truck.',
+  objectiveSide: 'Keep James calm and learn the dock.',
   currentZone: 'floor',
   trucksUnloaded: 0,
   currentTruck: null, // index 0-5
@@ -179,7 +183,7 @@ const STATE = {
   _fightScene:         false,     // Michelle vs Chance fight cutscene is playing
 
   // Jorie deathmatch — she randomly snaps and fights a coworker
-  jorieDeathMatchTimer: 35000,  // ms until Jorie picks her next victim (starts fast)
+  jorieDeathMatchTimer: 95000,  // ms until Jorie picks her next victim; rare legend event
   jorieKillCount:       0,      // total bodies she's dropped this shift
   jorieVictim:          null,   // id of whoever she's currently targeting
 };
@@ -1096,7 +1100,7 @@ class GameScene extends Phaser.Scene {
 
     // Timers & events
     this.gameTimer = 0; // elapsed real ms
-    this.nextEventAt = 60000 + Math.random()*60000; // first random event
+    this.nextEventAt = 120000 + Math.random()*90000; // first random event: give players room to learn
     this.energyDrainTimer = 0;
     this.suspicionDecayTimer = 0;
     this.npcChatterTimer = 0;
@@ -1127,6 +1131,8 @@ class GameScene extends Phaser.Scene {
     // Start UI scene
     this.scene.launch('UI');
     this.scene.bringToTop('UI');
+    this.updateShiftStructure(0, true);
+    this.refreshObjectives(true);
 
     // Assign first truck after short delay
     this.time.delayedCall(2000, ()=>{
@@ -3198,9 +3204,23 @@ class GameScene extends Phaser.Scene {
     [this.mgBg,this.mgTitle,this.mgPrompt,this.mgStatus,this.mgBar,this.mgScore,this.mgQuit,this.mgDockBg,this.mgJackGfx,this.mgComboTxt].forEach(o=>o&&o.setVisible(false));
     STATE.currentTruck = null;
 
-    // Check next assignment
+    this.refreshObjectives(true);
+
+    // Check next assignment or finish the shift if every truck is clear.
     if(!opts.skipAssignment){
-      this.time.delayedCall(1500, ()=>{ if(!STATE.dialogueActive) this.showAssignment(); });
+      this.time.delayedCall(1500, ()=>{
+        if(STATE.dialogueActive) return;
+        if(this.allTrucksDone()){
+          if(!STATE.shiftComplete){
+            STATE.shiftComplete = true;
+            STATE.score += 250;
+            this.floatText(this.player.x, this.player.y, 'All trucks cleared. Shift complete bonus!', '#ffd700');
+            this.time.delayedCall(900, ()=> this.endShift('normal'));
+          }
+        } else {
+          this.showAssignment();
+        }
+      });
     }
   }
 
@@ -5488,12 +5508,74 @@ class GameScene extends Phaser.Scene {
   }
 
   // ── ASSIGNMENT SYSTEM ──────────────────────────────────────────────────────
+
+  getShiftPhase(){
+    const min = STATE.gameMinutes;
+    if(min < 9*60) return 'Clock In';
+    if(min < 11*60) return 'Morning Rush';
+    if(min < 13*60) return 'Lunch Chaos';
+    if(min < STATE.shiftEnd) return 'Afternoon Push';
+    return 'Shift Review';
+  }
+
+  updateShiftStructure(delta, force=false){
+    const next = this.getShiftPhase();
+    if(force || STATE.shiftPhase !== next){
+      STATE.shiftPhase = next;
+      const phaseLines = {
+        'Clock In': 'Clock in, get your first truck, and keep the dock moving.',
+        'Morning Rush': 'Morning Rush: trucks matter more than gossip right now.',
+        'Lunch Chaos': 'Lunch Chaos: weird stuff can happen, but do not lose the dock.',
+        'Afternoon Push': 'Afternoon Push: finish clean and keep James under control.',
+        'Shift Review': 'Shift Review: wrap it up.'
+      };
+      this.logMsg(phaseLines[next] || next);
+      this.floatText(WW/2, 180, next, next === 'Lunch Chaos' ? '#ff88cc' : '#ffd700');
+      this.refreshObjectives(true);
+    }
+    if(!STATE.shiftComplete && STATE.gameMinutes >= STATE.shiftEnd && !STATE.dialogueActive && !STATE.miniGameActive){
+      STATE.shiftComplete = true;
+      this.endShift('normal');
+    }
+  }
+
+  refreshObjectives(force=false){
+    const activeTruck = STATE.currentTruckObj && !STATE.currentTruckObj.done ? STATE.currentTruckObj : null;
+    let main = 'Ask James for the next truck assignment.';
+    if(activeTruck){
+      const idx = this.trucks ? this.trucks.indexOf(activeTruck) : -1;
+      main = idx >= 0 ? 'Unload Bay ' + (idx + 1) + ' - ' + activeTruck.pallets + ' pallets.' : 'Unload the assigned truck.';
+    } else if(this.trucks && this.trucks.every(t => t.done)){
+      main = 'All trucks cleared. Punch out or survive until shift review.';
+    }
+
+    let side = 'Keep James below 50% rage.';
+    if(STATE.shiftPhase === 'Clock In') side = 'Learn the dock: talk once, then get moving.';
+    if(STATE.shiftPhase === 'Morning Rush') side = 'Clear trucks fast. Smoke breaks are risky during rush.';
+    if(STATE.shiftPhase === 'Lunch Chaos') side = 'Handle one weird event without hitting 75% suspicion.';
+    if(STATE.shiftPhase === 'Afternoon Push') side = 'Finish strong: keep energy above 25%.';
+    if(STATE.mode === 'chaos') side += ' Chaos mode pays more, but mistakes hit harder.';
+
+    if(force || STATE.objectiveMain !== main || STATE.objectiveSide !== side){
+      STATE.objectiveMain = main;
+      STATE.objectiveSide = side;
+    }
+  }
+
+  allTrucksDone(){
+    return this.trucks && this.trucks.length && this.trucks.every(t => t.done);
+  }
+
   showAssignment(){
     if(STATE.dialogueActive || STATE.miniGameActive) return;
     const available = this.trucks.filter(t=>!t.done);
     if(available.length === 0){
-      this.floatText(this.player.x, this.player.y, '🎉 All trucks done! Bonus!', '#ffd700');
-      STATE.score += 100;
+      if(!STATE.shiftComplete){
+        STATE.shiftComplete = true;
+        this.floatText(this.player.x, this.player.y, 'All trucks done. Shift complete bonus!', '#ffd700');
+        STATE.score += 250;
+        this.time.delayedCall(900, ()=> this.endShift('normal'));
+      }
       return;
     }
     const truck = Phaser.Math.RND.pick(available);
@@ -5566,7 +5648,8 @@ class GameScene extends Phaser.Scene {
         '"That\'s what I needed to hear. Move."',
       ];
       if(james) this.time.delayedCall(400, ()=> this.showBubble(james, Phaser.Math.RND.pick(okLines)));
-      this.floatText(this.player.x, this.player.y, `🚛 Head to Bay ${truckIdx+1}! Press E at the truck.`, '#44ff44');
+      this.refreshObjectives(true);
+      this.floatText(this.player.x, this.player.y, `Head to Bay ${truckIdx+1}. Press E at the truck.`, '#44ff44');
     }
     else if(idx === 1){ // Nah I'm good
       STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 14);
@@ -5576,21 +5659,23 @@ class GameScene extends Phaser.Scene {
       const jamesNo = [
         '"...NAH?! NAH?! Did you just say NAH to me on MY dock?!"',
         '"Excuse me?! EXCUSE ME?! Back to work. NOW. Or I\'m calling corporate."',
-        '"I\'m sorry — I don\'t think I heard you correctly. Because you didn\'t just say no."',
+        '"I\'m sorry. I don\'t think I heard you correctly. Because you did not just say no."',
         `"You're going to Bay ${truckIdx+1}. I don't know what 'nah' means. Figure it out."`,
       ];
       const james = this.npcs.find(n=>n.id==='james');
       if(james) this.showBubble(james, Phaser.Math.RND.pick(jamesNo));
-      this.floatText(this.player.x, this.player.y, '😬 James is FURIOUS. Suspicion +12, Annoyance +22', '#ff4400');
+      this.floatText(this.player.x, this.player.y, 'James is furious. Suspicion +12, Annoyance +14', '#ff4400');
       const chance = this.npcs.find(n=>n.id==='chance');
       if(chance) this.time.delayedCall(2000, ()=> this.showBubble(chance, '"...did they just say nah to James. I\'m going to need a minute."'));
+      this.refreshObjectives(true);
     }
     else { // Which bay again?
       STATE.currentTruckObj = truck;
       STATE.jamesAnnoyance = Math.min(100, STATE.jamesAnnoyance + 4);
       const james = this.npcs.find(n=>n.id==='james');
       if(james) this.showBubble(james, `"BAY ${truckIdx+1}. RIGHT THERE. THE ONE. WITH THE TRUCK. IN IT."`);
-      this.floatText(this.player.x, this.player.y, `🤔 Bay ${truckIdx+1} — over there! ${truck.pallets} pallets.`, '#ffaa44');
+      this.refreshObjectives(true);
+      this.floatText(this.player.x, this.player.y, `Bay ${truckIdx+1}: ${truck.pallets} pallets.`, '#ffaa44');
     }
   }
 
@@ -6498,6 +6583,10 @@ class GameScene extends Phaser.Scene {
   }
 
   triggerRandomEvent(){
+    if(STATE.shiftPhase === 'Clock In' && STATE.trucksUnloaded < 1){
+      this.nextEventAt = this.gameTimer + 45000;
+      return;
+    }
     const events = [
       ()=>{ // Peak rush
         this.floatText(WW/2,WH/2,'🔥 PEAK RUSH! Double points for 30s!','#ff4400');
@@ -6656,7 +6745,8 @@ class GameScene extends Phaser.Scene {
     ];
     const evt = Phaser.Math.RND.pick(events);
     evt();
-    this.nextEventAt = this.gameTimer + 30000 + Math.random()*45000; // events more frequent
+    const base = STATE.shiftPhase === 'Lunch Chaos' ? 65000 : 95000;
+    this.nextEventAt = this.gameTimer + base + Math.random()*90000;
   }
 
   // ── FLOATING TEXT ──────────────────────────────────────────────────────────
@@ -7424,7 +7514,7 @@ class GameScene extends Phaser.Scene {
     if(STATE.jorieDeathMatchTimer > 0) return;
 
     // Reset timer — 40-80s between fights so it happens constantly
-    STATE.jorieDeathMatchTimer = 40000 + Math.random() * 40000;
+    STATE.jorieDeathMatchTimer = 95000 + Math.random() * 90000;
 
     // Pick a victim — anyone who isn't protected
     const IMMUNE = ['james','jeff','jorie','pam','lee','michelle','christine'];
@@ -7833,6 +7923,8 @@ class GameScene extends Phaser.Scene {
 
     this.movePlayer(delta);
     STATE.currentZone = this.getCurrentZone();
+    this.updateShiftStructure(delta);
+    this.refreshObjectives();
     this.updateClerkEvents(delta);
     this.updateNPCs(delta);
 
@@ -7992,14 +8084,14 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // Random event
-    if(this.gameTimer >= this.nextEventAt && !STATE.dialogueActive){
+    // Random event - paced so comedy supports the shift instead of burying it.
+    if(this.gameTimer >= this.nextEventAt && !STATE.dialogueActive && !STATE.smokeChatOpen && !STATE._fightScene){
       this.triggerRandomEvent();
     }
 
     // NPC chatter
     this.npcChatterTimer += delta;
-    if(this.npcChatterTimer > 12000){
+    if(this.npcChatterTimer > 18000){
       this.npcChatterTimer = 0;
       const npc = Phaser.Math.RND.pick(this.npcs);
       this.showBubble(npc, this.getNpcLine(npc));
@@ -8045,20 +8137,23 @@ class UIScene extends Phaser.Scene {
 
   createHUD(){
     // ── TOP BAR (taller to fit 3 stat rows) ──────────────────────────────────
-    this.add.rectangle(GW/2, 0, GW, 58, 0x000000, 0.82).setOrigin(0.5,0).setDepth(40);
+    this.add.rectangle(GW/2, 0, GW, 78, 0x000000, 0.84).setOrigin(0.5,0).setDepth(40);
 
     // Clock (centre)
     this.clockTxt = this.add.text(GW/2, 18, '7:00 AM', {
       fontSize:'15px', fill:'#ffa01e', fontFamily:'monospace', fontStyle:'bold'
     }).setOrigin(0.5).setDepth(41);
-    this.dayTxt = this.add.text(GW/2, 34, '☀ SHIFT IN PROGRESS', {
+    this.dayTxt = this.add.text(GW/2, 34, 'SHIFT IN PROGRESS', {
       fontSize:'9px', fill:'rgba(255,160,30,0.5)', fontFamily:'monospace'
     }).setOrigin(0.5).setDepth(41);
 
     // Score (top-left)
-    this.scoreTxt = this.add.text(10, 18, '⭐ 0', {
+    this.scoreTxt = this.add.text(10, 14, 'Score: 0', {
       fontSize:'13px', fill:'#ffd700', fontFamily:'monospace', fontStyle:'bold'
     }).setOrigin(0,0.5).setDepth(41);
+    this.objectiveTxt = this.add.text(10, 30, '', {
+      fontSize:'10px', fill:'#ffffff', fontFamily:'monospace', lineSpacing:2, wordWrap:{ width: Math.max(260, GW - 230) }
+    }).setOrigin(0,0).setDepth(41);
 
     // ── RIGHT SIDE: Energy + Suspicion rows ──────────────────────────────────
     const RX = GW - 170; // label start x
@@ -8117,9 +8212,11 @@ class UIScene extends Phaser.Scene {
     this.clockTxt.setText(`${h12}:${m<10?'0'+m:m} ${ap}`);
     const pctShift = (STATE.gameMinutes - 7*60) / (STATE.shiftEnd - 7*60);
     this.clockTxt.setStyle({ fill: pctShift>0.85?'#ff4444':pctShift>0.6?'#ffaa00':'#ffa01e' });
+    this.dayTxt.setText(STATE.shiftPhase || 'SHIFT IN PROGRESS');
 
     // Score
-    this.scoreTxt.setText('⭐ '+STATE.score.toLocaleString());
+    this.scoreTxt.setText('Score: '+STATE.score.toLocaleString());
+    if(this.objectiveTxt) this.objectiveTxt.setText('Main: ' + (STATE.objectiveMain || '') + '\nSide: ' + (STATE.objectiveSide || ''));
 
     // Energy bar
     const epct = STATE.energy/100;
@@ -8166,12 +8263,12 @@ class UIScene extends Phaser.Scene {
 
     // Zone
     const zoneName = ZONES[STATE.currentZone]?.name || '';
-    this.zoneTxt.setText('📍 '+zoneName);
+    this.zoneTxt.setText(zoneName);
 
     // Achievements
     if(STATE.achievements.length > this.lastAchLen){
       this.lastAchLen = STATE.achievements.length;
-      this.lastAch = '🏆 '+STATE.achievements[STATE.achievements.length-1];
+      this.lastAch = 'Achievement: '+STATE.achievements[STATE.achievements.length-1];
     }
     this.achTxt.setText(this.lastAch);
   }
