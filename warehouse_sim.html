@@ -188,6 +188,12 @@ const STATE = {
   jorieDeathMatchTimer: 95000,  // ms until Jorie picks her next victim; rare legend event
   jorieKillCount:       0,      // total bodies she's dropped this shift
   jorieVictim:          null,   // id of whoever she's currently targeting
+
+  // Gustavo: restroom runner, office sneaker, James roommate loyalist
+  gustavoRestroomTimer: 18000,
+  gustavoOfficeTimer:   26000,
+  gustavoFlirtTimer:    9000,
+  gustavoJamesTimer:    14000,
 };
 
 // Zone layout
@@ -465,6 +471,24 @@ const NPC_DEFS = [
       '"I heard about the smoke break. I\'m not saying anything. Yet."',
     ],
     choices:['Suck up to him 😇', 'Tell him to mind his business 😤', 'Throw Chandler under the bus 🍞', 'BOLT 🏃'],
+  },
+  { id:'gustavo', name:'Gustavo', title:'(Restroom Runner)', color:0x22b8aa, zone:'floor', patrol:false,
+    appearance:{ shirt:0x169c8d, pants:0x202842, skin:0xc6814f, hair:0x120806, cap:true, capColor:0x0f5f55, badge:true },
+    lines:[
+      '"I am not hiding. I am managing a personal logistics situation."',
+      '"If James says move, I move. Roommate code. Also he knows where I live."',
+      '"Restroom again? Brother, that is between me and the building."',
+      '"I was in the clerk office for operational reasons. Michelle was also there. Coincidence."',
+      '"James calls me G-Money when he wants something. That means danger."',
+      '"I do everything James says because I have seen his kitchen after a bad shift."',
+      '"I am a loyal employee, a loyal roommate, and a frequent restroom visitor."',
+      '"Michelle smiled at me once and I have been emotionally promoted ever since."',
+      '"I am going to the restroom. If James asks, I am doing inventory."',
+      '"This dock has pressure. My stomach has deadlines. We all have struggles."',
+      '"James said hustle, so I hustled directly to the wrong place. Still hustle."',
+      '"I brought confidence today. Not paperwork. Just confidence."',
+    ],
+    choices:['Ask about James','Ask why restroom again','Tell him Michelle noticed','Tell him to help the dock'],
   },
   { id:'michelle', name:'Michelle', title:'(Clerk · Sweet & Rude)', color:0xff66cc, zone:'clerkOffice', patrol:false,
     appearance:{ shirt:0xff80d0, pants:0x441a55, skin:0xe8b8a0, hair:0x2a1a08, ponytail:true },
@@ -2817,6 +2841,40 @@ class GameScene extends Phaser.Scene {
         });
       }
     }
+    else if(npc.id === 'gustavo'){
+      if(idx === 0){
+        const jamesLines = [
+          '"James is a good roommate. Loud. Intense. Owns too many clipboards. But good."',
+          '"At home James labels leftovers by urgency. I respect the system and fear it."',
+          '"James said we ride together, work together, suffer together. I did not sign paperwork but here I am."',
+        ];
+        response = Phaser.Math.RND.pick(jamesLines);
+        scoreChange = 10;
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 4);
+      } else if(idx === 1){
+        response = '"Because peace lives in there. Also the vending machine burrito made choices."';
+        energyChange = 4;
+        scoreChange = 5;
+        npc.targetX = ZONES.restroom.x + 130;
+        npc.targetY = ZONES.restroom.y + 120;
+      } else if(idx === 2){
+        response = '"Michelle noticed? Like noticed noticed? I need to walk normal. Am I walking normal?"';
+        scoreChange = 15;
+        STATE.michellePressure = Math.min(100, STATE.michellePressure + 5);
+        const michelle = this.npcs.find(n=>n.id==='michelle');
+        if(michelle) this.time.delayedCall(900, ()=> this.showBubble(michelle, '"Gustavo, stop hovering by my office unless you brought food or paperwork."'));
+      } else {
+        response = '"If James asked, I already did it. If you asked, I am considering it emotionally."';
+        scoreChange = 20;
+        STATE.suspicion = Math.max(0, STATE.suspicion - 6);
+        const james = this.npcs.find(n=>n.id==='james');
+        if(james) this.time.delayedCall(700, ()=> this.showBubble(james, Phaser.Math.RND.pick([
+          '"Gus Bus! Help Bay 2 before I start assigning nicknames as discipline."',
+          '"G-Money, move like rent is due. Because it is."',
+          '"Gustavo, roommate rule: when I point, you go."'
+        ])));
+      }
+    }
     else if(npc.id === 'michelle'){
       if(idx===0){
         response = '"Hi sweetie. That was friendly. Suspicious, but friendly."';
@@ -2904,6 +2962,7 @@ class GameScene extends Phaser.Scene {
     if(npc.id === 'pam' && idx === 2) this.nudgeEmotion('chandler', 'angry', 22000);
     if(npc.id === 'chance' && idx === 2) this.nudgeEmotion('drew', 'panicked', 22000);
     if(npc.id === 'marcus') this.nudgeEmotion('marcus', idx === 0 ? 'smug' : idx === 1 ? 'reporting' : idx === 2 ? 'smug' : 'suspicious');
+    if(npc.id === 'gustavo') this.nudgeEmotion('gustavo', idx === 2 ? 'happy' : idx === 1 ? 'tired' : 'focused');
     if(npc.id === 'michelle') this.nudgeEmotion('michelle', idx === 2 ? 'sweet' : idx === 3 ? 'furious' : 'rude');
     if(npc.id === 'christine') this.nudgeEmotion('christine', idx === 1 ? 'focused' : idx === 2 ? 'annoyed' : idx === 3 ? 'done' : 'focused');
 
@@ -5754,6 +5813,10 @@ class GameScene extends Phaser.Scene {
         // through so the velocity/bubble drawing code at the bottom runs.
       }
 
+      if(npc.id === 'gustavo'){
+        this._updateGustavo(npc, delta);
+      }
+
       // ── LEE DISTRACTION MODE ────────────────────────────────────────────
       if(npc.id === 'lee' && STATE.leeDistractingJames){
         STATE.leeDistractionTimer -= delta;
@@ -7344,6 +7407,99 @@ class GameScene extends Phaser.Scene {
         this.awardAchievement('chance_survives', 'Chance Lived — somehow Michelle showed mercy', '#ff9900');
       }
       this.sendClerkBackToOffice(activeId);
+    }
+  }
+
+
+  _updateGustavo(gustavo, delta){
+    if(STATE.dialogueActive || STATE.miniGameActive || STATE.smokeChatOpen || STATE._fightScene) return;
+    const james = this.npcs.find(n=>n.id==='james');
+    const michelle = this.npcs.find(n=>n.id==='michelle');
+    const restroom = ZONES.restroom;
+    const office = ZONES.clerkOffice;
+
+    STATE.gustavoRestroomTimer -= delta;
+    STATE.gustavoOfficeTimer -= delta;
+    STATE.gustavoFlirtTimer -= delta;
+    STATE.gustavoJamesTimer -= delta;
+
+    if(STATE.gustavoRestroomTimer <= 0){
+      STATE.gustavoRestroomTimer = 26000 + Math.random()*26000;
+      gustavo.running = true;
+      gustavo.targetX = restroom.x + 70 + Math.random()*(restroom.w-140);
+      gustavo.targetY = restroom.y + 70 + Math.random()*(restroom.h-130);
+      gustavo.moveTimer = 4200;
+      const lines = [
+        '"Restroom audit. Very important. Do not put that in writing."',
+        '"I am clocking into the restroom for operational recovery."',
+        '"If James asks, I am checking water pressure for safety."',
+        '"This is my third restroom trip. That means my route is optimized."'
+      ];
+      this.showBubble(gustavo, Phaser.Math.RND.pick(lines), 3000);
+      this.floatText(gustavo.sprite.x, gustavo.sprite.y - 45, 'Gustavo headed to the restroom again.', '#22d6c4');
+      STATE.suspicion = Math.min(99, STATE.suspicion + 1);
+      return;
+    }
+
+    if(STATE.gustavoOfficeTimer <= 0 && michelle && !STATE.clerkOnDock){
+      STATE.gustavoOfficeTimer = 36000 + Math.random()*36000;
+      gustavo.running = true;
+      gustavo.targetX = office.x + 105 + Math.random()*80;
+      gustavo.targetY = office.y + 105 + Math.random()*80;
+      gustavo.moveTimer = 5000;
+      const sneakLines = [
+        '"I am going to the clerk office for paperwork. Maybe also destiny."',
+        '"Quick office check. If Michelle is there, that is a scheduling coincidence."',
+        '"I have a question for Michelle. The question is mostly how her day is going."',
+        '"Nobody tell James I am walking with this much confidence."'
+      ];
+      this.showBubble(gustavo, Phaser.Math.RND.pick(sneakLines), 3200);
+      STATE.michellePressure = Math.min(100, STATE.michellePressure + 4);
+      return;
+    }
+
+    if(STATE.gustavoFlirtTimer <= 0 && michelle){
+      STATE.gustavoFlirtTimer = 15000 + Math.random()*18000;
+      const dist = Phaser.Math.Distance.Between(gustavo.sprite.x, gustavo.sprite.y, michelle.sprite.x, michelle.sprite.y);
+      if(dist < 260){
+        gustavo.targetX = michelle.sprite.x + 44;
+        gustavo.targetY = michelle.sprite.y + 8;
+        const flirtLines = [
+          '"Michelle, you need anything? Paperwork, snacks, emotional support, I got options."',
+          '"Michelle, I was nearby. Not weird nearby. Professionally nearby."',
+          '"Michelle, your headset looks powerful today. Respectfully."',
+          '"If anybody bothers you, I will tell James immediately. Roommate hotline."'
+        ];
+        this.showBubble(gustavo, Phaser.Math.RND.pick(flirtLines), 3200);
+        this.time.delayedCall(1200, ()=>{
+          if(!STATE.dialogueActive && michelle.bubbleTimer <= 0){
+            this.showBubble(michelle, Phaser.Math.RND.pick([
+              '"Gustavo, I need food, not poetry."',
+              '"Aww. Cute. Still move."',
+              '"You are sweet. You are also blocking my path."',
+              '"Bring me a drink and maybe I will pretend this worked."'
+            ]), 3200);
+          }
+        });
+      }
+    }
+
+    if(STATE.gustavoJamesTimer <= 0 && james){
+      STATE.gustavoJamesTimer = 22000 + Math.random()*26000;
+      const dist = Phaser.Math.Distance.Between(gustavo.sprite.x, gustavo.sprite.y, james.sprite.x, james.sprite.y);
+      if(dist < 320 || STATE.jamesAnnoyance >= 55){
+        gustavo.targetX = james.sprite.x + 38;
+        gustavo.targetY = james.sprite.y + 8;
+        const nicknames = [
+          '"Gus Bus, I need you moving."',
+          '"G-Money, roommate rule: back me up."',
+          '"Gusto, stop charming the office and clear a lane."',
+          '"Bathroom Bandit, I need you on the dock for three actual minutes."'
+        ];
+        this.time.delayedCall(600, ()=>{ if(james) this.showBubble(james, Phaser.Math.RND.pick(nicknames), 3200); });
+        this.time.delayedCall(1700, ()=>{ if(gustavo) this.showBubble(gustavo, '"Yes James. Roommate code. I am already moving."', 3000); });
+        STATE.jamesAnnoyance = Math.max(0, STATE.jamesAnnoyance - 3);
+      }
     }
   }
 
