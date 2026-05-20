@@ -1206,221 +1206,88 @@ class GameScene extends Phaser.Scene {
     [300,700,1100,1500].forEach(x=>{ g.fillRoundedRect(x, 140, 30, 18, 2); g.lineStyle(1,0x333333,0.6); g.strokeRoundedRect(x,140,30,18,2); });
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    //  DOCK AREA -- realistic warehouse dock, styled after real photos
-    // ============================================================
-    // Base concrete floor (rougher/darker than polished warehouse floor)
-    g.fillStyle(0x2e2e2e, 1); g.fillRect(0, 170, WW, 300);
-    // Polished sheen strips
-    g.fillStyle(0x383838, 0.35);
-    for(let x=-300; x<WW+300; x+=90){ g.fillRect(x, 170, 45, 300); }
+    //  DOCK AREA
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // Concrete base (dark)
+    g.fillStyle(0x363636, 1); g.fillRect(0, 170, WW, 300);
+    // Concrete expansion joints (subtle grid)
+    g.lineStyle(1, 0x2c2c2c, 1);
+    for(let x=0; x<WW; x+=150){ g.lineBetween(x, 170, x, 470); }
+    for(let y=170; y<470; y+=120){ g.lineBetween(0, y, WW, y); }
+    // Concrete wear scuffs / tire marks
+    g.fillStyle(0x2e2e2e, 1);
+    [[80,260,180,6],[400,310,220,4],[620,380,150,5],[900,240,200,4],[1100,350,160,5],[1400,280,180,6],[1650,400,200,4]].forEach(([x,y,w,h])=>g.fillRect(x,y,w,h));
+    // Black tire skid streaks
+    g.lineStyle(3, 0x111111, 0.5);
+    [[150,200,320,220],[500,350,650,370],[900,250,1050,275],[1300,320,1450,340]].forEach(([x1,y1,x2,y2])=>g.lineBetween(x1,y1,x2,y2));
 
-    // Yellow floor safety lines
-    g.lineStyle(4, 0xffcc00, 0.60);
-    for(let x=0; x<WW; x+=36){ g.lineBetween(x, 174, x+28, 202); }
-    g.lineStyle(3, 0xffcc00, 0.28);
-    [380, 740, 1100, 1460].forEach(x=>{ g.lineBetween(x, 170, x, 470); });
-    g.lineBetween(0, 360, WW, 360);
+    // Yellow safety stripe along the dock/outside wall edge
+    g.lineStyle(7, 0xffcc00, 0.85); g.lineBetween(0, 174, WW, 174);
 
-    // Tire skid streaks
-    g.lineStyle(4, 0x111111, 0.45);
-    [[80,280,310,295],[420,390,580,375],[760,240,940,258],[1080,350,1260,362],[1380,290,1540,305],[1620,400,1780,415]].forEach(([x1,y1,x2,y2])=>g.lineBetween(x1,y1,x2,y2));
-    g.lineStyle(2, 0x111111, 0.25);
-    [[200,340,200,460],[660,300,660,460],[1040,310,1040,460],[1400,330,1400,460]].forEach(([x1,y1,x2,y2])=>g.lineBetween(x1,y1,x2,y2));
-
-    // DOCK BACK WALL -- painted white concrete with 6 bay doors
-    g.fillStyle(0xd0d0cc, 1); g.fillRect(0, 170, WW, 62);
-    g.lineStyle(1, 0xb8b8b5, 0.7);
-    for(let x=0; x<WW; x+=80){ g.lineBetween(x, 170, x, 232); }
-    for(let y=186; y<232; y+=16){ g.lineBetween(0, y, WW, y); }
-    // Clerestory window strip at top of wall
-    g.fillStyle(0x88bbdd, 0.35); g.fillRect(0, 170, WW, 8);
-    g.fillStyle(0xaaccee, 0.15); g.fillRect(0, 170, WW, 4);
-    g.lineStyle(1, 0x888888, 0.6);
-    for(let x=0; x<WW; x+=120){ g.lineBetween(x, 170, x, 178); }
-
-    // 6 DOCK DOOR OPENINGS
+    // Hazard stripes at each bay opening (yellow-black diagonal)
     for(let i=0; i<6; i++){
-      const bx = i*300 + 20;
-      const bw = 260;
-      const doorTop = 178;
-      const doorBot = 232;
-      // Door recess
-      g.fillStyle(0x1a1a1a, 1); g.fillRect(bx, doorTop, bw, doorBot - doorTop);
-      // Dock seals (foam padding around door frame)
-      g.fillStyle(0x222222, 1);
-      g.fillRect(bx - 8, doorTop, 8, doorBot - doorTop);
-      g.fillRect(bx + bw, doorTop, 8, doorBot - doorTop);
-      g.fillRect(bx - 8, doorTop - 5, bw + 16, 5);
-      // Black rubber bumpers at base
-      g.fillStyle(0x111111, 1);
-      g.fillRoundedRect(bx + 20, doorBot - 14, 40, 14, 2);
-      g.fillRoundedRect(bx + bw - 60, doorBot - 14, 40, 14, 2);
-      g.fillStyle(0x888888, 0.5);
-      [bx+30, bx+50, bx+bw-50, bx+bw-30].forEach(boltX=>{
-        g.fillCircle(boltX, doorBot - 7, 2.5);
-      });
-      // Dock leveler plate (ribbed)
-      g.fillStyle(0x585858, 1); g.fillRect(bx+4, doorBot - 8, bw - 8, 8);
-      g.lineStyle(1, 0x686868, 0.9);
-      for(let r=0; r<12; r++) g.lineBetween(bx+6+r*19, doorBot-7, bx+6+r*19, doorBot);
-      // Bay number background
-      g.fillStyle(0x1a1a1a, 0.75); g.fillRoundedRect(bx + bw/2 - 14, doorTop - 22, 28, 20, 3);
+      const bx = i*300;
+      for(let s=0; s<8; s++){
+        g.fillStyle(s%2===0 ? 0xffcc00 : 0x111111, 0.72);
+        g.fillRect(bx+s*37, 170, 37, 16);
+      }
     }
 
-    // Bay numbers as text on wall
+    // Dock leveler plates at each bay (metal ribbed plates)
     for(let i=0; i<6; i++){
-      const cx = i*300 + 20 + 130;
-      this.add.text(cx, 178 - 22 + 10, String(i+1), {
-        fontSize:'14px', fill:'#f0f0f0', fontFamily:'monospace', fontStyle:'bold',
-        stroke:'#000', strokeThickness:2
+      const bx = i*300+15;
+      g.fillStyle(0x4a4a4a, 1); g.fillRoundedRect(bx, 170, 270, 22, 2);
+      // Ribs
+      g.lineStyle(1, 0x5a5a5a, 0.8);
+      for(let r=0; r<14; r++) g.lineBetween(bx+r*19, 173, bx+r*19, 190);
+      // Edge bumpers
+      g.fillStyle(0xffcc00, 0.85);
+      g.fillRect(bx, 170, 12, 22); g.fillRect(bx+258, 170, 12, 22);
+      // Dock seal shadow at top edge
+      g.fillStyle(0x111111, 0.4); g.fillRect(bx, 170, 270, 6);
+    }
+
+    // Bay floor numbers (large painted letters)
+    for(let i=0; i<6; i++){
+      this.add.text(i*300+150, 435, `${i+1}`, {
+        fontSize:'48px', fill:'rgba(255,200,0,0.10)', fontFamily:'monospace', fontStyle:'bold'
       }).setOrigin(0.5);
     }
 
-    // Dock signal lights (red = truck secured)
+    // Forklift traffic arrows (painted yellow on dock floor)
     for(let i=0; i<6; i++){
-      const lx = i*300 + 282;
-      g.fillStyle(0x2a2a2a, 1); g.fillRoundedRect(lx, 185, 14, 30, 2);
-      g.lineStyle(1, 0x444444, 0.8); g.strokeRoundedRect(lx, 185, 14, 30, 2);
-      g.fillStyle(0xdd2200, 0.9); g.fillCircle(lx + 7, 192, 4);
-      g.fillStyle(0xff4422, 0.4); g.fillCircle(lx + 7, 192, 6);
-      g.fillStyle(0x224400, 0.7); g.fillCircle(lx + 7, 207, 4);
+      const ax = i*300+150, ay = 380;
+      // Arrow shaft
+      g.fillStyle(0xffcc00, 0.14); g.fillRect(ax-5, ay-55, 10, 75);
+      // Arrow head
+      g.fillStyle(0xffcc00, 0.14); g.fillTriangle(ax-16, ay-55, ax+16, ay-55, ax, ay-82);
     }
 
-    // YELLOW SAFETY BOLLARDS flanking each door
+    // Overhead dock lights (bright ceiling fixtures â€“ cone effect)
     for(let i=0; i<6; i++){
-      const bx = i * 300;
-      [bx + 8, bx + 290].forEach(px => {
-        g.fillStyle(0x000000, 0.35); g.fillEllipse(px + 3, 248, 20, 8);
-        g.fillStyle(0xffcc00, 1); g.fillRect(px - 7, 228, 14, 52);
-        g.fillStyle(0xffaa00, 1); g.fillRoundedRect(px - 9, 225, 18, 8, 3);
-        g.fillStyle(0xffffff, 0.4); g.fillRect(px - 7, 244, 14, 5);
-        g.fillStyle(0xffffff, 0.2); g.fillRect(px - 7, 254, 14, 3);
-      });
-    }
-    // Center-aisle bollards
-    [150, 450, 750, 1050, 1350, 1650].forEach(px => {
-      g.fillStyle(0x000000, 0.3); g.fillEllipse(px + 3, 268, 18, 7);
-      g.fillStyle(0xffcc00, 1); g.fillRect(px - 6, 250, 12, 46);
-      g.fillStyle(0xffaa00, 1); g.fillRoundedRect(px - 8, 247, 16, 7, 3);
-      g.fillStyle(0xffffff, 0.35); g.fillRect(px - 6, 263, 12, 4);
-    });
-
-    // STACKED BLACK PALLETS scattered through bays
-    [[55,300,3],[140,290,4],[200,310,2],[350,280,5],[430,300,3],[510,285,4],
-     [640,310,2],[730,295,4],[800,305,3],[940,285,5],[1020,300,3],[1090,290,4],
-     [1230,305,2],[1310,285,4],[1380,295,3],[1530,300,4],[1610,285,3],[1700,310,2]
-    ].forEach(([px,py,h])=>{
-      g.fillStyle(0x000000, 0.4); g.fillRect(px+4, py+h*6+4, 58, 14);
-      for(let s=0; s<h; s++){
-        const sy = py + (h - 1 - s) * 6;
-        g.fillStyle(s===0 ? 0x1a1a1a : 0x141414, 1); g.fillRect(px, sy, 58, 14);
-        g.lineStyle(1, 0x2a2a2a, 0.8);
-        [10,20,30,40,50].forEach(sx=>g.lineBetween(px+sx, sy+2, px+sx, sy+12));
-      }
-      g.fillStyle(0x333333, 0.4); g.fillRect(px+2, py, 54, 3);
-    });
-
-    // BLUE PALLETS WITH STACKED PRODUCT BOXES (like the Watermelon boxes in photo)
-    [
-      [80,390,4],[380,380,4],[680,390,3],[980,385,4],[1280,390,3],[1560,385,3]
-    ].forEach(([x,y,cols])=>{
-      const boxW=52, boxH=28, rows=2;
-      const totalW = cols*boxW + (cols-1)*2;
-      const totalH = rows*boxH;
-      // Blue pallet base
-      g.fillStyle(0x1a4a8a, 0.9); g.fillRoundedRect(x-4, y+totalH, totalW+8, 10, 2);
-      g.lineStyle(1, 0x336699, 0.6); g.strokeRoundedRect(x-4, y+totalH, totalW+8, 10, 2);
-      for(let s=0;s<=cols;s++) g.lineBetween(x-4+s*((totalW+8)/cols), y+totalH, x-4+s*((totalW+8)/cols), y+totalH+10);
-      // Stacked boxes
-      const boxCols = [0xc8a060, 0xb89050, 0xcc9955, 0xc0a060];
-      for(let r=0;r<rows;r++){
-        for(let c=0;c<cols;c++){
-          const bx2 = x + c*(boxW+2);
-          const by2 = y + (rows-1-r)*boxH;
-          const col = boxCols[c%boxCols.length];
-          g.fillStyle(col, 0.92); g.fillRoundedRect(bx2, by2, boxW, boxH-2, 1);
-          g.fillStyle(0xffffff, 0.08); g.fillRect(bx2+2, by2+2, boxW-4, 5);
-          // Box label/print lines
-          g.fillStyle(0x5a3a18, 0.5); g.fillRect(bx2+4, by2+8, boxW-8, 2);
-          g.fillStyle(0x5a3a18, 0.3); g.fillRect(bx2+4, by2+13, boxW-8, 2);
-          // Strapping
-          g.lineStyle(1, 0x885522, 0.4);
-          g.lineBetween(bx2+boxW*0.33, by2, bx2+boxW*0.33, by2+boxH-2);
-          g.lineBetween(bx2+boxW*0.67, by2, bx2+boxW*0.67, by2+boxH-2);
-        }
-      }
-      // Shrink wrap outline
-      g.lineStyle(1, 0xdddddd, 0.10); g.strokeRect(x-2, y, totalW+4, totalH+2);
-    });
-
-    // ORANGE TOYOTA FORKLIFTS parked on dock
-    [[330,270,false],[930,260,true],[1530,265,false]].forEach(([x,y,flip])=>{
-      g.fillStyle(0x000000, 0.3); g.fillEllipse(x, y+32, 70, 18);
-      // Body
-      g.fillStyle(0xcc4400, 1); g.fillRoundedRect(x-18, y-8, 36, 40, 4);
-      g.fillStyle(0xaa3300, 1); g.fillRoundedRect(x-14, y-8, 28, 18, 3);
-      // Windshield
-      g.fillStyle(0xaaccdd, 0.35); g.fillRoundedRect(x-11, y-6, 22, 12, 2);
-      // Counterweight
-      g.fillStyle(0x222222, 1); g.fillRoundedRect(x-20, y+24, 40, 16, 3);
-      // Mast
-      g.fillStyle(0x888888, 1); g.fillRect(x-2, y-38, 4, 30);
-      // Fork tines
-      g.fillStyle(0x999999, 1);
-      g.fillRect(x-14, y-36, 4, 26);
-      g.fillRect(x+10, y-36, 4, 26);
-      // Wheels
-      [[-16,8],[16,8],[-16,28],[16,28]].forEach(([wx,wy])=>{
-        g.fillStyle(0x111111, 1); g.fillCircle(x+wx, y+wy, 5);
-        g.fillStyle(0x444444, 0.5); g.fillCircle(x+wx, y+wy, 3);
-      });
-      // Cage outline
-      g.lineStyle(2, 0xcc6600, 0.7); g.strokeRect(x-18, y-8, 36, 40);
-    });
-
-    // OVERHEAD DOCK LIGHTS - ceiling fixtures with light cones
-    for(let i=0; i<6; i++){
-      const lx = i*300+150;
-      g.fillStyle(0xaaaaaa, 0.6); g.fillRect(lx-22, 170, 44, 8);
-      g.fillStyle(0xffffee, 0.10); g.fillCircle(lx, 200, 80);
-      g.fillStyle(0xffffee, 0.06); g.fillCircle(lx, 200, 120);
-      g.fillStyle(0xffffee, 0.04); g.fillTriangle(lx, 178, lx-100, 420, lx+100, 420);
+      // Fixture housing
+      g.fillStyle(0x888888, 0.5); g.fillRect(i*300+130, 172, 40, 8);
+      // Light cone
+      g.fillStyle(0xffffcc, 0.07); g.fillTriangle(i*300+150, 180, i*300+90, 350, i*300+210, 350);
+      g.fillStyle(0xffffcc, 0.04); g.fillCircle(i*300+150, 200, 70);
     }
 
-    // OVERHEAD PIPING / CONDUIT hints
-    g.lineStyle(5, 0x4a4a4a, 0.5); g.lineBetween(0, 172, WW, 172);
-    g.lineStyle(3, 0x555555, 0.35); g.lineBetween(0, 185, WW, 185);
-    // Fire suppression pipe (red)
-    g.lineStyle(2, 0x882222, 0.4); g.lineBetween(0, 176, WW, 176);
-    for(let x=150; x<WW; x+=300){
-      g.fillStyle(0xaa3333, 0.6); g.fillCircle(x, 176, 3);
-      g.fillStyle(0xdd4444, 0.4); g.fillCircle(x, 176, 5);
-    }
-
-    // STRUCTURAL PILLARS (bay dividers) with red safety paint
+    // Bay dividers (wall columns)
     for(let i=0; i<=6; i++){
       const bx = i*300;
-      g.fillStyle(0x000000, 0.3); g.fillRect(bx+6, 170, 6, 300);
-      g.fillStyle(0x555555, 1); g.fillRect(bx-5, 170, 10, 300);
-      g.fillStyle(0xffffff, 0.08); g.fillRect(bx-4, 170, 3, 300);
-      // Red safety stripe on pillar base
-      g.fillStyle(0xcc2200, 0.7); g.fillRect(bx-5, 400, 10, 70);
-      g.fillStyle(0xffffff, 0.3); g.fillRect(bx-5, 416, 10, 6);
-      g.fillStyle(0xcc2200, 0.7); g.fillRect(bx-5, 432, 10, 8);
+      g.fillStyle(0x4a4a4a, 1); g.fillRect(bx-3, 170, 6, 300);
+      g.fillStyle(0xffffff, 0.06); g.fillRect(bx-1, 170, 2, 300);
     }
 
-    // WALL SAFETY STRIPE
-    g.lineStyle(8, 0xffcc00, 0.75); g.lineBetween(0, 174, WW, 174);
-    g.lineStyle(3, 0x000000, 0.5); g.lineBetween(0, 178, WW, 178);
-
-    // TRASH CANS near dock doors
-    [268, 568, 868, 1168, 1468, 1768].forEach(tx=>{
-      g.fillStyle(0x888888, 0.8); g.fillEllipse(tx, 244, 16, 10);
-      g.fillStyle(0x777777, 0.9); g.fillRect(tx-7, 234, 14, 18);
-      g.fillStyle(0x999999, 0.5); g.fillRect(tx-7, 234, 14, 4);
-      g.fillStyle(0x666666, 0.5); g.fillRect(tx-7, 234, 2, 18);
+    // Dock safety cones
+    const conePositions = [[50,430],[290,430],[600,430],[870,430],[1150,430],[1450,430],[1730,430]];
+    conePositions.forEach(([cx,cy])=>{
+      g.fillStyle(0xff5500, 0.8); g.fillTriangle(cx, cy-16, cx-8, cy+4, cx+8, cy+4);
+      g.fillStyle(0xffffff, 0.5); g.fillRect(cx-6, cy-8, 12, 3);
+      g.fillStyle(0x333333, 0.6); g.fillEllipse(cx, cy+4, 18, 6);
     });
 
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  WAREHOUSE FLOOR
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Polished concrete base (lighter than dock)
