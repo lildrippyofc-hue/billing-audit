@@ -6518,6 +6518,7 @@
     }
 
     function renderDockTabs() {
+      if (!els.dockTabs) return;
       const docks = dockTypes();
       if (docks.length && (!state.activeDock || state.activeDock === "all" || !docks.includes(state.activeDock))) {
         state.activeDock = docks[0];
@@ -7280,7 +7281,14 @@
         tbody.appendChild(tr);
       });
 
-      els.ddpTableMeta.textContent = `${rows.length} truck${rows.length === 1 ? "" : "s"} shown`;
+      if (!rows.length) {
+        appendEmptyRow(tbody, headers.length, state.normalizedRows.length ? "No trucks match that filter." : "Import a daily truck report first.");
+      }
+      if (!state.normalizedRows.length) {
+        els.ddpTableMeta.textContent = "Import a daily truck report to see DDP / EXW breakdown";
+      } else {
+        els.ddpTableMeta.textContent = `${rows.length} truck${rows.length === 1 ? "" : "s"} shown`;
+      }
     }
 
     function renderClerkDoorLookup(updateMessage = true) {
@@ -7542,8 +7550,16 @@
         tbody.appendChild(tr);
       });
 
+      if (!rows.length) {
+        appendEmptyRow(tbody, headers.length, state.normalizedRows.length ? "No trucks match that filter." : "Import a daily truck report first.");
+      }
+
       const statusCounts = countBy(dockRows, (truck) => truck.status);
-      els.truckFinderTableMeta.textContent = `${rows.length} final truck${rows.length === 1 ? "" : "s"} shown | ${statusCounts["Breakdown Truck"] || 0} breakdown, ${statusCounts["Roll Off"] || 0} roll off, ${statusCounts["Needs Audit"] || 0} in audit`;
+      if (!state.normalizedRows.length) {
+        els.truckFinderTableMeta.textContent = "Import a daily truck report to use Truck Finder";
+      } else {
+        els.truckFinderTableMeta.textContent = `${rows.length} final truck${rows.length === 1 ? "" : "s"} shown | ${statusCounts["Breakdown Truck"] || 0} breakdown, ${statusCounts["Roll Off"] || 0} roll off, ${statusCounts["Needs Audit"] || 0} in audit`;
+      }
       renderTruckFinderAudit();
     }
 
@@ -9121,7 +9137,7 @@
         button.type = "button";
         button.className = "sortable-header";
         button.dataset.validationSort = column.key;
-        button.textContent = `${column.label}${sort.key === column.key ? (sort.direction === "asc" ? " ^" : " v") : ""}`;
+        button.textContent = `${column.label}${sort.key === column.key ? (sort.direction === "asc" ? " ↑" : " ↓") : ""}`;
         th.appendChild(button);
         headerRow.appendChild(th);
       });
@@ -9341,7 +9357,7 @@
       els.toast.textContent = message;
       els.toast.classList.add("show");
       clearTimeout(showToast.timer);
-      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 2600);
+      showToast.timer = setTimeout(() => els.toast.classList.remove("show"), 3400);
     }
 
     function trimLabel(label, limit) {
@@ -9850,6 +9866,7 @@
       _wxInitialized = true;
       var zipInput  = document.getElementById('wxZipInput');
       var searchBtn = document.getElementById('wxSearchBtn');
+      if (!zipInput || !searchBtn) return;
       var lastZip   = localStorage.getItem('wx_last_zip') || '';
       if (lastZip) { zipInput.value = lastZip; fetchWeather(lastZip); }
       searchBtn.addEventListener('click', function() {
@@ -9864,11 +9881,12 @@
 
     function wxShowError(msg) {
       var el = document.getElementById('wxError');
+      if (!el) return;
       el.textContent = msg; el.style.display = 'block';
-      document.getElementById('wxLoading').style.display = 'none';
+      var ld = document.getElementById('wxLoading'); if (ld) ld.style.display = 'none';
     }
-    function wxHideError() { document.getElementById('wxError').style.display = 'none'; }
-    function wxSetLoading(v) { document.getElementById('wxLoading').style.display = v ? 'block' : 'none'; }
+    function wxHideError() { var el = document.getElementById('wxError'); if (el) el.style.display = 'none'; }
+    function wxSetLoading(v) { var el = document.getElementById('wxLoading'); if (el) el.style.display = v ? 'block' : 'none'; }
 
     var WX_CODE_MAP = {
       0:  ['â˜€ï¸','Clear'],       1:  ['ðŸŒ¤ï¸','Mainly Clear'],
