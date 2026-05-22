@@ -7944,6 +7944,77 @@ class GameScene extends Phaser.Scene {
   }
 
   // â”€â”€ JORIE DEATHMATCH TICKER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  _updateCoolerToddCheck(delta){
+    if(STATE._fightScene || STATE.dialogueActive || STATE.miniGameActive) return;
+    STATE.coolerToddCheckTimer -= delta;
+    if(STATE.coolerToddCheckTimer > 0) return;
+    STATE.coolerToddCheckTimer = 45000 + Math.random() * 45000;
+    if(STATE.coolerToddChecker) return;
+
+    const candidates = this.npcs.filter(n =>
+      ['marcus','jeff','jorie'].includes(n.id) &&
+      n.sprite.visible && n.bubbleTimer <= 0 && !n._walkingToTodd
+    );
+    if(candidates.length === 0) return;
+
+    const checker = Phaser.Math.RND.pick(candidates);
+    STATE.coolerToddChecker = checker.id;
+    checker._walkingToTodd = true;
+
+    const todd = this.npcs.find(n => n.id === 'todd');
+    if(!todd){ STATE.coolerToddChecker=null; checker._walkingToTodd=false; return; }
+
+    const goLines = {
+      marcus:[
+        '"Alright. I am going to check on Todd. Professionally."',
+        '"Todd has been quiet. That concerns me more than noise."',
+        '"Someone should go see about Todd. I will handle it."',
+      ],
+      jeff:[
+        '"Yo I'm gonna go peek on Todd real quick."',
+        '"Todd's been in there a minute... let me go vibe check him."',
+        '"Bro where is Todd. I'm going in."',
+      ],
+      jorie:[
+        '"Fine. I'll go check on Todd. This is not my job."',
+        '"If Todd is doing something weird I'm turning around immediately."',
+        '"Going to the freezer. Don't read into it."',
+      ],
+    };
+    this.showBubble(checker, Phaser.Math.RND.pick(goLines[checker.id]||['"Going to check on Todd."']), 5500);
+
+    const fz = ZONES.freezer || {x:1300,y:770,w:500,h:330};
+    checker.targetX = fz.x + 100;
+    checker.targetY = fz.y + 80;
+
+    this.time.delayedCall(3200, ()=>{
+      if(!checker.sprite.visible){ STATE.coolerToddChecker=null; checker._walkingToTodd=false; return; }
+      const react = {
+        marcus:['"Todd. Are you okay in here?"','"Todd what exactly are you doing right now."','"I see. I will not ask follow-up questions."'],
+        jeff:['"Yo Todd bro what is going on in here lmao."','"Todd my guy... what ARE you doing."','"This is wild. I respect it though."'],
+        jorie:['"Todd I knew it. I KNEW something was wrong."','"I am not even going to ask."','"Todd. Baby. Please."'],
+      };
+      this.showBubble(checker, Phaser.Math.RND.pick(react[checker.id]||['"...Todd."']), 5500);
+      this.time.delayedCall(1800, ()=>{
+        const tLines=[
+          '"Oh. Hey. This is normal."','"I'm just... thinking in here."',
+          '"The cold helps me focus. Don't worry about it."',
+          '"I was about to come out. Probably."','"It's actually nice once you go numb."',
+          '"Time moves differently in the freezer."','"If you tell James I will deny everything."',
+        ];
+        if(todd.bubbleTimer<=0) this.showBubble(todd, Phaser.Math.RND.pick(tLines), 5500);
+      });
+      this.time.delayedCall(5000, ()=>{
+        if(!checker.sprite.visible){ STATE.coolerToddChecker=null; checker._walkingToTodd=false; return; }
+        const cz = ZONES.cooler || {x:950,y:770,w:350,h:330};
+        checker.targetX = cz.x + 80 + Math.random()*100;
+        checker.targetY = cz.y + 60 + Math.random()*80;
+        STATE.coolerToddChecker = null;
+        checker._walkingToTodd = false;
+      });
+    });
+  }
+
   _updateJorieDeathmatch(jorie, delta){
     if(!jorie) return;
     if(STATE._fightScene || STATE.dialogueActive || STATE.miniGameActive) return;
