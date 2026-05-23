@@ -230,6 +230,7 @@
     .summary-eclipse { border-left: 5px solid var(--eclipse-line); }
     .summary-aldi { border-left: 5px solid var(--aldi-line); }
     .summary-shared { border-left: 5px solid var(--shared-line); }
+    .summary-review { border-left: 5px solid var(--review-line); }
 
     .client-note {
       display: grid;
@@ -657,6 +658,7 @@
           <button class="tab fault-tab" type="button" data-filter="eclipse">Eclipse</button>
           <button class="tab fault-tab" type="button" data-filter="aldi">Aldi</button>
           <button class="tab fault-tab" type="button" data-filter="shared">Eclipse + Aldi</button>
+          <button class="tab fault-tab" type="button" data-filter="review">Needs Review</button>
         </nav>
 
         <section class="table-section">
@@ -1122,12 +1124,13 @@
       const counts = getCounts();
       summaryGrid.innerHTML = [
         summaryCard(counts.total, "Total trucks"),
-        summaryCard(counts.highlighted, "Highlighted hits"),
+        summaryCard(counts.highlighted, "Categorized faults"),
         summaryCard(counts.driver, "Driver fault", "summary-driver"),
         summaryCard(counts.clerk, "Clerk fault", "summary-clerk"),
         summaryCard(counts.eclipse, "Eclipse fault", "summary-eclipse"),
         summaryCard(counts.aldi, "Aldi fault", "summary-aldi"),
-        summaryCard(counts.shared, "Eclipse + Aldi fault", "summary-shared")
+        summaryCard(counts.shared, "Eclipse + Aldi fault", "summary-shared"),
+        summaryCard(counts.needsReview, "Needs review", "summary-review")
       ].join("");
     }
 
@@ -1156,7 +1159,8 @@
 
     function getVisibleRows() {
       const rows = state.parsed.filter((row) => {
-        if (!row.detention || !isCategorizedFault(row.fault)) return false;
+        if (!row.detention) return false;
+        if (!isCategorizedFault(row.fault) && row.fault !== "review") return false;
         if (state.filter !== "all" && row.fault !== state.filter) return false;
         return true;
       });
@@ -1425,7 +1429,7 @@
 
     function exportReport() {
       syncNotesFromTextareas();
-      const highlighted = sortRows(state.parsed.filter((row) => row.detention && isCategorizedFault(row.fault)));
+      const highlighted = sortRows(state.parsed.filter((row) => row.detention && (isCategorizedFault(row.fault) || row.fault === "review")));
       const spaceRows = state.parsed.filter((row) => row.space);
       if (!highlighted.length && !spaceRows.length) {
         showMessage("There are no results to export.");
