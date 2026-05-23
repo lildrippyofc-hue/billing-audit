@@ -446,11 +446,6 @@
     :root.retro #truckChargeAuditPanel { --section-accent: #2dff88; --section-accent-2: #ffb000; --section-glow: rgba(45,255,136,0.24); --section-soft: rgba(45,255,136,0.10); }
     :root.retro #historyPanel { --section-accent: #8f5cff; --section-accent-2: #65d8ff; --section-glow: rgba(143,92,255,0.26); --section-soft: rgba(143,92,255,0.11); }
     :root.retro #helpPanel { --section-accent: #ffb000; --section-accent-2: #ff4fd8; --section-glow: rgba(255,176,0,0.25); --section-soft: rgba(255,176,0,0.11); }
-    :root.retro #flappyBirdPanel  { --section-accent: #2dff88; --section-accent-2: #ff4fd8; --section-glow: rgba(45,255,136,0.24); --section-soft: rgba(45,255,136,0.10); }
-    :root.retro #paperPlanePanel  { --section-accent: #ffb000; --section-accent-2: #00f5ff; --section-glow: rgba(255,176,0,0.24); --section-soft: rgba(255,176,0,0.10); }
-    :root.retro #jetpackJamesPanel { --section-accent: #00f5ff; --section-accent-2: #ff4fd8; --section-glow: rgba(0,245,255,0.24); --section-soft: rgba(0,245,255,0.10); }
-    :root.retro #localWeatherPanel  { --section-accent: #2dff88; --section-accent-2: #00f5ff; --section-glow: rgba(45,255,136,0.22); --section-soft: rgba(45,255,136,0.09); }
-    :root.retro #warehouseSimPanel  { --section-accent: #ff4fd8; --section-accent-2: #00f5ff; --section-glow: rgba(255,79,216,0.28);  --section-soft: rgba(255,79,216,0.12); }
 
     :root.retro .tab-panel.active .panel,
     :root.retro .tab-panel.active .table-wrap,
@@ -2043,10 +2038,6 @@
     }
   
     /* â”€â”€ Game frame panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    #flappyBirdPanel    { padding: 0; }
-    #paperPlanePanel    { padding: 0; }
-    #jetpackJamesPanel  { padding: 0; }
-    #warehouseSimPanel  { padding: 0; }
     #detentionPanel    { padding: 0; }
     .game-frame-wrap {
       width: 100%;
@@ -2156,14 +2147,6 @@
         <div class="menu-group">
           <div class="menu-group-title">Help</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="help" data-menu-label="Help: How To Use">How To Use</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Break Time</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="localWeather" data-menu-label="Local Weather">Local Weather</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="flappyBird" data-menu-label="Flappy Bird">Flappy Bird</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="paperPlane" data-menu-label="Paper Plane">Paper Plane</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="jetpackJames" data-menu-label="Jetpack James">Jetpack James</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="warehouseSim" data-menu-label="Warehouse Rush">Warehouse Rush</button>
         </div>
       </div>
     </nav>
@@ -3495,88 +3478,6 @@
 
       </section>
 
-      <!-- IN OTHER NEWS PANEL -->
-
-      <!-- FLAPPY BIRD PANEL -->
-      <section id="flappyBirdPanel" class="tab-panel" aria-label="Flappy Bird">
-        <div class="motivation-bar" id="motivBar_flappyBird"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="flappyFrame" src="" title="Flappy Bird" allowfullscreen></iframe>
-        </div>
-      </section>
-
-      <!-- PAPER PLANE PANEL -->
-      <section id="paperPlanePanel" class="tab-panel" aria-label="Paper Plane">
-        <div class="motivation-bar" id="motivBar_paperPlane"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="paperPlaneFrame" src="" title="Paper Plane" allowfullscreen></iframe>
-        </div>
-      </section>
-
-      <!-- JETPACK JAMES PANEL -->
-      <section id="jetpackJamesPanel" class="tab-panel" aria-label="Jetpack James">
-        <div class="motivation-bar" id="motivBar_jetpackJames"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="jetpackFrame" src="" title="Jetpack James" allowfullscreen></iframe>
-        </div>
-      </section>
-<!-- WAREHOUSE SIM PANEL -->
-      <section id="warehouseSimPanel" class="tab-panel" aria-label="Warehouse Rush">
-        <div class="motivation-bar" id="motivBar_warehouseSim"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="game-frame-wrap">
-          <iframe id="warehouseSimFrame" src="" title="Warehouse Rush" allowfullscreen></iframe>
-        </div>
-      </section>
-
-      <!-- LOCAL WEATHER PANEL -->
-      <section id="localWeatherPanel" class="tab-panel" aria-label="Local Weather">
-        <div class="motivation-bar" id="motivBar_localWeather"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div style="max-width:900px;margin:0 auto;padding:24px 16px">
-
-          <!-- Zip code search -->
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:28px;flex-wrap:wrap">
-            <input id="wxZipInput" type="text" inputmode="numeric" maxlength="5" placeholder="Enter ZIP codeâ€¦"
-              style="flex:1;min-width:140px;max-width:220px;padding:12px 16px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font-size:1rem;outline:none">
-            <button id="wxSearchBtn" type="button"
-              style="padding:12px 22px;border-radius:10px;background:var(--teal);color:#fff;font-weight:700;border:none;cursor:pointer;font-size:0.95rem;white-space:nowrap">
-              Get Weather
-            </button>
-            <span id="wxLocationLabel" style="color:var(--muted);font-size:0.88rem;margin-left:4px"></span>
-          </div>
-
-          <!-- Current conditions card -->
-          <div id="wxCurrentCard" style="display:none;background:var(--panel);border-radius:14px;padding:24px 28px;margin-bottom:20px;box-shadow:var(--shadow);border:1px solid var(--line)">
-            <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-              <div id="wxIcon" style="font-size:4rem;line-height:1"></div>
-              <div style="flex:1">
-                <div style="font-size:3rem;font-weight:900;color:var(--ink)" id="wxTemp"></div>
-                <div style="font-size:1rem;color:var(--muted)" id="wxDesc"></div>
-              </div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;font-size:0.88rem">
-                <div><span style="color:var(--muted)">Feels like</span><br><strong id="wxFeels"></strong></div>
-                <div><span style="color:var(--muted)">Humidity</span><br><strong id="wxHumidity"></strong></div>
-                <div><span style="color:var(--muted)">Wind</span><br><strong id="wxWind"></strong></div>
-                <div><span style="color:var(--muted)">UV Index</span><br><strong id="wxUv"></strong></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Hourly strip -->
-          <div id="wxHourlyWrap" style="display:none;margin-bottom:20px">
-            <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">Next 12 Hours</div>
-            <div id="wxHourlyStrip" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch"></div>
-          </div>
-
-          <!-- 7-day forecast -->
-          <div id="wxForecastWrap" style="display:none">
-            <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.08em;color:var(--muted);text-transform:uppercase;margin-bottom:10px">7-Day Forecast</div>
-            <div id="wxForecastGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px"></div>
-          </div>
-
-          <div id="wxError" style="color:var(--red);font-size:0.9rem;margin-top:16px;display:none"></div>
-          <div id="wxLoading" style="color:var(--muted);font-size:0.9rem;margin-top:16px;display:none">Fetching weatherâ€¦</div>
-        </div>
-      </section>
 
     </main>
   </div>
@@ -4128,11 +4029,6 @@
         truckChargeAudit: [["PAY","Wrong charges cost money."],["FEE","Every FSPAY check matters."],["TEST","Precision billing audit in progress."],["WARN","Catch it here before it becomes a problem."]],
         history:          [["LOG","This is the saved work record."],["DONE","Every entry here is documented."],["SAVE","Saved, logged, and ready."]],
         help:             [["HELP","Use this page when you need a reset."],["READ","Step-by-step instructions are here."],["LEARN","The best users keep learning."]],
-        flappyBird:       [["BIRD","Try not to die immediately."],["PIPE","Flap or nap."],["FOCUS","The pipes have absolutely no chill."],["RUN","One more run. Just one more."]],
-        paperPlane:       [["PLANE","Let it fly, cowboy."],["WIND","Find the thermals. Ride them."],["FOLD","Someone folded that with love."],["BEST","Beat your best. Always."]],
-        jetpackJames:     [["JET","Hold to fly. Let go to fall."],["COIN","Grab every coin."],["ZAP","Dodge the zappers."],["RUN","Run. Fly. Repeat."]],
-        localWeather:     [["WX","Check before you head out."],["RAIN","Better to know than to get soaked."],["TEMP","Weather checked. Day planned."],["WIND","Stay one step ahead of the forecast."]],
-        warehouseSim:     [["RUSH","Chandler is watching. Act natural."],["EYES","Don't let Pam catch you slacking."],["WORK","Unload fast. Bill accurately. Survive."],["LEE","Lee will say yes. Always ask Lee."]]
       };
       var timers = {};
       function showMotiv(tab) {
@@ -8893,27 +8789,10 @@
       renderCharts();
       if (name === "breakdownsAudit") renderBreakdownsAudit();
       if (name === "truckChargeAudit") renderTruckChargeAudit();
-      if (name === "flappyBird") {
-        var ff = document.getElementById("flappyFrame");
-        if (ff && !ff.getAttribute("data-loaded")) { ff.src = "/games/flappy"; ff.setAttribute("data-loaded","1"); }
-      }
-      if (name === "paperPlane") {
-        var pf = document.getElementById("paperPlaneFrame");
-        if (pf && !pf.getAttribute("data-loaded")) { pf.src = "/games/paper-plane"; pf.setAttribute("data-loaded","1"); }
-      }
-      if (name === "jetpackJames") {
-        var jf = document.getElementById("jetpackFrame");
-        if (jf && !jf.getAttribute("data-loaded")) { jf.src = "/games/jetpack"; jf.setAttribute("data-loaded","1"); }
-      }
-
-      if (name === "warehouseSim") {
-        var wsf = document.getElementById("warehouseSimFrame");
-        if (wsf && !wsf.getAttribute("data-loaded")) { wsf.src = "/games/warehouse-sim"; wsf.setAttribute("data-loaded","1"); }
-      }
       if (name === "detention") {
         var df = document.getElementById("detentionFrame");
         if (df && !df.getAttribute("data-loaded")) { df.src = "detention-section.html"; df.setAttribute("data-loaded", "1"); }
-      }      if (name === "localWeather") { initWeatherTab(); }
+      }
       document.dispatchEvent(new CustomEvent("tabSelected", { detail: name }));
     }
 
@@ -9146,137 +9025,6 @@
       renderAll();
     });
   
-    // â”€â”€ Local Weather â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    var _wxInitialized = false;
-
-    function initWeatherTab() {
-      if (_wxInitialized) return;
-      _wxInitialized = true;
-      var zipInput  = document.getElementById('wxZipInput');
-      var searchBtn = document.getElementById('wxSearchBtn');
-      if (!zipInput || !searchBtn) return;
-      var lastZip   = localStorage.getItem('wx_last_zip') || '';
-      if (lastZip) { zipInput.value = lastZip; fetchWeather(lastZip); }
-      searchBtn.addEventListener('click', function() {
-        var z = zipInput.value.trim();
-        if (/^\d{5}$/.test(z)) { localStorage.setItem('wx_last_zip', z); fetchWeather(z); }
-        else { wxShowError('Please enter a valid 5-digit ZIP code.'); }
-      });
-      zipInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') searchBtn.click();
-      });
-    }
-
-    function wxShowError(msg) {
-      var el = document.getElementById('wxError');
-      if (!el) return;
-      el.textContent = msg; el.style.display = 'block';
-      var ld = document.getElementById('wxLoading'); if (ld) ld.style.display = 'none';
-    }
-    function wxHideError() { var el = document.getElementById('wxError'); if (el) el.style.display = 'none'; }
-    function wxSetLoading(v) { var el = document.getElementById('wxLoading'); if (el) el.style.display = v ? 'block' : 'none'; }
-
-    var WX_CODE_MAP = {
-      0:  ['â˜€ï¸','Clear'],       1:  ['ðŸŒ¤ï¸','Mainly Clear'],
-      2:  ['â›…','Partly Cloudy'], 3:  ['â˜ï¸','Overcast'],
-      45: ['ðŸŒ«ï¸','Foggy'],       48: ['ðŸŒ«ï¸','Icy Fog'],
-      51: ['ðŸŒ¦ï¸','Light Drizzle'], 53: ['ðŸŒ¦ï¸','Drizzle'],  55: ['ðŸŒ§ï¸','Heavy Drizzle'],
-      61: ['ðŸŒ§ï¸','Light Rain'],   63: ['ðŸŒ§ï¸','Rain'],       65: ['ðŸŒ§ï¸','Heavy Rain'],
-      71: ['ðŸŒ¨ï¸','Light Snow'],   73: ['â„ï¸','Snow'],        75: ['â„ï¸','Heavy Snow'],
-      80: ['ðŸŒ¦ï¸','Rain Showers'], 81: ['ðŸŒ§ï¸','Rain Showers'], 82: ['â›ˆï¸','Heavy Showers'],
-      95: ['â›ˆï¸','Thunderstorm'], 96: ['â›ˆï¸','Thunderstorm'], 99: ['â›ˆï¸','Thunderstorm']
-    };
-
-    function wxCodeInfo(code) {
-      return WX_CODE_MAP[code] || ['ðŸŒ¡ï¸', 'Unknown'];
-    }
-
-    function fetchWeather(zip) {
-      wxHideError(); wxSetLoading(true);
-      document.getElementById('wxCurrentCard').style.display = 'none';
-      document.getElementById('wxHourlyWrap').style.display = 'none';
-      document.getElementById('wxForecastWrap').style.display = 'none';
-      // Step 1: zip â†’ lat/lon via Nominatim
-      fetch('https://nominatim.openstreetmap.org/search?postalcode=' + zip + '&country=us&format=json&limit=1', {
-        headers: { 'User-Agent': 'BillingAuditApp/1.0' }
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(geo) {
-        if (!geo || !geo.length) throw new Error('ZIP code not found. Try another.');
-        var lat = parseFloat(geo[0].lat).toFixed(4);
-        var lon = parseFloat(geo[0].lon).toFixed(4);
-        var city = (geo[0].display_name || '').split(',')[0];
-        document.getElementById('wxLocationLabel').textContent = city ? 'ðŸ“ ' + city : '';
-        // Step 2: lat/lon â†’ weather via Open-Meteo
-        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
-          '&longitude=' + lon +
-          '&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,uv_index,weather_code' +
-          '&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min' +
-          '&temperature_unit=fahrenheit&wind_speed_unit=mph&forecast_days=7&timezone=auto';
-        return fetch(url).then(function(r) { return r.json(); });
-      })
-      .then(function(data) {
-        wxSetLoading(false);
-        var cur = data.current;
-        var info = wxCodeInfo(cur.weather_code);
-        document.getElementById('wxIcon').textContent = info[0];
-        document.getElementById('wxTemp').textContent = Math.round(cur.temperature_2m) + 'Â°F';
-        document.getElementById('wxDesc').textContent = info[1];
-        document.getElementById('wxFeels').textContent = Math.round(cur.apparent_temperature) + 'Â°F';
-        document.getElementById('wxHumidity').textContent = cur.relative_humidity_2m + '%';
-        document.getElementById('wxWind').textContent = Math.round(cur.wind_speed_10m) + ' mph';
-        document.getElementById('wxUv').textContent = cur.uv_index;
-        document.getElementById('wxCurrentCard').style.display = 'block';
-
-        // Hourly strip (next 12 hours)
-        var now = new Date();
-        var hours = data.hourly.time;
-        var hTemps = data.hourly.temperature_2m;
-        var hCodes = data.hourly.weather_code;
-        var strip = document.getElementById('wxHourlyStrip');
-        strip.innerHTML = '';
-        var count = 0;
-        for (var i = 0; i < hours.length && count < 12; i++) {
-          var t = new Date(hours[i]);
-          if (t <= now) continue;
-          var hi = wxCodeInfo(hCodes[i]);
-          var card = document.createElement('div');
-          card.style.cssText = 'min-width:72px;text-align:center;background:var(--panel-2);border-radius:10px;padding:10px 6px;font-size:0.82rem;flex-shrink:0;border:1px solid var(--line)';
-          card.innerHTML = '<div style="color:var(--muted);margin-bottom:4px">' + t.toLocaleTimeString([],{hour:'numeric',hour12:true}) + '</div>' +
-            '<div style="font-size:1.4rem">' + hi[0] + '</div>' +
-            '<div style="font-weight:700;color:var(--ink);margin-top:4px">' + Math.round(hTemps[i]) + 'Â°</div>';
-          strip.appendChild(card);
-          count++;
-        }
-        document.getElementById('wxHourlyWrap').style.display = 'block';
-
-        // 7-day forecast
-        var days = data.daily;
-        var grid = document.getElementById('wxForecastGrid');
-        grid.innerHTML = '';
-        var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-        for (var d = 0; d < days.time.length; d++) {
-          var dt = new Date(days.time[d] + 'T12:00:00');
-          var di = wxCodeInfo(days.weather_code[d]);
-          var dayLabel = d === 0 ? 'Today' : dayNames[dt.getDay()];
-          var fc = document.createElement('div');
-          fc.style.cssText = 'background:var(--panel-2);border-radius:12px;padding:14px 10px;text-align:center;border:1px solid var(--line)';
-          fc.innerHTML = '<div style="font-size:0.78rem;font-weight:700;color:var(--muted);margin-bottom:6px">' + dayLabel + '</div>' +
-            '<div style="font-size:1.8rem;margin-bottom:6px">' + di[0] + '</div>' +
-            '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:6px">' + di[1] + '</div>' +
-            '<div style="font-size:0.88rem;font-weight:700;color:var(--ink)">' + Math.round(days.temperature_2m_max[d]) + 'Â°</div>' +
-            '<div style="font-size:0.78rem;color:var(--muted)">' + Math.round(days.temperature_2m_min[d]) + 'Â°</div>';
-          grid.appendChild(fc);
-        }
-        document.getElementById('wxForecastWrap').style.display = 'block';
-      })
-      .catch(function(err) {
-        wxSetLoading(false);
-        wxShowError(err.message || 'Could not load weather. Check your connection.');
-      });
-    }
-    // â”€â”€ End Local Weather â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     // â”€â”€ Gummy Worms (retro mode only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     (function initGummyWorms() {
       var canvas = document.createElement("canvas");
