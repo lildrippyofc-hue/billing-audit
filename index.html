@@ -446,7 +446,6 @@
     :root.retro #truckChargeAuditPanel { --section-accent: #2dff88; --section-accent-2: #ffb000; --section-glow: rgba(45,255,136,0.24); --section-soft: rgba(45,255,136,0.10); }
     :root.retro #historyPanel { --section-accent: #8f5cff; --section-accent-2: #65d8ff; --section-glow: rgba(143,92,255,0.26); --section-soft: rgba(143,92,255,0.11); }
     :root.retro #helpPanel { --section-accent: #ffb000; --section-accent-2: #ff4fd8; --section-glow: rgba(255,176,0,0.25); --section-soft: rgba(255,176,0,0.11); }
-    :root.retro #inOtherNewsPanel { --section-accent: #65d8ff; --section-accent-2: #ff4fd8; --section-glow: rgba(101,216,255,0.24); --section-soft: rgba(101,216,255,0.10); }
     :root.retro #flappyBirdPanel  { --section-accent: #2dff88; --section-accent-2: #ff4fd8; --section-glow: rgba(45,255,136,0.24); --section-soft: rgba(45,255,136,0.10); }
     :root.retro #paperPlanePanel  { --section-accent: #ffb000; --section-accent-2: #00f5ff; --section-glow: rgba(255,176,0,0.24); --section-soft: rgba(255,176,0,0.10); }
     :root.retro #jetpackJamesPanel { --section-accent: #00f5ff; --section-accent-2: #ff4fd8; --section-glow: rgba(0,245,255,0.24); --section-soft: rgba(0,245,255,0.10); }
@@ -1617,8 +1616,6 @@
       /* Charts shorter */
       .chart-box { height: 200px; }
 
-      /* News grid single column */
-      .news-grid { grid-template-columns: 1fr !important; padding: 0 10px 20px; }
 
       /* Game frames â€” use svh (small viewport height) so address bar doesn't break it */
       .game-frame-wrap { height: calc(100svh - 82px); }
@@ -2063,134 +2060,6 @@
       width: 100%; height: 100%; border: none; display: block;
     }
 
-    /* â”€â”€ In Other News tab â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    #inOtherNewsPanel { padding: 0; }
-    .news-toolbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 20px 12px; gap: 12px; flex-wrap: wrap;
-    }
-    .news-toolbar-title { font-size: 1.2rem; font-weight: 800; color: var(--ink); }
-    .news-toolbar-sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
-    .news-tabs {
-      display: flex; gap: 8px; flex-wrap: wrap; padding: 0 20px 16px;
-      border-bottom: 1px solid var(--line);
-    }
-    .news-tab-button {
-      border: 1px solid var(--line); background: var(--panel); color: var(--muted);
-      border-radius: 999px; padding: 8px 13px; font-size: 0.82rem; font-weight: 800;
-      cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
-    }
-    .news-tab-button[aria-selected="true"] {
-      background: #DC582A; border-color: #DC582A; color: #fff;
-      box-shadow: 0 8px 18px rgba(220,88,42,0.20);
-    }
-    .news-view { display: none; padding-top: 18px; }
-    .news-view.active { display: block; }
-    .news-section-heading {
-      display: flex; align-items: end; justify-content: space-between;
-      padding: 0 20px 12px; gap: 12px; flex-wrap: wrap;
-    }
-    .news-section-title { font-size: 0.95rem; font-weight: 900; color: var(--ink); }
-    .news-section-sub { font-size: 0.78rem; color: var(--muted); }
-    .news-refresh-btn {
-      background: #DC582A; color: #fff; border: none; border-radius: 10px;
-      padding: 9px 18px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; gap: 7px; transition: background 0.15s;
-    }
-    .news-refresh-btn:hover { background: #b84420; }
-    .news-refresh-btn:disabled { background: #aaa; cursor: not-allowed; }
-    .news-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 18px; padding: 0 20px 28px;
-    }
-    .news-card {
-      background: var(--panel); border-radius: 14px;
-      border: 1px solid var(--line); overflow: hidden;
-      display: flex; flex-direction: column;
-      box-shadow: var(--shadow); transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .news-card:hover { transform: translateY(-3px); box-shadow: 0 10px 32px rgba(0,73,118,0.18); }
-    .news-card-img { width: 100%; height: 180px; object-fit: cover; display: block; background: var(--panel-2); }
-    .news-card-img-placeholder {
-      width: 100%; height: 120px; background: var(--panel-2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 2.2rem;
-    }
-    .news-card-body { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .news-card-source {
-      display: inline-block; background: #DC582A; color: #fff;
-      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em;
-      padding: 2px 8px; border-radius: 4px; text-transform: uppercase;
-    }
-    .news-card-title {
-      font-size: 0.97rem; font-weight: 700; color: var(--ink); line-height: 1.35;
-      text-decoration: none; display: block;
-    }
-    .news-card-title:hover { color: #DC582A; }
-    .news-card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; flex: 1; }
-    .news-card-date { font-size: 0.75rem; color: var(--muted); opacity: 0.8; }
-    .news-loading {
-      text-align: center; padding: 60px 20px; color: var(--muted);
-      font-size: 1rem; font-weight: 600;
-    }
-    .news-loading-spinner {
-      width: 36px; height: 36px; border: 4px solid var(--line);
-      border-top-color: #DC582A; border-radius: 50%;
-      animation: newsSpin 0.8s linear infinite; margin: 0 auto 16px;
-    }
-    @keyframes newsSpin { to { transform: rotate(360deg); } }
-    .news-error { text-align: center; padding: 40px 20px; color: var(--muted); }
-    .poll-layout {
-      display: grid; grid-template-columns: minmax(280px, 0.95fr) minmax(320px, 1.25fr);
-      gap: 18px; padding: 0 20px 28px;
-    }
-    .poll-panel {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      box-shadow: var(--shadow); overflow: hidden;
-    }
-    .poll-panel-head {
-      padding: 14px 16px; border-bottom: 1px solid var(--line);
-      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-    }
-    .poll-panel-title { font-size: 0.9rem; font-weight: 900; color: var(--ink); }
-    .poll-select {
-      width: min(100%, 420px); border: 1px solid var(--line); border-radius: 10px;
-      padding: 9px 10px; background: var(--panel-2); color: var(--ink); font-weight: 700;
-      font-size: 0.82rem;
-    }
-    .poll-chart-box { height: 320px; padding: 12px; }
-    .poll-status {
-      margin: 0 20px 16px; border: 1px solid var(--line); background: var(--panel-2);
-      color: var(--muted); border-radius: 12px; padding: 12px 14px; font-size: 0.82rem;
-      line-height: 1.45;
-    }
-    .poll-status a { color: #DC582A; font-weight: 800; }
-    .poll-table-wrap { max-height: 420px; overflow: auto; }
-    .poll-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-    .poll-table th, .poll-table td {
-      text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line);
-      vertical-align: top;
-    }
-    .poll-table th {
-      position: sticky; top: 0; background: var(--panel-2); z-index: 1;
-      color: var(--muted); font-size: 0.72rem; text-transform: uppercase;
-    }
-    .poll-table a { color: var(--ink); font-weight: 800; text-decoration: none; }
-    .poll-table a:hover { color: #DC582A; }
-    .poll-pill {
-      display: inline-flex; align-items: center; gap: 4px; border-radius: 999px;
-      background: var(--panel-2); color: var(--muted); padding: 3px 7px; margin: 2px 4px 2px 0;
-      font-size: 0.72rem; font-weight: 800;
-    }
-    :root.dark .news-card-title { color: #cce8ff; }
-    :root.dark .news-card-title:hover { color: #ff6b35; }
-    :root.retro .news-card-title { color: #f0e8ff; }
-    :root.retro .news-card-title:hover { color: #00f5ff; }
-    :root.retro .news-card-source { background: #5838ff; }
-    :root.retro .news-card { border-color: #3d28b0; }
-    :root.retro .news-tab-button[aria-selected="true"] { background: #00f5ff; border-color: #00f5ff; color: #120020; }
-    :root.retro .poll-panel { border-color: rgba(0,245,255,0.24); }
     @media (max-width: 900px) {
       .poll-layout { grid-template-columns: 1fr; }
     }
@@ -2290,7 +2159,6 @@
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Break Time</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="inOtherNews" data-menu-label="In Other News">In Other News</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="localWeather" data-menu-label="Local Weather">Local Weather</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="flappyBird" data-menu-label="Flappy Bird">Flappy Bird</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="paperPlane" data-menu-label="Paper Plane">Paper Plane</button>
@@ -3628,96 +3496,6 @@
       </section>
 
       <!-- IN OTHER NEWS PANEL -->
-      <section id="inOtherNewsPanel" class="tab-panel" aria-label="In Other News">
-        <div class="motivation-bar" id="motivBar_inOtherNews"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="news-toolbar">
-          <div>
-            <div class="news-toolbar-title">In Other News</div>
-            <div class="news-toolbar-sub" id="newsLastUpdated">Press Refresh to load headlines, election news, and polls.</div>
-          </div>
-          <button class="news-refresh-btn" id="newsRefreshBtn" type="button">
-            <span>&#8635;</span> Refresh
-          </button>
-        </div>
-        <div class="news-tabs" role="tablist" aria-label="News sections">
-          <button class="news-tab-button" type="button" aria-selected="true" data-news-view="headlines">CNN / Fox News</button>
-          <button class="news-tab-button" type="button" aria-selected="false" data-news-view="election">Latest Election News</button>
-          <button class="news-tab-button" type="button" aria-selected="false" data-news-view="polls">RealClear Polls</button>
-        </div>
-        <div id="newsContainer">
-          <div class="news-loading" style="display:none;">
-            <div class="news-loading-spinner"></div>
-            Loading live dashboard...
-          </div>
-          <div class="news-view active" id="newsView_headlines">
-            <div class="news-section-heading">
-              <div>
-                <div class="news-section-title">CNN Latest</div>
-                <div class="news-section-sub">Top stories from CNN.</div>
-              </div>
-            </div>
-            <div class="news-grid" id="cnnNewsGrid"></div>
-            <div class="news-section-heading">
-              <div>
-                <div class="news-section-title">Fox News Latest</div>
-                <div class="news-section-sub">Top stories from Fox News.</div>
-              </div>
-            </div>
-            <div class="news-grid" id="foxNewsGrid"></div>
-          </div>
-          <div class="news-view" id="newsView_election">
-            <div class="news-section-heading">
-              <div>
-                <div class="news-section-title">Latest Election News</div>
-                <div class="news-section-sub">Politics and election headlines from CNN and Fox News.</div>
-              </div>
-            </div>
-            <div class="news-grid" id="electionNewsGrid"></div>
-          </div>
-          <div class="news-view" id="newsView_polls">
-            <div class="news-section-heading">
-              <div>
-                <div class="news-section-title">RealClearPolling Latest Polls</div>
-                <div class="news-section-sub">Pick a race to chart the available polling average from the latest RealClearPolling rows.</div>
-              </div>
-            </div>
-            <div class="poll-status" id="pollStatus">Refresh to load polling data.</div>
-            <div class="poll-layout">
-              <section class="poll-panel" aria-label="Polling average chart">
-                <div class="poll-panel-head">
-                  <div class="poll-panel-title">Polling Average Chart</div>
-                  <select class="poll-select" id="pollRaceSelect" aria-label="Choose race"></select>
-                </div>
-                <div class="poll-chart-box">
-                  <canvas id="pollAverageChart"></canvas>
-                </div>
-              </section>
-              <section class="poll-panel" aria-label="Latest polls table">
-                <div class="poll-panel-head">
-                  <div>
-                    <div class="poll-panel-title">Every Latest Poll</div>
-                    <div class="news-section-sub" id="allPollsMeta">Refresh to load all races.</div>
-                  </div>
-                </div>
-                <div class="poll-table-wrap">
-                  <table class="poll-table">
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Race</th>
-                        <th>Poll</th>
-                        <th>Results</th>
-                        <th>Spread</th>
-                      </tr>
-                    </thead>
-                    <tbody id="latestPollsBody"></tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <!-- FLAPPY BIRD PANEL -->
       <section id="flappyBirdPanel" class="tab-panel" aria-label="Flappy Bird">
@@ -4229,11 +4007,6 @@
         help: [
           { sel: "#helpPanel .help-hero", title: "You Found the Help Page!", msg: "Everything about how to use this app is explained right here. Scroll down slowly. There are step by step instructions, pictures, and a big list of frequently asked questions. Come back here any time you are confused." }
         ],
-        inOtherNews: [
-          { sel: "#newsRefreshBtn", title: "Refresh Headlines", msg: "Press this button to load the latest headlines when the backend service is running." },
-          { sel: "#cnnNewsGrid", title: "News Cards", msg: "Loaded headlines show here as cards." },
-          { sel: "#pollRaceSelect", title: "Polling Races", msg: "After refresh, choose a race here to view the polling chart and latest RealClearPolling rows." }
-        ]
       };
 
       function el(id) { return document.getElementById(id); }
@@ -4355,7 +4128,6 @@
         truckChargeAudit: [["PAY","Wrong charges cost money."],["FEE","Every FSPAY check matters."],["TEST","Precision billing audit in progress."],["WARN","Catch it here before it becomes a problem."]],
         history:          [["LOG","This is the saved work record."],["DONE","Every entry here is documented."],["SAVE","Saved, logged, and ready."]],
         help:             [["HELP","Use this page when you need a reset."],["READ","Step-by-step instructions are here."],["LEARN","The best users keep learning."]],
-        inOtherNews:      [["NEWS","Take a quick look."],["WORLD","Stay informed."],["BREAK","A few minutes to breathe."],["MOVE","The world keeps moving. So do you."]],
         flappyBird:       [["BIRD","Try not to die immediately."],["PIPE","Flap or nap."],["FOCUS","The pipes have absolutely no chill."],["RUN","One more run. Just one more."]],
         paperPlane:       [["PLANE","Let it fly, cowboy."],["WIND","Find the thermals. Ride them."],["FOLD","Someone folded that with love."],["BEST","Beat your best. Always."]],
         jetpackJames:     [["JET","Hold to fly. Let go to fall."],["COIN","Grab every coin."],["ZAP","Dodge the zappers."],["RUN","Run. Fly. Repeat."]],
@@ -9121,7 +8893,6 @@
       renderCharts();
       if (name === "breakdownsAudit") renderBreakdownsAudit();
       if (name === "truckChargeAudit") renderTruckChargeAudit();
-      if (name === "inOtherNews") initNewsTab();
       if (name === "flappyBird") {
         var ff = document.getElementById("flappyFrame");
         if (ff && !ff.getAttribute("data-loaded")) { ff.src = "/games/flappy"; ff.setAttribute("data-loaded","1"); }
@@ -9375,288 +9146,6 @@
       renderAll();
     });
   
-    // â”€â”€ In Other News â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    var _newsLoaded = false;
-    var _newsLoading = false;
-    var _newsDashboard = null;
-    var _activeNewsView = "headlines";
-
-    function initNewsTab() {
-      if (!_newsLoaded) fetchNews();
-    }
-
-    function fetchNews() {
-      if (_newsLoading) return;
-      _newsLoading = true;
-      var grid      = document.getElementById("cnnNewsGrid");
-      var lastUpd   = document.getElementById("newsLastUpdated");
-      var refreshBtn = document.getElementById("newsRefreshBtn");
-
-      ["cnnNewsGrid", "foxNewsGrid", "electionNewsGrid"].forEach(function(id) {
-        var sectionGrid = document.getElementById(id);
-        if (sectionGrid) sectionGrid.innerHTML = "";
-      });
-      setPollStatus("Loading RealClearPolling latest polls...");
-      if (lastUpd) lastUpd.textContent = "Loading headlines...";
-      if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = "Loading..."; }
-
-      fetch(newsApiPath("/api/news-dashboard"))
-        .then(function(r) {
-          if (!r.ok) throw new Error("Server returned " + r.status);
-          return r.json();
-        })
-        .then(function(data) {
-          _newsDashboard = data || {};
-          _newsLoaded = true;
-          _newsLoading = false;
-          if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.innerHTML = "&#8635; Refresh"; }
-          renderNewsDashboard(_newsDashboard);
-          if (lastUpd) {
-            var d = data.fetched_at ? new Date(data.fetched_at) : new Date();
-            lastUpd.textContent = "Last updated: " + d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
-          }
-        })
-        .catch(function(err) {
-          _newsLoading = false;
-          if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.innerHTML = "&#8635; Refresh"; }
-          if (grid) grid.innerHTML = '<div class="news-error">Could not load the live dashboard. Refresh the website, then try again.<br><small>' + (err.message || '') + '</small></div>';
-          setPollStatus("Could not load RealClearPolling. Refresh the website, then try again.");
-          if (lastUpd) lastUpd.textContent = "Failed to load.";
-        });
-    }
-
-    function renderNewsCards(articles) {
-      var grid = document.getElementById("cnnNewsGrid");
-      if (!grid) return;
-      if (!articles.length) {
-        grid.innerHTML = '<div class="news-error">No articles found.</div>';
-        return;
-      }
-      var frag = document.createDocumentFragment();
-      articles.forEach(function(a) {
-        var card = document.createElement("div");
-        card.className = "news-card";
-
-        var imgHtml = "";
-        if (a.image) {
-          imgHtml = '<img class="news-card-img" src="' + escHtml(a.image) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">';
-        } else {
-          imgHtml = '<div class="news-card-img-placeholder">ðŸ“°</div>';
-        }
-
-        var desc = a.description ? a.description.replace(/<[^>]+>/g, "").substring(0, 140) : "";
-        if (desc.length === 140) desc += "...";
-
-        var dateStr = "";
-        if (a.pub_date) {
-          try { dateStr = new Date(a.pub_date).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}); } catch(e) { dateStr = a.pub_date; }
-        }
-
-        card.innerHTML = imgHtml +
-          '<div class="news-card-body">' +
-            '<span class="news-card-source">' + escHtml(a.source || "News") + '</span>' +
-            '<a class="news-card-title" href="' + escHtml(a.link || '#') + '" target="_blank" rel="noopener">' + escHtml(a.title || 'No title') + '</a>' +
-            (desc ? '<div class="news-card-desc">' + escHtml(desc) + '</div>' : '') +
-            (dateStr ? '<div class="news-card-date">' + escHtml(dateStr) + '</div>' : '') +
-          '</div>';
-        frag.appendChild(card);
-      });
-      grid.innerHTML = "";
-      grid.appendChild(frag);
-    }
-
-    function newsApiPath(path) {
-      if (window.location.protocol === "file:") return "http://localhost:8000" + path;
-      return path;
-    }
-
-    function renderNewsDashboard(data) {
-      renderNewsCardSection("cnnNewsGrid", data.cnn || [], "No CNN articles found.");
-      renderNewsCardSection("foxNewsGrid", data.fox || [], "No Fox News articles found.");
-      renderNewsCardSection("electionNewsGrid", data.election_articles || [], "No election articles found.");
-      renderPolls(data.polls || [], data.polling_averages || [], data.errors || {}, data.polls_url || "");
-      showNewsView(_activeNewsView);
-    }
-
-    function renderNewsCardSection(gridId, articles, emptyMessage) {
-      var grid = document.getElementById(gridId);
-      if (!grid) return;
-      if (!articles.length) {
-        grid.innerHTML = '<div class="news-error">' + escHtml(emptyMessage || "No articles found.") + '</div>';
-        return;
-      }
-      var frag = document.createDocumentFragment();
-      articles.forEach(function(a) {
-        var card = document.createElement("div");
-        card.className = "news-card";
-        var imgHtml = a.image
-          ? '<img class="news-card-img" src="' + escHtml(a.image) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-          : '<div class="news-card-img-placeholder">NEWS</div>';
-        var desc = a.description ? String(a.description).replace(/<[^>]+>/g, "").substring(0, 140) : "";
-        if (desc.length === 140) desc += "...";
-        var dateStr = "";
-        if (a.pub_date) {
-          try { dateStr = new Date(a.pub_date).toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}); } catch(e) { dateStr = a.pub_date; }
-        }
-        card.innerHTML = imgHtml +
-          '<div class="news-card-body">' +
-            '<span class="news-card-source">' + escHtml(a.source || "News") + '</span>' +
-            '<a class="news-card-title" href="' + escHtml(a.link || '#') + '" target="_blank" rel="noopener">' + escHtml(a.title || 'No title') + '</a>' +
-            (desc ? '<div class="news-card-desc">' + escHtml(desc) + '</div>' : '') +
-            (dateStr ? '<div class="news-card-date">' + escHtml(dateStr) + '</div>' : '') +
-          '</div>';
-        frag.appendChild(card);
-      });
-      grid.innerHTML = "";
-      grid.appendChild(frag);
-    }
-
-    function showNewsView(viewName) {
-      _activeNewsView = viewName || "headlines";
-      document.querySelectorAll("[data-news-view]").forEach(function(btn) {
-        var active = btn.getAttribute("data-news-view") === _activeNewsView;
-        btn.setAttribute("aria-selected", active ? "true" : "false");
-      });
-      document.querySelectorAll(".news-view").forEach(function(panel) {
-        panel.classList.remove("active");
-      });
-      var panel = document.getElementById("newsView_" + _activeNewsView);
-      if (panel) panel.classList.add("active");
-      if (_activeNewsView === "polls" && _newsDashboard) {
-        renderPolls(_newsDashboard.polls || [], _newsDashboard.polling_averages || [], _newsDashboard.errors || {}, _newsDashboard.polls_url || "");
-      }
-    }
-
-    function setPollStatus(message, link) {
-      var status = document.getElementById("pollStatus");
-      if (!status) return;
-      status.innerHTML = escHtml(message || "") + (link ? ' <a href="' + escHtml(link) + '" target="_blank" rel="noopener">Open RealClearPolling</a>' : "");
-    }
-
-    function renderPolls(polls, averages, errors, pollsUrl) {
-      var select = document.getElementById("pollRaceSelect");
-      if (!select) return;
-
-      if (errors && errors.polls) {
-        setPollStatus(errors.polls, pollsUrl);
-      } else {
-        setPollStatus(polls.length
-          ? "Loaded " + polls.length + " latest RealClearPolling rows. Choose a race to view the average chart."
-          : "No RealClearPolling rows were found on refresh.", pollsUrl);
-      }
-
-      var selected = select.value;
-      var options = (averages || []).filter(function(item) {
-        return item && item.race && item.candidates && item.candidates.length;
-      });
-      select.innerHTML = "";
-      if (!options.length) {
-        var blank = document.createElement("option");
-        blank.value = "";
-        blank.textContent = "No races available";
-        select.appendChild(blank);
-        renderLatestPollRows([]);
-        drawPollingAverage(null);
-        return;
-      }
-
-      options.forEach(function(item, index) {
-        var opt = document.createElement("option");
-        opt.value = item.race;
-        opt.textContent = item.race + " (" + item.poll_count + " poll" + (item.poll_count === 1 ? "" : "s") + ")";
-        select.appendChild(opt);
-        if (!selected && index === 0) selected = item.race;
-      });
-      if (!options.some(function(item) { return item.race === selected; })) selected = options[0].race;
-      select.value = selected;
-      renderPollRace(selected, polls, options);
-    }
-
-    function renderPollRace(race, polls, averages) {
-      var avg = (averages || []).find(function(item) { return item.race === race; });
-      drawPollingAverage(avg);
-      renderLatestPollRows(polls || []);
-    }
-
-    function drawPollingAverage(avg) {
-      var canvas = document.getElementById("pollAverageChart");
-      if (!canvas) return;
-      if (!avg || !avg.candidates || !avg.candidates.length) {
-        var rect = canvas.getBoundingClientRect();
-        var ratio = window.devicePixelRatio || 1;
-        canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-        canvas.height = Math.max(1, Math.floor(rect.height * ratio));
-        var ctx = canvas.getContext("2d");
-        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        ctx.clearRect(0, 0, rect.width, rect.height);
-        ctx.fillStyle = chartTheme().background;
-        ctx.fillRect(0, 0, rect.width, rect.height);
-        drawEmptyChart(ctx, rect.width, rect.height, "No polling average available");
-        return;
-      }
-      var data = avg.candidates.slice(0, 8).map(function(item) {
-        return { label: item.candidate, value: Number(item.value) || 0 };
-      });
-      drawBarChart(canvas, data, {
-        color: chartTheme().secondary,
-        accent: chartTheme().accent,
-        horizontal: true,
-        emptyLabel: "No polling average available"
-      });
-    }
-
-    function renderLatestPollRows(rows) {
-      var body = document.getElementById("latestPollsBody");
-      var meta = document.getElementById("allPollsMeta");
-      if (!body) return;
-      if (!rows.length) {
-        if (meta) meta.textContent = "No poll rows loaded.";
-        body.innerHTML = '<tr><td colspan="5" class="news-error">No latest poll rows loaded.</td></tr>';
-        return;
-      }
-      var raceCount = new Set(rows.map(function(row) { return row.race || ""; }).filter(Boolean)).size;
-      if (meta) {
-        meta.textContent = rows.length + " latest poll rows across " + raceCount + " races.";
-      }
-      body.innerHTML = rows.map(function(row) {
-        var results = (row.results || []).map(function(item) {
-          return '<span class="poll-pill">' + escHtml(item.candidate) + ' ' + escHtml(item.value) + '</span>';
-        }).join("");
-        return '<tr>' +
-          '<td>' + escHtml(row.date || "") + '</td>' +
-          '<td><a href="' + escHtml(row.link || "#") + '" target="_blank" rel="noopener">' + escHtml(row.race || "") + '</a></td>' +
-          '<td>' + escHtml(row.pollster || "") + '</td>' +
-          '<td>' + results + '</td>' +
-          '<td>' + escHtml(row.spread || "") + '</td>' +
-        '</tr>';
-      }).join("");
-    }
-
-    function escHtml(str) {
-      return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-    }
-
-    var newsRefreshBtn = document.getElementById("newsRefreshBtn");
-    if (newsRefreshBtn) {
-      newsRefreshBtn.addEventListener("click", function() {
-        _newsLoaded = false;
-        fetchNews();
-      });
-    }
-    document.querySelectorAll("[data-news-view]").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        showNewsView(btn.getAttribute("data-news-view"));
-      });
-    });
-    var pollRaceSelect = document.getElementById("pollRaceSelect");
-    if (pollRaceSelect) {
-      pollRaceSelect.addEventListener("change", function() {
-        if (!_newsDashboard) return;
-        renderPollRace(pollRaceSelect.value, _newsDashboard.polls || [], _newsDashboard.polling_averages || []);
-      });
-    }
-    // â”€â”€ End In Other News â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
     // â”€â”€ Local Weather â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     var _wxInitialized = false;
 
