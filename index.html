@@ -367,6 +367,38 @@
     :root.dark input[type="text"], :root.dark input[type="search"] { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
+    /* Spill alert styles */
+    .spill-alert-banner {
+      background: #fff0f0;
+      border: 2px solid #e53e3e;
+      border-radius: 8px;
+      color: #c53030;
+      padding: 10px 14px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+    :root.dark .spill-alert-banner { background: #3d1515; border-color: #fc8181; color: #fca5a5; }
+    tr.spill-risk-row td { background: #fff5f5 !important; }
+    :root.dark tr.spill-risk-row td { background: #2d1515 !important; }
+    .term-pill.alert { background: #e53e3e; color: #fff; border: none; }
+    .term-pill.ok { background: #38a169; color: #fff; border: none; }
+    .spill-record-btn { background: #e53e3e; color: #fff; border: none; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    .spill-record-btn:hover { background: #c53030; }
+    .spill-clean-btn { background: #38a169; color: #fff; border: none; font-weight: 700; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+    .spill-clean-btn:hover { background: #2f855a; }
+    .spill-del-btn { background: #e53e3e; color: #fff; border: none; border-radius: 4px; padding: 2px 8px; font-size: 0.78em; cursor: pointer; white-space: nowrap; }
+    .spill-del-btn:hover { background: #c53030; }
+    .spill-clear-btn { background: #e53e3e; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-weight: 600; cursor: pointer; }
+    .spill-clear-btn:hover { background: #c53030; }
+    :root.dark .spill-record-btn { background: #9b1c1c; }
+    :root.dark .spill-record-btn:hover { background: #7f1d1d; }
+    :root.dark .spill-clean-btn { background: #276749; }
+    :root.dark .spill-clean-btn:hover { background: #1e5236; }
+
     /* Retro mode */
     @keyframes retroBg { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
     @keyframes neonPulse { 0%,100%{opacity:1; filter:saturate(1.1)} 50%{opacity:0.82; filter:saturate(1.6)} }
@@ -2135,6 +2167,7 @@
           <div class="menu-group-title">Clerk Support and Helper</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="clerkDoor" data-menu-label="Clerk Support: Clerk Door">Clerk Door</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="doorSuggestor" data-menu-label="Clerk Support: Door Suggestor">Door Suggestor</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="spillTracker" data-menu-label="Clerk Support: Spill Tracker">Spill Tracker</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Audit</div>
@@ -2570,6 +2603,92 @@
           </div>
           <div class="table-scroller">
             <table id="doorSuggestorTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="spillTrackerPanel" class="tab-panel" aria-label="Spill Tracker">
+        <div class="motivation-bar" id="motivBar_spillTracker"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <span class="brand-watermark" aria-hidden="true">JH</span>
+          <span class="brand-quote">Keep moving forward</span>
+          <div class="brand-swoosh" aria-hidden="true"></div>
+        </div>
+
+        <div class="lookup-grid">
+          <section class="panel lookup-box" aria-labelledby="spillTrackerTitle">
+            <div class="panel-header">
+              <h2 id="spillTrackerTitle">Spill Tracker</h2>
+              <span class="panel-kicker">PO Spill Risk Lookup</span>
+            </div>
+            <div class="friendly-note">Enter a PO number to check if that supplier has a known spill risk. Suppliers spilled more than 30% of the time trigger a red alert.</div>
+            <div class="lookup-row">
+              <input id="spillTrackerInput" class="lookup-input" type="text" placeholder="Enter PO number">
+              <button id="spillTrackerButton" type="button">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+                Check Spill Risk
+              </button>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="spillTrackerResultTitle">
+            <div class="panel-header">
+              <h2 id="spillTrackerResultTitle">Result</h2>
+              <span class="panel-kicker" id="spillTrackerKicker">No PO searched</span>
+            </div>
+            <div class="lookup-result" id="spillTrackerResult">
+              <div class="term-pill missing">--</div>
+              <div class="highlight-label">Enter a PO number to check if this truck is a likely spill.</div>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel" style="margin-top: 14px;" aria-labelledby="spillRecordTitle">
+          <div class="panel-header">
+            <h2 id="spillRecordTitle">Record a Spill Event</h2>
+            <span class="panel-kicker">Build spill history</span>
+          </div>
+          <div class="friendly-note">Record when a truck spills so the system learns the pattern. Suppliers with 3+ recorded events and &gt;30% spill rate will trigger the red alert automatically.</div>
+          <div class="lookup-row" style="flex-wrap:wrap; gap: 8px;">
+            <input id="spillRecordSupplier" class="lookup-input" type="text" placeholder="Supplier name (required)" style="min-width:200px;">
+            <input id="spillRecordPo" class="lookup-input" type="text" placeholder="PO number (optional)" style="min-width:130px;">
+            <input id="spillRecordNotes" class="lookup-input" type="text" placeholder="Notes (optional)" style="min-width:180px; flex:1;">
+            <button id="spillRecordButton" type="button" class="spill-record-btn">&#x26A0;&#xFE0F; Record Spill</button>
+            <button id="spillCleanButton" type="button" class="spill-clean-btn">&#x2705; Record Clean Truck</button>
+          </div>
+        </section>
+
+        <section class="table-wrap" aria-labelledby="spillRiskTableTitle" style="margin-top: 14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="spillRiskTableTitle">Today&apos;s Trucks &mdash; Spill Risk</div>
+              <div class="table-meta" id="spillTrackerTableMeta">No rows loaded</div>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="spillTrackerTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="table-wrap" aria-labelledby="spillHistoryTitle" style="margin-top: 14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="spillHistoryTitle">Recorded Spill Events</div>
+              <div class="table-meta" id="spillHistoryTableMeta">No events recorded yet</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button id="clearSpillHistoryButton" type="button" class="spill-clear-btn">Clear All Records</button>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="spillHistoryTable">
               <thead></thead>
               <tbody></tbody>
             </table>
@@ -3657,7 +3776,12 @@
       { patterns: ["Cafe Valley"], rangeStart: 95, rangeEnd: 103, topDoors: [95, 98, 100, 103], tall: true, note: "Manual rule: Cafe Valley needs a tall door." },
       { patterns: ["Columbia Fruit", "Richelieu Foods", "La Fournee", "PDM Vegetables", "Bimbo Bakehouse"], rangeStart: 95, rangeEnd: 103, topDoors: [95, 98, 100, 103], tall: true, note: "Cheat sheet: this freezer vendor needs a tall freezer door." },
       { patterns: ["Del Monte"], rangeStart: 79, rangeEnd: 86, topDoors: [79, 80, 81, 82, 83, 84, 85, 86, 69, 70, 71, 72, 73, 74], tall: false, note: "Cheat sheet: use produce doors first; doors 69-74 can work only if produce is full." },
-      { patterns: ["NS Brands", "NS Brand"], rangeStart: 77, rangeEnd: 90, topDoors: [80, 84, 86, 88, 89], tall: true, note: "Manual rule: NS brands trucks must go on doors 77-90 and require a tall door. Preferred tall doors in range: 80, 84, 86, 88, 89." }
+      { patterns: ["NS Brands", "NS Brand"], rangeStart: 77, rangeEnd: 90, topDoors: [80, 84, 86, 88, 89], tall: true, note: "Manual rule: NS brands trucks must go on doors 77-90 and require a tall door. Preferred tall doors in range: 80, 84, 86, 88, 89." },
+      { patterns: ["Absopure", "Absopure Water"], rangeStart: 27, rangeEnd: 33, topDoors: [27, 33], tall: false, spill: true, note: "Manual rule: Absopure goes on door 27 or 33. SPILL ALERT: This supplier frequently spills. Have a spill kit ready." }
+    ];
+
+    const MANUAL_SPILL_RULES = [
+      { patterns: ["Absopure", "Absopure Water"], rate: 1.0, note: "Known high spill risk. Always have a spill kit ready at the door." }
     ];
 
     const LIVE_DOCK_SHEET = {
@@ -3729,6 +3853,20 @@
       doorSuggestorKicker: document.getElementById("doorSuggestorKicker"),
       doorSuggestorTable: document.getElementById("doorSuggestorTable"),
       doorSuggestorTableMeta: document.getElementById("doorSuggestorTableMeta"),
+      spillTrackerInput: document.getElementById("spillTrackerInput"),
+      spillTrackerButton: document.getElementById("spillTrackerButton"),
+      spillTrackerResult: document.getElementById("spillTrackerResult"),
+      spillTrackerKicker: document.getElementById("spillTrackerKicker"),
+      spillTrackerTable: document.getElementById("spillTrackerTable"),
+      spillTrackerTableMeta: document.getElementById("spillTrackerTableMeta"),
+      spillHistoryTable: document.getElementById("spillHistoryTable"),
+      spillHistoryTableMeta: document.getElementById("spillHistoryTableMeta"),
+      spillRecordSupplier: document.getElementById("spillRecordSupplier"),
+      spillRecordPo: document.getElementById("spillRecordPo"),
+      spillRecordNotes: document.getElementById("spillRecordNotes"),
+      spillRecordButton: document.getElementById("spillRecordButton"),
+      spillCleanButton: document.getElementById("spillCleanButton"),
+      clearSpillHistoryButton: document.getElementById("clearSpillHistoryButton"),
       opsAuditFile: document.getElementById("opsAuditFile"),
       dmsAuditFile: document.getElementById("dmsAuditFile"),
       truckChargeOpsFile: document.getElementById("truckChargeOpsFile"),
@@ -4027,6 +4165,7 @@
         truckFinder:      [["FIND","Lookup is ready."],["AIM","Find it, verify it, move on."],["PO","Every PO has a story."],["FAST","Quick lookup, sharp review."]],
         clerkDoor:        [["DOOR","Every door assignment matters."],["CLERK","Clerk support is ready."],["AIM","Door accuracy starts here."]],
         doorSuggestor:    [["MAP","Smarter routing saves time."],["IDEA","Use history to pick the best door."],["GO","Optimized and efficient."]],
+        spillTracker:     [["ALERT","Know before the spill happens."],["WATCH","Track patterns, stop repeat issues."],["SAFE","Spill kit ready. You got this."]],
         audit:            [["CALL","Roll Off or Breakdown â€” make the call."],["DECIDE","Your decision locks the record."],["AUDIT","Every catch saves money."],["SHARP","Good calls here save time later."]],
         breakdownsAudit:  [["AUDIT","Every catch saves money."],["BILL","Billing errors stop here."],["CHECK","Audit mode is active."],["PIN","Details matter here."]],
         truckChargeAudit: [["PAY","Wrong charges cost money."],["FEE","Every FSPAY check matters."],["TEST","Precision billing audit in progress."],["WARN","Catch it here before it becomes a problem."]],
@@ -4096,6 +4235,28 @@
       if (event.key === "Enter") renderDoorSuggestorLookup();
     });
     els.refreshLiveDoorsButton.addEventListener("click", () => loadLiveDoorSheet(true));
+    els.spillTrackerButton.addEventListener("click", renderSpillTrackerLookup);
+    els.spillTrackerInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") renderSpillTrackerLookup();
+    });
+    els.spillRecordButton.addEventListener("click", () => recordSpillEvent(true));
+    els.spillCleanButton.addEventListener("click", () => recordSpillEvent(false));
+    els.clearSpillHistoryButton.addEventListener("click", () => {
+      if (confirm("Clear all recorded spill events? This cannot be undone.")) {
+        localStorage.removeItem("spillRecords");
+        renderSpillHistoryTable();
+        renderSpillTrackerTable();
+        showToast("Spill history cleared.");
+      }
+    });
+    els.spillHistoryTable.addEventListener("click", (event) => {
+      const btn = event.target.closest("button[data-spill-delete]");
+      if (!btn) return;
+      const idx = Number(btn.dataset.spillDelete);
+      deleteSpillRecord(idx);
+      renderSpillHistoryTable();
+      renderSpillTrackerTable();
+    });
     els.opsAuditFile.addEventListener("change", (event) => handleBreakdownAuditFile("ops", event));
     els.dmsAuditFile.addEventListener("change", (event) => handleBreakdownAuditFile("dms", event));
     els.truckChargeOpsFile.addEventListener("change", (event) => handleTruckChargeAuditFile("ops", event));
@@ -5374,7 +5535,11 @@
 
     function doorRecommendationForHistory(history, truck = null) {
       const fallbackDoor = fallbackDoorForHistory(history);
-      if (!history) return { door: null, reason: "No supplier door history found", fallbackDoor: null };
+      if (!history) {
+        const areaFb = areaFallbackDoor(truck);
+        if (areaFb) return { door: areaFb.door, fallbackDoor: areaFb.door, reason: areaFb.reason };
+        return { door: null, reason: "No supplier door history found", fallbackDoor: null };
+      }
       const needsTall = truck ? clerkDoorStatusForSupplier(truck.supplier) === "Tall Door" : Boolean(history.tall);
       const targetArea = dockAreaForTruck(truck, fallbackDoor);
 
@@ -5482,6 +5647,84 @@
     function isNsBrandsSupplier(supplier) {
       const key = normalizeSupplierKey(supplier);
       return key === "ns" || /^ns\s/.test(key) || /\bns brands?\b/.test(key);
+    }
+
+    function isAbsopureSupplier(supplier) {
+      const key = normalizeSupplierKey(supplier);
+      return key.includes("absopure");
+    }
+
+    // ── Spill tracking ──────────────────────────────────────────
+    function getSpillRecords() {
+      try { return JSON.parse(localStorage.getItem("spillRecords") || "[]"); } catch(e) { return []; }
+    }
+
+    function saveSpillRecord(record) {
+      const records = getSpillRecords();
+      records.unshift(record);
+      if (records.length > 500) records.length = 500;
+      try { localStorage.setItem("spillRecords", JSON.stringify(records)); } catch(e) {}
+    }
+
+    function deleteSpillRecord(idx) {
+      const records = getSpillRecords();
+      records.splice(idx, 1);
+      try { localStorage.setItem("spillRecords", JSON.stringify(records)); } catch(e) {}
+    }
+
+    function supplierSpillRate(supplier) {
+      const key = normalizeSupplierKey(supplier || "");
+      if (!key) return 0;
+      const manualRule = MANUAL_SPILL_RULES.find(function(rule) {
+        return rule.patterns.some(function(p) {
+          const rk = normalizeSupplierKey(p);
+          return rk && (key.includes(rk) || rk.includes(key));
+        });
+      });
+      if (manualRule) return manualRule.rate;
+      const records = getSpillRecords();
+      const supplierRecords = records.filter(function(r) {
+        const rk = normalizeSupplierKey(r.supplier || "");
+        return rk && (key.includes(rk) || rk.includes(key));
+      });
+      if (supplierRecords.length < 3) return 0;
+      const spillCount = supplierRecords.filter(function(r) { return r.spilled; }).length;
+      return spillCount / supplierRecords.length;
+    }
+
+    function supplierSpillNote(supplier) {
+      const key = normalizeSupplierKey(supplier || "");
+      const manualRule = MANUAL_SPILL_RULES.find(function(rule) {
+        return rule.patterns.some(function(p) {
+          const rk = normalizeSupplierKey(p);
+          return rk && (key.includes(rk) || rk.includes(key));
+        });
+      });
+      return manualRule ? manualRule.note : null;
+    }
+
+    function isSpillRisk(supplier) {
+      return supplierSpillRate(supplier) > 0.30;
+    }
+
+    function spillAlertBannerHtml(supplier) {
+      const rate = supplierSpillRate(supplier);
+      if (rate <= 0.30) return "";
+      const pct = Math.round(rate * 100);
+      const note = supplierSpillNote(supplier) || "";
+      return `<div class="spill-alert-banner">⚠️ <strong>Warning: Truck may be spilled</strong> — ${escapeHtml(supplier)} has a ${pct}% spill rate. Alert the receiving team.${note ? " " + escapeHtml(note) : ""}</div>`;
+    }
+
+    // ── Area-based door fallback (no supplier history) ────────────
+    function areaFallbackDoor(truck) {
+      if (!truck) return null;
+      const text = normalizeText((truck.dockType || "") + " " + (truck.area || ""));
+      if (/\b(freezer|frozen)\b/.test(text)) return { door: 98, reason: "Area fallback: freezer truck → freezer doors (95-103). No supplier history found." };
+      if (/\b(cooler|cold|chill|chl|meat|dairy)\b/.test(text)) return { door: 88, reason: "Area fallback: cooler/CHL truck → cooler doors (87-94). No supplier history found." };
+      if (/\b(produce|salad)\b/.test(text)) return { door: 80, reason: "Area fallback: produce truck → produce doors (79-86). No supplier history found." };
+      if (/\b(a\s*wall|awall|chip|paper|water)\b/.test(text)) return { door: 28, reason: "Area fallback: A-Wall truck → doors 27-33. No supplier history found." };
+      if (/\b(dry|front|ambient|amb|grocery)\b/.test(text)) return { door: 54, reason: "Area fallback: dry/AMB truck → dry doors (46-74). No supplier history found." };
+      return null;
     }
 
     function doorNumbersForHistory(history) {
@@ -5865,6 +6108,9 @@
       renderClerkDoorTable();
       renderDoorSuggestorLookup(false);
       renderDoorSuggestorTable();
+      renderSpillTrackerLookup(false);
+      renderSpillTrackerTable();
+      renderSpillHistoryTable();
       if (document.getElementById("breakdownsAuditPanel")?.classList.contains("active")) renderBreakdownsAudit();
       if (document.getElementById("truckChargeAuditPanel")?.classList.contains("active")) renderTruckChargeAudit();
     }
@@ -6889,6 +7135,7 @@
       )).join(" | ");
       els.doorSuggestorKicker.textContent = `${matches.length} truck${matches.length === 1 ? "" : "s"} matched`;
       els.doorSuggestorResult.innerHTML = `
+        ${spillAlertBannerHtml(primaryTruck.supplier)}
         <div class="term-pill ${klass}">${escapeHtml(label)}</div>
         <div class="highlight-label">${escapeHtml(liveLabel)}</div>
         <div class="highlight-label">PO ${escapeHtml(poInput)} matched the truck below.</div>
@@ -6902,7 +7149,7 @@
       thead.innerHTML = "";
       tbody.innerHTML = "";
 
-      const headers = ["Supplier / Vendor", "Recommended Door", "Live Door Status", "History", "Reference Number", "PO Numbers", "Dock Section", "Hour"];
+      const headers = ["Supplier / Vendor", "Spill Risk", "Recommended Door", "Live Door Status", "History", "Reference Number", "PO Numbers", "Dock Section", "Hour"];
       const headerRow = document.createElement("tr");
       headers.forEach((header) => {
         const th = document.createElement("th");
@@ -6913,8 +7160,11 @@
 
       const rows = state.normalizedRows.map((truck) => {
         const history = doorRangeHistoryFor(truck.supplier);
+        const spillRate = supplierSpillRate(truck.supplier);
         return {
           supplier: truck.supplier,
+          spillRisk: spillRate > 0.30 ? `⚠️ HIGH (${Math.round(spillRate * 100)}%)` : (spillRate > 0 ? `${Math.round(spillRate * 100)}%` : "—"),
+          spillHigh: spillRate > 0.30,
           range: recommendedDoorLabel(history, truck),
           live: liveDoorTextForHistory(history, truck),
           history: doorRangeHistoryText(truck.supplier),
@@ -6928,7 +7178,8 @@
       const fragDS = document.createDocumentFragment();
       rows.forEach((truck) => {
         const tr = document.createElement("tr");
-        [truck.supplier, truck.range, truck.live, truck.history, truck.reference, truck.po, truck.dockType, truck.hourLabel].forEach((value) => {
+        if (truck.spillHigh) tr.classList.add("spill-risk-row");
+        [truck.supplier, truck.spillRisk, truck.range, truck.live, truck.history, truck.reference, truck.po, truck.dockType, truck.hourLabel].forEach((value) => {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
@@ -6947,6 +7198,126 @@
       } else {
         els.doorSuggestorTableMeta.textContent = `${rows.length} truck${rows.length === 1 ? "" : "s"} shown | ${withRange} with recommended doors`;
       }
+    }
+
+    function recordSpillEvent(spilled) {
+      const supplier = els.spillRecordSupplier.value.trim();
+      const po = els.spillRecordPo.value.trim();
+      const notes = els.spillRecordNotes.value.trim();
+      if (!supplier) { showToast("Enter a supplier name first."); return; }
+      saveSpillRecord({ supplier, po, notes, spilled, date: new Date().toISOString() });
+      els.spillRecordSupplier.value = "";
+      els.spillRecordPo.value = "";
+      els.spillRecordNotes.value = "";
+      renderSpillHistoryTable();
+      renderSpillTrackerTable();
+      showToast(spilled ? `⚠️ Spill recorded for ${supplier}.` : `✅ Clean truck recorded for ${supplier}.`);
+    }
+
+    function renderSpillTrackerLookup(updateMessage = true) {
+      const poInput = els.spillTrackerInput.value.trim();
+      if (!poInput) {
+        if (updateMessage) showToast("Enter a PO number first.");
+        els.spillTrackerKicker.textContent = "No PO searched";
+        els.spillTrackerResult.innerHTML = `
+          <div class="term-pill missing">--</div>
+          <div class="highlight-label">Enter a PO number to check spill risk for that supplier.</div>
+        `;
+        return;
+      }
+      const matches = trucksForPo(poInput);
+      if (!matches.length) {
+        els.spillTrackerKicker.textContent = "PO not found";
+        els.spillTrackerResult.innerHTML = `
+          <div class="term-pill missing">--</div>
+          <div class="highlight-label">No truck found for that PO in the imported daily report.</div>
+        `;
+        return;
+      }
+      const primaryTruck = matches[0];
+      const rate = supplierSpillRate(primaryTruck.supplier);
+      const pct = Math.round(rate * 100);
+      const isRisk = rate > 0.30;
+      const statusText = isRisk ? `⚠️ HIGH SPILL RISK (${pct}%)` : (rate > 0 ? `Low Risk (${pct}%)` : "No Spill History");
+      const note = supplierSpillNote(primaryTruck.supplier) || "";
+      els.spillTrackerKicker.textContent = `${matches.length} truck${matches.length === 1 ? "" : "s"} matched`;
+      els.spillTrackerResult.innerHTML = `
+        ${isRisk ? `<div class="spill-alert-banner">⚠️ <strong>Warning: Truck may be spilled</strong> — ${escapeHtml(primaryTruck.supplier)} has a ${pct}% spill rate. Alert receiving team before unloading.${note ? " " + escapeHtml(note) : ""}</div>` : ""}
+        <div class="term-pill ${isRisk ? "alert" : "ok"}">${escapeHtml(statusText)}</div>
+        <div class="highlight-label">Supplier: ${escapeHtml(primaryTruck.supplier)}</div>
+        <div class="highlight-label">${isRisk ? "Have spill kit at the door before the truck opens." : "No significant spill risk found for this supplier."}</div>
+      `;
+    }
+
+    function renderSpillTrackerTable() {
+      const thead = els.spillTrackerTable.querySelector("thead");
+      const tbody = els.spillTrackerTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Supplier / Vendor", "Spill Risk", "Recommended Door", "Reference Number", "PO Numbers", "Dock Section"];
+      const headerRow = document.createElement("tr");
+      headers.forEach((h) => { const th = document.createElement("th"); th.textContent = h; headerRow.appendChild(th); });
+      thead.appendChild(headerRow);
+      const rows = state.normalizedRows.map((truck) => {
+        const history = doorRangeHistoryFor(truck.supplier);
+        const rate = supplierSpillRate(truck.supplier);
+        return {
+          supplier: truck.supplier,
+          spillRisk: rate > 0.30 ? `⚠️ HIGH (${Math.round(rate * 100)}%)` : (rate > 0 ? `${Math.round(rate * 100)}%` : "—"),
+          spillHigh: rate > 0.30,
+          range: recommendedDoorLabel(history, truck),
+          reference: truck.reference,
+          po: truck.poNumbers.join(", ") || "Not listed",
+          dockType: truck.dockType
+        };
+      }).sort((a, b) => Number(b.spillHigh) - Number(a.spillHigh) || a.supplier.localeCompare(b.supplier));
+      const frag = document.createDocumentFragment();
+      rows.forEach((truck) => {
+        const tr = document.createElement("tr");
+        if (truck.spillHigh) tr.classList.add("spill-risk-row");
+        [truck.supplier, truck.spillRisk, truck.range, truck.reference, truck.po, truck.dockType].forEach((value) => {
+          const td = document.createElement("td"); td.textContent = value; tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!rows.length) appendEmptyRow(tbody, headers.length, "Import a daily truck report first.");
+      const highCount = rows.filter((r) => r.spillHigh).length;
+      els.spillTrackerTableMeta.textContent = state.normalizedRows.length
+        ? `${rows.length} truck${rows.length === 1 ? "" : "s"} | ${highCount} high spill risk`
+        : "Import a daily truck report to see spill risk";
+    }
+
+    function renderSpillHistoryTable() {
+      const thead = els.spillHistoryTable.querySelector("thead");
+      const tbody = els.spillHistoryTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const records = getSpillRecords();
+      const headers = ["Date", "Supplier", "Result", "PO", "Notes", ""];
+      const headerRow = document.createElement("tr");
+      headers.forEach((h) => { const th = document.createElement("th"); th.textContent = h; headerRow.appendChild(th); });
+      thead.appendChild(headerRow);
+      const frag = document.createDocumentFragment();
+      records.forEach((rec, idx) => {
+        const tr = document.createElement("tr");
+        if (rec.spilled) tr.classList.add("spill-risk-row");
+        const dateStr = rec.date ? new Date(rec.date).toLocaleString() : "";
+        [dateStr, rec.supplier || "", rec.spilled ? "⚠️ Spilled" : "✅ Clean", rec.po || "", rec.notes || ""].forEach((value) => {
+          const td = document.createElement("td"); td.textContent = value; tr.appendChild(td);
+        });
+        const delTd = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "Remove";
+        delBtn.dataset.spillDelete = String(idx);
+        delBtn.className = "spill-del-btn";
+        delTd.appendChild(delBtn);
+        tr.appendChild(delTd);
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!records.length) appendEmptyRow(tbody, headers.length, "No spill events recorded yet. Use the form above to add events.");
+      els.spillHistoryTableMeta.textContent = `${records.length} event${records.length === 1 ? "" : "s"} recorded`;
     }
 
     function renderTruckFinderLookup(updateMessage = true) {
