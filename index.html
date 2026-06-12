@@ -3656,7 +3656,8 @@
       { patterns: ["MOWI", "Great Lakes Cheese"], rangeStart: 88, rangeEnd: 94, topDoors: [88, 89, 91, 94], tall: true, note: "Cheat sheet: MOWI and Great Lakes Cheese need tall cooler doors." },
       { patterns: ["Cafe Valley"], rangeStart: 95, rangeEnd: 103, topDoors: [95, 98, 100, 103], tall: true, note: "Manual rule: Cafe Valley needs a tall door." },
       { patterns: ["Columbia Fruit", "Richelieu Foods", "La Fournee", "PDM Vegetables", "Bimbo Bakehouse"], rangeStart: 95, rangeEnd: 103, topDoors: [95, 98, 100, 103], tall: true, note: "Cheat sheet: this freezer vendor needs a tall freezer door." },
-      { patterns: ["Del Monte"], rangeStart: 79, rangeEnd: 86, topDoors: [79, 80, 81, 82, 83, 84, 85, 86, 69, 70, 71, 72, 73, 74], tall: false, note: "Cheat sheet: use produce doors first; doors 69-74 can work only if produce is full." }
+      { patterns: ["Del Monte"], rangeStart: 79, rangeEnd: 86, topDoors: [79, 80, 81, 82, 83, 84, 85, 86, 69, 70, 71, 72, 73, 74], tall: false, note: "Cheat sheet: use produce doors first; doors 69-74 can work only if produce is full." },
+      { patterns: ["NS Brands", "NS Brand"], rangeStart: 77, rangeEnd: 90, topDoors: [80, 84, 86, 88, 89], tall: true, note: "Manual rule: NS brands trucks must go on doors 77-90 and require a tall door. Preferred tall doors in range: 80, 84, 86, 88, 89." }
     ];
 
     const LIVE_DOCK_SHEET = {
@@ -5449,6 +5450,7 @@
     function clerkDoorStatusForSupplier(supplier) {
       if (isCafeValleySupplier(supplier)) return "Tall Door";
       if (isBonipakSupplier(supplier)) return "Tall Door";
+      if (isNsBrandsSupplier(supplier)) return "Tall Door";
       const manualRule = manualDoorRuleForSupplier(supplier);
       if (manualRule) return manualRule.tall ? "Tall Door" : "Regular Door";
       const history = tallDoorHistoryFor(supplier);
@@ -5459,6 +5461,7 @@
     function clerkDoorHistoryText(supplier) {
       if (isCafeValleySupplier(supplier)) return "Manual rule: Cafe Valley needs a tall door.";
       if (isBonipakSupplier(supplier)) return "Manual rule: Bonipak needs a tall door. Use 80, 84, or 86.";
+      if (isNsBrandsSupplier(supplier)) return "Manual rule: NS brands trucks go on doors 77-90 and must use a tall door. Preferred: 80, 84, 86, 88, or 89.";
       const manualRule = manualDoorRuleForSupplier(supplier);
       if (manualRule) return manualRule.note;
       const history = tallDoorHistoryFor(supplier);
@@ -5474,6 +5477,11 @@
     function isBonipakSupplier(supplier) {
       const key = normalizeSupplierKey(supplier);
       return key.includes("bonipak") || key.includes("boni pak");
+    }
+
+    function isNsBrandsSupplier(supplier) {
+      const key = normalizeSupplierKey(supplier);
+      return key === "ns" || /^ns\s/.test(key) || /\bns brands?\b/.test(key);
     }
 
     function doorNumbersForHistory(history) {
