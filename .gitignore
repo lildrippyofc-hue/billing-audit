@@ -9,6 +9,7 @@ _backups/
 # Other folders not needed on server
 outputs/
 easy-button/
+orbit/
 .claude/
 recipes.html
 
