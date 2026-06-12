@@ -8486,11 +8486,21 @@
         (audit.leadMissedBreakdowns || []).map(function(r) { return r.reference; })
       );
 
+      // Determine whether the manager name column is present across rows
+      const hasManagerNames = allRows.some(function(r) { return r.managerName && r.managerName.length > 0; });
+
       const clerkMap = new Map();
       allRows.forEach(function(row) {
-        const clerkId = row.po ? extractPoClerkId(row.po) : null;
+        // Primary: use the Manager Name column value directly
+        // Fallback: parse initials from PO number only if no manager name column found
+        let clerkId = null;
+        if (hasManagerNames) {
+          clerkId = row.managerName ? row.managerName.trim() : null;
+        } else {
+          clerkId = row.po ? extractPoClerkId(row.po) : null;
+        }
         if (!clerkId) return;
-        if (!clerkMap.has(clerkId)) clerkMap.set(clerkId, { clerkId, total: 0, dateErrors: 0, poErrors: 0, missedBreakdowns: 0 });
+        if (!clerkMap.has(clerkId)) clerkMap.set(clerkId, { clerkId, total: 0, dateErrors: 0, poErrors: 0, missedBreakdowns: 0, source: hasManagerNames ? "name" : "po" });
         const c = clerkMap.get(clerkId);
         c.total++;
         if (wrongDateSet.has(`${row.source}|${row.reference}|${row.po}`)) c.dateErrors++;
@@ -8513,21 +8523,28 @@
       const rows = buildClerkLeaderboard();
       const audit = state.breakdownAudit;
 
+      const usingNames = rows.length > 0 && rows[0].source === "name";
       if (els.clerkBoardKicker) {
         if (!audit.ops && !currentDmsValidationReport()) {
           els.clerkBoardKicker.textContent = "Load OPS + DMS in Breakdowns Audit first";
+        } else if (rows.length === 0) {
+          els.clerkBoardKicker.textContent = "No clerk names or PO initials found in loaded reports";
         } else {
-          els.clerkBoardKicker.textContent = `${rows.length} clerk${rows.length !== 1 ? "s" : ""} identified from PO initials`;
+          els.clerkBoardKicker.textContent = rows.length + " clerk" + (rows.length !== 1 ? "s" : "") + " identified from " + (usingNames ? "Manager Name column" : "PO initials");
         }
       }
       if (els.clerkBoardStatus) {
         els.clerkBoardStatus.innerHTML = "";
+        const totalPOs = rows.reduce(function(s, r) { return s + r.total; }, 0);
+        const sourceNote = usingNames
+          ? "Source: Manager Name column (eclipsemgr / entered by / manager name — whichever is present)"
+          : "Source: PO number initials — no Manager Name column found. Add that column to OPS/DMS for better accuracy.";
         [
-          `Clerks found: ${rows.length}`,
-          `Total POs with readable clerk IDs: ${rows.reduce(function(s, r) { return s + r.total; }, 0)}`,
-          `PO initials extracted from MMDDYY suffix (e.g. ks071126 = clerk KS)`,
-          `Date errors require a business date set in Business Date Audit`,
-          `Error rate = (date errors + PO typos + missed breakdowns) / total POs`
+          "Clerks found: " + rows.length,
+          "Total PO rows attributed: " + totalPOs,
+          sourceNote,
+          "Date errors require a business date set in Business Date Audit",
+          "Error rate = (date errors + PO typos + missed breakdowns) / total POs"
         ].forEach(function(msg) { els.clerkBoardStatus.appendChild(emptySmall(msg)); });
       }
 
@@ -8535,7 +8552,7 @@
       const tbody = els.clerkBoardTable.querySelector("tbody");
       thead.innerHTML = "";
       tbody.innerHTML = "";
-      const headers = ["Clerk ID", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate", "Watch Area"];
+      const headers = ["Clerk / Manager", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate", "Watch Area"];
       const hr = document.createElement("tr");
       headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
       thead.appendChild(hr);
@@ -8557,14 +8574,14 @@
         frag.appendChild(tr);
       });
       tbody.appendChild(frag);
-      if (!rows.length) appendEmptyRow(tbody, headers.length, "No clerk IDs found. POs must contain an initials+MMDDYY suffix.");
-      if (els.clerkBoardTableMeta) els.clerkBoardTableMeta.textContent = `${rows.length} clerk${rows.length !== 1 ? "s" : ""} | sorted by error rate`;
+      if (!rows.length) appendEmptyRow(tbody, headers.length, "No clerk names found. Make sure your OPS file has a Manager Name, EclipseMgr, or Entered By column.");
+      if (els.clerkBoardTableMeta) els.clerkBoardTableMeta.textContent = rows.length + " clerk" + (rows.length !== 1 ? "s" : "") + " | sorted by error rate | source: " + (usingNames ? "Manager Name column" : "PO initials fallback");
     }
 
     function exportClerkBoardCsv() {
       const rows = buildClerkLeaderboard();
       if (!rows.length) { showToast("No clerk data to export."); return; }
-      const headers = ["Clerk ID", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate %", "Watch Area"];
+      const headers = ["Clerk / Manager", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate %", "Watch Area"];
       const csvRows = rows.map(function(c) {
         return [c.clerkId, c.total, c.dateErrors, c.poErrors, c.missedBreakdowns, c.totalErrors, Math.round(c.errorRate * 100), c.totalErrors ? c.worstCategory : "—"]
           .map(function(v) { return `"${String(v).replace(/"/g, '""')}"`; }).join(",");
@@ -9591,6 +9608,12 @@
         const billTo = source === "OPS" ? breakdownAuditFieldByAliases(report, row, ["bill to", "billto", "billing customer", "billing", "customer bill to"]) : "";
         const loadType = source === "OPS" ? breakdownAuditFieldByAliases(report, row, ["load type", "loadtype", "type"]) : "";
         const longDescription = source === "OPS" ? breakdownAuditFieldByAliases(report, row, ["long description", "description", "work description", "task description"]) : "";
+        const managerName = breakdownAuditFieldByAliases(report, row, [
+          "eclipsemgr", "eclipse mgr", "eclipse manager",
+          "manager name", "manager's name", "managers name", "mgr name", "manager",
+          "entered by", "created by", "user name", "username", "employee name",
+          "receiver", "received by", "clerk", "clerk name"
+        ]);
         const opsBilledBreakdown = source === "OPS" && isOpsBilledBreakdown({ billTo, loadType, longDescription, po, rowText });
         return {
           source,
@@ -9599,6 +9622,7 @@
           reference,
           po,
           supplier,
+          managerName: managerName ? managerName.trim() : "",
           commentText,
           rowText,
           codes,
