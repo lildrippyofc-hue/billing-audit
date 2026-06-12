@@ -421,6 +421,16 @@
     }
     :root.dark .portal-alert-strip { background: #3d1515; border-color: #fc8181; color: #fca5a5; }
     .portal-alert-item { display: flex; align-items: center; gap: 8px; }
+    /* Shift pace banner */
+    .portal-pace-alert { border-radius: 8px; padding: 9px 14px; font-size: 0.9em; font-weight: 600; margin: 8px 0; line-height: 1.5; transition: background 0.3s, border-color 0.3s; }
+    .portal-pace-alert.pace-good    { background:#f0fff4; border:2px solid #38a169; color:#276749; }
+    .portal-pace-alert.pace-warning { background:#fffbeb; border:2px solid #d69e2e; color:#744210; }
+    .portal-pace-alert.pace-behind  { background:#fff5f5; border:2px solid #e53e3e; color:#c53030; }
+    :root.dark .portal-pace-alert.pace-good    { background:#0d2218; border-color:#68d391; color:#9ae6b4; }
+    :root.dark .portal-pace-alert.pace-warning { background:#1f1700; border-color:#f6c843; color:#fbd38d; }
+    :root.dark .portal-pace-alert.pace-behind  { background:#2d1515; border-color:#fc8181; color:#fca5a5; }
+    @keyframes portal-pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+    .portal-pace-alert.pace-behind { animation: portal-pulse 2.5s ease-in-out infinite; }
     /* Progress bar */
     .portal-progress-wrap { margin: 6px 0 10px; }
     .portal-progress-label { font-size: 0.8em; font-weight: 600; color: var(--label,#718096); margin-bottom: 4px; }
@@ -2280,6 +2290,7 @@
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Truck Report</div>
@@ -3295,6 +3306,22 @@
           </div>
         </section>
 
+        <section class="table-wrap" aria-labelledby="historyVendorTitle" style="margin-top: 14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="historyVendorTitle">Vendor Performance</div>
+              <div class="table-meta" id="historyVendorMeta">Learned from exported shifts — improves completion estimates over time</div>
+            </div>
+            <button id="refreshVendorStatsBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Refresh</button>
+          </div>
+          <div class="table-scroller">
+            <table id="historyVendorTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
       </section>
       </section>
 
@@ -3394,12 +3421,15 @@
             <span class="portal-day-label" id="portalDayLabel">Loading...</span>
           </div>
           <div class="portal-header-right">
-            <label style="font-size:0.78em; color:var(--muted,#888);">Free time (min):</label>
+            <button id="portalDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn">Pull Live DMS</button>
+            <label style="font-size:0.78em; color:var(--muted,#888);">Receiving grace (min):</label>
             <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
+            <button id="portalExportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">&#8595; Export Shift</button>
             <button id="portalClearDoneBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Done</button>
             <button id="portalClearAllBtn" type="button" class="secondary-btn" style="font-size:0.8em; color:#e53e3e;">Clear All</button>
           </div>
         </div>
+        <div class="friendly-note" id="portalDmsStatus" style="margin:8px 0;">Live DMS not pulled yet. Manual clock-in is still available.</div>
 
         <!-- Add truck form -->
         <div class="portal-add-form" id="portalAddForm">
@@ -3447,16 +3477,21 @@
           <article class="metric-card">
             <div class="metric-label">Urgent / Warning</div>
             <div class="metric-value" id="portalUrgentCount" style="color:#e53e3e;">0</div>
-            <div class="metric-note">Under 60 min of free time left.</div>
+            <div class="metric-note">Under 60 min to finish receiving.</div>
           </article>
           <article class="metric-card">
             <div class="metric-label">In Detention</div>
             <div class="metric-value" id="portalDetentionCount" style="color:#c53030;">0</div>
-            <div class="metric-note">Free time already exceeded.</div>
+            <div class="metric-note">Unload finished, receiving still open past grace.</div>
           </article>
-          <article class="metric-card">
+          <article class="metric-card" id="portal4amCard" style="transition:border-color 0.3s;">
+            <div class="metric-label">4AM Cutoff</div>
+            <div class="metric-value" id="portal4amCount" style="font-size:1.3em;">—</div>
+            <div class="metric-note" id="portal4amNote">Must start receiving by 4:00 AM.</div>
+          </article>
+          <article class="metric-card" id="portalEstCard" style="transition:border-color 0.3s;">
             <div class="metric-label">Est. Day Complete</div>
-            <div class="metric-value" id="portalEstComplete" style="font-size:1.3em;">—</div>
+            <div class="metric-value" id="portalEstComplete" style="font-size:1.3em; transition:color 0.3s;">—</div>
             <div class="metric-note" id="portalEstNote">Based on avg turn time.</div>
           </article>
           <article class="metric-card">
@@ -3470,6 +3505,9 @@
             <div class="metric-note">Completed trucks today.</div>
           </article>
         </div>
+
+        <!-- Shift pace / 4AM goal banner -->
+        <div id="portalPaceAlert" class="portal-pace-alert" style="display:none;"></div>
 
         <!-- Progress bar -->
         <div class="portal-progress-wrap" id="portalProgressWrap" style="display:none;">
@@ -3504,7 +3542,117 @@
             </table>
           </div>
         </section>
+
+        <!-- Past Shift Exports -->
+        <section class="table-wrap" style="margin-top:10px;" id="portalExportsSection">
+          <div class="table-toolbar" style="align-items:center;">
+            <div>
+              <div class="table-title">Past Shift Exports</div>
+              <div class="table-meta" id="portalExportsMeta">No exports saved yet.</div>
+            </div>
+          </div>
+          <div id="portalExportsList" style="padding:4px 14px 10px;"></div>
+        </section>
+
       </section>
+
+      <!-- ═══ DMS STAMP ═══════════════════════════════════════════════════════ -->
+      <section id="dmsStampPanel" class="tab-panel" aria-label="DMS Stamp">
+        <div class="motivation-bar" id="motivBar_dmsStamp"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+
+        <!-- Connection status bar -->
+        <div class="portal-header-bar" style="margin-bottom:12px;">
+          <div class="portal-live-badge">
+            <span class="portal-live-dot" id="dmsStampDot" style="background:#718096;"></span>
+            <span style="font-weight:700; color:var(--text,#1a202c);">DMS Stamp</span>
+          </div>
+          <div style="font-size:0.82em; color:var(--muted,#888);" id="dmsStampStatus">Connect to DMS to stamp trucks directly from this screen.</div>
+          <div>
+            <button id="dmsStampTestBtn" type="button" class="secondary-btn" style="font-size:0.82em;">Test DMS Connection</button>
+          </div>
+        </div>
+
+        <!-- Info note -->
+        <div class="friendly-note" style="margin-bottom:12px;">
+          <strong>How this works:</strong> Pick a stamp type, paste the Load ID from My Portal (or DMS), optionally set a custom time, then hit Stamp. The app sends the stamp to DMS through the same login it uses for My Portal. If a stamp type fails, open Chrome DevTools → Network while stamping in DMS and look for the POST URL — paste it in <code>dms_config.json</code> as <code>"stamp_endpoint"</code>.
+        </div>
+
+        <!-- Stamp form -->
+        <div class="panel" style="padding:20px 22px; margin-bottom:14px;">
+          <div class="panel-kicker">New Stamp</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px;">
+
+            <div>
+              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Load ID</label>
+              <input id="dmsStampLoadId" type="text" class="lookup-input" placeholder="Paste Load ID from portal" autocomplete="off" style="width:100%;">
+            </div>
+
+            <div>
+              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">PO # (optional)</label>
+              <input id="dmsStampPo" type="text" class="lookup-input" placeholder="e.g. 1234567" autocomplete="off" style="width:100%;">
+            </div>
+
+            <div>
+              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Stamp Type</label>
+              <select id="dmsStampType" class="lookup-input" style="width:100%;">
+                <option value="checkin">Check In</option>
+                <option value="driveratdoor">Driver At Door</option>
+                <option value="unloadstart">Unload Start</option>
+                <option value="unloadfinish">Unload Finish</option>
+                <option value="receivingfinish">Receiving Finish</option>
+              </select>
+            </div>
+
+            <div>
+              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Time <span style="font-weight:400; text-transform:none; letter-spacing:0;">(defaults to now)</span></label>
+              <div style="display:flex; gap:6px;">
+                <input id="dmsStampTime" type="datetime-local" class="lookup-input" style="flex:1;">
+                <button id="dmsStampNowBtn" type="button" class="secondary-btn" style="font-size:0.8em; white-space:nowrap;">Now</button>
+              </div>
+            </div>
+
+          </div>
+
+          <div style="margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button id="dmsStampSubmitBtn" type="button" class="primary-btn" style="font-size:0.92em; font-weight:700; padding:9px 22px;">Stamp Truck</button>
+            <span id="dmsStampSpinner" style="display:none; font-size:0.82em; color:var(--muted,#888);">Stamping...</span>
+          </div>
+          <div id="dmsStampResult" style="margin-top:12px; display:none; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600;"></div>
+        </div>
+
+        <!-- Recent stamp log -->
+        <div class="table-wrap">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title">Stamp Log</div>
+              <div class="table-meta" id="dmsStampLogMeta">Stamps you send this session appear here.</div>
+            </div>
+            <button id="dmsStampClearLog" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Log</button>
+          </div>
+          <div class="table-scroller">
+            <table id="dmsStampLogTable" style="width:100%; border-collapse:collapse; font-size:0.84em;">
+              <thead>
+                <tr>
+                  <th style="text-align:left; padding:8px 10px;">Time Sent</th>
+                  <th style="text-align:left; padding:8px 10px;">Load ID</th>
+                  <th style="text-align:left; padding:8px 10px;">Stamp Type</th>
+                  <th style="text-align:left; padding:8px 10px;">Stamp Time</th>
+                  <th style="text-align:left; padding:8px 10px;">Result</th>
+                </tr>
+              </thead>
+              <tbody id="dmsStampLogBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DevTools tip -->
+        <div class="panel" style="margin-top:14px; padding:16px 20px; border-left:4px solid #d69e2e; background:var(--warn-bg,#fffbeb);">
+          <div style="font-size:0.78em; font-weight:700; color:#744210; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">Can't find the stamp endpoint?</div>
+          <p style="margin:0; font-size:0.85em; color:var(--text,#1a202c); line-height:1.6;">Open DMS in Chrome, press <strong>F12</strong> → Network tab → filter by <strong>XHR</strong>. Stamp a truck the normal way. Look for a POST request with "stamp" in the URL. Right-click it → Copy → Copy URL. Paste that URL into <code>dms_config.json</code> as <code>"stamp_endpoint"</code> and restart the server.</p>
+        </div>
+
+      </section>
+      <!-- ═══ END DMS STAMP ════════════════════════════════════════════════════ -->
 
       <section id="exceptionsPanel" class="tab-panel" aria-label="Exceptions Queue">
         <div class="motivation-bar" id="motivBar_exceptions"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
@@ -3748,30 +3896,30 @@
 
           <!-- HERO -->
           <div class="help-hero">
-            <div class="help-hero-badge">Step-By-Step Guide</div>
-            <h2 class="help-hero-title">How To Use Daily Truck Operations</h2>
-            <p class="help-hero-sub">Read this top to bottom at least once. Everything you need to know about using this app is on this page.</p>
+            <div class="help-hero-badge">Your Complete Guide — No Experience Needed</div>
+            <h2 class="help-hero-title">Welcome! This App Is Made For You.</h2>
+            <p class="help-hero-sub">You do not need to be a tech person. You do not need to know anything special. Every single thing you need is right here on this page. Scroll down slowly. Read one part at a time. You got this.</p>
           </div>
 
           <!-- QUICK START -->
           <div class="help-quickstart">
-            <h2>The Three Most Important Things</h2>
-            <p>If you only remember three things from this whole page, remember these.</p>
+            <h2>The Three Things That Matter Most</h2>
+            <p>If you only remember three things from this whole page, let it be these three. Everything else is just extra detail.</p>
             <div class="quickstart-steps">
               <div class="qs-step">
                 <div class="qs-num">1</div>
-                <h3>Upload The File</h3>
-                <p>Click the orange button in the top right corner. Pick your .csv file. Done.</p>
+                <h3>Upload The File Every Morning</h3>
+                <p>The orange button in the top right corner. Click it. Pick your truck schedule file. That is it. The app does the rest.</p>
               </div>
               <div class="qs-step">
                 <div class="qs-num">2</div>
-                <h3>Look Up Trucks</h3>
-                <p>Go to Truck Finder. Type a PO number. The app tells you Roll Off or Breakdown.</p>
+                <h3>Look Up Any Truck By PO Number</h3>
+                <p>Go to Truck Finder. Type the PO number from your paperwork. The app tells you the answer in one second — Roll Off, Breakdown, or Needs Review.</p>
               </div>
               <div class="qs-step">
                 <div class="qs-num">3</div>
-                <h3>Mark Your Answer</h3>
-                <p>If it says Needs Review, go to Roll Off Audit and click Roll Off or Breakdown Truck.</p>
+                <h3>Make The Call On Needs Review Trucks</h3>
+                <p>If it says Needs Review, go to Roll Off Audit. Find the truck. Click Roll Off or Breakdown. It saves automatically. Done. You can always change it if you picked wrong — no stress.</p>
               </div>
             </div>
           </div>
@@ -3783,10 +3931,10 @@
             <div class="help-step">
               <div class="help-step-num">1</div>
               <div class="help-step-content">
-                <h3>Find Your File On The Computer</h3>
-                <p>Before you can use this app, you need a file. The file has all the truck information in it. It is saved on the computer or a shared folder. The file ends in <strong>.csv</strong> or <strong>.xlsx</strong>. Those are just file types like how a photo ends in .jpg.</p>
-                <div class="help-step-tip">The file name usually has the date in it. Example: TruckCount_05162026.csv - look for today's date to find the right one.</div>
-                <div class="help-step-tip" style="margin-top:8px; border-left-color:#DC582A; background:#FFF0F0;">Do NOT upload a file from last week. Always get today's file. Ask your manager where it is saved if you cannot find it.</div>
+                <h3>Find Your Truck File On The Computer</h3>
+                <p>Before anything else, you need a file from your manager. This file holds all of today's truck information. It lives on the computer or in a shared folder. The file ends in <strong>.csv</strong> or <strong>.xlsx</strong> — those are just file types, like how a photo ends in .jpg. Nothing scary.</p>
+                <div class="help-step-tip">The file name usually has today's date in it. Example: TruckCount_06122026.csv. Look for today's date and you will find the right one.</div>
+                <div class="help-step-tip" style="margin-top:8px; border-left-color:#DC582A; background:#FFF0F0;">Always use today's file — not yesterday's, not last week's. If you cannot find it, just ask your manager. There are no dumb questions here. Everyone has to ask at first.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -3819,9 +3967,9 @@
               <div class="help-step-num">2</div>
               <div class="help-step-content">
                 <h3>Click The Orange Upload Button</h3>
-                <p>Look at the very top right of the screen. You will see an <strong>orange button</strong>. Click it ONE time. A window will pop up asking you to pick a file. Find your file and double-click it. The app will load it automatically.</p>
-                <div class="help-step-tip">If the window closes but nothing changed, try clicking the button again. Sometimes the computer takes a few seconds to respond.</div>
-                <div class="help-step-tip" style="margin-top:8px;">After it loads, the big numbers on the screen will change. If the numbers changed, it worked!</div>
+                <p>Look at the very top right of the screen. There is an <strong>orange button</strong> — you cannot miss it. Click it one time. A window pops up. Find your file in that window. Double-click it. The app loads it all by itself. You do not have to do anything else.</p>
+                <div class="help-step-tip">If the window closes and nothing happened, that just means you closed it before picking a file. Click the orange button again and this time pick the file before closing.</div>
+                <div class="help-step-tip" style="margin-top:8px;">How do you know it worked? The big numbers on the screen will change from 0 to real numbers. If the numbers updated — you did it perfectly.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -3850,9 +3998,9 @@
             <div class="help-step">
               <div class="help-step-num">3</div>
               <div class="help-step-content">
-                <h3>Read The Big Numbers On Overview</h3>
-                <p>After uploading, you will see four boxes with big numbers. These boxes are at the top of the Overview page. Each box tells you something different: how many trucks came in, what hour was busiest, what type of truck was most common, and how many types there were. You do NOT need to type anything - they update by themselves.</p>
-                <div class="help-step-tip">If all the numbers still say 0, the file did not upload correctly. Try uploading again. Make sure you picked the right file.</div>
+                <h3>Check The Big Numbers On Overview</h3>
+                <p>Right after uploading, you will see four big-number boxes at the top of the page. These tell you: how many trucks came in today, which hour was the busiest, which truck type showed up most, and how many different types there were total. You do not type anything here — they fill in all by themselves the moment your file loads.</p>
+                <div class="help-step-tip">If all the numbers still say 0 after uploading, the file did not load correctly. Try uploading again. Make sure you picked the right file — not a different document or a blank one.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -3884,10 +4032,10 @@
             <div class="help-step">
               <div class="help-step-num">4</div>
               <div class="help-step-content">
-                <h3>Look Up A Truck Using Its PO Number</h3>
-                <p>Click the menu button at the top left. Go to <strong>Lead Tools</strong>, then click <strong>Truck Finder</strong>. You will see a box where you can type. Type the PO number exactly as it looks on your paperwork. Then press the <strong>Enter key</strong> on your keyboard or click the Search button. The app will look it up and tell you the answer.</p>
-                <div class="help-step-tip">A PO number is usually 7 digits. Example: 1234567. Do not add spaces or dashes. Just type the numbers.</div>
-                <div class="help-step-tip" style="margin-top:8px;">The answer will say Roll Off, Breakdown Truck, or Needs Review. If it says Needs Review, go to Step 5.</div>
+                <h3>Look Up Any Truck With Its PO Number</h3>
+                <p>Click the menu button at the top left to open the menu. Go to <strong>Lead Tools</strong>, then click <strong>Truck Finder</strong>. A box appears. Type the PO number from your paperwork exactly as it looks — just the numbers, no spaces, no dashes. Then press <strong>Enter</strong> on your keyboard or click Search. The answer shows up in one second.</p>
+                <div class="help-step-tip">A PO number is usually 7 digits. Example: 1234567. Type it just like that — nothing extra, nothing missing.</div>
+                <div class="help-step-tip" style="margin-top:8px;">The answer will say <strong>Roll Off</strong>, <strong>Breakdown Truck</strong>, or <strong>Needs Review</strong>. If it says Needs Review, that means a person needs to make the call. That is Step 5 — and that person is you. You are capable of this.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -3917,9 +4065,9 @@
             <div class="help-step">
               <div class="help-step-num">5</div>
               <div class="help-step-content">
-                <h3>Mark Roll Off Or Breakdown When It Says Needs Review</h3>
-                <p>When Truck Finder says <strong>"Needs Review"</strong>, you need to make a decision. Go to <strong>Lead Tools</strong>, then <strong>Roll Off Audit</strong>. You will see a list of trucks waiting for your answer. Each truck has two choices. Click the circle next to the right answer. It saves by itself. You do not press any Save button.</p>
-                <div class="help-step-tip">Not sure which to pick? Ask your supervisor first. And if you click the wrong one by accident - that is okay, it happens all the time. You can go right back and change it. No drama.</div>
+                <h3>Decide Roll Off Or Breakdown When It Says Needs Review</h3>
+                <p>When Truck Finder says <strong>Needs Review</strong>, the app could not figure it out on its own — so it is asking for your help. Go to <strong>Lead Tools → Roll Off Audit</strong>. You will see the trucks waiting for a decision. Each one has two buttons. Click the right one. It saves instantly, no Save button needed.</p>
+                <div class="help-step-tip">Not sure which to pick? That is completely okay — ask your supervisor. You are not expected to know everything on day one. And if you click the wrong one by accident, just go back and click the right one. It updates immediately. No drama, no judgment, no lost data.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -3949,9 +4097,9 @@
             <div class="help-step">
               <div class="help-step-num">6</div>
               <div class="help-step-content">
-                <h3>See What You Already Did In History</h3>
-                <p>All your decisions save automatically. To see them, click the menu button, go to <strong>Database</strong>, then click <strong>History</strong>. Click the <strong>Refresh</strong> button on that page. You will see two tables: one for every file you uploaded, and one for every Roll Off and Breakdown decision you ever made. This stays saved even after you close the browser.</p>
-                <div class="help-step-tip">To reload an old report, find it in the list and click the Load button. Everything comes back just like it was.</div>
+                <h3>See Your Full Work History Any Time</h3>
+                <p>Every decision you make saves automatically — you never lose anything. To see your history, click the menu button, go to <strong>Database → History</strong>, then click the <strong>Refresh</strong> button on that page. Two tables appear: one for every file you ever uploaded, and one for every single Roll Off and Breakdown decision ever made. This record stays saved even after you close the browser and come back days later.</p>
+                <div class="help-step-tip">Want to reload a past report? Find it in the top table and click its Load button. Everything comes back exactly as it was. Your work is always safe here.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -3988,201 +4136,241 @@
               </div>
             </div>
 
+            <!-- STEP 7 -->
+            <div class="help-step">
+              <div class="help-step-num">7</div>
+              <div class="help-step-content">
+                <h3>Use My Portal To Watch Trucks Live During The Shift</h3>
+                <p>Go to <strong>Live → My Portal</strong> in the menu. This is your live operations board for the overnight shift. Every truck you clock in shows up here with a countdown timer. The board tracks who is in detention, who is urgent, who is active, and what time the shift is estimated to finish. It also shows you how many trucks need to start receiving before the 4:00 AM cutoff.</p>
+                <div class="help-step-tip">Clock in a truck by filling in Truck/Ref #, Door, Supplier, and PO at the bottom of the page, then click Clock In. The truck appears on the board immediately with a live countdown.</div>
+                <div class="help-step-tip" style="margin-top:8px;">Click <strong>Export Shift</strong> at the end of the night to download a full CSV of the shift — every truck, every time, detention minutes included. The file also saves to the website so you can pull it up later.</div>
+              </div>
+            </div>
+
+            <!-- STEP 8 -->
+            <div class="help-step">
+              <div class="help-step-num">8</div>
+              <div class="help-step-content">
+                <h3>Stamp Trucks To DMS Without Leaving This App</h3>
+                <p>Go to <strong>Live → DMS Stamp</strong> in the menu. If your DMS credentials are set up in <code>dms_config.json</code>, you can send time stamps directly to DMS from here. Pick the stamp type (Check In, Unload Start, Unload Finish, etc.), paste the Load ID from My Portal, set the time, and hit <strong>Stamp Truck</strong>. Every stamp you send appears in the Stamp Log at the bottom.</p>
+                <div class="help-step-tip">First time? Click <strong>Test DMS Connection</strong> to make sure the app can reach DMS. If it fails, check that your username and password are filled in inside <code>dms_config.json</code> — or ask whoever set up the server.</div>
+                <div class="help-step-tip" style="margin-top:8px; border-left-color:#d69e2e; background:#fffbeb;">If the stamp fails on the first try, the app automatically tries a few other common DMS endpoints. If all fail, open Chrome DevTools → Network tab, stamp a truck normally in DMS, copy the POST URL, and add it to <code>dms_config.json</code> as <code>"stamp_endpoint"</code>.</div>
+              </div>
+            </div>
+
           </div><!-- end .help-steps -->
 
           <!-- CHEAT SHEET -->
           <div class="help-cheatsheet">
-            <h2>Quick Cheat Sheet</h2>
-            <p>Print this out and tape it to your desk so you always have it handy.</p>
+            <h2>Quick Cheat Sheet — Print This And Keep It At Your Desk</h2>
+            <p>Four answers. That is all this job needs. If you know these four things, you know the whole billing side of this app.</p>
             <div class="cheat-grid">
               <div class="cheat-card">
                 <h4>Roll Off = NO Invoice</h4>
-                <p>The truck came but the lumper service did NOT unload it. No money is owed. Pick this when the truck just left without being worked.</p>
+                <p>The truck showed up but the lumper crew did NOT unload it. The truck just rolled away. No work was done, so no money is owed. Pick this when the truck left without being touched by the lumper service.</p>
               </div>
               <div class="cheat-card">
                 <h4>Breakdown Truck = YES Invoice</h4>
-                <p>The lumper service DID unload the truck. Money is owed. An invoice should be sent. Pick this when the truck was actually unloaded.</p>
+                <p>The lumper crew DID unload this truck. Work was done, so they need to get paid. An invoice should be created and sent. Pick this when the truck was actually unloaded by the lumper service.</p>
               </div>
               <div class="cheat-card">
-                <h4>Driver Unload (DU) = NO Invoice</h4>
-                <p>The truck driver did the unloading themselves. No lumper service involved. No invoice. The app skips these automatically - you do nothing.</p>
+                <h4>Driver Unload (DU) = Skip It</h4>
+                <p>The truck driver unloaded their own truck. The lumper crew did not touch it. No invoice. You do not have to do anything — the app automatically skips DU trucks. They will never show up in Roll Off Audit.</p>
               </div>
               <div class="cheat-card">
-                <h4>Needs Review = ASK Someone</h4>
-                <p>The app is also uncertain, and that is okay - uncertainty is part of the process. A real person (you!) gets to look and decide. Your supervisor is here as a support resource. You do not have to figure it out alone.</p>
+                <h4>Needs Review = You Make The Call</h4>
+                <p>The app looked at the data and could not tell for certain. So it is asking a real human — you — to look and decide. Not sure? That is what supervisors are for. Ask them. You are not alone, and being uncertain is perfectly normal.</p>
               </div>
             </div>
           </div>
 
           <!-- GLOSSARY -->
           <div class="help-glossary">
-            <h3 class="help-glossary-title">Words And What They Mean</h3>
-            <p class="help-glossary-sub">This app uses some words that may feel unfamiliar. Here is a plain-English breakdown of what each word means.</p>
+            <h3 class="help-glossary-title">Words And What They Actually Mean</h3>
+            <p class="help-glossary-sub">Some of the words in this app can sound technical or confusing when you first start. Here is every word explained in plain, everyday English. No background knowledge needed.</p>
             <div class="glossary-grid">
               <div class="glossary-item">
                 <h4>PO Number</h4>
-                <p>PO stands for Purchase Order. It is a unique ID for one truck delivery. Every truck has one. It usually looks like a 7-digit number: 1234567. You use it to search for a specific truck.</p>
+                <p>PO stands for Purchase Order. It is just a unique ID number for one truck delivery. Every single truck has its own PO number. It usually looks like 7 digits: 1234567. You type it into Truck Finder to search for that specific truck.</p>
               </div>
               <div class="glossary-item">
                 <h4>Roll Off</h4>
-                <p>The truck left the dock without being unloaded by the lumper service. No invoice. This is the most common outcome. Nothing was billed.</p>
+                <p>The truck came to the dock but the lumper crew did not unload it. The truck just left on its own ("rolled off"). No unloading happened, so no invoice is needed. This is the most common result.</p>
               </div>
               <div class="glossary-item">
                 <h4>Breakdown Truck</h4>
-                <p>The lumper service did unload this truck. An invoice should be sent because they did work and need to get paid.</p>
+                <p>The lumper crew did unload this truck. They did real work, so they deserve to get paid. An invoice needs to be created and sent for this truck.</p>
               </div>
               <div class="glossary-item">
                 <h4>Driver Unload (DU)</h4>
-                <p>The truck driver unloaded their own truck. The lumper service did not do anything. No invoice. The app detects this automatically.</p>
+                <p>The truck driver unloaded their own truck themselves. The lumper crew was not involved at all. No invoice needed. The app automatically skips these — you never have to deal with DU trucks.</p>
               </div>
               <div class="glossary-item">
                 <h4>Needs Review</h4>
-                <p>The app could not figure out if it is Roll Off or Breakdown on its own. A person needs to look and make the call. Go to Roll Off Audit.</p>
+                <p>The app looked at the data and could not confidently decide Roll Off or Breakdown on its own. It needs a human to look and decide. Go to Roll Off Audit. That human is you, and you can do it.</p>
               </div>
               <div class="glossary-item">
                 <h4>OPS Report</h4>
-                <p>A report from the billing system. It shows what invoices were submitted. You attach this file in the Breakdowns Audit section.</p>
+                <p>A file from the billing system that shows all the invoices that were submitted. You use it in Breakdowns Audit. Your manager will tell you where to find it.</p>
+              </div>
+              <div class="glossary-item">
+                <h4>DMS</h4>
+                <p>The Document Management System — the main warehouse software at Eclipse Advantage. This app can connect to DMS to pull live truck data and even send time stamps directly. Your DMS login goes in <code>dms_config.json</code>.</p>
               </div>
               <div class="glossary-item">
                 <h4>DMS Report</h4>
-                <p>A report from the warehouse system. It shows what the lead wrote in the system. Also used in Breakdowns Audit to double-check entries.</p>
+                <p>A file exported from DMS that shows what the lead wrote in the system. Used in Breakdowns Audit to double-check billing entries against what actually happened on the dock.</p>
               </div>
               <div class="glossary-item">
                 <h4>Dock Section</h4>
-                <p>The area of the warehouse where trucks unload. Different sections handle different products. Examples: Dry, Freezer, Egg.</p>
+                <p>The part of the warehouse where trucks unload. Different sections handle different kinds of products — for example: Dry, Freezer, Egg. Trucks are sorted by dock section in the charts.</p>
               </div>
               <div class="glossary-item">
-                <h4>Supplier or Vendor</h4>
-                <p>The company that sent the truck or provided the lumper service. The app uses this to match trucks to billing records.</p>
+                <h4>Free Time / Grace Period</h4>
+                <p>The amount of time a truck is allowed to be at the dock before detention fees start. Usually 120 minutes (2 hours). You can change this number in My Portal.</p>
               </div>
               <div class="glossary-item">
-                <h4>Overview Tab</h4>
-                <p>The first page you see after uploading. It has the four big number boxes showing truck count, busiest hour, busiest type, and total groups.</p>
+                <h4>Detention</h4>
+                <p>When a truck stays at the dock longer than the free time allows, it is in detention. Detention means extra fees are being charged. My Portal shows a red DETENTION badge on these trucks so you can see them immediately.</p>
+              </div>
+              <div class="glossary-item">
+                <h4>My Portal</h4>
+                <p>The live operations board for your overnight shift. It shows every truck that has been clocked in, with countdowns, status badges, and an estimated shift completion time. Found under Live in the menu.</p>
+              </div>
+              <div class="glossary-item">
+                <h4>DMS Stamp</h4>
+                <p>A time stamp sent to DMS marking a specific event for a truck — like when it checked in, when unloading started, or when receiving finished. You can send stamps directly from this app using the DMS Stamp tab.</p>
+              </div>
+              <div class="glossary-item">
+                <h4>Export Shift</h4>
+                <p>A button in My Portal that saves a complete record of the shift — every truck, check-in time, finish time, and detention minutes — as a CSV file. It also saves a copy on the server so you can download it later.</p>
               </div>
               <div class="glossary-item">
                 <h4>Truck Finder</h4>
-                <p>A search tool in the Lead Tools menu. You type a PO number and it tells you if that truck is Roll Off, Breakdown, or Needs Review.</p>
+                <p>A search tool under Lead Tools. Type a PO number and it instantly tells you: Roll Off, Breakdown, or Needs Review. Use it whenever you need to check one specific truck.</p>
               </div>
               <div class="glossary-item">
                 <h4>History</h4>
-                <p>A log of everything that was saved. Shows all past reports uploaded and every Roll Off or Breakdown decision ever made. Found in Database menu.</p>
+                <p>A complete log of everything ever saved — every file uploaded and every billing decision ever made. Found under Database in the menu. Your work is always here, even days later.</p>
               </div>
             </div>
           </div>
 
           <!-- WARNING BOX -->
           <div class="help-warning-box">
-            <h3>A Important Notes</h3><p style="margin-top:0; margin-bottom:14px; opacity:0.9;">A few things to know before you get started.</p>
-            <p><strong>Always use today's file.</strong> If you uploaded the wrong file, click Clear Report and upload the correct one.</p>
-            <p><strong>Wait for the file to finish loading.</strong> Wait until you see "Report loaded" before doing anything else. If the browser closed, just reopen it and try again.</p>
-            <p><strong>Not sure if it's Roll Off or Breakdown?</strong> Ask your supervisor. You can change your answer any time by going back to Roll Off Audit and clicking the correct circle.</p>
-            <p><strong>The app only accepts .csv and .xlsx files.</strong> If your file won't upload, ask your manager for the correct file format.</p>
+            <h3>Things Worth Knowing Before You Start</h3>
+            <p style="margin-top:0; margin-bottom:14px; opacity:0.9;">Not warnings — just helpful reminders. You are doing great.</p>
+            <p><strong>Always use today's file.</strong> If you accidentally uploaded the wrong one, click Clear Report and upload the right file. No harm done.</p>
+            <p><strong>Wait until the file finishes loading.</strong> When it says "Report loaded," you are ready to go. If the browser closed before it finished, just reopen it and upload again. Your saved decisions are always still there.</p>
+            <p><strong>Not sure if it is Roll Off or Breakdown?</strong> Ask your supervisor — that is exactly what they are there for. And you can change your answer any time just by going back to Roll Off Audit and clicking the correct button. Nothing is permanent.</p>
+            <p><strong>The app only accepts .csv and .xlsx files.</strong> If your file will not upload, ask your manager for the correct file format. It is probably just the wrong file type.</p>
+            <p><strong>Your work is always saved.</strong> Decisions save automatically the moment you click them. Closing the browser does not erase anything. Come back tomorrow and your history is still there waiting for you.</p>
           </div>
 
           <!-- FAQ -->
           <div class="help-faq">
             <h2 class="help-section-title">Frequently Asked Questions</h2>
-            <p class="help-section-sub">Common problems and how to fix them.</p>
+            <p class="help-section-sub">Real questions from real people who use this app. No question is too basic. Scroll and find yours.</p>
             <div class="faq-columns">
 
               <div class="faq-item">
                 <p class="faq-q">The page is completely blank or white. What do I do?</p>
-                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> to force-reload the page. If it is still blank, close the tab and re-open the <strong>index.html</strong> file directly in your browser.</p>
+                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> on your keyboard to force-reload the page. If it is still blank, close the tab, then open the app again fresh. Your saved decisions are not gone — they live in the browser and survive reloads.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">I clicked the orange button but nothing happened.</p>
-                <p class="faq-a">Wait 3 seconds and try clicking again. Sometimes the file picker window is slow to open. If a window appeared but you closed it without picking a file, click the button again and this time pick your file before closing the window.</p>
+                <p class="faq-a">Wait three seconds and try again. The file picker window can be slow to appear. If a window did pop up but you closed it before picking a file, just click the orange button again and this time choose your file before closing.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">I cannot find the file on my computer. Where is it?</p>
-                <p class="faq-a"><strong>Ask your manager.</strong> The file is usually saved in a shared folder or sent by email every morning. The file name will have today's date in it. Look for files ending in .csv or .xlsx.</p>
+                <p class="faq-a">Ask your manager — seriously, that is the right move. The file is usually in a shared folder or sent by email each morning. The file name typically has today's date in it. Look for something ending in .csv or .xlsx.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">What is a PO number and where do I find it?</p>
-                <p class="faq-a">A PO number is a unique ID number for one truck. It is on your paperwork or shown in the truck list on screen. It usually looks like 7 digits: <span class="good">1234567</span>. If you are not sure which number it is, ask your supervisor to point to it on the paperwork.</p>
+                <p class="faq-a">A PO number is just a unique ID for one truck. It is on your physical paperwork or shown in the truck list on screen. It usually looks like 7 digits: <span class="good">1234567</span>. Not sure which number it is? Ask your supervisor to point it out the first time — after that you will know it by sight.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">The app says the page is not responding. What do I do?</p>
-                <p class="faq-a">The app is Wait 30 seconds without clicking. If it is still unresponsive, press <strong>Ctrl + Shift + R</strong> to reload. Your saved decisions will still be there.</p>
+                <p class="faq-q">The app is frozen or not responding. Help!</p>
+                <p class="faq-a">Wait 30 seconds without clicking anything — sometimes it just needs a moment. If it is still stuck, press <strong>Ctrl + Shift + R</strong> to reload. Your saved decisions come back automatically. You do not lose anything.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">I clicked the wrong answer. How do I fix it?</p>
-                <p class="faq-a">Go back to Roll Off Audit, find the truck, and click the correct circle. It updates immediately. You can change it as many times as you need.</p>
+                <p class="faq-q">I clicked the wrong answer for a truck. Can I fix it?</p>
+                <p class="faq-a">Yes, easily. Go to Roll Off Audit, find the truck, and click the correct button. It updates immediately. You can change it as many times as you need. Mistakes happen to everyone — this app makes them easy to fix.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">I don't know if this truck is Roll Off or Breakdown.</p>
-                <p class="faq-a">Ask your supervisor. That is the right call when you are not sure. They will tell you which one to pick.</p>
+                <p class="faq-q">I genuinely do not know if a truck is Roll Off or Breakdown.</p>
+                <p class="faq-a">Ask your supervisor. Full stop. That is the right answer. There is no shame in not knowing — this stuff is not obvious at first. Your supervisor will tell you which one to pick, and next time it will be easier.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">Do I need to look up every single truck in Truck Finder?</p>
-                <p class="faq-a">No. You only need to handle the trucks under <strong>Roll Off Audit</strong> that are waiting for a decision. Trucks that already show Roll Off or Breakdown in Truck Finder are already done. You do not touch those.</p>
+                <p class="faq-q">Do I have to look up every truck in Truck Finder?</p>
+                <p class="faq-a">No. Only deal with the trucks inside <strong>Roll Off Audit</strong> that are waiting for a decision. Trucks already showing Roll Off or Breakdown are done. Leave them alone unless your supervisor says otherwise.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">After uploading, all the numbers still say zero. Why?</p>
-                <p class="faq-a">The app could not read your file. Either you picked the wrong file or the file is empty. Try uploading again. If it keeps showing zeros, ask your manager to open the file in Excel and check that it actually has data in it.</p>
+                <p class="faq-q">I uploaded the file but all the numbers still say zero.</p>
+                <p class="faq-a">The app could not read the file. Either the wrong file was selected, or the file is empty. Try uploading again. If it keeps showing zeros, ask your manager to open the file in Excel and confirm it actually has data rows in it.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">The file upload failed and nothing loaded. What happened?</p>
-                <p class="faq-a">The most common reasons: the file is still open in Excel (close Excel first), the file is not .csv or .xlsx, or the computer ran out of memory. Close other programs and try again. If it still fails, restart the computer.</p>
+                <p class="faq-q">The file upload failed completely. What happened?</p>
+                <p class="faq-a">Most common causes: the file is still open in Excel (close Excel first and try again), it is not a .csv or .xlsx file, or the computer is low on memory. Close other programs and retry. If it keeps failing, restart the computer.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">I see DU or Driver Unload on a truck. What do I do?</p>
-                <p class="faq-a"><strong>Nothing. You do not have to do anything.</strong> The app automatically skips Driver Unload trucks. They will not show up in Roll Off Audit. They do not need an invoice so there is nothing for you to decide.</p>
+                <p class="faq-q">A truck says DU or Driver Unload. Do I need to do anything?</p>
+                <p class="faq-a">Nothing at all. The app automatically skips Driver Unload trucks. They never appear in Roll Off Audit. The driver unloaded their own truck, so no invoice is needed and no decision is required from you.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">Truck Finder says No truck found. Why?</p>
-                <p class="faq-a">Either you typed the PO number wrong or that truck is not in today's report. Check that you did not add spaces or extra characters. Make sure you uploaded today's file first. If the PO is still missing, tell your supervisor right away.</p>
+                <p class="faq-q">Truck Finder says "No truck found." Why?</p>
+                <p class="faq-a">Either the PO number was typed with a typo (spaces, extra digits, wrong number) or that truck is not in today's uploaded file. Double-check the number. Make sure you uploaded today's file first. If the PO is genuinely missing, let your supervisor know right away.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">Can two people use this at the same time?</p>
-                <p class="faq-a">Absolutely - and it is It can cause conflicts. Coordinate with your team so only one person uploads at a time.</p>
+                <p class="faq-q">Can more than one person use this app at the same time?</p>
+                <p class="faq-a">Yes — multiple people can be logged in at once. Just coordinate so only one person is uploading a file at a time, to avoid overwriting each other's work. Decisions are saved individually so those are fine to make in parallel.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">History says no saved reports. Why?</p>
-                <p class="faq-a">The website may need a fresh connection. Press <strong>Ctrl + Shift + R</strong>, then click Refresh on the History page. If it still shows no reports, ask your manager to check the website database.</p>
+                <p class="faq-q">History shows no saved reports. Why?</p>
+                <p class="faq-a">Click the <strong>Refresh</strong> button on the History page first — it does not auto-load. If it still shows nothing after refreshing, press <strong>Ctrl + Shift + R</strong> on the whole page. If reports are still missing, ask your manager to check the server database.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">My manager wants to see the decisions I made. What do I show them?</p>
-                <p class="faq-a">Click the menu button. Go to <strong>Database</strong> then <strong>History</strong>. Click Refresh. Scroll down to the bottom table called Audit Decision Log. That table shows every Roll Off and Breakdown decision with the time and date it was made.</p>
+                <p class="faq-q">My manager wants to see all the decisions I made. What do I show them?</p>
+                <p class="faq-a">Open the menu → <strong>Database → History</strong> → click Refresh. Scroll to the bottom table called Audit Decision Log. That table shows every single Roll Off and Breakdown decision ever made, with the exact date and time of each one. That is your complete record.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">The page keeps asking me to reload. Should I?</p>
-                <p class="faq-a">Yes, go ahead. Press <strong>Ctrl + Shift + R</strong>. Your saved decisions are stored in your browser and are completely safe - reloading the page cannot delete them. You will need to upload your file again, but everything you already decided is still there. No data was lost. You are good.</p>
+                <p class="faq-q">The app keeps asking me to reload the page. Should I?</p>
+                <p class="faq-a">Yes, go ahead. Press <strong>Ctrl + Shift + R</strong>. Reloading does not delete your decisions — they are stored safely in the browser. You will need to re-upload your file for the current session, but your history and all past decisions are completely untouched.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">How do I open this app again tomorrow?</p>
-                <p class="faq-a">Open the <strong>index.html</strong> file directly in your browser, upload today's report, and keep working. All your previous saved decisions are stored automatically in your browser's local storage.</p>
+                <p class="faq-q">A truck in My Portal says DETENTION. What does that mean?</p>
+                <p class="faq-a">It means that truck has been at the dock longer than the allowed free time (usually 2 hours). Detention means extra fees are accumulating. The red DETENTION badge and timer show exactly how long they are over. Alert the appropriate person so the truck can be moved or the situation addressed.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">What does the colored bar next to each dock section mean?</p>
-                <p class="faq-a">The bar shows how busy that section was compared to the others. A full bar means most trucks went there. A short bar means fewer trucks. The number next to the bar is the exact truck count - that is the important number.</p>
+                <p class="faq-q">How do I know when the shift will be done?</p>
+                <p class="faq-a">My Portal shows an <strong>Est. Day Complete</strong> card at the top. It calculates the estimated finish time based on the average turn time of trucks already processed. The estimate updates live every second as the night progresses. The pace alert banner tells you if you are on track for the 4:00 AM goal.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">Why are there so many trucks on the screen? Do I have to deal with all of them?</p>
-                <p class="faq-a">No. The Overview and Data tabs just show you information. You only need to act on trucks in the <strong>Roll Off Audit</strong> tab that say they need a decision. Ignore everything else unless your supervisor tells you otherwise.</p>
+                <p class="faq-q">The DMS Stamp tab says the connection failed. What now?</p>
+                <p class="faq-a">Check that your DMS username and password are filled in inside <code>dms_config.json</code> — that file lives in the same folder as the app. Restart the server after saving changes. If credentials look right but it still fails, ask whoever manages the server to check the DMS connection.</p>
               </div>
 
               <div class="faq-item">
-                <p class="faq-q">How do I know if I did everything right for the day?</p>
-                <p class="faq-a">First - the fact that you are asking this question means you already care, and that matters. Go to <strong>Roll Off Audit</strong>. If the list is empty, that is a beautiful thing - it means you showed up and got it done. Check <strong>History</strong> to see your decisions reflected back to you. That log is a record of your contributions.</p>
+                <p class="faq-q">How do I know if I did everything right today?</p>
+                <p class="faq-a">Go to <strong>Roll Off Audit</strong>. If the list is empty, you are done — every truck that needed a decision has been handled. Go to <strong>History</strong> to see your full record. That log is proof of your work. The fact that you are asking this question means you care about doing a good job, and that matters.</p>
               </div>
 
             </div>
@@ -4190,19 +4378,20 @@
 
           <!-- STUCK -->
           <div class="help-stuck">
-            <h2>Still Stuck? Do These Steps</h2>
-            <p style="margin-bottom:16px; opacity:0.9;">If something is not working, go through these steps in order.</p>
-            <p><strong>Step 1:</strong> Read this page again from the top. The answer is probably here.</p>
-            <p><strong>Step 2:</strong> Try the action again. A second attempt often works.</p>
-            <p><strong>Step 3:</strong> Press Ctrl + Shift + R to reload the page. Your saved decisions will not be lost.</p>
-            <p><strong>Step 4:</strong> Ask your supervisor. Show them this page and describe what happened.</p>
-            <p style="margin-top:16px;">You are doing fine. These things happen and there is always a fix.</p>
+            <h2>Still Stuck? Here Is Exactly What To Do.</h2>
+            <p style="margin-bottom:16px; opacity:0.9;">Go through these in order. One of them will fix it.</p>
+            <p><strong>1.</strong> Read this help page again from the top. The answer to almost every question is already written here — sometimes you just have to scroll to the right part.</p>
+            <p><strong>2.</strong> Try the action one more time. Many issues fix themselves on the second attempt.</p>
+            <p><strong>3.</strong> Press <strong>Ctrl + Shift + R</strong> to fully reload the page. Your saved decisions stay safe — reloading never deletes them.</p>
+            <p><strong>4.</strong> Ask your supervisor. Show them this help page and describe what you were trying to do when it broke. That context helps them help you faster.</p>
+            <p style="margin-top:16px;">You are not doing anything wrong by asking for help. Every single person who works here had to ask questions at some point. That is how learning works, and it is completely valid.</p>
           </div>
 
           <!-- QUICK REF -->
           <div class="help-quick-ref">
-            <h3>The Two Most Important Steps</h3>
-            <p>If you forget everything else on this page, remember these two things: <strong>Step 2 is Upload The File</strong> (orange button, top right) and <strong>Step 5 is Mark Roll Off or Breakdown</strong> (Roll Off Audit tab). Those two steps are the whole job. Everything else is just extra detail.</p><p style="margin-top:14px; color:#004976; font-weight:600;">If you made a mistake, just go back and fix it. Everything in this app can be changed.</p>
+            <h3>If You Forget Everything Else — Remember Just These Two</h3>
+            <p><strong>Upload the file every morning</strong> — orange button, top right corner of the screen. And <strong>mark Roll Off or Breakdown</strong> for trucks in Roll Off Audit that are waiting on a decision. Those two things are the core of the daily job. Everything else in this app supports those two actions.</p>
+            <p style="margin-top:14px; color:#004976; font-weight:600;">Made a mistake somewhere? Go back and fix it. Every single thing in this app can be changed. Nothing is permanent until you want it to be.</p>
           </div>
 
         </div><!-- end .help-panel-inner -->
@@ -4260,7 +4449,19 @@
       },
       portal: {
         freeTimeMinutes: 120,
-        refreshInterval: null
+        refreshInterval: null,
+        liveRows: [],
+        liveUpdatedAt: "",
+        liveError: "",
+        liveAttempted: false,
+        liveBusy: false,
+        livePollMs: 120000,
+        credentialBlocked: false,
+        uiTickInterval: null,
+        liveClockInterval: null,
+        estMs: null,
+        notifiedBehind: false,
+        vendorAvgs: {}
       },
       truckChargeAudit: {
         ops: null,
@@ -4504,7 +4705,26 @@
       portalLiveDot: document.getElementById("portalLiveDot"),
       portalLiveClock: document.getElementById("portalLiveClock"),
       portalDayLabel: document.getElementById("portalDayLabel"),
+      portalDmsSyncBtn: document.getElementById("portalDmsSyncBtn"),
+      portalDmsStatus: document.getElementById("portalDmsStatus"),
       portalFreeTime: document.getElementById("portalFreeTime"),
+      dmsStampDot: document.getElementById("dmsStampDot"),
+      dmsStampStatus: document.getElementById("dmsStampStatus"),
+      dmsStampTestBtn: document.getElementById("dmsStampTestBtn"),
+      dmsStampLoadId: document.getElementById("dmsStampLoadId"),
+      dmsStampPo: document.getElementById("dmsStampPo"),
+      dmsStampType: document.getElementById("dmsStampType"),
+      dmsStampTime: document.getElementById("dmsStampTime"),
+      dmsStampNowBtn: document.getElementById("dmsStampNowBtn"),
+      dmsStampSubmitBtn: document.getElementById("dmsStampSubmitBtn"),
+      dmsStampSpinner: document.getElementById("dmsStampSpinner"),
+      dmsStampResult: document.getElementById("dmsStampResult"),
+      dmsStampLogBody: document.getElementById("dmsStampLogBody"),
+      dmsStampLogMeta: document.getElementById("dmsStampLogMeta"),
+      dmsStampClearLog: document.getElementById("dmsStampClearLog"),
+      portalExportBtn: document.getElementById("portalExportBtn"),
+      portalExportsList: document.getElementById("portalExportsList"),
+      portalExportsMeta: document.getElementById("portalExportsMeta"),
       portalClearDoneBtn: document.getElementById("portalClearDoneBtn"),
       portalClearAllBtn: document.getElementById("portalClearAllBtn"),
       portalInputRef: document.getElementById("portalInputRef"),
@@ -4518,6 +4738,11 @@
       portalActiveCount: document.getElementById("portalActiveCount"),
       portalUrgentCount: document.getElementById("portalUrgentCount"),
       portalDetentionCount: document.getElementById("portalDetentionCount"),
+      portal4amCard: document.getElementById("portal4amCard"),
+      portal4amCount: document.getElementById("portal4amCount"),
+      portal4amNote: document.getElementById("portal4amNote"),
+      portalEstCard: document.getElementById("portalEstCard"),
+      portalPaceAlert: document.getElementById("portalPaceAlert"),
       portalEstComplete: document.getElementById("portalEstComplete"),
       portalEstNote: document.getElementById("portalEstNote"),
       portalDoneCount: document.getElementById("portalDoneCount"),
@@ -4750,8 +4975,47 @@
         doorSuggestor: [
           { sel: "#doorSuggestorPanel .lookup-box", title: "Get a Door Suggestion", msg: "This tool looks at your truck data and suggests which door a truck should go to. Fill in the boxes here to get a recommendation." }
         ],
+        myPortal: [
+          { sel: ".portal-header-bar", title: "Your Live Shift Board", msg: "This is My Portal — your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
+          { sel: "#portalDmsSyncBtn", title: "Pull Live DMS Data", msg: "Click this button to pull the latest truck data from DMS automatically. It refreshes every 2 minutes on its own, but you can force a refresh any time by clicking here." },
+          { sel: ".summary-grid", title: "Your Shift Snapshot", msg: "These four cards update live — trucks docked, trucks complete, how many trucks must start by 4AM, and the estimated shift completion time. Watch the Est. Day Complete card: if it turns red, you are running behind the 4AM goal." },
+          { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and flashes red when the estimated finish time goes past 4AM." },
+          { sel: "#portalBoard", title: "Live Operations Board", msg: "Every truck clocked in appears here with a live countdown. DETENTION means the truck is past its free time — act on those first. URGENT means under 30 minutes left. Rows update every second without any page reload." },
+          { sel: "#portalExportBtn", title: "Export Shift at End of Night", msg: "When the shift is over, click Export Shift to download a CSV with every truck, check-in time, finish time, and detention minutes. A copy also saves to the server so you can pull it up later from the Past Shift Exports section below." }
+        ],
+        dmsStamp: [
+          { sel: "#dmsStampTestBtn", title: "Test Your DMS Connection First", msg: "Before stamping anything, click this button to make sure the app can reach DMS. It will show a green message if everything is connected, or a red message telling you what to fix." },
+          { sel: "#dmsStampLoadId", title: "Paste the Load ID Here", msg: "The Load ID comes from DMS or from the truck row in My Portal. Paste it here exactly as it appears. This tells DMS which specific truck you are stamping." },
+          { sel: "#dmsStampType", title: "Pick the Stamp Type", msg: "Choose what event you are recording — Check In, Driver At Door, Unload Start, Unload Finish, or Receiving Finish. Pick the one that matches what just happened with the truck." },
+          { sel: "#dmsStampSubmitBtn", title: "Hit Stamp Truck to Send It", msg: "After filling in the Load ID and stamp type, click Stamp Truck. The app sends the stamp to DMS through the same login it uses for My Portal. The result shows up instantly below the button, and a log entry appears in the Stamp Log table." }
+        ],
+        exceptions: [
+          { sel: "#exceptionsPanel .summary-grid", title: "Exceptions Overview", msg: "These cards show how many exception items are flagged across the operation — high priority, medium priority, and total open items. High priority items need your attention first." },
+          { sel: "#exceptionsPanel .table-wrap", title: "Exception Items List", msg: "Each row here is a flagged issue — a billing mismatch, a date error, a missing stamp, or another operational problem. Review each one and take the action described. Items clear automatically when the underlying issue is resolved." }
+        ],
+        spillTracker: [
+          { sel: "#spillTrackerPanel .lookup-box, #spillTrackerPanel .portal-add-form", title: "Log a Spill Here", msg: "Use this form to record any spill event on the dock. Fill in the location, description, and time. Each entry is timestamped and saved so you have a complete record if it is ever needed for safety reports or billing disputes." }
+        ],
+        turnTracker: [
+          { sel: "#turnTrackerPanel .summary-grid, #turnTrackerPanel .metric-card", title: "Turn Time Summary", msg: "These numbers show the average, fastest, and slowest truck turn times based on the data you have loaded. Turn time is how long a truck takes from check-in to finish — shorter is better, especially on nights when you have a lot of trucks." },
+          { sel: "#turnTrackerPanel .table-wrap", title: "Per-Truck Turn Times", msg: "This table shows the individual turn time for every truck in the current data. Sort it to find your fastest and slowest trucks. Use this information to identify which doors or suppliers consistently take longer." }
+        ],
+        detention: [
+          { sel: "#detentionFrame", title: "Detention Report", msg: "This section shows every truck that has gone into or is currently in detention — meaning they stayed at the dock past the allowed free time. Use this report to track detention charges and identify patterns in which carriers or doors run long." }
+        ],
+        bizDateAudit: [
+          { sel: "#bizDateAuditPanel .table-wrap, #bizDateAuditPanel .summary-grid", title: "Business Date Audit", msg: "This audit checks whether trucks in the system have the correct business date attached to them. Trucks with a business date that is 2 or more days off are flagged here. Review each one and correct the date in DMS if needed." }
+        ],
+        clerkBoard: [
+          { sel: "#clerkBoardPanel .summary-grid, #clerkBoardPanel .metric-card", title: "Clerk Leaderboard Overview", msg: "This shows clerk performance metrics — number of POs processed, accuracy rate, and how each clerk ranks against the others. Use it to recognize strong performance and spot anyone who may need support." },
+          { sel: "#clerkBoardPanel .table-wrap", title: "Clerk Detail Table", msg: "Each row is one clerk with their full stats. The table is sortable — click any column header to rank by that metric. This data comes from the uploaded report so it reflects the current file you have loaded." }
+        ],
+        trends: [
+          { sel: "#trendsPanel .summary-grid, #trendsPanel .metric-card", title: "Trends Overview", msg: "These cards show high-level patterns across multiple shifts or time periods — which days are busiest, which truck types are increasing, and where volume is shifting. Upload multiple reports over time to get more accurate trend data." },
+          { sel: "#trendsPanel .table-wrap, #trendsPanel canvas", title: "Trend Charts and Tables", msg: "The charts and tables here visualize patterns over time. Look for spikes, dips, and consistent patterns — those tell you when to staff up, when problems tend to happen, and which parts of the operation are growing." }
+        ],
         help: [
-          { sel: "#helpPanel .help-hero", title: "You Found the Help Page!", msg: "Everything about how to use this app is explained right here. Scroll down slowly. There are step by step instructions, pictures, and a big list of frequently asked questions. Come back here any time you are confused." }
+          { sel: "#helpPanel .help-hero", title: "Welcome to the Help Page", msg: "Every question about this app is answered right here. Scroll down slowly — there are step-by-step instructions for every feature, a plain-English glossary of every word the app uses, and a FAQ section for common problems. Come back any time you are confused." }
         ],
       };
 
@@ -4996,6 +5260,13 @@
     });
     els.portalStatusFilter.addEventListener("change", renderPortalBoard);
 
+    if (els.portalDmsSyncBtn) {
+      els.portalDmsSyncBtn.addEventListener("click", function() {
+        state.portal.credentialBlocked = false;
+        portalPullLiveDms(true);
+      });
+    }
+
     els.portalClockInBtn.addEventListener("click", function() {
       const ref = els.portalInputRef.value.trim();
       const door = els.portalInputDoor.value.trim();
@@ -5031,11 +5302,22 @@
       el && el.addEventListener("keydown", function(e) { if (e.key === "Enter") els.portalClockInBtn.click(); });
     });
 
+    if (els.portalExportBtn) {
+      els.portalExportBtn.addEventListener("click", function() { portalExportShift(); });
+    }
     els.portalClearDoneBtn.addEventListener("click", function() {
       if (confirm("Remove all completed trucks from the board?")) { portalClearDone(); renderPortalBoard(); }
     });
     els.portalClearAllBtn.addEventListener("click", function() {
       if (confirm("Clear ALL trucks from the board? This cannot be undone.")) { portalClearAll(); renderPortalBoard(); }
+    });
+    document.addEventListener("visibilitychange", function() {
+      if (document.hidden) {
+        portalStopLivePolling();
+      } else if (portalPanelIsActive()) {
+        portalStartLivePolling();
+        portalPullLiveDms(false, { quiet: true });
+      }
     });
     els.turnRunButton.addEventListener("click", renderTurnTracker);
     els.turnThresholdInput.addEventListener("change", renderTurnTracker);
@@ -5086,6 +5368,18 @@
     els.truckChargeOpsFile.addEventListener("change", (event) => handleTruckChargeAuditFile("ops", event));
     els.truckChargeRangeFile.addEventListener("change", (event) => handleTruckChargeAuditFile("ranged", event));
     if (els.refreshHistoryButton) els.refreshHistoryButton.addEventListener("click", renderHistoryPanel);
+    const refreshVendorStatsBtn = document.getElementById("refreshVendorStatsBtn");
+    if (refreshVendorStatsBtn) refreshVendorStatsBtn.addEventListener("click", function() {
+      fetch("/api/portal/vendor-stats")
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          state.portal.vendorStats = data.stats || [];
+          const avgs = {};
+          (data.stats || []).forEach(function(s) { avgs[s.vendor] = s.avg_min; });
+          state.portal.vendorAvgs = avgs;
+          renderVendorPerformance();
+        }).catch(function() {});
+    });
     els.lumperValidationFilter.addEventListener("change", renderLumperValidationTable);
     els.lumperValidationSearch.addEventListener("input", renderLumperValidationTable);
     els.lumperValidationTable.addEventListener("click", (event) => {
@@ -8388,6 +8682,196 @@
       try { localStorage.setItem(PORTAL_STORAGE_KEY, JSON.stringify(trucks)); } catch(e) {}
     }
 
+    function portalIsoToMs(value) {
+      if (!value) return null;
+      const ms = Date.parse(value);
+      return Number.isFinite(ms) ? ms : null;
+    }
+
+    function portalLiveToBoardTruck(row) {
+      const appointmentMs = portalIsoToMs(row.appointmentIso);
+      const checkInMs = portalIsoToMs(row.checkInIso);
+      const driverAtDoorMs = portalIsoToMs(row.driverAtDoorIso);
+      const unloadStartMs = portalIsoToMs(row.unloadStartIso);
+      const unloadFinishMs = portalIsoToMs(row.unloadFinishIso);
+      const receivingFinishMs = portalIsoToMs(row.receivingFinishIso || row.finishIso);
+      return {
+        id: row.id || ("dms-" + (row.rowid || row.po || row.ref || Math.random().toString(36).slice(2))),
+        source: "DMS",
+        ref: String(row.ref || row.rowid || row.po || "DMS").trim(),
+        door: String(row.door || "").trim(),
+        supplier: String(row.supplier || "").trim(),
+        po: String(row.po || "").trim(),
+        area: String(row.area || "").trim(),
+        comments: String(row.comments || "").trim(),
+        appointmentMs: appointmentMs,
+        checkInMs: checkInMs,
+        driverAtDoorMs: driverAtDoorMs,
+        unloadStartMs: unloadStartMs,
+        unloadFinishMs: unloadFinishMs,
+        receivingFinishMs: receivingFinishMs,
+        finishMs: receivingFinishMs,
+        date: new Date().toLocaleDateString()
+      };
+    }
+
+    function portalPanelIsActive() {
+      const panel = document.getElementById("myPortalPanel");
+      return Boolean(panel && panel.classList.contains("active"));
+    }
+
+    function portalMaybeNotify(title, body) {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") {
+        new Notification(title, { body: body, icon: "/favicon.ico" });
+      } else if (Notification.permission === "default") {
+        Notification.requestPermission().then(function(perm) {
+          if (perm === "granted") new Notification(title, { body: body, icon: "/favicon.ico" });
+        });
+      }
+    }
+
+    async function portalPullLiveDms(force, options) {
+      if (!els.portalDmsSyncBtn) return;
+      options = options || {};
+      const quiet = Boolean(options.quiet);
+      if (state.portal.liveBusy) return;
+      if (!force && state.portal.credentialBlocked) return;
+      state.portal.liveBusy = true;
+      els.portalDmsSyncBtn.disabled = true;
+      els.portalDmsSyncBtn.textContent = quiet ? "Live..." : "Pulling...";
+      if (els.portalDmsStatus && !quiet) {
+        els.portalDmsStatus.textContent = "Pulling live ALDIOKS rows from DMS...";
+      }
+      try {
+        state.portal.liveAttempted = true;
+        const url = "/api/dms/portal" + (force ? "?force=true" : "");
+        const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+        const data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok || !data.ok) {
+          throw new Error(data.detail || "DMS pull failed.");
+        }
+        state.portal.liveRows = (data.trucks || []).map(portalLiveToBoardTruck);
+        state.portal.liveUpdatedAt = data.updated_at || new Date().toISOString();
+        state.portal.liveError = "";
+        state.portal.credentialBlocked = false;
+        if (els.portalDmsStatus) {
+          const loc = data.location || {};
+          const locName = loc.name || loc.locName || loc.cCode || "ALDIOKS";
+          const pulledAt = new Date().toLocaleTimeString();
+          els.portalDmsStatus.textContent = `Live DMS active: ${state.portal.liveRows.length} truck rows for ${locName}, business date ${data.business_date}. Last refresh ${pulledAt}. Auto-refreshes every ${Math.round((state.portal.livePollMs || 120000) / 60000)} min while this tab is open.`;
+        }
+      } catch (err) {
+        state.portal.liveError = err.message || String(err);
+        state.portal.liveRows = [];
+        if (/credentials are not configured/i.test(state.portal.liveError)) {
+          state.portal.credentialBlocked = true;
+        }
+        if (els.portalDmsStatus) {
+          els.portalDmsStatus.textContent = "Live DMS unavailable: " + state.portal.liveError + " Manual clock-in still works.";
+        }
+      } finally {
+        state.portal.liveBusy = false;
+        els.portalDmsSyncBtn.disabled = false;
+        els.portalDmsSyncBtn.textContent = "Pull Live DMS";
+        renderPortalBoard();
+      }
+    }
+
+    function portalFmtCountdown(ms) {
+      const neg = ms < 0;
+      const abs = Math.abs(ms);
+      const h = Math.floor(abs / 3600000);
+      const m = Math.floor((abs % 3600000) / 60000);
+      const s = Math.floor((abs % 60000) / 1000);
+      const prefix = neg ? "+" : "";
+      if (h > 0)       return prefix + h + "h " + m + "m";
+      if (m >= 5)      return prefix + m + "m";
+      if (m > 0)       return prefix + m + "m " + String(s).padStart(2,"0") + "s";
+      return prefix + s + "s";
+    }
+
+    function portalLiveClock() {
+      if (!portalPanelIsActive()) return;
+      const now = Date.now();
+
+      // Tick every countdown cell in the board
+      const cells = document.querySelectorAll("[data-countdown-deadline]");
+      cells.forEach(function(td) {
+        const deadlineMs = +td.dataset.countdownDeadline;
+        const remaining = deadlineMs - now;
+        const minsRem = remaining / 60000;
+        if (remaining < 0) {
+          td.textContent = "DETENTION " + portalFmtCountdown(remaining);
+          td.className = "portal-countdown-detention";
+        } else if (minsRem < 30) {
+          td.textContent = portalFmtCountdown(remaining) + " to finish";
+          td.className = "portal-countdown-urgent";
+        } else if (minsRem < 60) {
+          td.textContent = portalFmtCountdown(remaining) + " to finish";
+          td.className = "portal-countdown-warning";
+        } else {
+          td.textContent = portalFmtCountdown(remaining) + " to finish";
+          td.className = "portal-countdown-active";
+        }
+      });
+
+      // Tick the estimated-finish countdown note
+      const estMs = state.portal.estMs;
+      if (estMs && els.portalEstNote && state.portal.estMs !== null) {
+        const remaining = estMs - now;
+        const goal4amMs = (function(){ const d = new Date(); d.setHours(4,0,0,0); return d.getTime(); })();
+        const behindMs = Math.max(0, estMs - goal4amMs);
+        let countStr;
+        if (remaining <= 0) {
+          countStr = "finishing now";
+        } else {
+          const h = Math.floor(remaining / 3600000);
+          const m = Math.floor((remaining % 3600000) / 60000);
+          const s = Math.floor((remaining % 60000) / 1000);
+          if (remaining >= 3600000)      countStr = h + "h " + m + "m remaining";
+          else if (remaining >= 300000)  countStr = m + "m remaining";
+          else                           countStr = m + "m " + String(s).padStart(2,"0") + "s remaining";
+        }
+        if (behindMs > 0) {
+          const bm = Math.round(behindMs / 60000);
+          countStr += " · " + bm + " min past 4AM";
+        }
+        els.portalEstNote.textContent = countStr;
+      }
+    }
+
+    function portalStartLivePolling() {
+      if (!state.portal.refreshInterval) {
+        state.portal.refreshInterval = setInterval(function() {
+          if (portalPanelIsActive()) portalPullLiveDms(false, { quiet: true });
+        }, state.portal.livePollMs || 120000);
+      }
+      if (!state.portal.uiTickInterval) {
+        state.portal.uiTickInterval = setInterval(function() {
+          if (portalPanelIsActive()) renderPortalBoard();
+        }, 60000);
+      }
+      if (!state.portal.liveClockInterval) {
+        state.portal.liveClockInterval = setInterval(portalLiveClock, 1000);
+      }
+    }
+
+    function portalStopLivePolling() {
+      if (state.portal.refreshInterval) {
+        clearInterval(state.portal.refreshInterval);
+        state.portal.refreshInterval = null;
+      }
+      if (state.portal.uiTickInterval) {
+        clearInterval(state.portal.uiTickInterval);
+        state.portal.uiTickInterval = null;
+      }
+      if (state.portal.liveClockInterval) {
+        clearInterval(state.portal.liveClockInterval);
+        state.portal.liveClockInterval = null;
+      }
+    }
+
     function portalGenId() {
       return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     }
@@ -8396,6 +8880,7 @@
       const trucks = portalLoadTrucks();
       trucks.push({
         id: portalGenId(),
+        source: "Manual",
         ref: ref.trim(),
         door: door.trim(),
         supplier: supplier.trim(),
@@ -8428,7 +8913,129 @@
       portalSaveTrucks([]);
     }
 
+    function portalExportShift() {
+      const manual = portalLoadTrucks();
+      const live = state.portal.liveRows || [];
+      const seen = new Set();
+      const all = [];
+      live.forEach(function(t) { seen.add(t.id); all.push(t); });
+      manual.forEach(function(t) { if (!seen.has(t.id)) all.push(t); });
+      if (all.length === 0) { alert("No trucks on the board to export."); return; }
+
+      const now = Date.now();
+      const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
+      const d = new Date();
+      if (d.getHours() < 12) d.setDate(d.getDate() - 1);
+      const shiftDate = d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+
+      function fmtT(ms) {
+        if (!ms) return "";
+        return new Date(ms).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+      }
+      function esc(v) {
+        const s = String(v == null ? "" : v);
+        return (s.includes(",") || s.includes('"') || s.includes("\n")) ? '"' + s.replace(/"/g, '""') + '"' : s;
+      }
+
+      const headers = ["Shift Date","Source","Truck/Ref","Door","Supplier","PO","Check-In","Finish","Min on Dock","Status","Detention (min)"];
+      const rows = all.map(function(t) {
+        const calc = portalCalcStatus(t, freeTimeMs, now);
+        const finMs = t.finishMs || t.receivingFinishMs || t.unloadFinishMs;
+        const dockMin = (t.checkInMs && finMs) ? Math.max(0, Math.round((finMs - t.checkInMs) / 60000)) : "";
+        const detMin = calc.minutesInDetention != null ? Math.round(calc.minutesInDetention) : "";
+        return [shiftDate, t.source || "Manual", t.ref || "", t.door || "", t.supplier || "", t.po || "",
+                fmtT(t.checkInMs), fmtT(finMs), dockMin, calc.status, detMin].map(esc).join(",");
+      });
+
+      const csv = [headers.join(","), ...rows].join("\r\n");
+      const filename = "shift_" + shiftDate.replace(/\//g, "-") + ".csv";
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+
+      const truckPayload = all.map(function(t) {
+        const calc = portalCalcStatus(t, freeTimeMs, now);
+        const finMs = t.finishMs || t.receivingFinishMs || t.unloadFinishMs;
+        const dockMin = (t.checkInMs && finMs) ? Math.max(0, Math.round((finMs - t.checkInMs) / 60000)) : null;
+        return { source: t.source || "Manual", ref: t.ref || "", door: t.door || "",
+                 supplier: t.supplier || "", po: t.po || "", check_in: fmtT(t.checkInMs),
+                 finish: fmtT(finMs), status: calc.status, dock_min: dockMin,
+                 detention_min: calc.minutesInDetention != null ? Math.round(calc.minutesInDetention) : null };
+      });
+
+      fetch("/api/portal/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shift_date: shiftDate, filename: filename, truck_count: all.length, csv: csv, trucks: truckPayload })
+      }).then(function() { portalLoadExportsList(); }).catch(function() {});
+
+      const learnTrucks = truckPayload.filter(function(t) { return t.dock_min && t.dock_min > 0; })
+        .map(function(t) { return { supplier: t.supplier, dock_min: t.dock_min, shift_date: shiftDate, source: t.source, ref: t.ref }; });
+      if (learnTrucks.length) {
+        fetch("/api/portal/learn", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trucks: learnTrucks })
+        }).then(function() { portalFetchVendorAvgs(); }).catch(function() {});
+      }
+    }
+
+    function portalLoadExportsList() {
+      if (!els.portalExportsList) return;
+      fetch("/api/portal/exports")
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          const list = data.exports || [];
+          if (els.portalExportsMeta) {
+            els.portalExportsMeta.textContent = list.length === 0 ? "No exports saved yet." :
+              list.length + " shift export" + (list.length !== 1 ? "s" : "") + " saved.";
+          }
+          if (list.length === 0) { els.portalExportsList.innerHTML = ""; return; }
+          els.portalExportsList.innerHTML = list.map(function(e) {
+            const savedAt = e.saved_at ? new Date(e.saved_at).toLocaleString() : "";
+            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border,#e2e8f0);">' +
+              '<div>' +
+                '<span style="font-size:0.88em;font-weight:600;color:var(--text,#1a202c);">' + e.shift_date + '</span>' +
+                '<span style="font-size:0.8em;color:var(--muted,#888);margin-left:10px;">' + e.truck_count + ' truck' + (e.truck_count !== 1 ? 's' : '') + '</span>' +
+                (savedAt ? '<span style="font-size:0.78em;color:var(--muted,#888);margin-left:10px;">Saved ' + savedAt + '</span>' : '') +
+              '</div>' +
+              '<a href="/api/portal/exports/' + e.filename + '" download style="font-size:0.82em;color:#3182ce;font-weight:600;text-decoration:none;">&#8595; Download CSV</a>' +
+            '</div>';
+          }).join("");
+        })
+        .catch(function() {});
+    }
+
     function portalCalcStatus(truck, freeTimeMs, now) {
+      const isDms = truck.source === "DMS";
+      if (isDms && truck.receivingFinishMs) {
+        const startMs = truck.checkInMs || truck.unloadFinishMs || truck.receivingFinishMs;
+        const turnMin = Math.round((truck.receivingFinishMs - startMs) / 60000);
+        return { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Finished receiving", countdownClass: "portal-countdown-active", minutesInDetention: null };
+      }
+      if (isDms && truck.appointmentMs && truck.driverAtDoorMs && !truck.unloadStartMs) {
+        const startLateMin = Math.floor((now - truck.appointmentMs) / 60000);
+        if (startLateMin >= 30) {
+          return { status: "startsoon", turnMin: null, msRemaining: null, countdownLabel: "Needs unload start now", countdownClass: "portal-countdown-urgent", minutesInDetention: null, startLateMin };
+        }
+      }
+      if (isDms && truck.unloadFinishMs) {
+        const msRemaining = truck.unloadFinishMs + freeTimeMs - now;
+        const minsRem = Math.round(msRemaining / 60000);
+        if (msRemaining < 0) {
+          const det = Math.abs(minsRem);
+          return { status: "detention", msRemaining, countdownLabel: "REC DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null };
+        }
+        if (minsRem < 30) return { status: "urgent",  msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-urgent",  minutesInDetention: null, turnMin: null };
+        if (minsRem < 60) return { status: "warning", msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-warning", minutesInDetention: null, turnMin: null };
+        return { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m to finish receiving", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
+      }
+      if (!truck.checkInMs) {
+        return { status: "waiting", turnMin: null, msRemaining: null, countdownLabel: isDms ? "Waiting for unload finish" : "Waiting for check-in", countdownClass: "", minutesInDetention: null };
+      }
       if (truck.finishMs) {
         const turnMin = Math.round((truck.finishMs - truck.checkInMs) / 60000);
         return { status: "complete", turnMin, msRemaining: null, countdownLabel: "Done ✓", countdownClass: "portal-countdown-active", minutesInDetention: null };
@@ -8444,15 +9051,35 @@
       return { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m left", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
     }
 
+    function portalFetchVendorAvgs() {
+      fetch("/api/portal/vendor-stats")
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          const avgs = {};
+          (data.stats || []).forEach(function(s) { avgs[s.vendor] = s.avg_min; });
+          state.portal.vendorAvgs = avgs;
+          state.portal.vendorStats = data.stats || [];
+        })
+        .catch(function() {});
+    }
+
     function renderPortal() {
       state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
+      portalStartLivePolling();
+      if (!state.portal.liveAttempted) portalPullLiveDms(false);
+      portalFetchVendorAvgs();
       renderPortalBoard();
+      portalLoadExportsList();
     }
 
     function renderPortalBoard() {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
-      const trucks = portalLoadTrucks();
+      const manualTrucks = portalLoadTrucks().map(function(t) {
+        return Object.assign({ source: "Manual" }, t);
+      });
+      const liveTrucks = state.portal.liveRows || [];
+      const trucks = [...liveTrucks, ...manualTrucks];
       const statusFilter = els.portalStatusFilter ? els.portalStatusFilter.value : "all";
 
       // Enrich with computed status
@@ -8461,27 +9088,71 @@
         return Object.assign({}, t, calc);
       });
 
-      const statusOrder = { detention: 0, urgent: 1, warning: 2, active: 3, complete: 4 };
+      const statusOrder = { detention: 0, startsoon: 1, urgent: 2, warning: 3, active: 4, waiting: 5, complete: 6 };
       enriched.sort(function(a, b) {
         const ao = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 5;
         const bo = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 5;
         if (ao !== bo) return ao - bo;
         if (a.msRemaining !== null && b.msRemaining !== null) return a.msRemaining - b.msRemaining;
+        if (a.checkInMs && b.checkInMs) return a.checkInMs - b.checkInMs;
         return 0;
       });
 
       const active    = enriched.filter(function(r) { return r.status === "active"; });
       const warning   = enriched.filter(function(r) { return r.status === "warning"; });
       const urgent    = enriched.filter(function(r) { return r.status === "urgent"; });
+      const startSoon = enriched.filter(function(r) { return r.status === "startsoon"; });
       const detention = enriched.filter(function(r) { return r.status === "detention"; });
       const complete  = enriched.filter(function(r) { return r.status === "complete"; });
+      const waiting   = enriched.filter(function(r) { return r.status === "waiting"; });
 
       // Summary cards
       if (els.portalActiveCount)    els.portalActiveCount.textContent    = active.length + urgent.length + warning.length + detention.length;
-      if (els.portalUrgentCount)    els.portalUrgentCount.textContent    = urgent.length + warning.length;
+      if (els.portalUrgentCount)    els.portalUrgentCount.textContent    = startSoon.length + urgent.length + warning.length;
       if (els.portalDetentionCount) els.portalDetentionCount.textContent = detention.length;
       if (els.portalDoneCount)      els.portalDoneCount.textContent      = complete.length;
       if (els.portalProgressNote)   els.portalProgressNote.textContent   = "of " + enriched.length + " today.";
+
+      // 4AM cutoff tracker
+      if (els.portal4amCard && els.portal4amCount && els.portal4amNote) {
+        const cutoff4am = (function() { const d = new Date(); d.setHours(4,0,0,0); return d.getTime(); })();
+        const msTo4am = cutoff4am - now;
+        const notStarted = enriched.filter(function(t) { return t.status !== "complete" && !t.checkInMs; });
+        const n = notStarted.length;
+        if (n === 0 && enriched.length > 0) {
+          els.portal4amCount.textContent = "✓";
+          els.portal4amCount.style.color = "#38a169";
+          els.portal4amNote.textContent = "All trucks started receiving.";
+          els.portal4amCard.style.borderColor = "#38a169";
+        } else if (msTo4am <= 0) {
+          els.portal4amCount.textContent = n > 0 ? n : "—";
+          els.portal4amCount.style.color = n > 0 ? "#c53030" : "";
+          els.portal4amNote.textContent = n > 0 ? n + " truck(s) missed the 4AM cutoff" : "Cutoff passed.";
+          els.portal4amCard.style.borderColor = n > 0 ? "#c53030" : "";
+        } else {
+          const minsTo = Math.round(msTo4am / 60000);
+          const toStr = minsTo < 60 ? minsTo + " min" : Math.floor(minsTo/60) + "h " + (minsTo%60) + "m";
+          if (n === 0) {
+            els.portal4amCount.textContent = "✓";
+            els.portal4amCount.style.color = "#38a169";
+            els.portal4amNote.textContent = toStr + " to 4AM — all started.";
+            els.portal4amCard.style.borderColor = "#38a169";
+          } else {
+            els.portal4amCount.textContent = n;
+            if (minsTo <= 60) {
+              els.portal4amCount.style.color = "#e53e3e";
+              els.portal4amCard.style.borderColor = "#e53e3e";
+            } else if (minsTo <= 120) {
+              els.portal4amCount.style.color = "#d69e2e";
+              els.portal4amCard.style.borderColor = "#d69e2e";
+            } else {
+              els.portal4amCount.style.color = "";
+              els.portal4amCard.style.borderColor = "";
+            }
+            els.portal4amNote.textContent = n + " not started · " + toStr + " to 4AM";
+          }
+        }
+      }
 
       // Avg turn time
       const completedWithTime = complete.filter(function(r) { return r.turnMin && r.turnMin > 0; });
@@ -8491,21 +9162,105 @@
       if (completedWithTime.length) avgTurn = Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMin; }, 0) / completedWithTime.length);
       if (els.portalAvgTurn) els.portalAvgTurn.textContent = Math.floor(avgTurn/60) + "h " + (avgTurn%60) + "m";
 
-      // Estimated completion
-      const stillRunning = active.length + urgent.length + warning.length + detention.length;
+      // Shift window: 8PM → 4AM
+      const goal4amMs = (function() { const d = new Date(); d.setHours(4,0,0,0); return d.getTime(); })();
+      const shiftStartMs = (function() { const d = new Date(); d.setHours(20,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime(); })();
+      const timeRemainingToGoalMs = Math.max(0, goal4amMs - now);
+      const shiftElapsedMs = Math.max(0, now - shiftStartMs);
+
+      // Estimated completion — latest per-truck deadline
+      const runningTrucks = [...active, ...startSoon, ...urgent, ...warning, ...detention];
+      const stillRunning = runningTrucks.length;
+      let estMs = null;
+      state.portal.estMs = null;
       if (stillRunning > 0) {
-        const estMs = now + stillRunning * avgTurn * 60000;
+        const perTruckEst = runningTrucks.map(function(t) {
+          const vKey = (t.supplier || "").trim().toUpperCase();
+          const vendorAvg = (vKey && state.portal.vendorAvgs[vKey]) ? state.portal.vendorAvgs[vKey] : avgTurn;
+          if (t.unloadFinishMs) return t.unloadFinishMs + freeTimeMs;
+          if (t.checkInMs)      return t.checkInMs + vendorAvg * 60000;
+          return now + vendorAvg * 60000;
+        });
+        estMs = Math.max.apply(null, perTruckEst);
+        state.portal.estMs = estMs;
         const ef = new Date(estMs);
         const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
         const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
+        const minsOut = Math.round((estMs - now) / 60000);
         if (els.portalEstComplete) els.portalEstComplete.textContent = h12 + ":" + mm + " " + ampm;
-        if (els.portalEstNote) els.portalEstNote.textContent = stillRunning + " truck(s) remaining, ~" + avgTurn + " min avg";
+        if (els.portalEstNote) {
+          if (minsOut <= 0) {
+            els.portalEstNote.textContent = stillRunning + " truck(s) past deadline";
+          } else if (minsOut < 60) {
+            els.portalEstNote.textContent = stillRunning + " remaining · " + minsOut + " min away";
+          } else {
+            els.portalEstNote.textContent = stillRunning + " remaining · " + Math.floor(minsOut/60) + "h " + (minsOut%60) + "m away";
+          }
+        }
       } else if (enriched.length > 0) {
         if (els.portalEstComplete) els.portalEstComplete.textContent = "Done ✓";
         if (els.portalEstNote) els.portalEstNote.textContent = "All trucks completed!";
       } else {
         if (els.portalEstComplete) els.portalEstComplete.textContent = "—";
         if (els.portalEstNote) els.portalEstNote.textContent = "Clock in trucks above.";
+      }
+
+      // Color the Est. card and show pace banner vs 4AM goal
+      const behindMs = (estMs !== null && stillRunning > 0) ? Math.max(0, estMs - goal4amMs) : 0;
+      const onTrack  = estMs === null || stillRunning === 0 || behindMs === 0;
+      if (els.portalEstCard) {
+        if (enriched.length === 0) {
+          els.portalEstCard.style.borderColor = "";
+          if (els.portalEstComplete) els.portalEstComplete.style.color = "";
+        } else if (stillRunning === 0) {
+          els.portalEstCard.style.borderColor = "#38a169";
+          if (els.portalEstComplete) els.portalEstComplete.style.color = "#38a169";
+        } else if (behindMs > 1800000) {
+          els.portalEstCard.style.borderColor = "#e53e3e";
+          if (els.portalEstComplete) els.portalEstComplete.style.color = "#e53e3e";
+        } else if (behindMs > 0) {
+          els.portalEstCard.style.borderColor = "#d69e2e";
+          if (els.portalEstComplete) els.portalEstComplete.style.color = "#d69e2e";
+        } else {
+          els.portalEstCard.style.borderColor = "#38a169";
+          if (els.portalEstComplete) els.portalEstComplete.style.color = "#38a169";
+        }
+      }
+      if (els.portalPaceAlert) {
+        const elapsedH = shiftElapsedMs / 3600000;
+        const actualRate = elapsedH > 0.25 ? (complete.length / elapsedH).toFixed(1) : null;
+        const needRate   = timeRemainingToGoalMs > 0 ? ((stillRunning + waiting.length) / (timeRemainingToGoalMs / 3600000)).toFixed(1) : null;
+        if (enriched.length === 0) {
+          els.portalPaceAlert.style.display = "none";
+        } else if (stillRunning === 0) {
+          els.portalPaceAlert.className = "portal-pace-alert pace-good";
+          els.portalPaceAlert.style.display = "";
+          els.portalPaceAlert.innerHTML = "✅ <strong>All receiving done!</strong> Shift complete before the 4AM goal.";
+          state.portal.notifiedBehind = false;
+        } else if (behindMs > 0) {
+          const behindMin = Math.round(behindMs / 60000);
+          const ef2 = new Date(estMs);
+          const hh2 = ef2.getHours(), mm2 = String(ef2.getMinutes()).padStart(2,"0");
+          const ampm2 = hh2 >= 12 ? "PM" : "AM"; const h12b = hh2 % 12 || 12;
+          const paceStr = (actualRate && needRate) ? " Pace: " + actualRate + " trucks/hr — need " + needRate + " trucks/hr to finish by 4AM." : "";
+          els.portalPaceAlert.className = "portal-pace-alert " + (behindMin > 30 ? "pace-behind" : "pace-warning");
+          els.portalPaceAlert.style.display = "";
+          els.portalPaceAlert.innerHTML = (behindMin > 30 ? "🔴" : "🟡") +
+            " <strong>Running " + behindMin + " min behind the 4AM goal.</strong>" +
+            " Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr;
+          if (!state.portal.notifiedBehind) {
+            state.portal.notifiedBehind = true;
+            portalMaybeNotify("OKS Portal — Behind Schedule", "Running " + behindMin + " min behind. Est. finish " + h12b + ":" + mm2 + " " + ampm2 + ". Need " + (needRate || "?") + " trucks/hr.");
+          }
+        } else {
+          const bufMin = Math.round((goal4amMs - estMs) / 60000);
+          const bufStr = bufMin < 60 ? bufMin + " min" : Math.floor(bufMin/60) + "h " + (bufMin%60) + "m";
+          const paceStr = actualRate ? " Pace: " + actualRate + " trucks/hr." : "";
+          els.portalPaceAlert.className = "portal-pace-alert pace-good";
+          els.portalPaceAlert.style.display = "";
+          els.portalPaceAlert.innerHTML = "✅ <strong>On track</strong> — est. finish " + bufStr + " before the 4AM goal." + paceStr;
+          state.portal.notifiedBehind = false;
+        }
       }
 
       // Progress bar
@@ -8525,16 +9280,19 @@
       }
 
       // Alert strip
-      const alerts = [...detention, ...urgent];
+      const alerts = [...detention, ...startSoon, ...urgent];
       if (els.portalAlertStrip) {
         if (alerts.length) {
           els.portalAlertStrip.style.display = "";
           els.portalAlertStrip.innerHTML = "⚠️ " + alerts.map(function(r) {
             const doorStr = r.door ? (" • Door " + escapeHtml(r.door)) : "";
             if (r.status === "detention") {
-              return '<span class="portal-alert-item">🔴 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — IN DETENTION for " + r.minutesInDetention + " min</span>";
+              return '<span class="portal-alert-item">🔴 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — receiving detention for " + r.minutesInDetention + " min</span>";
             }
-            return '<span class="portal-alert-item">🟠 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — only " + Math.round(r.msRemaining/60000) + " min of free time remaining — expedite!</span>";
+            if (r.status === "startsoon") {
+              return '<span class="portal-alert-item">🟡 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — THIS truck needs to be started soon. It is " + r.startLateMin + " min past appointment, driver is at door, unload not started.</span>";
+            }
+            return '<span class="portal-alert-item">🟠 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — only " + Math.round(r.msRemaining/60000) + " min left to finish receiving</span>";
           }).join("<br>");
         } else {
           els.portalAlertStrip.style.display = "none";
@@ -8544,7 +9302,7 @@
       // Filter for table
       const filtered = statusFilter === "all" ? enriched : enriched.filter(function(r) {
         if (statusFilter === "active")    return r.status === "active";
-        if (statusFilter === "urgent")    return r.status === "urgent" || r.status === "warning";
+        if (statusFilter === "urgent")    return r.status === "startsoon" || r.status === "urgent" || r.status === "warning";
         if (statusFilter === "detention") return r.status === "detention";
         if (statusFilter === "complete")  return r.status === "complete";
         return true;
@@ -8555,7 +9313,7 @@
       const tbody = els.portalBoard.querySelector("tbody");
       thead.innerHTML = "";
       tbody.innerHTML = "";
-      const colHeaders = ["Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Time Remaining", "Turn Time", "Actions"];
+      const colHeaders = ["Source", "Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Receiving Clock", "Turn Time", "Actions"];
       const hr = document.createElement("tr");
       colHeaders.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
       thead.appendChild(hr);
@@ -8563,22 +9321,29 @@
       const frag = document.createDocumentFragment();
       filtered.forEach(function(r) {
         const tr = document.createElement("tr");
-        const rowClassMap = { detention: "portal-row-detention", urgent: "portal-row-urgent", warning: "portal-row-warning", complete: "portal-row-complete" };
+        const rowClassMap = { detention: "portal-row-detention", startsoon: "portal-row-urgent", urgent: "portal-row-urgent", warning: "portal-row-warning", complete: "portal-row-complete" };
         const rowClass = rowClassMap[r.status];
         if (rowClass) tr.classList.add(rowClass);
+
+        const sourceTd = document.createElement("td");
+        sourceTd.textContent = r.source || "Manual";
+        tr.appendChild(sourceTd);
 
         const statusTd = document.createElement("td");
         const badge = document.createElement("span");
         badge.className = "portal-status portal-status-" + r.status;
-        const statusLabels = { detention: "DETENTION", urgent: "URGENT", warning: "WARNING", active: "Active", complete: "Done" };
+        const statusLabels = { detention: "DETENTION", startsoon: "START SOON", urgent: "URGENT", warning: "WARNING", active: "Active", waiting: "Waiting", complete: "Done" };
         badge.textContent = statusLabels[r.status] || r.status;
         statusTd.appendChild(badge);
         tr.appendChild(statusTd);
 
-        const checkInTime = new Date(r.checkInMs);
-        const ch = checkInTime.getHours(), cm = String(checkInTime.getMinutes()).padStart(2,"0");
-        const camp = ch >= 12 ? "PM" : "AM"; const ch12 = ch % 12 || 12;
-        const checkInStr = ch12 + ":" + cm + " " + camp;
+        let checkInStr = "—";
+        if (r.checkInMs) {
+          const checkInTime = new Date(r.checkInMs);
+          const ch = checkInTime.getHours(), cm = String(checkInTime.getMinutes()).padStart(2,"0");
+          const camp = ch >= 12 ? "PM" : "AM"; const ch12 = ch % 12 || 12;
+          checkInStr = ch12 + ":" + cm + " " + camp;
+        }
 
         [r.ref, r.door || "—", r.supplier || "—", r.po || "—", checkInStr].forEach(function(v) {
           const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
@@ -8587,11 +9352,21 @@
         const cntTd = document.createElement("td");
         cntTd.textContent = r.countdownLabel;
         if (r.countdownClass) cntTd.className = r.countdownClass;
+        if (r.status !== "complete" && r.status !== "waiting" && r.status !== "startsoon") {
+          const deadlineMs = r.unloadFinishMs ? r.unloadFinishMs + freeTimeMs
+                           : r.checkInMs     ? r.checkInMs + freeTimeMs
+                           : 0;
+          if (deadlineMs) cntTd.dataset.countdownDeadline = deadlineMs;
+        }
         tr.appendChild(cntTd);
 
         const turnTd = document.createElement("td");
         if (r.turnMin !== null && r.turnMin !== undefined) {
           turnTd.textContent = Math.floor(r.turnMin/60) + "h " + (r.turnMin%60) + "m";
+        } else if (!r.checkInMs) {
+          turnTd.textContent = "Not checked in";
+          turnTd.style.color = "var(--muted,#a0aec0)";
+          turnTd.style.fontSize = "0.85em";
         } else {
           const elapsedMin = Math.round((now - r.checkInMs) / 60000);
           turnTd.textContent = Math.floor(elapsedMin/60) + "h " + (elapsedMin%60) + "m elapsed";
@@ -8602,7 +9377,7 @@
 
         const actTd = document.createElement("td");
         actTd.style.whiteSpace = "nowrap";
-        if (!r.finishMs) {
+        if (!r.finishMs && r.source !== "DMS") {
           const doneBtn = document.createElement("button");
           doneBtn.type = "button";
           doneBtn.className = "secondary-btn";
@@ -8612,17 +9387,23 @@
           doneBtn.addEventListener("click", function() { portalMarkDone(this.dataset.id); renderPortalBoard(); });
           actTd.appendChild(doneBtn);
         }
-        const delBtn = document.createElement("button");
-        delBtn.type = "button";
-        delBtn.className = "secondary-btn";
-        delBtn.style.cssText = "font-size:0.75em; padding:3px 8px; color:#e53e3e; border-color:#e53e3e;";
-        delBtn.textContent = "✕";
-        delBtn.title = "Remove";
-        delBtn.dataset.id = r.id;
-        delBtn.addEventListener("click", function() {
-          if (confirm("Remove truck " + r.ref + " from the board?")) { portalRemove(this.dataset.id); renderPortalBoard(); }
-        });
-        actTd.appendChild(delBtn);
+        if (r.source !== "DMS") {
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "secondary-btn";
+          delBtn.style.cssText = "font-size:0.75em; padding:3px 8px; color:#e53e3e; border-color:#e53e3e;";
+          delBtn.textContent = "✕";
+          delBtn.title = "Remove";
+          delBtn.dataset.id = r.id;
+          delBtn.addEventListener("click", function() {
+            if (confirm("Remove truck " + r.ref + " from the board?")) { portalRemove(this.dataset.id); renderPortalBoard(); }
+          });
+          actTd.appendChild(delBtn);
+        } else {
+          actTd.textContent = "Live";
+          actTd.style.color = "var(--muted,#a0aec0)";
+          actTd.style.fontSize = "0.85em";
+        }
         tr.appendChild(actTd);
 
         frag.appendChild(tr);
@@ -8634,7 +9415,7 @@
       }
       if (els.portalBoardMeta) {
         els.portalBoardMeta.textContent = enriched.length > 0
-          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown • " + detention.length + " in detention • " + (urgent.length + warning.length) + " urgent/warning • updated " + new Date().toLocaleTimeString())
+          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown • " + detention.length + " in detention • " + (startSoon.length + urgent.length + warning.length) + " urgent/warning • updated " + new Date().toLocaleTimeString())
           : "No trucks clocked in yet. Use the form above to add a truck.";
       }
     }
@@ -11137,6 +11918,146 @@
       els.tableMeta.textContent = `${trucks.length} trucks in ${dockLabel}, sorted by hour, area, and dock section`;
     }
 
+    // ── DMS Stamp ──────────────────────────────────────────────────────────────
+
+    var _dmsStampLog = [];
+
+    function dmsStampSetDot(color, msg) {
+      if (els.dmsStampDot) els.dmsStampDot.style.background = color;
+      if (els.dmsStampStatus) els.dmsStampStatus.textContent = msg;
+    }
+
+    function dmsStampRenderLog() {
+      if (!els.dmsStampLogBody) return;
+      if (_dmsStampLog.length === 0) {
+        els.dmsStampLogBody.innerHTML = '<tr><td colspan="5" style="padding:12px 10px; color:var(--muted,#888); font-style:italic;">No stamps sent yet this session.</td></tr>';
+        if (els.dmsStampLogMeta) els.dmsStampLogMeta.textContent = "Stamps you send this session appear here.";
+        return;
+      }
+      if (els.dmsStampLogMeta) els.dmsStampLogMeta.textContent = _dmsStampLog.length + " stamp" + (_dmsStampLog.length !== 1 ? "s" : "") + " sent this session.";
+      els.dmsStampLogBody.innerHTML = _dmsStampLog.slice().reverse().map(function(e) {
+        const okStyle = e.ok ? "color:#276749; font-weight:700;" : "color:#c53030; font-weight:700;";
+        return "<tr>" +
+          "<td style='padding:7px 10px; color:var(--muted,#888); font-size:0.82em;'>" + e.sentAt + "</td>" +
+          "<td style='padding:7px 10px;'>" + (e.loadId || "—") + "</td>" +
+          "<td style='padding:7px 10px;'>" + e.stampType + "</td>" +
+          "<td style='padding:7px 10px;'>" + e.stampTime + "</td>" +
+          "<td style='padding:7px 10px; " + okStyle + "'>" + (e.ok ? "OK" : "FAILED") + (e.endpoint ? " · " + e.endpoint.split("/").pop() : "") + "</td>" +
+        "</tr>";
+      }).join("");
+    }
+
+    async function dmsStampSend() {
+      const loadId = els.dmsStampLoadId ? els.dmsStampLoadId.value.trim() : "";
+      const po     = els.dmsStampPo     ? els.dmsStampPo.value.trim()     : "";
+      const type   = els.dmsStampType   ? els.dmsStampType.value          : "checkin";
+      const time   = els.dmsStampTime   ? els.dmsStampTime.value          : "";
+
+      if (!loadId && !po) {
+        if (els.dmsStampResult) {
+          els.dmsStampResult.style.display = "block";
+          els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
+          els.dmsStampResult.textContent = "Enter a Load ID or PO number before stamping.";
+        }
+        return;
+      }
+
+      if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.disabled = true;
+      if (els.dmsStampSpinner) els.dmsStampSpinner.style.display = "inline";
+      if (els.dmsStampResult) els.dmsStampResult.style.display = "none";
+
+      const stampTimeIso = time ? new Date(time).toISOString() : new Date().toISOString();
+      const sentAt = new Date().toLocaleTimeString();
+
+      try {
+        const resp = await fetch("/api/dms/stamp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ load_id: loadId || null, po: po || null, stamp_type: type, stamp_time: stampTimeIso })
+        });
+        const data = await resp.json().catch(function() { return {}; });
+
+        const ok = resp.ok && (data.ok !== false);
+        _dmsStampLog.push({ sentAt, loadId, po, stampType: type, stampTime: new Date(stampTimeIso).toLocaleTimeString(), ok, endpoint: data.endpoint || "" });
+        dmsStampRenderLog();
+
+        if (els.dmsStampResult) {
+          if (ok) {
+            els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#f0fff4; border:1.5px solid #38a169; color:#276749;";
+            els.dmsStampResult.textContent = "Stamp sent successfully via " + (data.endpoint || "DMS") + ".";
+            dmsStampSetDot("#38a169", "Connected — last stamp OK at " + sentAt);
+          } else {
+            const detail = data.detail || (data.response && (data.response.message || data.response.error)) || "DMS returned an error.";
+            els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
+            els.dmsStampResult.textContent = "Stamp failed: " + detail;
+            dmsStampSetDot("#e53e3e", "Stamp failed at " + sentAt);
+          }
+        }
+      } catch (err) {
+        _dmsStampLog.push({ sentAt, loadId, po, stampType: type, stampTime: new Date(stampTimeIso).toLocaleTimeString(), ok: false, endpoint: "" });
+        dmsStampRenderLog();
+        if (els.dmsStampResult) {
+          els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
+          els.dmsStampResult.textContent = "Network error: " + (err.message || String(err));
+        }
+        dmsStampSetDot("#e53e3e", "Connection error");
+      } finally {
+        if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.disabled = false;
+        if (els.dmsStampSpinner) els.dmsStampSpinner.style.display = "none";
+      }
+    }
+
+    async function dmsStampTestConnection() {
+      dmsStampSetDot("#d69e2e", "Testing connection...");
+      if (els.dmsStampTestBtn) { els.dmsStampTestBtn.disabled = true; els.dmsStampTestBtn.textContent = "Testing..."; }
+      try {
+        const resp = await fetch("/api/dms/session", { headers: { Accept: "application/json" } });
+        const data = await resp.json().catch(function() { return {}; });
+        if (resp.ok && data.ok) {
+          const loc = (data.location && (data.location.name || data.location.cCode)) || "Unknown location";
+          dmsStampSetDot("#38a169", "Connected to DMS — " + loc);
+        } else {
+          dmsStampSetDot("#e53e3e", "DMS connection failed: " + (data.detail || "Check credentials in dms_config.json"));
+        }
+      } catch (err) {
+        dmsStampSetDot("#e53e3e", "Could not reach server: " + (err.message || String(err)));
+      } finally {
+        if (els.dmsStampTestBtn) { els.dmsStampTestBtn.disabled = false; els.dmsStampTestBtn.textContent = "Test DMS Connection"; }
+      }
+    }
+
+    function renderDmsStamp() {
+      dmsStampRenderLog();
+      dmsStampSetDot("#718096", "Connect to DMS to stamp trucks directly from this screen.");
+      if (els.dmsStampTime) {
+        const now = new Date();
+        now.setSeconds(0, 0);
+        els.dmsStampTime.value = now.toISOString().slice(0, 16);
+      }
+    }
+
+    // Wire DMS Stamp buttons (runs after DOM ready via existing init block)
+    document.addEventListener("DOMContentLoaded", function() {
+      if (els.dmsStampTestBtn) els.dmsStampTestBtn.addEventListener("click", dmsStampTestConnection);
+      if (els.dmsStampNowBtn) {
+        els.dmsStampNowBtn.addEventListener("click", function() {
+          if (!els.dmsStampTime) return;
+          const now = new Date();
+          now.setSeconds(0, 0);
+          els.dmsStampTime.value = now.toISOString().slice(0, 16);
+        });
+      }
+      if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.addEventListener("click", dmsStampSend);
+      if (els.dmsStampClearLog) {
+        els.dmsStampClearLog.addEventListener("click", function() {
+          _dmsStampLog = [];
+          dmsStampRenderLog();
+        });
+      }
+    });
+
+    // ── End DMS Stamp ──────────────────────────────────────────────────────────
+
     function emptySmall(message) {
       const item = document.createElement("div");
       item.className = "dock-row";
@@ -11163,10 +12084,12 @@
       if (name === "truckChargeAudit") renderTruckChargeAudit();
       if (name === "bizDateAudit") renderBusinessDateAudit();
       if (name === "myPortal") renderPortal();
+      else portalStopLivePolling();
       if (name === "exceptions") renderExceptions();
       if (name === "turnTracker") renderTurnTracker();
       if (name === "clerkBoard") renderClerkLeaderboard();
       if (name === "trends") renderTrends();
+      if (name === "dmsStamp") renderDmsStamp();
       if (name === "detention") {
         var df = document.getElementById("detentionFrame");
         if (df && !df.getAttribute("data-loaded")) { df.src = "detention-section.html"; df.setAttribute("data-loaded", "1"); }
@@ -11266,6 +12189,60 @@
       } catch (e) {}
     }
 
+    function renderVendorPerformance() {
+      const tbl = document.getElementById("historyVendorTable");
+      const meta = document.getElementById("historyVendorMeta");
+      if (!tbl) return;
+      const thead = tbl.querySelector("thead");
+      const tbody = tbl.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const stats = state.portal.vendorStats || [];
+      if (meta) meta.textContent = stats.length
+        ? stats.length + " vendor" + (stats.length !== 1 ? "s" : "") + " tracked — learned from exported shifts"
+        : "No data yet — export a completed shift to start learning";
+      const hRow = document.createElement("tr");
+      ["Vendor / Carrier", "Avg Min on Dock", "Fastest", "Slowest", "75th Pct", "Shifts Seen", "Last Seen"].forEach(function(h) {
+        const th = document.createElement("th");
+        th.textContent = h;
+        hRow.appendChild(th);
+      });
+      thead.appendChild(hRow);
+      if (!stats.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 7;
+        td.style.textAlign = "center";
+        td.style.color = "var(--muted,#888)";
+        td.style.padding = "18px";
+        td.textContent = "Export a completed shift from My Portal to start building vendor history.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+      stats.forEach(function(s) {
+        const tr = document.createElement("tr");
+        const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+        const fmtMin = function(m) { return Math.floor(m/60) + "h " + (m%60) + "m"; };
+        const avgColor = s.avg_min <= 120 ? "var(--green,#38a169)" : s.avg_min <= 180 ? "var(--amber,#d69e2e)" : "var(--red,#e53e3e)";
+        [
+          { val: s.vendor, style: "font-weight:600;" },
+          { val: fmtMin(s.avg_min), style: "color:" + avgColor + ";font-weight:700;" },
+          { val: fmtMin(s.min_min), style: "color:var(--green,#38a169);" },
+          { val: fmtMin(s.max_min), style: "color:var(--red,#e53e3e);" },
+          { val: fmtMin(s.p75_min), style: "" },
+          { val: s.count, style: "" },
+          { val: lastSeen, style: "color:var(--muted,#888);font-size:0.9em;" },
+        ].forEach(function(cell) {
+          const td = document.createElement("td");
+          td.textContent = cell.val;
+          if (cell.style) td.setAttribute("style", cell.style);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+    }
+
     function renderHistoryPanel() {
       if (!els.historyReportsMeta || !els.historyReportsTable) return;
       renderDoorHistorySection();
@@ -11357,6 +12334,17 @@
           dTbody.appendChild(tr);
         });
       }
+
+      fetch("/api/portal/vendor-stats")
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          state.portal.vendorStats = data.stats || [];
+          const avgs = {};
+          (data.stats || []).forEach(function(s) { avgs[s.vendor] = s.avg_min; });
+          state.portal.vendorAvgs = avgs;
+          renderVendorPerformance();
+        })
+        .catch(function() { renderVendorPerformance(); });
     }
 
     function loadReportFromHistory(reportId) {
