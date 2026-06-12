@@ -7397,7 +7397,14 @@
     function sameTimestampsDu(row, tsHeaders) {
       if (tsHeaders.length < 2) return false;
       const vals = tsHeaders.map(function(h) { return breakdownAuditField(row, h); }).filter(function(v) { return meaningfulTimestamp(v); });
-      return vals.length >= 2 && new Set(vals).size === 1;
+      if (vals.length < 2) return false;
+      // Exact same string value across all timestamps
+      if (new Set(vals).size === 1) return true;
+      // All timestamps within 1 minute of each other (clerk rubber-stamped through at once)
+      const dates = vals.map(function(v) { return new Date(v); }).filter(function(d) { return !isNaN(d.getTime()); });
+      if (dates.length < 2) return false;
+      const times = dates.map(function(d) { return d.getTime(); });
+      return Math.max.apply(null, times) - Math.min.apply(null, times) <= 60000;
     }
 
     function isBananaChargeRow(row) {
@@ -7416,6 +7423,9 @@
 
     function normalizeBreakdownAuditRows(report, source) {
       const selectors = report.selectors || detectSelectors(report.headers, report.rows);
+      const timestampHeaders = source === "DMS" ? report.headers.filter(function(h) {
+        return /driver.*check|driver.*door|clerk.*check|check.*in|at.*door|unload.*start|unload.*finish|start.*receiv|finish.*receiv|receiv.*start|receiv.*finish/i.test(h);
+      }) : [];
       return report.rows.map((row, index) => {
         const commentText = breakdownAuditCommentText(report.headers, selectors, row);
         const rowText = Object.values(row).map((value) => cleanCell(value)).filter(Boolean).join(" | ");
@@ -7450,7 +7460,7 @@
             longDescription,
             po ? `PO ${po}` : ""
           ].filter(Boolean).join(" | ") : "",
-          isDu: /\b(DU|DRIVER\s*UNLOAD|D\.U\.)\b/i.test(commentText + " " + rowText),
+          isDu: /\b(DU|DRIVER\s*UNLOAD|D\.U\.)\b/i.test(commentText + " " + rowText) || sameTimestampsDu(row, timestampHeaders),
           looksLikeBreakdown: hasBreakdownCode || opsBilledBreakdown || /\b(break\s*down|breakdown|broken\s*down|5\s*c|detention|code\s*c)\b/i.test(rowText)
         };
       });
@@ -7499,6 +7509,7 @@
 
       return dmsRows
         .filter((row) => !isRejectedAuditRow(row))
+        .filter((row) => !row.isDu)
         .filter((row) => dmsAuditRowArrived(row, dmsReport))
         .map((row) => {
           const dmsDigits = breakdownAuditPoDigitsForRow(row)[0] || "";
@@ -7521,6 +7532,7 @@
       if (!hasOps || !dmsReport) return 0;
       return dmsRows
         .filter((row) => !isRejectedAuditRow(row))
+        .filter((row) => !row.isDu)
         .filter((row) => dmsAuditRowArrived(row, dmsReport))
         .filter((row) => (breakdownAuditPoDigitsForRow(row)[0] || "").length >= 5)
         .length;
