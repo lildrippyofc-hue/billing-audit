@@ -3263,6 +3263,39 @@
         </section>
 
       </section>
+
+        <section class="table-wrap" aria-labelledby="historyDoorTitle" style="margin-top: 14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="historyDoorTitle">Door Suggestor History</div>
+              <div class="table-meta" id="historyDoorMeta">Auto-saved each day when a truck report is loaded</div>
+            </div>
+            <button id="clearDoorHistoryBtn" type="button" class="secondary-btn" style="font-size:0.8em; color:#e53e3e; border-color:#e53e3e;">Clear All Door History</button>
+          </div>
+          <div class="table-scroller">
+            <table id="historyDoorTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div id="historyDoorDetail" style="display:none; margin-top:12px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title" id="historyDoorDetailTitle">Door Detail</div>
+                <div class="table-meta" id="historyDoorDetailMeta"></div>
+              </div>
+              <button id="historyDoorDetailClose" type="button" class="secondary-btn" style="font-size:0.8em;">&#x2715; Close</button>
+            </div>
+            <div class="table-scroller">
+              <table id="historyDoorDetailTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </section>
       </section>
 
       <!-- DETENTION REPORT PANEL -->
@@ -4497,6 +4530,14 @@
       portalBoardMeta: document.getElementById("portalBoardMeta"),
       portalStatusFilter: document.getElementById("portalStatusFilter"),
       portalBoard: document.getElementById("portalBoard"),
+      historyDoorMeta: document.getElementById("historyDoorMeta"),
+      historyDoorTable: document.getElementById("historyDoorTable"),
+      historyDoorDetail: document.getElementById("historyDoorDetail"),
+      historyDoorDetailTitle: document.getElementById("historyDoorDetailTitle"),
+      historyDoorDetailMeta: document.getElementById("historyDoorDetailMeta"),
+      historyDoorDetailClose: document.getElementById("historyDoorDetailClose"),
+      historyDoorDetailTable: document.getElementById("historyDoorDetailTable"),
+      clearDoorHistoryBtn: document.getElementById("clearDoorHistoryBtn"),
       excHighCount: document.getElementById("excHighCount"),
       excMedCount: document.getElementById("excMedCount"),
       excTotalCount: document.getElementById("excTotalCount"),
@@ -4939,6 +4980,16 @@
       setInterval(tick, 1000);
     })();
 
+    els.historyDoorDetailClose.addEventListener("click", function() {
+      if (els.historyDoorDetail) els.historyDoorDetail.style.display = "none";
+    });
+    els.clearDoorHistoryBtn.addEventListener("click", function() {
+      if (confirm("Clear all saved door history? This cannot be undone.")) {
+        localStorage.removeItem("doorSuggestorHistory");
+        renderHistoryPanel();
+        showToast("Door history cleared.");
+      }
+    });
     els.portalFreeTime.addEventListener("change", function() {
       state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
       renderPortalBoard();
@@ -6892,6 +6943,8 @@
       renderSpillHistoryTable();
       renderPortal();
       renderExceptions();
+      const _hp = document.getElementById("historyPanel");
+      if (_hp && _hp.classList.contains("active")) renderDoorHistorySection();
       if (document.getElementById("breakdownsAuditPanel")?.classList.contains("active")) renderBreakdownsAudit();
       if (document.getElementById("truckChargeAuditPanel")?.classList.contains("active")) renderTruckChargeAudit();
     }
@@ -7978,7 +8031,138 @@
         els.doorSuggestorTableMeta.textContent = "Import a daily truck report to see door suggestions";
       } else {
         els.doorSuggestorTableMeta.textContent = `${rows.length} truck${rows.length === 1 ? "" : "s"} shown | ${withRange} with recommended doors`;
+        saveDoorSuggestorSnapshot(rows);
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // DOOR SUGGESTOR HISTORY
+    // ═══════════════════════════════════════════════════════════
+
+    const DOOR_HISTORY_KEY = "doorSuggestorHistory";
+    const DOOR_HISTORY_MAX_DAYS = 90;
+
+    function saveDoorSuggestorSnapshot(rows) {
+      if (!rows || !rows.length) return;
+      const today = new Date();
+      const dateKey = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+      let history = [];
+      try { history = JSON.parse(localStorage.getItem(DOOR_HISTORY_KEY) || "[]"); } catch(e) {}
+      history = history.filter(function(s) { return s.dateKey !== dateKey; });
+      const snapshot = {
+        dateKey,
+        savedAt: Date.now(),
+        filename: state.fileName || "truck report",
+        truckCount: rows.length,
+        trucks: rows.map(function(r) {
+          return {
+            supplier: r.supplier || "",
+            reference: r.reference || "",
+            po: r.po || "",
+            recommendedDoor: r.range || "—",
+            dockType: r.dockType || "",
+            spillHigh: Boolean(r.spillHigh),
+            spillRisk: r.spillRisk || "—",
+            hourLabel: r.hourLabel || ""
+          };
+        })
+      };
+      history.unshift(snapshot);
+      if (history.length > DOOR_HISTORY_MAX_DAYS) history = history.slice(0, DOOR_HISTORY_MAX_DAYS);
+      try { localStorage.setItem(DOOR_HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
+    }
+
+    function renderDoorHistorySection() {
+      if (!els.historyDoorTable) return;
+      let history = [];
+      try { history = JSON.parse(localStorage.getItem(DOOR_HISTORY_KEY) || "[]"); } catch(e) {}
+
+      if (els.historyDoorMeta) els.historyDoorMeta.textContent = history.length + " day" + (history.length !== 1 ? "s" : "") + " saved (stored locally in this browser, up to 90 days)";
+
+      const thead = els.historyDoorTable.querySelector("thead");
+      const tbody = els.historyDoorTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+
+      const hr = document.createElement("tr");
+      ["Date", "Trucks", "Top Suppliers", "Spill Alerts", "File", "Actions"].forEach(function(h) {
+        const th = document.createElement("th"); th.textContent = h; hr.appendChild(th);
+      });
+      thead.appendChild(hr);
+
+      if (!history.length) {
+        appendEmptyRow(tbody, 6, "No door history yet. Import a truck report and the daily door suggestions will be saved here automatically.");
+        return;
+      }
+
+      history.forEach(function(snap) {
+        const tr = document.createElement("tr");
+        const dt = new Date(snap.savedAt);
+        const dateStr = dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+        const supplierCounts = {};
+        (snap.trucks || []).forEach(function(t) { if (t.supplier) supplierCounts[t.supplier] = (supplierCounts[t.supplier] || 0) + 1; });
+        const topSuppliers = Object.entries(supplierCounts).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 3).map(function(e) { return e[0]; }).join(", ");
+        const spillCount = (snap.trucks || []).filter(function(t) { return t.spillHigh; }).length;
+        const truckCount = snap.truckCount || (snap.trucks || []).length;
+
+        [dateStr, truckCount, topSuppliers || "—", spillCount > 0 ? ("⚠️ " + spillCount) : "—", snap.filename || "—"].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+        });
+
+        const actTd = document.createElement("td");
+        actTd.style.whiteSpace = "nowrap";
+        const viewBtn = document.createElement("button");
+        viewBtn.type = "button";
+        viewBtn.textContent = "View";
+        viewBtn.style.marginRight = "6px";
+        viewBtn.addEventListener("click", function() { showDoorHistoryDetail(snap); });
+        actTd.appendChild(viewBtn);
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.textContent = "Delete";
+        delBtn.addEventListener("click", function() {
+          if (!confirm("Delete door history for " + snap.dateKey + "?")) return;
+          let h2 = [];
+          try { h2 = JSON.parse(localStorage.getItem(DOOR_HISTORY_KEY) || "[]"); } catch(e) {}
+          localStorage.setItem(DOOR_HISTORY_KEY, JSON.stringify(h2.filter(function(s) { return s.dateKey !== snap.dateKey; })));
+          if (els.historyDoorDetail) els.historyDoorDetail.style.display = "none";
+          renderDoorHistorySection();
+        });
+        actTd.appendChild(delBtn);
+        tr.appendChild(actTd);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showDoorHistoryDetail(snap) {
+      if (!els.historyDoorDetail) return;
+      const dt = new Date(snap.savedAt);
+      const dateStr = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+      if (els.historyDoorDetailTitle) els.historyDoorDetailTitle.textContent = "Door Suggestions — " + dateStr;
+      if (els.historyDoorDetailMeta) els.historyDoorDetailMeta.textContent = (snap.trucks || []).length + " trucks | " + snap.filename;
+      const thead = els.historyDoorDetailTable.querySelector("thead");
+      const tbody = els.historyDoorDetailTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const hr = document.createElement("tr");
+      ["Supplier", "Ref #", "PO", "Recommended Door", "Dock Type", "Spill Risk", "Hour"].forEach(function(h) {
+        const th = document.createElement("th"); th.textContent = h; hr.appendChild(th);
+      });
+      thead.appendChild(hr);
+      const trucks = (snap.trucks || []).slice().sort(function(a, b) { return (a.supplier || "").localeCompare(b.supplier || ""); });
+      const frag = document.createDocumentFragment();
+      trucks.forEach(function(t) {
+        const tr = document.createElement("tr");
+        if (t.spillHigh) tr.classList.add("spill-risk-row");
+        [t.supplier, t.reference, t.po, t.recommendedDoor, t.dockType, t.spillRisk, t.hourLabel || "—"].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v || "—"; tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!trucks.length) appendEmptyRow(tbody, 7, "No trucks in this snapshot.");
+      els.historyDoorDetail.style.display = "";
+      els.historyDoorDetail.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -11084,6 +11268,7 @@
 
     function renderHistoryPanel() {
       if (!els.historyReportsMeta || !els.historyReportsTable) return;
+      renderDoorHistorySection();
       const rThead = els.historyReportsTable.querySelector("thead");
       const rTbody = els.historyReportsTable.querySelector("tbody");
       const dThead = els.historyDecisionsTable.querySelector("thead");
