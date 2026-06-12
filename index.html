@@ -2105,8 +2105,6 @@
           </div>
           <span id="darkModeLabel">Light</span>
         </button>
-        <span id="dailyVisitorBadge" style="display:none;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.22);border-radius:999px;padding:4px 11px;font-size:0.75rem;font-weight:700;color:#fff;letter-spacing:0.03em;" title="Unique logins in the last 24 hours">ðŸ‘¥ <span id="dailyVisitorCount">â€”</span> today</span>
-        <button class="sign-out-btn" id="signOutBtn" type="button" style="display:none" title="Sign out">Sign out</button>
       </div>
     </header>
 
@@ -3356,7 +3354,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">The page is completely blank or white. What do I do?</p>
-                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> to force-reload the page. If it is still blank, close the tab, open a new one, and go to <span class="good">https://www.jamehinna.net</span>.</p>
+                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> to force-reload the page. If it is still blank, close the tab and re-open the <strong>index.html</strong> file directly in your browser.</p>
               </div>
 
               <div class="faq-item">
@@ -3431,12 +3429,12 @@
 
               <div class="faq-item">
                 <p class="faq-q">The page keeps asking me to reload. Should I?</p>
-                <p class="faq-a">Yes, go ahead. Press <strong>Ctrl + Shift + R</strong>. Your saved decisions in the database are completely safe - reloading the page cannot delete them. You will need to upload your file again, but everything you already decided is still there. No data was lost. You are good.</p>
+                <p class="faq-a">Yes, go ahead. Press <strong>Ctrl + Shift + R</strong>. Your saved decisions are stored in your browser and are completely safe - reloading the page cannot delete them. You will need to upload your file again, but everything you already decided is still there. No data was lost. You are good.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">How do I open this app again tomorrow?</p>
-                <p class="faq-a">Open your browser and go to <span class="good">https://www.jamehinna.net</span>. Log in, upload today's report, and keep working. All your previous saved decisions stay in the website database.</p>
+                <p class="faq-a">Open the <strong>index.html</strong> file directly in your browser, upload today's report, and keep working. All your previous saved decisions are stored automatically in your browser's local storage.</p>
               </div>
 
               <div class="faq-item">
@@ -8835,57 +8833,60 @@
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ Backend API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    async function loadDecisionsFromBackend() {
+    function loadDecisionsFromBackend() {
       try {
-        const res = await fetch("/api/decisions");
-        if (!res.ok) return;
-        state.backendAvailable = true;
-        const decisions = await res.json();
-        decisions.forEach(function(d) {
-          state.auditDecisions[d.truck_key] = d.decision;
-          (d.po_keys || []).forEach(function(k) { state.auditDecisions[k] = d.decision; });
-          if (d.supplier_key) state.auditDecisions[d.supplier_key] = d.decision;
-        });
+        const saved = localStorage.getItem("auditDecisions");
+        if (!saved) return;
+        const decisions = JSON.parse(saved);
+        Object.assign(state.auditDecisions, decisions);
         renderTruckFinderLookup(false);
         renderTruckFinderTable();
         renderTruckFinderAudit();
-      } catch (e) {
-        state.backendAvailable = false;
-      }
+      } catch (e) {}
     }
 
-    async function saveReportToBackend(filename, headers, rows, selectors) {
+    function saveReportToBackend(filename, headers, rows, selectors) {
       try {
-        const res = await fetch("/api/reports", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename, headers, rows, selectors })
-        });
-        if (res.ok) {
-          state.backendAvailable = true;
-          const data = await res.json();
-          state.currentReportId = data.id;
+        const reports = JSON.parse(localStorage.getItem("auditReports") || "[]");
+        const entry = {
+          id: Date.now(),
+          filename: filename,
+          uploaded_at: new Date().toISOString(),
+          row_count: rows.length,
+          headers: headers,
+          rows: rows,
+          selectors: selectors
+        };
+        const filtered = reports.filter(function(r) { return r.filename !== filename; });
+        filtered.unshift(entry);
+        try {
+          localStorage.setItem("auditReports", JSON.stringify(filtered.slice(0, 10)));
+        } catch (e) {
+          try { localStorage.setItem("auditReports", JSON.stringify(filtered.slice(0, 3))); } catch (e2) {}
         }
+        state.currentReportId = entry.id;
       } catch (e) {}
     }
 
-    async function saveDecisionToBackend(truckKey, decision, poKeys, supplierKey) {
+    function saveDecisionToBackend(truckKey, decision, poKeys, supplierKey) {
       try {
-        await fetch("/api/decisions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            truck_key: truckKey,
-            decision: decision,
-            report_id: state.currentReportId || null,
-            po_keys: poKeys || [],
-            supplier_key: supplierKey || null
-          })
-        });
+        localStorage.setItem("auditDecisions", JSON.stringify(state.auditDecisions));
+        const log = JSON.parse(localStorage.getItem("auditDecisionLog") || "[]");
+        const idx = log.findIndex(function(d) { return d.truck_key === truckKey; });
+        const entry = {
+          truck_key: truckKey,
+          decision: decision,
+          po_keys: poKeys || [],
+          supplier_key: supplierKey || null,
+          decided_at: new Date().toISOString(),
+          filename: state.fileName || ""
+        };
+        if (idx >= 0) { log[idx] = entry; } else { log.unshift(entry); }
+        localStorage.setItem("auditDecisionLog", JSON.stringify(log.slice(0, 500)));
       } catch (e) {}
     }
 
-    async function renderHistoryPanel() {
+    function renderHistoryPanel() {
       if (!els.historyReportsMeta || !els.historyReportsTable) return;
       const rThead = els.historyReportsTable.querySelector("thead");
       const rTbody = els.historyReportsTable.querySelector("tbody");
@@ -8896,118 +8897,101 @@
       dThead.innerHTML = "";
       dTbody.innerHTML = "";
 
-      els.historyReportsMeta.textContent = "Loading...";
+      let reports = [];
+      let decisions = [];
+      try { reports = JSON.parse(localStorage.getItem("auditReports") || "[]"); } catch (e) {}
+      try { decisions = JSON.parse(localStorage.getItem("auditDecisionLog") || "[]"); } catch (e) {}
 
-      try {
-        const [reports, decisions] = await Promise.all([
-          fetch("/api/reports").then(function(r) { return r.json(); }),
-          fetch("/api/decisions").then(function(r) { return r.json(); })
-        ]);
+      els.historyReportsMeta.textContent = reports.length + " saved report" + (reports.length === 1 ? "" : "s") + " (stored locally in this browser)";
 
-        els.historyReportsMeta.textContent = reports.length + " saved report" + (reports.length === 1 ? "" : "s");
-        const rHead = document.createElement("tr");
-        ["Date / Time", "Filename", "Rows", "Actions"].forEach(function(label) {
-          const th = document.createElement("th");
-          th.textContent = label;
-          rHead.appendChild(th);
-        });
-        rThead.appendChild(rHead);
+      const rHead = document.createElement("tr");
+      ["Date / Time", "Filename", "Rows", "Actions"].forEach(function(label) {
+        const th = document.createElement("th");
+        th.textContent = label;
+        rHead.appendChild(th);
+      });
+      rThead.appendChild(rHead);
 
-        if (!reports.length) {
-          appendEmptyRow(rTbody, 4, "No reports saved yet. Upload a truck report to save it.");
-        } else {
-          reports.forEach(function(report) {
-            const tr = document.createElement("tr");
-            const dt = new Date(report.uploaded_at);
-            const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-            const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-            [dateStr + " " + timeStr, report.filename, report.row_count].forEach(function(val) {
-              const td = document.createElement("td");
-              td.textContent = val;
-              tr.appendChild(td);
-            });
-            const actionTd = document.createElement("td");
-            const loadBtn = document.createElement("button");
-            loadBtn.type = "button";
-            loadBtn.textContent = "Load";
-            loadBtn.style.marginRight = "6px";
-            loadBtn.addEventListener("click", function() { loadReportFromHistory(report.id); });
-            const delBtn = document.createElement("button");
-            delBtn.type = "button";
-            delBtn.textContent = "Delete";
-            delBtn.addEventListener("click", async function() {
-              if (!confirm('Delete "' + report.filename + '"?')) return;
-              await fetch("/api/reports/" + report.id, { method: "DELETE" });
-              renderHistoryPanel();
-            });
-            actionTd.appendChild(loadBtn);
-            actionTd.appendChild(delBtn);
-            tr.appendChild(actionTd);
-            rTbody.appendChild(tr);
+      if (!reports.length) {
+        appendEmptyRow(rTbody, 4, "No reports saved yet. Upload a truck report to save it here automatically.");
+      } else {
+        reports.forEach(function(report) {
+          const tr = document.createElement("tr");
+          const dt = new Date(report.uploaded_at);
+          const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          [dateStr + " " + timeStr, report.filename, report.row_count].forEach(function(val) {
+            const td = document.createElement("td");
+            td.textContent = val;
+            tr.appendChild(td);
           });
-        }
-
-        els.historyDecisionsMeta.textContent = decisions.length + " decision" + (decisions.length === 1 ? "" : "s") + " in database";
-        const dHead = document.createElement("tr");
-        ["Date / Time", "Truck Key", "Supplier", "Decision", "Report"].forEach(function(label) {
-          const th = document.createElement("th");
-          th.textContent = label;
-          dHead.appendChild(th);
-        });
-        dThead.appendChild(dHead);
-
-        if (!decisions.length) {
-          appendEmptyRow(dTbody, 5, "No decisions yet. Mark trucks in Roll Off Audit and they appear here.");
-        } else {
-          const reportMap = {};
-          reports.forEach(function(r) { reportMap[r.id] = r.filename; });
-          decisions.forEach(function(d) {
-            const tr = document.createElement("tr");
-            const dt = new Date(d.decided_at);
-            const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-            const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-            const isBreakdown = d.decision === "Breakdown Truck";
-            [
-              dateStr + " " + timeStr,
-              d.truck_key,
-              d.supplier_key || "-",
-              d.decision,
-              d.report_id ? (reportMap[d.report_id] || "Report #" + d.report_id) : "-"
-            ].forEach(function(val, i) {
-              const td = document.createElement("td");
-              td.textContent = val;
-              if (i === 3) td.style.color = isBreakdown ? "var(--green)" : "var(--amber)";
-              tr.appendChild(td);
-            });
-            dTbody.appendChild(tr);
+          const actionTd = document.createElement("td");
+          const loadBtn = document.createElement("button");
+          loadBtn.type = "button";
+          loadBtn.textContent = "Load";
+          loadBtn.style.marginRight = "6px";
+          loadBtn.addEventListener("click", function() { loadReportFromHistory(report.id); });
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.textContent = "Delete";
+          delBtn.addEventListener("click", function() {
+            if (!confirm('Delete "' + report.filename + '" from local history?')) return;
+            try {
+              const saved = JSON.parse(localStorage.getItem("auditReports") || "[]");
+              localStorage.setItem("auditReports", JSON.stringify(saved.filter(function(r) { return r.id !== report.id; })));
+            } catch (e) {}
+            renderHistoryPanel();
           });
-        }
-      } catch (e) {
-        els.historyReportsMeta.textContent = "Error loading history. Is the backend running?";
+          actionTd.appendChild(loadBtn);
+          actionTd.appendChild(delBtn);
+          tr.appendChild(actionTd);
+          rTbody.appendChild(tr);
+        });
+      }
+
+      els.historyDecisionsMeta.textContent = decisions.length + " decision" + (decisions.length === 1 ? "" : "s") + " saved in browser";
+      const dHead = document.createElement("tr");
+      ["Date / Time", "Truck Key", "Supplier", "Decision", "Report"].forEach(function(label) {
+        const th = document.createElement("th");
+        th.textContent = label;
+        dHead.appendChild(th);
+      });
+      dThead.appendChild(dHead);
+
+      if (!decisions.length) {
+        appendEmptyRow(dTbody, 5, "No decisions yet. Mark trucks in Roll Off Audit and they appear here.");
+      } else {
+        decisions.forEach(function(d) {
+          const tr = document.createElement("tr");
+          const dt = new Date(d.decided_at);
+          const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+          const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          const isBreakdown = d.decision === "Breakdown Truck";
+          [dateStr + " " + timeStr, d.truck_key, d.supplier_key || "-", d.decision, d.filename || "-"].forEach(function(val, i) {
+            const td = document.createElement("td");
+            td.textContent = val;
+            if (i === 3) td.style.color = isBreakdown ? "var(--green)" : "var(--amber)";
+            tr.appendChild(td);
+          });
+          dTbody.appendChild(tr);
+        });
       }
     }
 
-    async function loadReportFromHistory(reportId) {
+    function loadReportFromHistory(reportId) {
       try {
         showToast("Loading report from history...");
-        const [data, decisions] = await Promise.all([
-          fetch("/api/reports/" + reportId).then(function(r) { return r.json(); }),
-          fetch("/api/decisions?report_id=" + reportId).then(function(r) { return r.json(); })
-        ]);
+        const reports = JSON.parse(localStorage.getItem("auditReports") || "[]");
+        const data = reports.find(function(r) { return r.id === reportId; });
+        if (!data) { showToast("Report not found in local history."); return; }
         state.fileName = data.filename;
         state.headers = data.headers;
         state.rows = data.rows;
         state.currentReportId = data.id;
-        state.auditDecisions = {};
         state.selectors = data.selectors || detectSelectors(data.headers, data.rows);
-        decisions.forEach(function(d) {
-          state.auditDecisions[d.truck_key] = d.decision;
-          (d.po_keys || []).forEach(function(k) { state.auditDecisions[k] = d.decision; });
-          if (d.supplier_key) state.auditDecisions[d.supplier_key] = d.decision;
-        });
         refreshReport();
         selectTab("overview");
-        showToast("Loaded: " + data.filename + " (" + data.row_count + " rows, " + decisions.length + " decisions restored)");
+        showToast("Loaded: " + data.filename + " (" + data.row_count + " rows)");
       } catch (e) {
         showToast("Could not load report from history.");
       }
