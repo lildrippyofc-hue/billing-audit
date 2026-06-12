@@ -367,6 +367,12 @@
     :root.dark input[type="text"], :root.dark input[type="search"] { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
+    /* Business Date Audit styles */
+    tr.bizdate-error-row td { background: #fffbeb !important; }
+    tr.bizdate-error-high td { background: #fff3cd !important; border-left: 3px solid #e53e3e; }
+    :root.dark tr.bizdate-error-row td { background: #1e1800 !important; }
+    :root.dark tr.bizdate-error-high td { background: #2a1f00 !important; border-left: 3px solid #fc8181; }
+
     /* Spill alert styles */
     .spill-alert-banner {
       background: #fff0f0;
@@ -2174,6 +2180,7 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="breakdownsAudit" data-menu-label="Audit: Breakdowns Audit">Breakdowns Audit</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="truckChargeAudit" data-menu-label="Audit: Truck Charge Audit">Truck Charge Audit</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="detention" data-menu-label="Audit: Detention Report">Detention</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="bizDateAudit" data-menu-label="Audit: Business Date Audit">Business Date</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Database</div>
@@ -3132,6 +3139,82 @@
           <iframe id="detentionFrame" src="" title="DMS Detention Report" loading="lazy"></iframe>
         </div>
       </section>
+      <section id="bizDateAuditPanel" class="tab-panel" aria-label="Business Date Audit">
+        <div class="motivation-bar" id="motivBar_bizDateAudit"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <span class="brand-watermark" aria-hidden="true">JH</span>
+          <span class="brand-quote">Keep moving forward</span>
+          <div class="brand-swoosh" aria-hidden="true"></div>
+        </div>
+
+        <div class="lookup-grid">
+          <section class="panel lookup-box" aria-labelledby="bizDateAuditTitle">
+            <div class="panel-header">
+              <h2 id="bizDateAuditTitle">Business Date Audit</h2>
+              <span class="panel-kicker">PO Date vs. Process Date</span>
+            </div>
+            <div class="friendly-note">
+              This tool reads the date embedded inside each PO number (e.g. <code>oks.75180579811.ks071126</code> encodes <strong>07/11/26</strong>).
+              Set the expected business date below and any PO whose embedded date does not match will be flagged.
+            </div>
+            <div class="friendly-note" id="bizDateSourceNote">Load OPS or DMS files in <strong>Breakdowns Audit</strong> first — this section reads those same files automatically.</div>
+            <div class="lookup-row" style="flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;">
+              <label style="font-weight:600; white-space:nowrap;">Expected Business Date:</label>
+              <input id="bizDateInput" type="date" class="lookup-input" style="max-width:180px;">
+              <button id="bizDateRunButton" type="button">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+                Run Audit
+              </button>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="bizDateStatusTitle">
+            <div class="panel-header">
+              <h2 id="bizDateStatusTitle">Audit Status</h2>
+              <span class="panel-kicker" id="bizDateKicker">No date selected</span>
+            </div>
+            <div class="overview-list" id="bizDateStatus"></div>
+          </section>
+        </div>
+
+        <div class="summary-grid" style="margin-top:14px;">
+          <article class="metric-card">
+            <div class="metric-label">POs Scanned</div>
+            <div class="metric-value" id="bizDateTotal">0</div>
+            <div class="metric-note">Total PO fields found in loaded reports.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Dates Readable</div>
+            <div class="metric-value" id="bizDateParsed">0</div>
+            <div class="metric-note">POs with a parseable MMDDYY date segment.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Wrong Business Date</div>
+            <div class="metric-value" id="bizDateErrors" style="color: var(--red, #e53e3e);">0</div>
+            <div class="metric-note">POs entered under the wrong business date.</div>
+          </article>
+        </div>
+
+        <section class="table-wrap" aria-labelledby="bizDateTableTitle" style="margin-top:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="bizDateTableTitle">Wrong Business Date POs</div>
+              <div class="table-meta" id="bizDateTableMeta">No audit run yet</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button id="bizDateExportButton" type="button">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="bizDateTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
       <section id="helpPanel" class="tab-panel" aria-label="How To Use">
         <div class="motivation-bar" id="motivBar_help"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="help-panel-inner">
@@ -3639,6 +3722,10 @@
         validationRows: [],
         validationSort: { key: "statusRank", direction: "asc" }
       },
+      bizDateAudit: {
+        errors: [],
+        lastRunDate: ""
+      },
       truckChargeAudit: {
         ops: null,
         ranged: null,
@@ -3867,6 +3954,17 @@
       spillRecordButton: document.getElementById("spillRecordButton"),
       spillCleanButton: document.getElementById("spillCleanButton"),
       clearSpillHistoryButton: document.getElementById("clearSpillHistoryButton"),
+      bizDateInput: document.getElementById("bizDateInput"),
+      bizDateRunButton: document.getElementById("bizDateRunButton"),
+      bizDateExportButton: document.getElementById("bizDateExportButton"),
+      bizDateKicker: document.getElementById("bizDateKicker"),
+      bizDateStatus: document.getElementById("bizDateStatus"),
+      bizDateTotal: document.getElementById("bizDateTotal"),
+      bizDateParsed: document.getElementById("bizDateParsed"),
+      bizDateErrors: document.getElementById("bizDateErrors"),
+      bizDateTable: document.getElementById("bizDateTable"),
+      bizDateTableMeta: document.getElementById("bizDateTableMeta"),
+      bizDateSourceNote: document.getElementById("bizDateSourceNote"),
       opsAuditFile: document.getElementById("opsAuditFile"),
       dmsAuditFile: document.getElementById("dmsAuditFile"),
       truckChargeOpsFile: document.getElementById("truckChargeOpsFile"),
@@ -4166,6 +4264,7 @@
         clerkDoor:        [["DOOR","Every door assignment matters."],["CLERK","Clerk support is ready."],["AIM","Door accuracy starts here."]],
         doorSuggestor:    [["MAP","Smarter routing saves time."],["IDEA","Use history to pick the best door."],["GO","Optimized and efficient."]],
         spillTracker:     [["ALERT","Know before the spill happens."],["WATCH","Track patterns, stop repeat issues."],["SAFE","Spill kit ready. You got this."]],
+        bizDateAudit:     [["DATE","Dates matter. Wrong entry costs money."],["CHECK","Every PO has a correct day."],["FIX","Catch it early, fix it fast."]],
         audit:            [["CALL","Roll Off or Breakdown â€” make the call."],["DECIDE","Your decision locks the record."],["AUDIT","Every catch saves money."],["SHARP","Good calls here save time later."]],
         breakdownsAudit:  [["AUDIT","Every catch saves money."],["BILL","Billing errors stop here."],["CHECK","Audit mode is active."],["PIN","Details matter here."]],
         truckChargeAudit: [["PAY","Wrong charges cost money."],["FEE","Every FSPAY check matters."],["TEST","Precision billing audit in progress."],["WARN","Catch it here before it becomes a problem."]],
@@ -4241,6 +4340,14 @@
     });
     els.spillRecordButton.addEventListener("click", () => recordSpillEvent(true));
     els.spillCleanButton.addEventListener("click", () => recordSpillEvent(false));
+    // Set default date to today
+    if (els.bizDateInput && !els.bizDateInput.value) {
+      const today = new Date();
+      els.bizDateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    }
+    els.bizDateRunButton.addEventListener("click", renderBusinessDateAudit);
+    els.bizDateInput.addEventListener("change", renderBusinessDateAudit);
+    els.bizDateExportButton.addEventListener("click", exportBizDateCsv);
     els.clearSpillHistoryButton.addEventListener("click", () => {
       if (confirm("Clear all recorded spill events? This cannot be undone.")) {
         localStorage.removeItem("spillRecords");
@@ -4410,7 +4517,8 @@
 
         renderBreakdownsAudit();
         renderTruckChargeAudit();
-        selectTab(activePanelId === "truckChargeAuditPanel" ? "truckChargeAudit" : "breakdownsAudit");
+        renderBusinessDateAudit();
+        selectTab(activePanelId === "truckChargeAuditPanel" ? "truckChargeAudit" : activePanelId === "bizDateAuditPanel" ? "bizDateAudit" : "breakdownsAudit");
         showToast(`${kind.toUpperCase()} report loaded for both audit sections.`);
       } catch (error) {
         showToast(error.message || "Could not read that audit report.");
@@ -7200,6 +7308,211 @@
       }
     }
 
+    // ═══════════════════════════════════════════════════════════
+    // Business Date Audit
+    // ═══════════════════════════════════════════════════════════
+
+    function tryParsePoDateSegment(seg) {
+      // Match optional 1-4 letters then exactly 6 digits = MMDDYY
+      const m = seg.match(/^[a-zA-Z]{0,4}(\d{2})(\d{2})(\d{2})$/);
+      if (!m) return null;
+      const mm = parseInt(m[1], 10);
+      const dd = parseInt(m[2], 10);
+      const yy = parseInt(m[3], 10);
+      if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+      const year = yy < 50 ? 2000 + yy : 1900 + yy;
+      const d = new Date(year, mm - 1, dd);
+      if (d.getMonth() !== mm - 1 || d.getDate() !== dd) return null;
+      return d;
+    }
+
+    function extractPoBusinessDate(po) {
+      const str = String(po || "").trim();
+      if (!str) return null;
+      // Try each dot-segment, last first
+      const segs = str.split(".");
+      for (let i = segs.length - 1; i >= 0; i--) {
+        const d = tryParsePoDateSegment(segs[i]);
+        if (d) return d;
+      }
+      // Fallback: search for [letters][MMDDYY] pattern anywhere
+      const m = str.match(/[a-zA-Z]{0,4}(\d{2})(\d{2})(\d{2})(?:[^a-zA-Z0-9]|$)/);
+      if (m) {
+        const mm = parseInt(m[1], 10); const dd = parseInt(m[2], 10); const yy = parseInt(m[3], 10);
+        if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+          const year = yy < 50 ? 2000 + yy : 1900 + yy;
+          const d = new Date(year, mm - 1, dd);
+          if (d.getMonth() === mm - 1 && d.getDate() === dd) return d;
+        }
+      }
+      return null;
+    }
+
+    function formatDateMDY(date) {
+      if (!date || isNaN(date.getTime())) return "";
+      return `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}/${String(date.getFullYear()).slice(-2)}`;
+    }
+
+    function dateToYMD(date) {
+      if (!date || isNaN(date.getTime())) return "";
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    }
+
+    function buildBusinessDateErrors(allRows, expectedDate) {
+      if (!expectedDate || !allRows || !allRows.length) return [];
+      const expYMD = dateToYMD(expectedDate);
+      const seen = new Set();
+      const results = [];
+      allRows.forEach(function(row) {
+        const po = String(row.po || "").trim();
+        if (!po) return;
+        const poDate = extractPoBusinessDate(po);
+        if (!poDate) return;
+        const poYMD = dateToYMD(poDate);
+        if (poYMD === expYMD) return; // correct — skip
+        const key = `${row.source}|${row.reference}|${po}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const daysDiff = Math.round((poDate.getTime() - expectedDate.getTime()) / 86400000);
+        results.push({
+          source: row.source || "",
+          reference: row.reference || "",
+          supplier: row.supplier || "",
+          po,
+          poDateStr: formatDateMDY(poDate),
+          expectedDateStr: formatDateMDY(expectedDate),
+          daysDiff,
+          diffLabel: `${daysDiff > 0 ? "+" : ""}${daysDiff} day${Math.abs(daysDiff) !== 1 ? "s" : ""}`
+        });
+      });
+      results.sort((a, b) => Math.abs(b.daysDiff) - Math.abs(a.daysDiff) || a.supplier.localeCompare(b.supplier));
+      return results;
+    }
+
+    function renderBusinessDateAudit() {
+      const audit = state.breakdownAudit;
+      const dmsReport = currentDmsValidationReport();
+      const hasDms = Boolean(dmsReport && dmsReport.rows && dmsReport.rows.length);
+      const hasOps = Boolean(audit.ops && audit.ops.rows && audit.ops.rows.length);
+
+      // Update source note
+      if (els.bizDateSourceNote) {
+        if (hasDms || hasOps) {
+          const parts = [];
+          if (hasOps) parts.push(`OPS: ${audit.opsFileName || "loaded"}`);
+          if (hasDms) parts.push(`DMS: ${audit.dmsFileName || audit.dmsFileName || (state.fileName || "daily report")}`);
+          els.bizDateSourceNote.innerHTML = `Using loaded audit files — ${escapeHtml(parts.join(" | "))}`;
+        } else {
+          els.bizDateSourceNote.innerHTML = `Load OPS or DMS files in <strong>Breakdowns Audit</strong> first — this section reads those same files automatically.`;
+        }
+      }
+
+      // Get expected date
+      let expectedDate = null;
+      if (els.bizDateInput && els.bizDateInput.value) {
+        expectedDate = new Date(els.bizDateInput.value + "T00:00:00");
+        if (isNaN(expectedDate.getTime())) expectedDate = null;
+      }
+
+      // Build all audit rows
+      const opsRows = hasOps ? normalizeBreakdownAuditRows(audit.ops, "OPS") : [];
+      const dmsRows = hasDms ? normalizeBreakdownAuditRows(dmsReport, "DMS") : [];
+      const allRows = [...opsRows, ...dmsRows];
+
+      // Counts
+      const posWithPo = allRows.filter(function(r) { return r.po; });
+      const posWithDates = posWithPo.filter(function(r) { return extractPoBusinessDate(r.po); });
+      const errors = expectedDate ? buildBusinessDateErrors(allRows, expectedDate) : [];
+      state.bizDateAudit.errors = errors;
+      state.bizDateAudit.lastRunDate = expectedDate ? dateToYMD(expectedDate) : "";
+
+      // Update metrics
+      if (els.bizDateTotal) els.bizDateTotal.textContent = formatNumber(posWithPo.length);
+      if (els.bizDateParsed) els.bizDateParsed.textContent = formatNumber(posWithDates.length);
+      if (els.bizDateErrors) els.bizDateErrors.textContent = formatNumber(errors.length);
+
+      // Kicker
+      if (els.bizDateKicker) {
+        if (!hasDms && !hasOps) {
+          els.bizDateKicker.textContent = "No report loaded — attach OPS/DMS in Breakdowns Audit";
+        } else if (!expectedDate) {
+          els.bizDateKicker.textContent = "Select a business date then click Run Audit";
+        } else if (errors.length === 0) {
+          els.bizDateKicker.textContent = `All ${posWithDates.length} PO dates match ${formatDateMDY(expectedDate)} ✓`;
+        } else {
+          els.bizDateKicker.textContent = `${errors.length} PO${errors.length !== 1 ? "s" : ""} entered on wrong business date`;
+        }
+      }
+
+      // Status list
+      if (els.bizDateStatus) {
+        els.bizDateStatus.innerHTML = "";
+        [
+          `OPS report: ${hasOps ? (audit.opsFileName || "loaded") : "not loaded"}`,
+          `DMS report: ${hasDms ? (audit.dmsFileName || state.fileName || "loaded") : "not loaded"}`,
+          `Business date: ${expectedDate ? formatDateMDY(expectedDate) : "not set"}`,
+          `POs scanned: ${posWithPo.length} total, ${posWithDates.length} with readable dates`,
+          `Detection: reads MMDDYY from dot-segments like ks071126 → 07/11/26`,
+          `Only POs where the embedded date does not match the expected date are shown.`
+        ].forEach(function(msg) { els.bizDateStatus.appendChild(emptySmall(msg)); });
+      }
+
+      // Render table
+      renderBusinessDateTable(errors);
+    }
+
+    function renderBusinessDateTable(errors) {
+      const table = els.bizDateTable;
+      if (!table) return;
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Source", "Reference #", "Supplier", "PO Number", "PO Date", "Expected Date", "Difference"];
+      const headerRow = document.createElement("tr");
+      headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; headerRow.appendChild(th); });
+      thead.appendChild(headerRow);
+      const frag = document.createDocumentFragment();
+      errors.forEach(function(err) {
+        const tr = document.createElement("tr");
+        tr.classList.add("bizdate-error-row");
+        const absDiff = Math.abs(err.daysDiff);
+        if (absDiff >= 2) tr.classList.add("bizdate-error-high");
+        [err.source, err.reference, err.supplier, err.po, err.poDateStr, err.expectedDateStr, err.diffLabel].forEach(function(val) {
+          const td = document.createElement("td"); td.textContent = val; tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!errors.length) {
+        const msg = state.bizDateAudit.lastRunDate ? "No wrong-date POs found. All readable PO dates match the expected business date." : "Set a business date and click Run Audit to check POs.";
+        appendEmptyRow(tbody, headers.length, msg);
+      }
+      if (els.bizDateTableMeta) {
+        els.bizDateTableMeta.textContent = errors.length
+          ? `${errors.length} PO${errors.length !== 1 ? "s" : ""} flagged | sorted by biggest date gap first`
+          : (state.bizDateAudit.lastRunDate ? "No errors found" : "Run audit to see results");
+      }
+    }
+
+    function exportBizDateCsv() {
+      const errors = state.bizDateAudit.errors || [];
+      if (!errors.length) { showToast("No errors to export."); return; }
+      const headers = ["Source", "Reference", "Supplier", "PO Number", "PO Date", "Expected Date", "Difference"];
+      const rows = errors.map(function(e) {
+        return [e.source, e.reference, e.supplier, e.po, e.poDateStr, e.expectedDateStr, e.diffLabel]
+          .map(function(v) { return `"${String(v || "").replace(/"/g, '""')}"`; }).join(",");
+      });
+      const csv = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `business_date_errors_${state.bizDateAudit.lastRunDate || "audit"}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
     function recordSpillEvent(spilled) {
       const supplier = els.spillRecordSupplier.value.trim();
       const po = els.spillRecordPo.value.trim();
@@ -9182,6 +9495,7 @@
       renderCharts();
       if (name === "breakdownsAudit") renderBreakdownsAudit();
       if (name === "truckChargeAudit") renderTruckChargeAudit();
+      if (name === "bizDateAudit") renderBusinessDateAudit();
       if (name === "detention") {
         var df = document.getElementById("detentionFrame");
         if (df && !df.getAttribute("data-loaded")) { df.src = "detention-section.html"; df.setAttribute("data-loaded", "1"); }
