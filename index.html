@@ -368,6 +368,22 @@
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
     /* ── My Portal ───────────────────────────────────────────── */
+    .portal-add-form {
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 10px;
+    }
+    :root.dark .portal-add-form { background: #0e1e30; border-color: #1e3a55; }
+    .portal-add-title { font-weight: 700; font-size: 0.9em; color: var(--label, #718096); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .portal-add-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .portal-field { display: flex; flex-direction: column; gap: 3px; min-width: 100px; }
+    .portal-field label { font-size: 0.75em; font-weight: 600; color: var(--label, #718096); }
+    .portal-field input { min-width: 90px; }
+    .portal-field-btn { justify-content: flex-end; }
+    .portal-clockin-btn { padding: 8px 18px; font-size: 0.88em; font-weight: 700; white-space: nowrap; }
+    .portal-add-error { color: #e53e3e; font-size: 0.82em; font-weight: 600; margin-top: 6px; }
     .portal-header-bar {
       display: flex;
       align-items: center;
@@ -3347,11 +3363,42 @@
           <div class="portal-header-right">
             <label style="font-size:0.78em; color:var(--muted,#888);">Free time (min):</label>
             <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
-            <button id="portalRefreshBtn" type="button" class="portal-refresh-btn">
-              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
-              Refresh
-            </button>
+            <button id="portalClearDoneBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Done</button>
+            <button id="portalClearAllBtn" type="button" class="secondary-btn" style="font-size:0.8em; color:#e53e3e;">Clear All</button>
           </div>
+        </div>
+
+        <!-- Add truck form -->
+        <div class="portal-add-form" id="portalAddForm">
+          <div class="portal-add-title">Clock In a Truck</div>
+          <div class="portal-add-fields">
+            <div class="portal-field">
+              <label for="portalInputRef">Truck / Ref #</label>
+              <input id="portalInputRef" type="text" class="lookup-input" placeholder="e.g. 47" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalInputDoor">Door #</label>
+              <input id="portalInputDoor" type="text" class="lookup-input" placeholder="e.g. 33" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalInputSupplier">Supplier</label>
+              <input id="portalInputSupplier" type="text" class="lookup-input" placeholder="e.g. Pepsi" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalInputPo">PO # <span style="font-weight:400;color:var(--muted,#888)">(optional)</span></label>
+              <input id="portalInputPo" type="text" class="lookup-input" placeholder="e.g. oks.123.ks061226" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalInputTime">Check-In Time <span style="font-weight:400;color:var(--muted,#888)">(defaults to now)</span></label>
+              <input id="portalInputTime" type="time" class="lookup-input">
+            </div>
+            <div class="portal-field portal-field-btn">
+              <button id="portalClockInBtn" type="button" class="primary-btn portal-clockin-btn">
+                ⏱ Clock In
+              </button>
+            </div>
+          </div>
+          <div id="portalAddError" class="portal-add-error" style="display:none;"></div>
         </div>
 
         <!-- Urgent alert strip -->
@@ -3361,17 +3408,17 @@
         <div class="summary-grid" style="margin:10px 0;">
           <article class="metric-card">
             <div class="metric-label">Trucks Active</div>
-            <div class="metric-value" id="portalActiveCount">—</div>
+            <div class="metric-value" id="portalActiveCount">0</div>
             <div class="metric-note">On dock, not yet finished.</div>
           </article>
           <article class="metric-card">
             <div class="metric-label">Urgent / Warning</div>
-            <div class="metric-value" id="portalUrgentCount" style="color:#e53e3e;">—</div>
+            <div class="metric-value" id="portalUrgentCount" style="color:#e53e3e;">0</div>
             <div class="metric-note">Under 60 min of free time left.</div>
           </article>
           <article class="metric-card">
             <div class="metric-label">In Detention</div>
-            <div class="metric-value" id="portalDetentionCount" style="color:#c53030;">—</div>
+            <div class="metric-value" id="portalDetentionCount" style="color:#c53030;">0</div>
             <div class="metric-note">Free time already exceeded.</div>
           </article>
           <article class="metric-card">
@@ -3381,8 +3428,8 @@
           </article>
           <article class="metric-card">
             <div class="metric-label">Trucks Done Today</div>
-            <div class="metric-value" id="portalDoneCount">—</div>
-            <div class="metric-note" id="portalProgressNote">of total scheduled.</div>
+            <div class="metric-value" id="portalDoneCount">0</div>
+            <div class="metric-note" id="portalProgressNote">of 0 today.</div>
           </article>
           <article class="metric-card">
             <div class="metric-label">Avg Turn Time</div>
@@ -3405,7 +3452,7 @@
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="portalBoardTitle">Live Operations Board</div>
-              <div class="table-meta" id="portalBoardMeta">Load your daily truck report and DMS file to populate</div>
+              <div class="table-meta" id="portalBoardMeta">No trucks clocked in yet. Use the form above to add a truck.</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
               <select id="portalStatusFilter" class="lookup-input" style="max-width:160px;">
@@ -3414,7 +3461,6 @@
                 <option value="urgent">Urgent / Warning</option>
                 <option value="detention">In Detention</option>
                 <option value="complete">Completed</option>
-                <option value="waiting">Not Arrived</option>
               </select>
             </div>
           </div>
@@ -3425,12 +3471,6 @@
             </table>
           </div>
         </section>
-
-        <div class="friendly-note" style="margin-top:12px; font-size:0.8em;">
-          <strong>Data source:</strong> Daily truck report + DMS audit timestamps.
-          For <strong>live auto-refresh</strong>: set up DMS to export to Google Sheets every 5 min —
-          contact your IT team or see the Help tab for setup instructions.
-        </div>
       </section>
 
       <section id="exceptionsPanel" class="tab-panel" aria-label="Exceptions Queue">
@@ -4432,7 +4472,15 @@
       portalLiveClock: document.getElementById("portalLiveClock"),
       portalDayLabel: document.getElementById("portalDayLabel"),
       portalFreeTime: document.getElementById("portalFreeTime"),
-      portalRefreshBtn: document.getElementById("portalRefreshBtn"),
+      portalClearDoneBtn: document.getElementById("portalClearDoneBtn"),
+      portalClearAllBtn: document.getElementById("portalClearAllBtn"),
+      portalInputRef: document.getElementById("portalInputRef"),
+      portalInputDoor: document.getElementById("portalInputDoor"),
+      portalInputSupplier: document.getElementById("portalInputSupplier"),
+      portalInputPo: document.getElementById("portalInputPo"),
+      portalInputTime: document.getElementById("portalInputTime"),
+      portalClockInBtn: document.getElementById("portalClockInBtn"),
+      portalAddError: document.getElementById("portalAddError"),
       portalAlertStrip: document.getElementById("portalAlertStrip"),
       portalActiveCount: document.getElementById("portalActiveCount"),
       portalUrgentCount: document.getElementById("portalUrgentCount"),
@@ -4891,12 +4939,53 @@
       setInterval(tick, 1000);
     })();
 
-    els.portalRefreshBtn.addEventListener("click", renderPortal);
     els.portalFreeTime.addEventListener("change", function() {
       state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
       renderPortalBoard();
     });
     els.portalStatusFilter.addEventListener("change", renderPortalBoard);
+
+    els.portalClockInBtn.addEventListener("click", function() {
+      const ref = els.portalInputRef.value.trim();
+      const door = els.portalInputDoor.value.trim();
+      const supplier = els.portalInputSupplier.value.trim();
+      const po = els.portalInputPo.value.trim();
+      const timeVal = els.portalInputTime.value;
+      if (!ref) {
+        els.portalAddError.textContent = "Truck / Ref # is required.";
+        els.portalAddError.style.display = "";
+        els.portalInputRef.focus();
+        return;
+      }
+      els.portalAddError.style.display = "none";
+      let checkInMs = Date.now();
+      if (timeVal) {
+        const now = new Date();
+        const [hh, mm] = timeVal.split(":").map(Number);
+        const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+        if (!isNaN(t.getTime())) checkInMs = t.getTime();
+      }
+      portalClockIn(ref, door, supplier, po, checkInMs);
+      els.portalInputRef.value = "";
+      els.portalInputDoor.value = "";
+      els.portalInputSupplier.value = "";
+      els.portalInputPo.value = "";
+      els.portalInputTime.value = "";
+      renderPortalBoard();
+      els.portalInputRef.focus();
+    });
+
+    // Allow Enter key in any portal input field to clock in
+    [els.portalInputRef, els.portalInputDoor, els.portalInputSupplier, els.portalInputPo, els.portalInputTime].forEach(function(el) {
+      el && el.addEventListener("keydown", function(e) { if (e.key === "Enter") els.portalClockInBtn.click(); });
+    });
+
+    els.portalClearDoneBtn.addEventListener("click", function() {
+      if (confirm("Remove all completed trucks from the board?")) { portalClearDone(); renderPortalBoard(); }
+    });
+    els.portalClearAllBtn.addEventListener("click", function() {
+      if (confirm("Clear ALL trucks from the board? This cannot be undone.")) { portalClearAll(); renderPortalBoard(); }
+    });
     els.turnRunButton.addEventListener("click", renderTurnTracker);
     els.turnThresholdInput.addEventListener("change", renderTurnTracker);
     els.turnFilterSelect.addEventListener("change", function() {
@@ -8099,97 +8188,76 @@
 
 
     // ═══════════════════════════════════════════════════════════
-    // MY PORTAL — Live Operations Dashboard
+    // MY PORTAL — Manual clock-in operations dashboard
     // ═══════════════════════════════════════════════════════════
 
-    function buildPortalRows() {
-      const dmsReport = currentDmsValidationReport();
-      if (!dmsReport || !dmsReport.rows || !dmsReport.rows.length) return [];
-      const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
-      const now = Date.now();
-      const headers = dmsReport.headers;
-      const sel = dmsReport.selectors || detectSelectors(headers, dmsReport.rows);
+    const PORTAL_STORAGE_KEY = "portalTrucks";
 
-      const doorH    = findBestTurnHeader(headers, ["door number", "door #", "door", "dock door", "assigned door", "dock"]);
-      const checkInH = findBestTurnHeader(headers, ["driver.*check.*in", "driver.*check", "check.*in", "at.*door"]);
-      const finishH  = findBestTurnHeader(headers, ["finish.*receiv", "receiv.*finish", "unload.*finish", "finish.*unload", "receiving.*finish"]);
-      const apptH    = findBestTurnHeader(headers, ["appt", "appointment", "scheduled", "sched.*time", "appt.*time"]);
-      const poH      = sel.po || null;
+    function portalLoadTrucks() {
+      try {
+        const raw = localStorage.getItem(PORTAL_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
 
-      return dmsReport.rows.map(function(row, idx) {
-        const reference = sel.reference ? cleanCell(row[sel.reference] || "") : ("Row " + (idx + 1));
-        if (!reference) return null;
-        const supplier   = sel.supplier  ? cleanCell(row[sel.supplier]  || "") : "";
-        const door       = doorH    ? cleanCell(row[doorH]    || "") : "";
-        const checkInVal = checkInH ? cleanCell(row[checkInH] || "") : "";
-        const finishVal  = finishH  ? cleanCell(row[finishH]  || "") : "";
-        const apptVal    = apptH    ? cleanCell(row[apptH]    || "") : "";
-        const po         = poH      ? cleanCell(row[poH]      || "") : "";
+    function portalSaveTrucks(trucks) {
+      try { localStorage.setItem(PORTAL_STORAGE_KEY, JSON.stringify(trucks)); } catch(e) {}
+    }
 
-        const checkInTime = parseDmsTs(checkInVal);
-        const finishTime  = parseDmsTs(finishVal);
-        const apptTime    = parseDmsTs(apptVal);
-        const isComplete  = Boolean(finishTime);
-        const hasArrived  = Boolean(checkInTime);
+    function portalGenId() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
 
-        const clockStart = checkInTime || apptTime;
-
-        let detentionStatus = hasArrived ? "active" : "waiting";
-        let msRemaining = null;
-        let countdownLabel = "—";
-        let countdownClass = "";
-        let minutesInDetention = null;
-
-        if (isComplete) {
-          detentionStatus = "complete";
-          if (checkInTime && finishTime) {
-            const mins = Math.round((finishTime.getTime() - checkInTime.getTime()) / 60000);
-            countdownLabel = "Done in " + Math.floor(mins/60) + "h " + (mins%60) + "m";
-            countdownClass = "portal-countdown-active";
-          } else {
-            countdownLabel = "Complete";
-          }
-        } else if (clockStart) {
-          msRemaining = clockStart.getTime() + freeTimeMs - now;
-          const minsRem = Math.round(msRemaining / 60000);
-          if (msRemaining < 0) {
-            detentionStatus = "detention";
-            minutesInDetention = Math.abs(minsRem);
-            countdownLabel = "IN DETENTION +" + Math.floor(minutesInDetention/60) + "h " + (minutesInDetention%60) + "m";
-            countdownClass = "portal-countdown-detention";
-          } else if (minsRem < 30) {
-            detentionStatus = "urgent";
-            countdownLabel = minsRem + " min left";
-            countdownClass = "portal-countdown-urgent";
-          } else if (minsRem < 60) {
-            detentionStatus = "warning";
-            countdownLabel = minsRem + " min left";
-            countdownClass = "portal-countdown-warning";
-          } else {
-            const h = Math.floor(minsRem / 60); const m = minsRem % 60;
-            countdownLabel = h + "h " + m + "m left";
-            countdownClass = "portal-countdown-active";
-          }
-        }
-
-        const statusOrder = { detention: 0, urgent: 1, warning: 2, active: 3, waiting: 4, complete: 5 };
-        const sortKey = statusOrder[detentionStatus] !== undefined ? statusOrder[detentionStatus] : 6;
-
-        return {
-          reference, supplier, door, po,
-          checkInVal, finishVal, apptVal,
-          checkInTime, finishTime, apptTime,
-          isComplete, hasArrived,
-          detentionStatus, msRemaining,
-          countdownLabel, countdownClass,
-          minutesInDetention, sortKey,
-          turnMinutes: (checkInTime && finishTime)
-            ? Math.round((finishTime.getTime() - checkInTime.getTime()) / 60000)
-            : null
-        };
-      }).filter(Boolean).sort(function(a, b) {
-        return a.sortKey - b.sortKey || a.reference.localeCompare(b.reference);
+    function portalClockIn(ref, door, supplier, po, checkInMs) {
+      const trucks = portalLoadTrucks();
+      trucks.push({
+        id: portalGenId(),
+        ref: ref.trim(),
+        door: door.trim(),
+        supplier: supplier.trim(),
+        po: po.trim(),
+        checkInMs: checkInMs,
+        finishMs: null,
+        date: new Date().toLocaleDateString()
       });
+      portalSaveTrucks(trucks);
+    }
+
+    function portalMarkDone(id) {
+      const trucks = portalLoadTrucks();
+      const t = trucks.find(function(x) { return x.id === id; });
+      if (t) t.finishMs = Date.now();
+      portalSaveTrucks(trucks);
+    }
+
+    function portalRemove(id) {
+      const trucks = portalLoadTrucks().filter(function(x) { return x.id !== id; });
+      portalSaveTrucks(trucks);
+    }
+
+    function portalClearDone() {
+      const trucks = portalLoadTrucks().filter(function(x) { return !x.finishMs; });
+      portalSaveTrucks(trucks);
+    }
+
+    function portalClearAll() {
+      portalSaveTrucks([]);
+    }
+
+    function portalCalcStatus(truck, freeTimeMs, now) {
+      if (truck.finishMs) {
+        const turnMin = Math.round((truck.finishMs - truck.checkInMs) / 60000);
+        return { status: "complete", turnMin, msRemaining: null, countdownLabel: "Done ✓", countdownClass: "portal-countdown-active", minutesInDetention: null };
+      }
+      const msRemaining = truck.checkInMs + freeTimeMs - now;
+      const minsRem = Math.round(msRemaining / 60000);
+      if (msRemaining < 0) {
+        const det = Math.abs(minsRem);
+        return { status: "detention", msRemaining, countdownLabel: "IN DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null };
+      }
+      if (minsRem < 30) return { status: "urgent",  msRemaining, countdownLabel: minsRem + " min left", countdownClass: "portal-countdown-urgent",  minutesInDetention: null, turnMin: null };
+      if (minsRem < 60) return { status: "warning", msRemaining, countdownLabel: minsRem + " min left", countdownClass: "portal-countdown-warning", minutesInDetention: null, turnMin: null };
+      return { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m left", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
     }
 
     function renderPortal() {
@@ -8198,55 +8266,73 @@
     }
 
     function renderPortalBoard() {
-      const allRows = buildPortalRows();
+      const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      const trucks = portalLoadTrucks();
       const statusFilter = els.portalStatusFilter ? els.portalStatusFilter.value : "all";
 
-      const active    = allRows.filter(function(r) { return r.detentionStatus === "active"; });
-      const urgent    = allRows.filter(function(r) { return r.detentionStatus === "urgent" || r.detentionStatus === "warning"; });
-      const detention = allRows.filter(function(r) { return r.detentionStatus === "detention"; });
-      const complete  = allRows.filter(function(r) { return r.isComplete; });
+      // Enrich with computed status
+      const enriched = trucks.map(function(t) {
+        const calc = portalCalcStatus(t, freeTimeMs, now);
+        return Object.assign({}, t, calc);
+      });
 
-      if (els.portalActiveCount)    els.portalActiveCount.textContent    = active.length + urgent.length + detention.length;
-      if (els.portalUrgentCount)    els.portalUrgentCount.textContent    = urgent.length;
+      const statusOrder = { detention: 0, urgent: 1, warning: 2, active: 3, complete: 4 };
+      enriched.sort(function(a, b) {
+        const ao = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 5;
+        const bo = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 5;
+        if (ao !== bo) return ao - bo;
+        if (a.msRemaining !== null && b.msRemaining !== null) return a.msRemaining - b.msRemaining;
+        return 0;
+      });
+
+      const active    = enriched.filter(function(r) { return r.status === "active"; });
+      const warning   = enriched.filter(function(r) { return r.status === "warning"; });
+      const urgent    = enriched.filter(function(r) { return r.status === "urgent"; });
+      const detention = enriched.filter(function(r) { return r.status === "detention"; });
+      const complete  = enriched.filter(function(r) { return r.status === "complete"; });
+
+      // Summary cards
+      if (els.portalActiveCount)    els.portalActiveCount.textContent    = active.length + urgent.length + warning.length + detention.length;
+      if (els.portalUrgentCount)    els.portalUrgentCount.textContent    = urgent.length + warning.length;
       if (els.portalDetentionCount) els.portalDetentionCount.textContent = detention.length;
       if (els.portalDoneCount)      els.portalDoneCount.textContent      = complete.length;
-      if (els.portalProgressNote)   els.portalProgressNote.textContent   = "of " + allRows.length + " total today";
+      if (els.portalProgressNote)   els.portalProgressNote.textContent   = "of " + enriched.length + " today.";
 
-      const completedWithTime = complete.filter(function(r) { return r.turnMinutes !== null && r.turnMinutes > 0; });
-      let avgTurn = 180;
-      if (completedWithTime.length) {
-        avgTurn = Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMinutes; }, 0) / completedWithTime.length);
-      } else if (state.turnTracker.rows.length) {
-        avgTurn = Math.round(state.turnTracker.rows.reduce(function(s, r) { return s + r.minutes; }, 0) / state.turnTracker.rows.length);
-      }
+      // Avg turn time
+      const completedWithTime = complete.filter(function(r) { return r.turnMin && r.turnMin > 0; });
+      let avgTurn = state.turnTracker.rows.length
+        ? Math.round(state.turnTracker.rows.reduce(function(s, r) { return s + r.minutes; }, 0) / state.turnTracker.rows.length)
+        : 180;
+      if (completedWithTime.length) avgTurn = Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMin; }, 0) / completedWithTime.length);
       if (els.portalAvgTurn) els.portalAvgTurn.textContent = Math.floor(avgTurn/60) + "h " + (avgTurn%60) + "m";
 
-      const remaining  = allRows.filter(function(r) { return !r.isComplete; });
-      const inProgress = remaining.filter(function(r) { return r.hasArrived; });
-      const notStarted = remaining.filter(function(r) { return !r.hasArrived; });
-      const activeDoors = Math.max(1, inProgress.length);
-      const remainingTime = (notStarted.length * avgTurn + inProgress.length * (avgTurn * 0.5)) / activeDoors;
-      const estFinish = new Date(Date.now() + remainingTime * 60000);
-      if (els.portalEstComplete && remaining.length > 0) {
-        const hh = estFinish.getHours(); const mm = String(estFinish.getMinutes()).padStart(2,"0");
+      // Estimated completion
+      const stillRunning = active.length + urgent.length + warning.length + detention.length;
+      if (stillRunning > 0) {
+        const estMs = now + stillRunning * avgTurn * 60000;
+        const ef = new Date(estMs);
+        const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
         const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
-        els.portalEstComplete.textContent = h12 + ":" + mm + " " + ampm;
-        if (els.portalEstNote) els.portalEstNote.textContent = remaining.length + " truck(s) remaining, ~" + avgTurn + " min avg";
-      } else if (remaining.length === 0 && allRows.length > 0) {
+        if (els.portalEstComplete) els.portalEstComplete.textContent = h12 + ":" + mm + " " + ampm;
+        if (els.portalEstNote) els.portalEstNote.textContent = stillRunning + " truck(s) remaining, ~" + avgTurn + " min avg";
+      } else if (enriched.length > 0) {
         if (els.portalEstComplete) els.portalEstComplete.textContent = "Done ✓";
-        if (els.portalEstNote)     els.portalEstNote.textContent     = "All trucks completed!";
+        if (els.portalEstNote) els.portalEstNote.textContent = "All trucks completed!";
       } else {
         if (els.portalEstComplete) els.portalEstComplete.textContent = "—";
+        if (els.portalEstNote) els.portalEstNote.textContent = "Clock in trucks above.";
       }
 
-      if (allRows.length > 0 && els.portalProgressWrap) {
-        const pct = Math.round((complete.length / allRows.length) * 100);
+      // Progress bar
+      if (enriched.length > 0 && els.portalProgressWrap) {
+        const pct = Math.round((complete.length / enriched.length) * 100);
         els.portalProgressWrap.style.display = "";
-        if (els.portalProgressFill)  els.portalProgressFill.style.width   = pct + "%";
-        if (els.portalProgressLabel) els.portalProgressLabel.textContent  = "Day Progress: " + complete.length + " of " + allRows.length + " trucks complete (" + pct + "%)";
+        if (els.portalProgressFill)  els.portalProgressFill.style.width  = pct + "%";
+        if (els.portalProgressLabel) els.portalProgressLabel.textContent = "Day Progress: " + complete.length + " of " + enriched.length + " trucks complete (" + pct + "%)";
         if (els.portalProgressPace) {
-          const firstArrival = allRows.find(function(r) { return r.checkInTime; });
-          const elapsedH = firstArrival ? (Date.now() - firstArrival.checkInTime.getTime()) / 3600000 : 0;
+          const firstMs = enriched.reduce(function(min, r) { return r.checkInMs < min ? r.checkInMs : min; }, Infinity);
+          const elapsedH = firstMs < Infinity ? (now - firstMs) / 3600000 : 0;
           const rate = elapsedH > 0.1 ? (complete.length / elapsedH).toFixed(1) : 0;
           els.portalProgressPace.textContent = rate > 0 ? ("Rate: ~" + rate + " trucks/hr") : "";
         }
@@ -8254,36 +8340,38 @@
         els.portalProgressWrap.style.display = "none";
       }
 
-      const alerts = allRows.filter(function(r) { return r.detentionStatus === "detention" || r.detentionStatus === "urgent"; });
+      // Alert strip
+      const alerts = [...detention, ...urgent];
       if (els.portalAlertStrip) {
         if (alerts.length) {
           els.portalAlertStrip.style.display = "";
           els.portalAlertStrip.innerHTML = "⚠️ " + alerts.map(function(r) {
-            const doorStr = r.door ? (" Door " + escapeHtml(r.door)) : "";
-            if (r.detentionStatus === "detention") {
-              return '<span class="portal-alert-item">🔴 Truck ' + escapeHtml(r.reference) + doorStr + ' — ' + escapeHtml(r.supplier) + ' — IN DETENTION for ' + r.minutesInDetention + ' min</span>';
+            const doorStr = r.door ? (" • Door " + escapeHtml(r.door)) : "";
+            if (r.status === "detention") {
+              return '<span class="portal-alert-item">🔴 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — IN DETENTION for " + r.minutesInDetention + " min</span>";
             }
-            return '<span class="portal-alert-item">🟠 Truck ' + escapeHtml(r.reference) + doorStr + ' — ' + escapeHtml(r.supplier) + ' — only ' + Math.round(r.msRemaining/60000) + ' min of free time remaining — expedite!</span>';
+            return '<span class="portal-alert-item">🟠 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — only " + Math.round(r.msRemaining/60000) + " min of free time remaining — expedite!</span>";
           }).join("<br>");
         } else {
           els.portalAlertStrip.style.display = "none";
         }
       }
 
-      const filtered = statusFilter === "all" ? allRows : allRows.filter(function(r) {
-        if (statusFilter === "active")    return r.detentionStatus === "active";
-        if (statusFilter === "urgent")    return r.detentionStatus === "urgent" || r.detentionStatus === "warning";
-        if (statusFilter === "detention") return r.detentionStatus === "detention";
-        if (statusFilter === "complete")  return r.isComplete;
-        if (statusFilter === "waiting")   return r.detentionStatus === "waiting";
+      // Filter for table
+      const filtered = statusFilter === "all" ? enriched : enriched.filter(function(r) {
+        if (statusFilter === "active")    return r.status === "active";
+        if (statusFilter === "urgent")    return r.status === "urgent" || r.status === "warning";
+        if (statusFilter === "detention") return r.status === "detention";
+        if (statusFilter === "complete")  return r.status === "complete";
         return true;
       });
 
+      // Build table
       const thead = els.portalBoard.querySelector("thead");
       const tbody = els.portalBoard.querySelector("tbody");
       thead.innerHTML = "";
       tbody.innerHTML = "";
-      const colHeaders = ["Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Time Remaining / Duration", "Turn Time"];
+      const colHeaders = ["Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Time Remaining", "Turn Time", "Actions"];
       const hr = document.createElement("tr");
       colHeaders.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
       thead.appendChild(hr);
@@ -8292,18 +8380,23 @@
       filtered.forEach(function(r) {
         const tr = document.createElement("tr");
         const rowClassMap = { detention: "portal-row-detention", urgent: "portal-row-urgent", warning: "portal-row-warning", complete: "portal-row-complete" };
-        const rowClass = rowClassMap[r.detentionStatus];
+        const rowClass = rowClassMap[r.status];
         if (rowClass) tr.classList.add(rowClass);
 
         const statusTd = document.createElement("td");
         const badge = document.createElement("span");
-        badge.className = "portal-status portal-status-" + r.detentionStatus;
-        const statusLabels = { detention: "DETENTION", urgent: "URGENT", warning: "WARNING", active: "Active", complete: "Done", waiting: "Waiting" };
-        badge.textContent = statusLabels[r.detentionStatus] || r.detentionStatus;
+        badge.className = "portal-status portal-status-" + r.status;
+        const statusLabels = { detention: "DETENTION", urgent: "URGENT", warning: "WARNING", active: "Active", complete: "Done" };
+        badge.textContent = statusLabels[r.status] || r.status;
         statusTd.appendChild(badge);
         tr.appendChild(statusTd);
 
-        [r.reference, r.door || "—", r.supplier, r.po || "—", r.checkInVal || "—"].forEach(function(v) {
+        const checkInTime = new Date(r.checkInMs);
+        const ch = checkInTime.getHours(), cm = String(checkInTime.getMinutes()).padStart(2,"0");
+        const camp = ch >= 12 ? "PM" : "AM"; const ch12 = ch % 12 || 12;
+        const checkInStr = ch12 + ":" + cm + " " + camp;
+
+        [r.ref, r.door || "—", r.supplier || "—", r.po || "—", checkInStr].forEach(function(v) {
           const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
         });
 
@@ -8313,21 +8406,52 @@
         tr.appendChild(cntTd);
 
         const turnTd = document.createElement("td");
-        turnTd.textContent = r.turnMinutes !== null ? (Math.floor(r.turnMinutes/60) + "h " + (r.turnMinutes%60) + "m") : "—";
+        if (r.turnMin !== null && r.turnMin !== undefined) {
+          turnTd.textContent = Math.floor(r.turnMin/60) + "h " + (r.turnMin%60) + "m";
+        } else {
+          const elapsedMin = Math.round((now - r.checkInMs) / 60000);
+          turnTd.textContent = Math.floor(elapsedMin/60) + "h " + (elapsedMin%60) + "m elapsed";
+          turnTd.style.color = "var(--muted,#a0aec0)";
+          turnTd.style.fontSize = "0.85em";
+        }
         tr.appendChild(turnTd);
+
+        const actTd = document.createElement("td");
+        actTd.style.whiteSpace = "nowrap";
+        if (!r.finishMs) {
+          const doneBtn = document.createElement("button");
+          doneBtn.type = "button";
+          doneBtn.className = "secondary-btn";
+          doneBtn.style.cssText = "font-size:0.75em; padding:3px 8px; background:#38a169; color:#fff; border-color:#38a169; margin-right:4px;";
+          doneBtn.textContent = "Done";
+          doneBtn.dataset.id = r.id;
+          doneBtn.addEventListener("click", function() { portalMarkDone(this.dataset.id); renderPortalBoard(); });
+          actTd.appendChild(doneBtn);
+        }
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "secondary-btn";
+        delBtn.style.cssText = "font-size:0.75em; padding:3px 8px; color:#e53e3e; border-color:#e53e3e;";
+        delBtn.textContent = "✕";
+        delBtn.title = "Remove";
+        delBtn.dataset.id = r.id;
+        delBtn.addEventListener("click", function() {
+          if (confirm("Remove truck " + r.ref + " from the board?")) { portalRemove(this.dataset.id); renderPortalBoard(); }
+        });
+        actTd.appendChild(delBtn);
+        tr.appendChild(actTd);
 
         frag.appendChild(tr);
       });
       tbody.appendChild(frag);
 
-      const hasData = allRows.length > 0;
       if (!filtered.length) {
-        appendEmptyRow(tbody, colHeaders.length, hasData ? "No trucks match this filter." : "Load your daily truck report and DMS file in Breakdowns Audit first.");
+        appendEmptyRow(tbody, colHeaders.length, enriched.length > 0 ? "No trucks match this filter." : "No trucks clocked in yet. Use the form above to add the first one.");
       }
       if (els.portalBoardMeta) {
-        els.portalBoardMeta.textContent = hasData
-          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown | " + detention.length + " in detention | " + urgent.length + " urgent | updated " + new Date().toLocaleTimeString())
-          : "Load your daily report and DMS file to populate the portal";
+        els.portalBoardMeta.textContent = enriched.length > 0
+          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown • " + detention.length + " in detention • " + (urgent.length + warning.length) + " urgent/warning • updated " + new Date().toLocaleTimeString())
+          : "No trucks clocked in yet. Use the form above to add a truck.";
       }
     }
 
