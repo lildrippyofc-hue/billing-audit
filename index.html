@@ -367,6 +367,72 @@
     :root.dark input[type="text"], :root.dark input[type="search"] { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
+    /* ── My Portal ───────────────────────────────────────────── */
+    .portal-header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--border, #e2e8f0);
+      border-radius: 10px;
+      padding: 10px 16px;
+      margin-bottom: 10px;
+    }
+    :root.dark .portal-header-bar { background: #0e1e30; border-color: #1e3a55; }
+    .portal-live-badge { display: flex; align-items: center; gap: 8px; }
+    .portal-live-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #38a169; display: inline-block;
+      transition: opacity 0.3s;
+      box-shadow: 0 0 6px #38a16988;
+    }
+    #portalLiveClock { font-size: 1.1em; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
+    .portal-header-center { font-weight: 600; color: var(--label, #718096); font-size: 0.9em; }
+    .portal-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .portal-refresh-btn { padding: 6px 12px; font-size: 0.82em; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    /* Alert strip */
+    .portal-alert-strip {
+      background: #fff5f5;
+      border: 2px solid #e53e3e;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      color: #c53030;
+      line-height: 1.7;
+    }
+    :root.dark .portal-alert-strip { background: #3d1515; border-color: #fc8181; color: #fca5a5; }
+    .portal-alert-item { display: flex; align-items: center; gap: 8px; }
+    /* Progress bar */
+    .portal-progress-wrap { margin: 6px 0 10px; }
+    .portal-progress-label { font-size: 0.8em; font-weight: 600; color: var(--label,#718096); margin-bottom: 4px; }
+    .portal-progress-track { height: 14px; background: var(--border,#e2e8f0); border-radius: 8px; overflow: hidden; }
+    .portal-progress-fill { height: 100%; background: linear-gradient(90deg, #38a169, #68d391); border-radius: 8px; transition: width 0.6s ease; }
+    .portal-progress-pace { font-size: 0.78em; color: var(--muted,#a0aec0); margin-top: 3px; }
+    :root.dark .portal-progress-track { background: #1e3a55; }
+    /* Board row colors */
+    tr.portal-row-detention td { background: #fff5f5 !important; font-weight: 600; }
+    tr.portal-row-urgent td { background: #fffbeb !important; font-weight: 600; }
+    tr.portal-row-warning td { background: #fefcbf !important; }
+    tr.portal-row-complete td { opacity: 0.55; }
+    :root.dark tr.portal-row-detention td { background: #2d1515 !important; }
+    :root.dark tr.portal-row-urgent td { background: #2a1f00 !important; }
+    :root.dark tr.portal-row-warning td { background: #2a2300 !important; }
+    /* Status chips */
+    .portal-status { display: inline-block; border-radius: 5px; padding: 2px 8px; font-size: 0.74em; font-weight: 700; white-space: nowrap; }
+    .portal-status-detention { background: #e53e3e; color: #fff; }
+    .portal-status-urgent { background: #dd6b20; color: #fff; }
+    .portal-status-warning { background: #d69e2e; color: #fff; }
+    .portal-status-active { background: #3182ce; color: #fff; }
+    .portal-status-complete { background: #38a169; color: #fff; }
+    .portal-status-waiting { background: #718096; color: #fff; }
+    /* Countdown cell */
+    td.portal-countdown-detention { color: #e53e3e; font-weight: 700; font-variant-numeric: tabular-nums; }
+    td.portal-countdown-urgent { color: #dd6b20; font-weight: 700; font-variant-numeric: tabular-nums; }
+    td.portal-countdown-warning { color: #d69e2e; font-weight: 600; font-variant-numeric: tabular-nums; }
+    td.portal-countdown-active { color: #38a169; font-variant-numeric: tabular-nums; }
     /* Trend charts grid */
     .trends-chart-grid {
       display: grid;
@@ -2196,6 +2262,10 @@
       </button>
       <div class="menu-panel" id="sectionMenuPanel">
         <div class="menu-group">
+          <div class="menu-group-title">Live</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal</button>
+        </div>
+        <div class="menu-group">
           <div class="menu-group-title">Truck Report</div>
           <button class="tab-button" type="button" aria-selected="true" data-tab="overview" data-menu-label="Truck Report: Overview">Overview</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="data" data-menu-label="Truck Report: Data">Data</button>
@@ -3262,6 +3332,107 @@
         </section>
       </section>
 
+      <section id="myPortalPanel" class="tab-panel" aria-label="My Portal">
+        <div class="motivation-bar" id="motivBar_myPortal"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+
+        <!-- Live header bar -->
+        <div class="portal-header-bar">
+          <div class="portal-live-badge">
+            <span class="portal-live-dot" id="portalLiveDot"></span>
+            <span id="portalLiveClock">--:-- --</span>
+          </div>
+          <div class="portal-header-center">
+            <span class="portal-day-label" id="portalDayLabel">Loading...</span>
+          </div>
+          <div class="portal-header-right">
+            <label style="font-size:0.78em; color:var(--muted,#888);">Free time (min):</label>
+            <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
+            <button id="portalRefreshBtn" type="button" class="portal-refresh-btn">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Urgent alert strip -->
+        <div id="portalAlertStrip" class="portal-alert-strip" style="display:none;"></div>
+
+        <!-- Summary cards -->
+        <div class="summary-grid" style="margin:10px 0;">
+          <article class="metric-card">
+            <div class="metric-label">Trucks Active</div>
+            <div class="metric-value" id="portalActiveCount">—</div>
+            <div class="metric-note">On dock, not yet finished.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Urgent / Warning</div>
+            <div class="metric-value" id="portalUrgentCount" style="color:#e53e3e;">—</div>
+            <div class="metric-note">Under 60 min of free time left.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">In Detention</div>
+            <div class="metric-value" id="portalDetentionCount" style="color:#c53030;">—</div>
+            <div class="metric-note">Free time already exceeded.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Est. Day Complete</div>
+            <div class="metric-value" id="portalEstComplete" style="font-size:1.3em;">—</div>
+            <div class="metric-note" id="portalEstNote">Based on avg turn time.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Trucks Done Today</div>
+            <div class="metric-value" id="portalDoneCount">—</div>
+            <div class="metric-note" id="portalProgressNote">of total scheduled.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Avg Turn Time</div>
+            <div class="metric-value" id="portalAvgTurn">—</div>
+            <div class="metric-note">Completed trucks today.</div>
+          </article>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="portal-progress-wrap" id="portalProgressWrap" style="display:none;">
+          <div class="portal-progress-label" id="portalProgressLabel">Day progress</div>
+          <div class="portal-progress-track">
+            <div class="portal-progress-fill" id="portalProgressFill" style="width:0%;"></div>
+          </div>
+          <div class="portal-progress-pace" id="portalProgressPace"></div>
+        </div>
+
+        <!-- Operations board -->
+        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="margin-top:10px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="portalBoardTitle">Live Operations Board</div>
+              <div class="table-meta" id="portalBoardMeta">Load your daily truck report and DMS file to populate</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <select id="portalStatusFilter" class="lookup-input" style="max-width:160px;">
+                <option value="all">All Trucks</option>
+                <option value="active">Active Only</option>
+                <option value="urgent">Urgent / Warning</option>
+                <option value="detention">In Detention</option>
+                <option value="complete">Completed</option>
+                <option value="waiting">Not Arrived</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="portalBoard">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="friendly-note" style="margin-top:12px; font-size:0.8em;">
+          <strong>Data source:</strong> Daily truck report + DMS audit timestamps.
+          For <strong>live auto-refresh</strong>: set up DMS to export to Google Sheets every 5 min —
+          contact your IT team or see the Help tab for setup instructions.
+        </div>
+      </section>
+
       <section id="exceptionsPanel" class="tab-panel" aria-label="Exceptions Queue">
         <div class="motivation-bar" id="motivBar_exceptions"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="brand-mark">
@@ -4014,6 +4185,10 @@
         slowTrucks: [],
         threshold: 180
       },
+      portal: {
+        freeTimeMinutes: 120,
+        refreshInterval: null
+      },
       truckChargeAudit: {
         ops: null,
         ranged: null,
@@ -4253,6 +4428,27 @@
       bizDateTable: document.getElementById("bizDateTable"),
       bizDateTableMeta: document.getElementById("bizDateTableMeta"),
       bizDateSourceNote: document.getElementById("bizDateSourceNote"),
+      portalLiveDot: document.getElementById("portalLiveDot"),
+      portalLiveClock: document.getElementById("portalLiveClock"),
+      portalDayLabel: document.getElementById("portalDayLabel"),
+      portalFreeTime: document.getElementById("portalFreeTime"),
+      portalRefreshBtn: document.getElementById("portalRefreshBtn"),
+      portalAlertStrip: document.getElementById("portalAlertStrip"),
+      portalActiveCount: document.getElementById("portalActiveCount"),
+      portalUrgentCount: document.getElementById("portalUrgentCount"),
+      portalDetentionCount: document.getElementById("portalDetentionCount"),
+      portalEstComplete: document.getElementById("portalEstComplete"),
+      portalEstNote: document.getElementById("portalEstNote"),
+      portalDoneCount: document.getElementById("portalDoneCount"),
+      portalProgressNote: document.getElementById("portalProgressNote"),
+      portalAvgTurn: document.getElementById("portalAvgTurn"),
+      portalProgressWrap: document.getElementById("portalProgressWrap"),
+      portalProgressLabel: document.getElementById("portalProgressLabel"),
+      portalProgressFill: document.getElementById("portalProgressFill"),
+      portalProgressPace: document.getElementById("portalProgressPace"),
+      portalBoardMeta: document.getElementById("portalBoardMeta"),
+      portalStatusFilter: document.getElementById("portalStatusFilter"),
+      portalBoard: document.getElementById("portalBoard"),
       excHighCount: document.getElementById("excHighCount"),
       excMedCount: document.getElementById("excMedCount"),
       excTotalCount: document.getElementById("excTotalCount"),
@@ -4586,6 +4782,7 @@
         doorSuggestor:    [["MAP","Smarter routing saves time."],["IDEA","Use history to pick the best door."],["GO","Optimized and efficient."]],
         spillTracker:     [["ALERT","Know before the spill happens."],["WATCH","Track patterns, stop repeat issues."],["SAFE","Spill kit ready. You got this."]],
         bizDateAudit:     [["DATE","Dates matter. Wrong entry costs money."],["CHECK","Every PO has a correct day."],["FIX","Catch it early, fix it fast."]],
+        myPortal:         [["LIVE","Your dock. Right now."],["WATCH","Every minute tracked. Every truck accountable."],["NOW","Real-time awareness wins the day."]],
         exceptions:       [["QUEUE","One list. Every issue. Nothing missed."],["CLEAR","Work it down, one at a time."],["SHARP","Catch it here before it costs money."]],
         turnTracker:      [["CLOCK","Every minute counts."],["FAST","Efficiency is a habit."],["TRACK","Know your numbers. Improve them."]],
         clerkBoard:       [["DATA","Numbers show the truth."],["GROW","Every mistake is a coaching opportunity."],["BEST","Top performers built their skill."]],
@@ -4671,6 +4868,35 @@
       els.bizDateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     }
     els.bizDateRunButton.addEventListener("click", renderBusinessDateAudit);
+    // Portal live clock — starts immediately, ticks every second
+    (function startPortalClock() {
+      function tick() {
+        const now = new Date();
+        const h = now.getHours();
+        const m = String(now.getMinutes()).padStart(2, "0");
+        const s = String(now.getSeconds()).padStart(2, "0");
+        const ampm = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        if (els.portalLiveClock) els.portalLiveClock.textContent = h12 + ":" + m + ":" + s + " " + ampm;
+        const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+        if (els.portalDayLabel) els.portalDayLabel.textContent = days[now.getDay()] + ", " + months[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
+        if (els.portalLiveDot) els.portalLiveDot.style.opacity = now.getSeconds() % 2 === 0 ? "1" : "0.3";
+        if (now.getSeconds() % 30 === 0) {
+          const panel = document.getElementById("myPortalPanel");
+          if (panel && panel.classList.contains("active")) renderPortalBoard();
+        }
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
+
+    els.portalRefreshBtn.addEventListener("click", renderPortal);
+    els.portalFreeTime.addEventListener("change", function() {
+      state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
+      renderPortalBoard();
+    });
+    els.portalStatusFilter.addEventListener("change", renderPortalBoard);
     els.turnRunButton.addEventListener("click", renderTurnTracker);
     els.turnThresholdInput.addEventListener("change", renderTurnTracker);
     els.turnFilterSelect.addEventListener("change", function() {
@@ -4871,6 +5097,7 @@
         renderBusinessDateAudit();
         renderTurnTracker();
         renderClerkLeaderboard();
+        renderPortal();
         renderExceptions();
         if (state.normalizedRows.length) saveTrendSnapshot();
         selectTab(activePanelId === "truckChargeAuditPanel" ? "truckChargeAudit" : activePanelId === "bizDateAuditPanel" ? "bizDateAudit" : "breakdownsAudit");
@@ -6574,6 +6801,7 @@
       renderSpillTrackerLookup(false);
       renderSpillTrackerTable();
       renderSpillHistoryTable();
+      renderPortal();
       renderExceptions();
       if (document.getElementById("breakdownsAuditPanel")?.classList.contains("active")) renderBreakdownsAudit();
       if (document.getElementById("truckChargeAuditPanel")?.classList.contains("active")) renderTruckChargeAudit();
@@ -7869,6 +8097,239 @@
       URL.revokeObjectURL(url);
     }
 
+
+    // ═══════════════════════════════════════════════════════════
+    // MY PORTAL — Live Operations Dashboard
+    // ═══════════════════════════════════════════════════════════
+
+    function buildPortalRows() {
+      const dmsReport = currentDmsValidationReport();
+      if (!dmsReport || !dmsReport.rows || !dmsReport.rows.length) return [];
+      const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      const headers = dmsReport.headers;
+      const sel = dmsReport.selectors || detectSelectors(headers, dmsReport.rows);
+
+      const doorH    = findBestTurnHeader(headers, ["door number", "door #", "door", "dock door", "assigned door", "dock"]);
+      const checkInH = findBestTurnHeader(headers, ["driver.*check.*in", "driver.*check", "check.*in", "at.*door"]);
+      const finishH  = findBestTurnHeader(headers, ["finish.*receiv", "receiv.*finish", "unload.*finish", "finish.*unload", "receiving.*finish"]);
+      const apptH    = findBestTurnHeader(headers, ["appt", "appointment", "scheduled", "sched.*time", "appt.*time"]);
+      const poH      = sel.po || null;
+
+      return dmsReport.rows.map(function(row, idx) {
+        const reference = sel.reference ? cleanCell(row[sel.reference] || "") : ("Row " + (idx + 1));
+        if (!reference) return null;
+        const supplier   = sel.supplier  ? cleanCell(row[sel.supplier]  || "") : "";
+        const door       = doorH    ? cleanCell(row[doorH]    || "") : "";
+        const checkInVal = checkInH ? cleanCell(row[checkInH] || "") : "";
+        const finishVal  = finishH  ? cleanCell(row[finishH]  || "") : "";
+        const apptVal    = apptH    ? cleanCell(row[apptH]    || "") : "";
+        const po         = poH      ? cleanCell(row[poH]      || "") : "";
+
+        const checkInTime = parseDmsTs(checkInVal);
+        const finishTime  = parseDmsTs(finishVal);
+        const apptTime    = parseDmsTs(apptVal);
+        const isComplete  = Boolean(finishTime);
+        const hasArrived  = Boolean(checkInTime);
+
+        const clockStart = checkInTime || apptTime;
+
+        let detentionStatus = hasArrived ? "active" : "waiting";
+        let msRemaining = null;
+        let countdownLabel = "—";
+        let countdownClass = "";
+        let minutesInDetention = null;
+
+        if (isComplete) {
+          detentionStatus = "complete";
+          if (checkInTime && finishTime) {
+            const mins = Math.round((finishTime.getTime() - checkInTime.getTime()) / 60000);
+            countdownLabel = "Done in " + Math.floor(mins/60) + "h " + (mins%60) + "m";
+            countdownClass = "portal-countdown-active";
+          } else {
+            countdownLabel = "Complete";
+          }
+        } else if (clockStart) {
+          msRemaining = clockStart.getTime() + freeTimeMs - now;
+          const minsRem = Math.round(msRemaining / 60000);
+          if (msRemaining < 0) {
+            detentionStatus = "detention";
+            minutesInDetention = Math.abs(minsRem);
+            countdownLabel = "IN DETENTION +" + Math.floor(minutesInDetention/60) + "h " + (minutesInDetention%60) + "m";
+            countdownClass = "portal-countdown-detention";
+          } else if (minsRem < 30) {
+            detentionStatus = "urgent";
+            countdownLabel = minsRem + " min left";
+            countdownClass = "portal-countdown-urgent";
+          } else if (minsRem < 60) {
+            detentionStatus = "warning";
+            countdownLabel = minsRem + " min left";
+            countdownClass = "portal-countdown-warning";
+          } else {
+            const h = Math.floor(minsRem / 60); const m = minsRem % 60;
+            countdownLabel = h + "h " + m + "m left";
+            countdownClass = "portal-countdown-active";
+          }
+        }
+
+        const statusOrder = { detention: 0, urgent: 1, warning: 2, active: 3, waiting: 4, complete: 5 };
+        const sortKey = statusOrder[detentionStatus] !== undefined ? statusOrder[detentionStatus] : 6;
+
+        return {
+          reference, supplier, door, po,
+          checkInVal, finishVal, apptVal,
+          checkInTime, finishTime, apptTime,
+          isComplete, hasArrived,
+          detentionStatus, msRemaining,
+          countdownLabel, countdownClass,
+          minutesInDetention, sortKey,
+          turnMinutes: (checkInTime && finishTime)
+            ? Math.round((finishTime.getTime() - checkInTime.getTime()) / 60000)
+            : null
+        };
+      }).filter(Boolean).sort(function(a, b) {
+        return a.sortKey - b.sortKey || a.reference.localeCompare(b.reference);
+      });
+    }
+
+    function renderPortal() {
+      state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
+      renderPortalBoard();
+    }
+
+    function renderPortalBoard() {
+      const allRows = buildPortalRows();
+      const statusFilter = els.portalStatusFilter ? els.portalStatusFilter.value : "all";
+
+      const active    = allRows.filter(function(r) { return r.detentionStatus === "active"; });
+      const urgent    = allRows.filter(function(r) { return r.detentionStatus === "urgent" || r.detentionStatus === "warning"; });
+      const detention = allRows.filter(function(r) { return r.detentionStatus === "detention"; });
+      const complete  = allRows.filter(function(r) { return r.isComplete; });
+
+      if (els.portalActiveCount)    els.portalActiveCount.textContent    = active.length + urgent.length + detention.length;
+      if (els.portalUrgentCount)    els.portalUrgentCount.textContent    = urgent.length;
+      if (els.portalDetentionCount) els.portalDetentionCount.textContent = detention.length;
+      if (els.portalDoneCount)      els.portalDoneCount.textContent      = complete.length;
+      if (els.portalProgressNote)   els.portalProgressNote.textContent   = "of " + allRows.length + " total today";
+
+      const completedWithTime = complete.filter(function(r) { return r.turnMinutes !== null && r.turnMinutes > 0; });
+      let avgTurn = 180;
+      if (completedWithTime.length) {
+        avgTurn = Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMinutes; }, 0) / completedWithTime.length);
+      } else if (state.turnTracker.rows.length) {
+        avgTurn = Math.round(state.turnTracker.rows.reduce(function(s, r) { return s + r.minutes; }, 0) / state.turnTracker.rows.length);
+      }
+      if (els.portalAvgTurn) els.portalAvgTurn.textContent = Math.floor(avgTurn/60) + "h " + (avgTurn%60) + "m";
+
+      const remaining  = allRows.filter(function(r) { return !r.isComplete; });
+      const inProgress = remaining.filter(function(r) { return r.hasArrived; });
+      const notStarted = remaining.filter(function(r) { return !r.hasArrived; });
+      const activeDoors = Math.max(1, inProgress.length);
+      const remainingTime = (notStarted.length * avgTurn + inProgress.length * (avgTurn * 0.5)) / activeDoors;
+      const estFinish = new Date(Date.now() + remainingTime * 60000);
+      if (els.portalEstComplete && remaining.length > 0) {
+        const hh = estFinish.getHours(); const mm = String(estFinish.getMinutes()).padStart(2,"0");
+        const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
+        els.portalEstComplete.textContent = h12 + ":" + mm + " " + ampm;
+        if (els.portalEstNote) els.portalEstNote.textContent = remaining.length + " truck(s) remaining, ~" + avgTurn + " min avg";
+      } else if (remaining.length === 0 && allRows.length > 0) {
+        if (els.portalEstComplete) els.portalEstComplete.textContent = "Done ✓";
+        if (els.portalEstNote)     els.portalEstNote.textContent     = "All trucks completed!";
+      } else {
+        if (els.portalEstComplete) els.portalEstComplete.textContent = "—";
+      }
+
+      if (allRows.length > 0 && els.portalProgressWrap) {
+        const pct = Math.round((complete.length / allRows.length) * 100);
+        els.portalProgressWrap.style.display = "";
+        if (els.portalProgressFill)  els.portalProgressFill.style.width   = pct + "%";
+        if (els.portalProgressLabel) els.portalProgressLabel.textContent  = "Day Progress: " + complete.length + " of " + allRows.length + " trucks complete (" + pct + "%)";
+        if (els.portalProgressPace) {
+          const firstArrival = allRows.find(function(r) { return r.checkInTime; });
+          const elapsedH = firstArrival ? (Date.now() - firstArrival.checkInTime.getTime()) / 3600000 : 0;
+          const rate = elapsedH > 0.1 ? (complete.length / elapsedH).toFixed(1) : 0;
+          els.portalProgressPace.textContent = rate > 0 ? ("Rate: ~" + rate + " trucks/hr") : "";
+        }
+      } else if (els.portalProgressWrap) {
+        els.portalProgressWrap.style.display = "none";
+      }
+
+      const alerts = allRows.filter(function(r) { return r.detentionStatus === "detention" || r.detentionStatus === "urgent"; });
+      if (els.portalAlertStrip) {
+        if (alerts.length) {
+          els.portalAlertStrip.style.display = "";
+          els.portalAlertStrip.innerHTML = "⚠️ " + alerts.map(function(r) {
+            const doorStr = r.door ? (" Door " + escapeHtml(r.door)) : "";
+            if (r.detentionStatus === "detention") {
+              return '<span class="portal-alert-item">🔴 Truck ' + escapeHtml(r.reference) + doorStr + ' — ' + escapeHtml(r.supplier) + ' — IN DETENTION for ' + r.minutesInDetention + ' min</span>';
+            }
+            return '<span class="portal-alert-item">🟠 Truck ' + escapeHtml(r.reference) + doorStr + ' — ' + escapeHtml(r.supplier) + ' — only ' + Math.round(r.msRemaining/60000) + ' min of free time remaining — expedite!</span>';
+          }).join("<br>");
+        } else {
+          els.portalAlertStrip.style.display = "none";
+        }
+      }
+
+      const filtered = statusFilter === "all" ? allRows : allRows.filter(function(r) {
+        if (statusFilter === "active")    return r.detentionStatus === "active";
+        if (statusFilter === "urgent")    return r.detentionStatus === "urgent" || r.detentionStatus === "warning";
+        if (statusFilter === "detention") return r.detentionStatus === "detention";
+        if (statusFilter === "complete")  return r.isComplete;
+        if (statusFilter === "waiting")   return r.detentionStatus === "waiting";
+        return true;
+      });
+
+      const thead = els.portalBoard.querySelector("thead");
+      const tbody = els.portalBoard.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const colHeaders = ["Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Time Remaining / Duration", "Turn Time"];
+      const hr = document.createElement("tr");
+      colHeaders.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
+      thead.appendChild(hr);
+
+      const frag = document.createDocumentFragment();
+      filtered.forEach(function(r) {
+        const tr = document.createElement("tr");
+        const rowClassMap = { detention: "portal-row-detention", urgent: "portal-row-urgent", warning: "portal-row-warning", complete: "portal-row-complete" };
+        const rowClass = rowClassMap[r.detentionStatus];
+        if (rowClass) tr.classList.add(rowClass);
+
+        const statusTd = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = "portal-status portal-status-" + r.detentionStatus;
+        const statusLabels = { detention: "DETENTION", urgent: "URGENT", warning: "WARNING", active: "Active", complete: "Done", waiting: "Waiting" };
+        badge.textContent = statusLabels[r.detentionStatus] || r.detentionStatus;
+        statusTd.appendChild(badge);
+        tr.appendChild(statusTd);
+
+        [r.reference, r.door || "—", r.supplier, r.po || "—", r.checkInVal || "—"].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+        });
+
+        const cntTd = document.createElement("td");
+        cntTd.textContent = r.countdownLabel;
+        if (r.countdownClass) cntTd.className = r.countdownClass;
+        tr.appendChild(cntTd);
+
+        const turnTd = document.createElement("td");
+        turnTd.textContent = r.turnMinutes !== null ? (Math.floor(r.turnMinutes/60) + "h " + (r.turnMinutes%60) + "m") : "—";
+        tr.appendChild(turnTd);
+
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+
+      const hasData = allRows.length > 0;
+      if (!filtered.length) {
+        appendEmptyRow(tbody, colHeaders.length, hasData ? "No trucks match this filter." : "Load your daily truck report and DMS file in Breakdowns Audit first.");
+      }
+      if (els.portalBoardMeta) {
+        els.portalBoardMeta.textContent = hasData
+          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown | " + detention.length + " in detention | " + urgent.length + " urgent | updated " + new Date().toLocaleTimeString())
+          : "Load your daily report and DMS file to populate the portal";
+      }
+    }
 
     // ═══════════════════════════════════════════════════════════
     // FEATURE 1: Clerk Leaderboard
@@ -10369,6 +10830,7 @@
       if (name === "breakdownsAudit") renderBreakdownsAudit();
       if (name === "truckChargeAudit") renderTruckChargeAudit();
       if (name === "bizDateAudit") renderBusinessDateAudit();
+      if (name === "myPortal") renderPortal();
       if (name === "exceptions") renderExceptions();
       if (name === "turnTracker") renderTurnTracker();
       if (name === "clerkBoard") renderClerkLeaderboard();
