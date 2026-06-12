@@ -367,6 +367,43 @@
     :root.dark input[type="text"], :root.dark input[type="search"] { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
+    /* Trend charts grid */
+    .trends-chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+      margin-top: 4px;
+    }
+    .trend-chart-card { background: var(--card-bg, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 14px 16px; }
+    .trend-chart-title { font-size: 0.82em; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--label, #718096); margin-bottom: 4px; }
+    .trend-chart-kicker { font-size: 0.78em; color: var(--muted, #a0aec0); margin-bottom: 8px; }
+    .trend-canvas { width: 100%; height: 120px; display: block; border-radius: 6px; }
+    :root.dark .trend-chart-card { background: #0e1e30; border-color: #1e3a55; }
+    :root.dark .trend-chart-title { color: #7faec8; }
+    :root.dark .trend-chart-kicker { color: #4a7a9b; }
+    /* Turn time status badges */
+    td.turn-fast { color: #276749; font-weight: 700; }
+    td.turn-ok { color: #2b6cb0; }
+    td.turn-slow { color: #dd6b20; font-weight: 700; }
+    td.turn-veryslow { color: #e53e3e; font-weight: 700; }
+    tr.turn-slow-row td { background: #fffbeb !important; }
+    tr.turn-veryslow-row td { background: #fff5f5 !important; }
+    :root.dark tr.turn-slow-row td { background: #1e1800 !important; }
+    :root.dark tr.turn-veryslow-row td { background: #2d1515 !important; }
+    /* Exception severity badges */
+    .exc-badge { display: inline-block; border-radius: 4px; padding: 2px 7px; font-size: 0.76em; font-weight: 700; white-space: nowrap; }
+    .exc-badge-HIGH { background: #e53e3e; color: #fff; }
+    .exc-badge-MEDIUM { background: #dd6b20; color: #fff; }
+    .exc-badge-LOW { background: #d69e2e; color: #fff; }
+    .exc-cat-badge { display: inline-block; border-radius: 4px; padding: 2px 6px; font-size: 0.74em; font-weight: 600; background: #ebf8ff; color: #2b6cb0; }
+    :root.dark .exc-cat-badge { background: #1a2d40; color: #7faec8; }
+    tr.exc-row-high td { background: #fff5f5 !important; }
+    :root.dark tr.exc-row-high td { background: #2d1515 !important; }
+    /* Clerk board error rate coloring */
+    td.clerk-rate-high { color: #e53e3e; font-weight: 700; }
+    td.clerk-rate-med { color: #dd6b20; font-weight: 600; }
+    td.clerk-rate-ok { color: #276749; }
+
     /* Business Date Audit styles */
     tr.bizdate-error-row td { background: #fffbeb !important; }
     tr.bizdate-error-high td { background: #fff3cd !important; border-left: 3px solid #e53e3e; }
@@ -2164,10 +2201,15 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="data" data-menu-label="Truck Report: Data">Data</button>
         </div>
         <div class="menu-group">
+          <div class="menu-group-title">Daily Review</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="exceptions" data-menu-label="Daily Review: Exceptions Queue">Exceptions Queue</button>
+        </div>
+        <div class="menu-group">
           <div class="menu-group-title">Lead Tools</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="ddp" data-menu-label="Lead Tools: DDP / EXW">DDP / EXW</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="truckFinder" data-menu-label="Lead Tools: Truck Finder">Truck Finder</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="audit" data-menu-label="Lead Tools: Roll Off Audit">Roll Off Audit</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="turnTracker" data-menu-label="Lead Tools: Turn Tracker">Turn Tracker</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Clerk Support and Helper</div>
@@ -2181,10 +2223,15 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="truckChargeAudit" data-menu-label="Audit: Truck Charge Audit">Truck Charge Audit</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="detention" data-menu-label="Audit: Detention Report">Detention</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="bizDateAudit" data-menu-label="Audit: Business Date Audit">Business Date</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="clerkBoard" data-menu-label="Audit: Clerk Leaderboard">Clerk Board</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Database</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="history" data-menu-label="Database: History">History</button>
+        </div>
+        <div class="menu-group">
+          <div class="menu-group-title">Analytics</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="trends" data-menu-label="Analytics: Trends">Trends</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Help</div>
@@ -3215,6 +3262,242 @@
         </section>
       </section>
 
+      <section id="exceptionsPanel" class="tab-panel" aria-label="Exceptions Queue">
+        <div class="motivation-bar" id="motivBar_exceptions"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <span class="brand-watermark" aria-hidden="true">JH</span>
+          <span class="brand-quote">Keep moving forward</span>
+          <div class="brand-swoosh" aria-hidden="true"></div>
+        </div>
+        <div class="summary-grid" style="margin-bottom:14px;">
+          <article class="metric-card">
+            <div class="metric-label">High Priority</div>
+            <div class="metric-value" id="excHighCount" style="color:var(--red,#e53e3e);">0</div>
+            <div class="metric-note">Spill risks, billing issues, 2+ day date errors.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Medium Priority</div>
+            <div class="metric-value" id="excMedCount" style="color:#dd6b20;">0</div>
+            <div class="metric-note">PO errors, lead misses, slow trucks.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Total Items</div>
+            <div class="metric-value" id="excTotalCount">0</div>
+            <div class="metric-note">All flagged items across every audit section.</div>
+          </article>
+        </div>
+
+        <section class="table-wrap" aria-labelledby="excTableTitle">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="excTableTitle">All Exceptions</div>
+              <div class="table-meta" id="excTableMeta">Load reports to populate the queue</div>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <select id="excCategoryFilter" class="lookup-input" style="max-width:160px;">
+                <option value="all">All Categories</option>
+                <option value="Spill Risk">Spill Risk</option>
+                <option value="Billing Issue">Billing Issue</option>
+                <option value="Wrong Date">Wrong Date</option>
+                <option value="PO Error">PO Error</option>
+                <option value="Lead Miss">Lead Miss</option>
+                <option value="Slow Truck">Slow Truck</option>
+              </select>
+              <select id="excSeverityFilter" class="lookup-input" style="max-width:130px;">
+                <option value="all">All Severity</option>
+                <option value="HIGH">High Only</option>
+                <option value="MEDIUM">Medium Only</option>
+              </select>
+              <button id="excRefreshButton" type="button">Refresh</button>
+              <button id="excExportButton" type="button">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="exceptionsTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="turnTrackerPanel" class="tab-panel" aria-label="Turn Tracker">
+        <div class="motivation-bar" id="motivBar_turnTracker"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <span class="brand-watermark" aria-hidden="true">JH</span>
+          <span class="brand-quote">Keep moving forward</span>
+          <div class="brand-swoosh" aria-hidden="true"></div>
+        </div>
+
+        <div class="lookup-grid">
+          <section class="panel lookup-box" aria-labelledby="turnTrackerTitle">
+            <div class="panel-header">
+              <h2 id="turnTrackerTitle">Truck Turn-Time Tracker</h2>
+              <span class="panel-kicker">Driver Check-In → Finish Receiving</span>
+            </div>
+            <div class="friendly-note">Uses the DMS report (loaded in Breakdowns Audit) to calculate how long each truck took. Set the slow-truck threshold below. Trucks over the threshold are flagged and added to the Exceptions Queue.</div>
+            <div class="lookup-row" style="flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px;">
+              <label style="font-weight:600; white-space:nowrap;">Slow threshold (minutes):</label>
+              <input id="turnThresholdInput" type="number" class="lookup-input" value="180" min="30" max="600" style="max-width:90px;">
+              <button id="turnRunButton" type="button">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+                Run
+              </button>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="turnStatusTitle">
+            <div class="panel-header">
+              <h2 id="turnStatusTitle">Summary</h2>
+              <span class="panel-kicker" id="turnKicker">No data</span>
+            </div>
+            <div class="overview-list" id="turnStatus"></div>
+          </section>
+        </div>
+
+        <div class="summary-grid" style="margin-top:14px;">
+          <article class="metric-card">
+            <div class="metric-label">Avg Turn Time</div>
+            <div class="metric-value" id="turnAvgTime">—</div>
+            <div class="metric-note">Average across all trucks with both timestamps.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Slowest Truck</div>
+            <div class="metric-value" id="turnSlowestTime">—</div>
+            <div class="metric-note">Longest unload time recorded today.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Over Threshold</div>
+            <div class="metric-value" id="turnSlowCount" style="color:var(--red,#e53e3e);">0</div>
+            <div class="metric-note">Trucks exceeding the slow-truck threshold.</div>
+          </article>
+        </div>
+
+        <section class="table-wrap" aria-labelledby="turnTableTitle" style="margin-top:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="turnTableTitle">Turn Time — All Trucks</div>
+              <div class="table-meta" id="turnTableMeta">Load DMS report in Breakdowns Audit first</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <select id="turnFilterSelect" class="lookup-input" style="max-width:150px;">
+                <option value="all">All Trucks</option>
+                <option value="slow">Slow Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="turnTrackerTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="clerkBoardPanel" class="tab-panel" aria-label="Clerk Leaderboard">
+        <div class="motivation-bar" id="motivBar_clerkBoard"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <span class="brand-watermark" aria-hidden="true">JH</span>
+          <span class="brand-quote">Keep moving forward</span>
+          <div class="brand-swoosh" aria-hidden="true"></div>
+        </div>
+
+        <div class="lookup-grid">
+          <section class="panel lookup-box" aria-labelledby="clerkBoardTitle">
+            <div class="panel-header">
+              <h2 id="clerkBoardTitle">Clerk Leaderboard</h2>
+              <span class="panel-kicker">Error rates by clerk initials</span>
+            </div>
+            <div class="friendly-note">Reads clerk initials from PO numbers (e.g. <code>ks071126</code> = clerk KS). Aggregates wrong-date POs, entry typos, and missed breakdowns per clerk. Requires OPS + DMS loaded in Breakdowns Audit, and a business date set in Business Date Audit.</div>
+            <button id="clerkBoardRefreshButton" type="button" style="margin-top:10px;">
+              <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.3"></path><path d="M3 12a9 9 0 0 1 15.5-6.3"></path><path d="M18 2v4h-4"></path><path d="M6 22v-4h4"></path></svg>
+              Refresh Leaderboard
+            </button>
+          </section>
+
+          <section class="panel" aria-labelledby="clerkBoardStatusTitle">
+            <div class="panel-header">
+              <h2 id="clerkBoardStatusTitle">Summary</h2>
+              <span class="panel-kicker" id="clerkBoardKicker">No data loaded</span>
+            </div>
+            <div class="overview-list" id="clerkBoardStatus"></div>
+          </section>
+        </div>
+
+        <section class="table-wrap" aria-labelledby="clerkBoardTableTitle" style="margin-top:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="clerkBoardTableTitle">Clerk Error Rates</div>
+              <div class="table-meta" id="clerkBoardTableMeta">No data</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button id="clerkBoardExportButton" type="button">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="clerkBoardTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="trendsPanel" class="tab-panel" aria-label="Trends">
+        <div class="motivation-bar" id="motivBar_trends"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <span class="brand-watermark" aria-hidden="true">JH</span>
+          <span class="brand-quote">Keep moving forward</span>
+          <div class="brand-swoosh" aria-hidden="true"></div>
+        </div>
+
+        <div class="lookup-grid" style="margin-bottom:14px;">
+          <section class="panel lookup-box" aria-labelledby="trendsTitle">
+            <div class="panel-header">
+              <h2 id="trendsTitle">Weekly Trends</h2>
+              <span class="panel-kicker">14-day rolling window</span>
+            </div>
+            <div class="friendly-note">Each day a report is loaded and audited, a snapshot is saved automatically. These charts show the last 14 days of activity. Snapshots are stored in your browser's local storage.</div>
+            <div class="lookup-row" style="gap:10px; margin-top:8px; flex-wrap:wrap;">
+              <button id="trendsSaveButton" type="button">Save Today&apos;s Snapshot</button>
+              <button id="trendsClearButton" type="button" class="spill-clear-btn">Clear All Snapshots</button>
+            </div>
+          </section>
+          <section class="panel" aria-labelledby="trendsSummaryTitle">
+            <div class="panel-header">
+              <h2 id="trendsSummaryTitle">14-Day Totals</h2>
+              <span class="panel-kicker" id="trendsKicker">No snapshots yet</span>
+            </div>
+            <div class="overview-list" id="trendsSummaryList"></div>
+          </section>
+        </div>
+
+        <div class="trends-chart-grid" id="trendsChartGrid">
+          <!-- 6 chart cards injected by JS -->
+        </div>
+
+        <section class="table-wrap" aria-labelledby="trendsRawTitle" style="margin-top:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="trendsRawTitle">Snapshot History</div>
+              <div class="table-meta" id="trendsTableMeta">No snapshots saved</div>
+            </div>
+            <button id="trendsExportButton" type="button">Export CSV</button>
+          </div>
+          <div class="table-scroller">
+            <table id="trendsTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
       <section id="helpPanel" class="tab-panel" aria-label="How To Use">
         <div class="motivation-bar" id="motivBar_help"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="help-panel-inner">
@@ -3726,6 +4009,11 @@
         errors: [],
         lastRunDate: ""
       },
+      turnTracker: {
+        rows: [],
+        slowTrucks: [],
+        threshold: 180
+      },
       truckChargeAudit: {
         ops: null,
         ranged: null,
@@ -3965,6 +4253,39 @@
       bizDateTable: document.getElementById("bizDateTable"),
       bizDateTableMeta: document.getElementById("bizDateTableMeta"),
       bizDateSourceNote: document.getElementById("bizDateSourceNote"),
+      excHighCount: document.getElementById("excHighCount"),
+      excMedCount: document.getElementById("excMedCount"),
+      excTotalCount: document.getElementById("excTotalCount"),
+      excCategoryFilter: document.getElementById("excCategoryFilter"),
+      excSeverityFilter: document.getElementById("excSeverityFilter"),
+      excRefreshButton: document.getElementById("excRefreshButton"),
+      excExportButton: document.getElementById("excExportButton"),
+      exceptionsTable: document.getElementById("exceptionsTable"),
+      excTableMeta: document.getElementById("excTableMeta"),
+      turnThresholdInput: document.getElementById("turnThresholdInput"),
+      turnRunButton: document.getElementById("turnRunButton"),
+      turnKicker: document.getElementById("turnKicker"),
+      turnStatus: document.getElementById("turnStatus"),
+      turnAvgTime: document.getElementById("turnAvgTime"),
+      turnSlowestTime: document.getElementById("turnSlowestTime"),
+      turnSlowCount: document.getElementById("turnSlowCount"),
+      turnFilterSelect: document.getElementById("turnFilterSelect"),
+      turnTrackerTable: document.getElementById("turnTrackerTable"),
+      turnTableMeta: document.getElementById("turnTableMeta"),
+      clerkBoardRefreshButton: document.getElementById("clerkBoardRefreshButton"),
+      clerkBoardKicker: document.getElementById("clerkBoardKicker"),
+      clerkBoardStatus: document.getElementById("clerkBoardStatus"),
+      clerkBoardTable: document.getElementById("clerkBoardTable"),
+      clerkBoardTableMeta: document.getElementById("clerkBoardTableMeta"),
+      clerkBoardExportButton: document.getElementById("clerkBoardExportButton"),
+      trendsSaveButton: document.getElementById("trendsSaveButton"),
+      trendsClearButton: document.getElementById("trendsClearButton"),
+      trendsKicker: document.getElementById("trendsKicker"),
+      trendsSummaryList: document.getElementById("trendsSummaryList"),
+      trendsChartGrid: document.getElementById("trendsChartGrid"),
+      trendsTable: document.getElementById("trendsTable"),
+      trendsTableMeta: document.getElementById("trendsTableMeta"),
+      trendsExportButton: document.getElementById("trendsExportButton"),
       opsAuditFile: document.getElementById("opsAuditFile"),
       dmsAuditFile: document.getElementById("dmsAuditFile"),
       truckChargeOpsFile: document.getElementById("truckChargeOpsFile"),
@@ -4265,6 +4586,10 @@
         doorSuggestor:    [["MAP","Smarter routing saves time."],["IDEA","Use history to pick the best door."],["GO","Optimized and efficient."]],
         spillTracker:     [["ALERT","Know before the spill happens."],["WATCH","Track patterns, stop repeat issues."],["SAFE","Spill kit ready. You got this."]],
         bizDateAudit:     [["DATE","Dates matter. Wrong entry costs money."],["CHECK","Every PO has a correct day."],["FIX","Catch it early, fix it fast."]],
+        exceptions:       [["QUEUE","One list. Every issue. Nothing missed."],["CLEAR","Work it down, one at a time."],["SHARP","Catch it here before it costs money."]],
+        turnTracker:      [["CLOCK","Every minute counts."],["FAST","Efficiency is a habit."],["TRACK","Know your numbers. Improve them."]],
+        clerkBoard:       [["DATA","Numbers show the truth."],["GROW","Every mistake is a coaching opportunity."],["BEST","Top performers built their skill."]],
+        trends:           [["CHART","Patterns reveal the real story."],["WEEK","One week of data beats a gut feeling."],["RISE","Improvement you can see is improvement that sticks."]],
         audit:            [["CALL","Roll Off or Breakdown â€” make the call."],["DECIDE","Your decision locks the record."],["AUDIT","Every catch saves money."],["SHARP","Good calls here save time later."]],
         breakdownsAudit:  [["AUDIT","Every catch saves money."],["BILL","Billing errors stop here."],["CHECK","Audit mode is active."],["PIN","Details matter here."]],
         truckChargeAudit: [["PAY","Wrong charges cost money."],["FEE","Every FSPAY check matters."],["TEST","Precision billing audit in progress."],["WARN","Catch it here before it becomes a problem."]],
@@ -4346,6 +4671,32 @@
       els.bizDateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     }
     els.bizDateRunButton.addEventListener("click", renderBusinessDateAudit);
+    els.turnRunButton.addEventListener("click", renderTurnTracker);
+    els.turnThresholdInput.addEventListener("change", renderTurnTracker);
+    els.turnFilterSelect.addEventListener("change", function() {
+      const rows = state.turnTracker.rows;
+      const onlySlow = els.turnFilterSelect.value === "slow";
+      renderTurnTrackerTable(onlySlow ? rows.filter(r => r.isSlow) : rows);
+    });
+    els.excRefreshButton.addEventListener("click", renderExceptions);
+    els.excCategoryFilter.addEventListener("change", renderExceptions);
+    els.excSeverityFilter.addEventListener("change", renderExceptions);
+    els.excExportButton.addEventListener("click", exportExceptionsCsv);
+    els.clerkBoardRefreshButton.addEventListener("click", renderClerkLeaderboard);
+    els.clerkBoardExportButton.addEventListener("click", exportClerkBoardCsv);
+    els.trendsSaveButton.addEventListener("click", function() {
+      saveTrendSnapshot();
+      renderTrends();
+      showToast("Snapshot saved for today.");
+    });
+    els.trendsClearButton.addEventListener("click", function() {
+      if (confirm("Clear all trend snapshots? This cannot be undone.")) {
+        localStorage.removeItem("trendSnapshots");
+        renderTrends();
+        showToast("Trend history cleared.");
+      }
+    });
+    els.trendsExportButton.addEventListener("click", exportTrendsCsv);
     els.bizDateInput.addEventListener("change", renderBusinessDateAudit);
     els.bizDateExportButton.addEventListener("click", exportBizDateCsv);
     els.clearSpillHistoryButton.addEventListener("click", () => {
@@ -4518,6 +4869,10 @@
         renderBreakdownsAudit();
         renderTruckChargeAudit();
         renderBusinessDateAudit();
+        renderTurnTracker();
+        renderClerkLeaderboard();
+        renderExceptions();
+        if (state.normalizedRows.length) saveTrendSnapshot();
         selectTab(activePanelId === "truckChargeAuditPanel" ? "truckChargeAudit" : activePanelId === "bizDateAuditPanel" ? "bizDateAudit" : "breakdownsAudit");
         showToast(`${kind.toUpperCase()} report loaded for both audit sections.`);
       } catch (error) {
@@ -6219,6 +6574,7 @@
       renderSpillTrackerLookup(false);
       renderSpillTrackerTable();
       renderSpillHistoryTable();
+      renderExceptions();
       if (document.getElementById("breakdownsAuditPanel")?.classList.contains("active")) renderBreakdownsAudit();
       if (document.getElementById("truckChargeAuditPanel")?.classList.contains("active")) renderTruckChargeAudit();
     }
@@ -7510,6 +7866,523 @@
       a.href = url;
       a.download = `business_date_errors_${state.bizDateAudit.lastRunDate || "audit"}.csv`;
       a.click();
+      URL.revokeObjectURL(url);
+    }
+
+
+    // ═══════════════════════════════════════════════════════════
+    // FEATURE 1: Clerk Leaderboard
+    // ═══════════════════════════════════════════════════════════
+
+    function extractPoClerkId(po) {
+      const str = String(po || "").trim();
+      const segs = str.split(".");
+      for (let i = segs.length - 1; i >= 0; i--) {
+        const m = segs[i].match(/^([a-zA-Z]{1,4})\d{6}$/);
+        if (m && tryParsePoDateSegment(segs[i])) return m[1].toUpperCase();
+      }
+      return null;
+    }
+
+    function buildClerkLeaderboard() {
+      const audit = state.breakdownAudit;
+      const dmsReport = currentDmsValidationReport();
+      const dmsRows = dmsReport ? normalizeBreakdownAuditRows(dmsReport, "DMS") : [];
+      const opsRows = audit.ops ? normalizeBreakdownAuditRows(audit.ops, "OPS") : [];
+      const allRows = [...dmsRows, ...opsRows];
+
+      const wrongDateSet = new Set(
+        (state.bizDateAudit.errors || []).map(function(e) { return `${e.source}|${e.reference}|${e.po}`; })
+      );
+      const poErrorPoSet = new Set(
+        (audit.clerkPoEntryErrors || []).map(function(e) { return String(e.po || ""); }).filter(Boolean)
+      );
+      const missedRefSet = new Set(
+        (audit.leadMissedBreakdowns || []).map(function(r) { return r.reference; })
+      );
+
+      const clerkMap = new Map();
+      allRows.forEach(function(row) {
+        const clerkId = row.po ? extractPoClerkId(row.po) : null;
+        if (!clerkId) return;
+        if (!clerkMap.has(clerkId)) clerkMap.set(clerkId, { clerkId, total: 0, dateErrors: 0, poErrors: 0, missedBreakdowns: 0 });
+        const c = clerkMap.get(clerkId);
+        c.total++;
+        if (wrongDateSet.has(`${row.source}|${row.reference}|${row.po}`)) c.dateErrors++;
+        if (poErrorPoSet.has(String(row.po || ""))) c.poErrors++;
+        if (missedRefSet.has(row.reference)) c.missedBreakdowns++;
+      });
+
+      return [...clerkMap.values()].map(function(c) {
+        const totalErrors = c.dateErrors + c.poErrors + c.missedBreakdowns;
+        return Object.assign({}, c, {
+          totalErrors,
+          errorRate: c.total ? totalErrors / c.total : 0,
+          worstCategory: c.dateErrors >= c.poErrors && c.dateErrors >= c.missedBreakdowns ? "Date Errors"
+            : c.poErrors >= c.missedBreakdowns ? "PO Typos" : "Missed Breakdowns"
+        });
+      }).sort(function(a, b) { return b.errorRate - a.errorRate || b.totalErrors - a.totalErrors; });
+    }
+
+    function renderClerkLeaderboard() {
+      const rows = buildClerkLeaderboard();
+      const audit = state.breakdownAudit;
+
+      if (els.clerkBoardKicker) {
+        if (!audit.ops && !currentDmsValidationReport()) {
+          els.clerkBoardKicker.textContent = "Load OPS + DMS in Breakdowns Audit first";
+        } else {
+          els.clerkBoardKicker.textContent = `${rows.length} clerk${rows.length !== 1 ? "s" : ""} identified from PO initials`;
+        }
+      }
+      if (els.clerkBoardStatus) {
+        els.clerkBoardStatus.innerHTML = "";
+        [
+          `Clerks found: ${rows.length}`,
+          `Total POs with readable clerk IDs: ${rows.reduce(function(s, r) { return s + r.total; }, 0)}`,
+          `PO initials extracted from MMDDYY suffix (e.g. ks071126 = clerk KS)`,
+          `Date errors require a business date set in Business Date Audit`,
+          `Error rate = (date errors + PO typos + missed breakdowns) / total POs`
+        ].forEach(function(msg) { els.clerkBoardStatus.appendChild(emptySmall(msg)); });
+      }
+
+      const thead = els.clerkBoardTable.querySelector("thead");
+      const tbody = els.clerkBoardTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Clerk ID", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate", "Watch Area"];
+      const hr = document.createElement("tr");
+      headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
+      thead.appendChild(hr);
+      const frag = document.createDocumentFragment();
+      rows.forEach(function(c) {
+        const tr = document.createElement("tr");
+        const ratePct = Math.round(c.errorRate * 100);
+        const rateClass = ratePct >= 30 ? "clerk-rate-high" : ratePct >= 10 ? "clerk-rate-med" : "clerk-rate-ok";
+        [c.clerkId, c.total, c.dateErrors, c.poErrors, c.missedBreakdowns, c.totalErrors].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+        });
+        const rateTd = document.createElement("td");
+        rateTd.textContent = `${ratePct}%`;
+        rateTd.className = rateClass;
+        tr.appendChild(rateTd);
+        const watchTd = document.createElement("td");
+        watchTd.textContent = c.totalErrors ? c.worstCategory : "—";
+        tr.appendChild(watchTd);
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!rows.length) appendEmptyRow(tbody, headers.length, "No clerk IDs found. POs must contain an initials+MMDDYY suffix.");
+      if (els.clerkBoardTableMeta) els.clerkBoardTableMeta.textContent = `${rows.length} clerk${rows.length !== 1 ? "s" : ""} | sorted by error rate`;
+    }
+
+    function exportClerkBoardCsv() {
+      const rows = buildClerkLeaderboard();
+      if (!rows.length) { showToast("No clerk data to export."); return; }
+      const headers = ["Clerk ID", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate %", "Watch Area"];
+      const csvRows = rows.map(function(c) {
+        return [c.clerkId, c.total, c.dateErrors, c.poErrors, c.missedBreakdowns, c.totalErrors, Math.round(c.errorRate * 100), c.totalErrors ? c.worstCategory : "—"]
+          .map(function(v) { return `"${String(v).replace(/"/g, '""')}"`; }).join(",");
+      });
+      const csv = [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "clerk_leaderboard.csv"; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FEATURE 3: Truck Turn-Time Tracker
+    // ═══════════════════════════════════════════════════════════
+
+    function parseDmsTs(val) {
+      if (!val) return null;
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function findBestTurnHeader(headers, pats) {
+      for (const pat of pats) {
+        const h = headers.find(function(hh) { return new RegExp(pat, "i").test(hh); });
+        if (h) return h;
+      }
+      return null;
+    }
+
+    function buildTurnTimes(dmsReport, thresholdMin) {
+      if (!dmsReport || !dmsReport.rows || !dmsReport.rows.length) return [];
+      const headers = dmsReport.headers;
+      const sel = dmsReport.selectors || detectSelectors(headers, dmsReport.rows);
+      const startH = findBestTurnHeader(headers, ["driver.*check.*in", "driver.*check", "check.*in", "driver.*at.*door", "at.*door"]);
+      const endH = findBestTurnHeader(headers, ["finish.*receiv", "receiv.*finish", "unload.*finish", "finish.*unload", "receiving.*finish"]);
+      if (!startH && !endH) return [];
+
+      const results = [];
+      dmsReport.rows.forEach(function(row, idx) {
+        const reference = sel.reference ? cleanCell(row[sel.reference] || "") : `Row ${idx + 1}`;
+        const supplier = sel.supplier ? cleanCell(row[sel.supplier] || "") : "";
+        const startVal = startH ? cleanCell(row[startH] || "") : "";
+        const endVal = endH ? cleanCell(row[endH] || "") : "";
+        if (!startVal && !endVal) return;
+        const startTime = parseDmsTs(startVal);
+        const endTime = parseDmsTs(endVal);
+        if (!startTime || !endTime) return;
+        const minutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
+        if (minutes < 0 || minutes > 1440) return; // skip invalid / > 24h
+        const isSlow = minutes >= thresholdMin;
+        const isVerySlow = minutes >= thresholdMin * 1.5;
+        let status = "Fast";
+        let statusClass = "turn-fast";
+        if (minutes >= thresholdMin * 1.5) { status = "Very Slow"; statusClass = "turn-veryslow"; }
+        else if (minutes >= thresholdMin) { status = "Slow"; statusClass = "turn-slow"; }
+        else if (minutes >= thresholdMin * 0.67) { status = "OK"; statusClass = "turn-ok"; }
+        results.push({
+          reference, supplier,
+          startStr: startVal, endStr: endVal,
+          minutes,
+          minutesLabel: `${Math.floor(minutes / 60)}h ${minutes % 60}m`,
+          status, statusClass, isSlow, isVerySlow
+        });
+      });
+      return results.sort(function(a, b) { return b.minutes - a.minutes; });
+    }
+
+    function renderTurnTracker() {
+      const threshold = Math.max(30, parseInt(els.turnThresholdInput.value, 10) || 180);
+      state.turnTracker.threshold = threshold;
+      const dmsReport = currentDmsValidationReport();
+      const rows = buildTurnTimes(dmsReport, threshold);
+      state.turnTracker.rows = rows;
+      state.turnTracker.slowTrucks = rows.filter(function(r) { return r.isSlow; });
+
+      if (els.turnKicker) {
+        if (!dmsReport) {
+          els.turnKicker.textContent = "No DMS report — load one in Breakdowns Audit";
+        } else if (!rows.length) {
+          els.turnKicker.textContent = "No matching timestamp columns found in this report";
+        } else {
+          const slowCnt = rows.filter(function(r) { return r.isSlow; }).length;
+          els.turnKicker.textContent = `${rows.length} truck${rows.length !== 1 ? "s" : ""} timed | ${slowCnt} over ${threshold} min`;
+        }
+      }
+
+      if (rows.length) {
+        const avg = Math.round(rows.reduce(function(s, r) { return s + r.minutes; }, 0) / rows.length);
+        const slowest = rows[0];
+        if (els.turnAvgTime) els.turnAvgTime.textContent = `${Math.floor(avg / 60)}h ${avg % 60}m`;
+        if (els.turnSlowestTime) els.turnSlowestTime.textContent = `${slowest.minutesLabel} (${slowest.supplier || slowest.reference})`;
+        if (els.turnSlowCount) els.turnSlowCount.textContent = rows.filter(function(r) { return r.isSlow; }).length;
+      } else {
+        if (els.turnAvgTime) els.turnAvgTime.textContent = "—";
+        if (els.turnSlowestTime) els.turnSlowestTime.textContent = "—";
+        if (els.turnSlowCount) els.turnSlowCount.textContent = "0";
+      }
+
+      if (els.turnStatus) {
+        els.turnStatus.innerHTML = "";
+        const dmsReport2 = currentDmsValidationReport();
+        const startH = dmsReport2 ? findBestTurnHeader(dmsReport2.headers, ["driver.*check.*in", "driver.*check", "check.*in", "at.*door"]) : null;
+        const endH = dmsReport2 ? findBestTurnHeader(dmsReport2.headers, ["finish.*receiv", "receiv.*finish", "unload.*finish"]) : null;
+        [
+          `Start column: ${startH || "not found"}`,
+          `End column: ${endH || "not found"}`,
+          `Threshold: ${threshold} minutes`,
+          `Trucks timed: ${rows.length}`,
+          `Slow trucks (over threshold): ${rows.filter(function(r) { return r.isSlow; }).length}`
+        ].forEach(function(msg) { if (els.turnStatus) els.turnStatus.appendChild(emptySmall(msg)); });
+      }
+
+      const onlySlow = els.turnFilterSelect.value === "slow";
+      renderTurnTrackerTable(onlySlow ? rows.filter(function(r) { return r.isSlow; }) : rows);
+    }
+
+    function renderTurnTrackerTable(rows) {
+      const thead = els.turnTrackerTable.querySelector("thead");
+      const tbody = els.turnTrackerTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Reference #", "Supplier", "Check-In", "Finish", "Duration", "Status"];
+      const hr = document.createElement("tr");
+      headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
+      thead.appendChild(hr);
+      const frag = document.createDocumentFragment();
+      rows.forEach(function(r) {
+        const tr = document.createElement("tr");
+        if (r.isVerySlow) tr.classList.add("turn-veryslow-row");
+        else if (r.isSlow) tr.classList.add("turn-slow-row");
+        [r.reference, r.supplier, r.startStr, r.endStr, r.minutesLabel].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
+        });
+        const statusTd = document.createElement("td");
+        statusTd.textContent = r.status;
+        statusTd.className = r.statusClass;
+        tr.appendChild(statusTd);
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!rows.length) appendEmptyRow(tbody, headers.length, state.turnTracker.rows.length ? "No trucks match the current filter." : "Load a DMS report with driver check-in and finish receiving timestamps.");
+      if (els.turnTableMeta) els.turnTableMeta.textContent = `${rows.length} truck${rows.length !== 1 ? "s" : ""} shown`;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FEATURE 4: Exceptions Queue
+    // ═══════════════════════════════════════════════════════════
+
+    function buildExceptions() {
+      const audit = state.breakdownAudit;
+      const items = [];
+      const catFilter = els.excCategoryFilter ? els.excCategoryFilter.value : "all";
+      const sevFilter = els.excSeverityFilter ? els.excSeverityFilter.value : "all";
+
+      function add(severity, category, reference, supplier, po, detail) {
+        if (catFilter !== "all" && catFilter !== category) return;
+        if (sevFilter !== "all" && sevFilter !== severity) return;
+        items.push({ severity, category, reference, supplier, po, detail });
+      }
+
+      // 1. Wrong business date
+      (state.bizDateAudit.errors || []).forEach(function(e) {
+        add(Math.abs(e.daysDiff) >= 2 ? "HIGH" : "MEDIUM", "Wrong Date", e.reference, e.supplier, e.po,
+          `PO date ${e.poDateStr}, expected ${e.expectedDateStr} (${e.diffLabel})`);
+      });
+      // 2. PO entry errors
+      (audit.clerkPoEntryErrors || []).forEach(function(e) {
+        add("MEDIUM", "PO Error", e.reference, e.supplier || e.opsSupplier || "", e.po, e.issueDetail || "Possible PO entry typo");
+      });
+      // 3. Lead missed breakdowns
+      (audit.leadMissedBreakdowns || []).forEach(function(e) {
+        add("MEDIUM", "Lead Miss", e.reference, e.supplier || "", e.po || "", "Expected breakdown comment missing from DMS");
+      });
+      // 4. Missing billing
+      (audit.missingBilling || []).forEach(function(e) {
+        add("HIGH", "Billing Issue", e.reference, e.supplier || "", e.po || "", e.issueDetail || "Missing billing documentation");
+      });
+      // 5. Spill risks from today's trucks
+      (state.normalizedRows || []).filter(function(t) { return supplierSpillRate(t.supplier) > 0.30; }).forEach(function(t) {
+        add("HIGH", "Spill Risk", t.reference, t.supplier, t.poNumbers.join(", "),
+          `${Math.round(supplierSpillRate(t.supplier) * 100)}% spill rate — have spill kit ready`);
+      });
+      // 6. Slow trucks
+      (state.turnTracker.slowTrucks || []).forEach(function(t) {
+        add(t.isVerySlow ? "HIGH" : "MEDIUM", "Slow Truck", t.reference, t.supplier, "",
+          `Took ${t.minutesLabel} — over ${state.turnTracker.threshold} min threshold`);
+      });
+
+      const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+      items.sort(function(a, b) {
+        return (order[a.severity] || 2) - (order[b.severity] || 2) || a.category.localeCompare(b.category);
+      });
+      return items;
+    }
+
+    function renderExceptions() {
+      const items = buildExceptions();
+      const allItems = buildExceptions.call(this); // re-run without filter for counts
+
+      // Run without filters for count badges
+      const prevCat = els.excCategoryFilter ? els.excCategoryFilter.value : "all";
+      const prevSev = els.excSeverityFilter ? els.excSeverityFilter.value : "all";
+      const savedCatFilter = prevCat; const savedSevFilter = prevSev;
+      // count with no filter
+      const allUnfiltered = (function() {
+        const a = state.bizDateAudit.errors || [];
+        const b = state.breakdownAudit.clerkPoEntryErrors || [];
+        const c = state.breakdownAudit.leadMissedBreakdowns || [];
+        const d = state.breakdownAudit.missingBilling || [];
+        const e = (state.normalizedRows || []).filter(function(t) { return supplierSpillRate(t.supplier) > 0.30; });
+        const f = state.turnTracker.slowTrucks || [];
+        const spillHigh = e.length;
+        const billingHigh = d.length;
+        const wrongDateHigh = a.filter(function(x) { return Math.abs(x.daysDiff) >= 2; }).length;
+        const slowHigh = f.filter(function(x) { return x.isVerySlow; }).length;
+        const high = spillHigh + billingHigh + wrongDateHigh + slowHigh;
+        const med = (a.length - wrongDateHigh) + b.length + c.length + (f.length - slowHigh);
+        return { high, med, total: a.length + b.length + c.length + d.length + e.length + f.length };
+      })();
+
+      if (els.excHighCount) els.excHighCount.textContent = allUnfiltered.high;
+      if (els.excMedCount) els.excMedCount.textContent = allUnfiltered.med;
+      if (els.excTotalCount) els.excTotalCount.textContent = allUnfiltered.total;
+
+      const thead = els.exceptionsTable.querySelector("thead");
+      const tbody = els.exceptionsTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Severity", "Category", "Reference #", "Supplier", "PO", "Detail"];
+      const hr = document.createElement("tr");
+      headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
+      thead.appendChild(hr);
+      const frag = document.createDocumentFragment();
+      items.forEach(function(item) {
+        const tr = document.createElement("tr");
+        if (item.severity === "HIGH") tr.classList.add("exc-row-high");
+        const sevTd = document.createElement("td");
+        const badge = document.createElement("span");
+        badge.className = `exc-badge exc-badge-${item.severity}`;
+        badge.textContent = item.severity;
+        sevTd.appendChild(badge);
+        tr.appendChild(sevTd);
+        const catTd = document.createElement("td");
+        const catBadge = document.createElement("span");
+        catBadge.className = "exc-cat-badge";
+        catBadge.textContent = item.category;
+        catTd.appendChild(catBadge);
+        tr.appendChild(catTd);
+        [item.reference, item.supplier, item.po, item.detail].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v || "—"; tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!items.length) appendEmptyRow(tbody, headers.length, allUnfiltered.total ? "No items match the current filters." : "No exceptions found. Load reports and run audits first.");
+      if (els.excTableMeta) els.excTableMeta.textContent = `${items.length} item${items.length !== 1 ? "s" : ""} shown | ${allUnfiltered.high} high priority, ${allUnfiltered.med} medium`;
+    }
+
+    function exportExceptionsCsv() {
+      const tmpCat = els.excCategoryFilter.value; const tmpSev = els.excSeverityFilter.value;
+      els.excCategoryFilter.value = "all"; els.excSeverityFilter.value = "all";
+      const items = buildExceptions();
+      els.excCategoryFilter.value = tmpCat; els.excSeverityFilter.value = tmpSev;
+      if (!items.length) { showToast("No exceptions to export."); return; }
+      const headers = ["Severity", "Category", "Reference", "Supplier", "PO", "Detail"];
+      const csvRows = items.map(function(e) {
+        return [e.severity, e.category, e.reference, e.supplier, e.po, e.detail]
+          .map(function(v) { return `"${String(v || "").replace(/"/g, '""')}"`; }).join(",");
+      });
+      const csv = [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "exceptions_queue.csv"; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // FEATURE 5: Trends (Weekly Rollup)
+    // ═══════════════════════════════════════════════════════════
+
+    const TREND_METRICS = [
+      { key: "totalTrucks", label: "Trucks Loaded", color: "#3182ce" },
+      { key: "clerkPoErrors", label: "PO Entry Errors", color: "#e53e3e" },
+      { key: "leadMissed", label: "Lead Misses", color: "#dd6b20" },
+      { key: "wrongDates", label: "Wrong Date POs", color: "#d69e2e" },
+      { key: "spillRisks", label: "Spill Risks", color: "#c53030" },
+      { key: "billingIssues", label: "Billing Issues", color: "#805ad5" }
+    ];
+
+    function getTrendSnapshots() {
+      try { return JSON.parse(localStorage.getItem("trendSnapshots") || "[]"); } catch(e) { return []; }
+    }
+
+    function saveTrendSnapshot() {
+      const audit = state.breakdownAudit;
+      const today = new Date();
+      const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const snap = {
+        date,
+        totalTrucks: state.normalizedRows.length,
+        clerkPoErrors: (audit.clerkPoEntryErrors || []).length,
+        leadMissed: (audit.leadMissedBreakdowns || []).length,
+        wrongDates: (state.bizDateAudit.errors || []).length,
+        spillRisks: (state.normalizedRows || []).filter(function(t) { return supplierSpillRate(t.supplier) > 0.30; }).length,
+        billingIssues: (audit.missingBilling || []).length
+      };
+      const snapshots = getTrendSnapshots();
+      const existingIdx = snapshots.findIndex(function(s) { return s.date === date; });
+      if (existingIdx >= 0) snapshots.splice(existingIdx, 1);
+      snapshots.unshift(snap);
+      if (snapshots.length > 60) snapshots.length = 60;
+      try { localStorage.setItem("trendSnapshots", JSON.stringify(snapshots)); } catch(e) {}
+    }
+
+    function renderTrends() {
+      const snapshots = getTrendSnapshots().slice(0, 14);
+      const theme = chartTheme();
+
+      if (els.trendsKicker) {
+        els.trendsKicker.textContent = snapshots.length
+          ? `${snapshots.length} day${snapshots.length !== 1 ? "s" : ""} of data (last 14)`
+          : "No snapshots yet — load a report and click Save Today's Snapshot";
+      }
+
+      // Summary list
+      if (els.trendsSummaryList) {
+        els.trendsSummaryList.innerHTML = "";
+        if (snapshots.length) {
+          TREND_METRICS.forEach(function(m) {
+            const total = snapshots.reduce(function(s, snap) { return s + (snap[m.key] || 0); }, 0);
+            const avg = snapshots.length ? (total / snapshots.length).toFixed(1) : 0;
+            els.trendsSummaryList.appendChild(emptySmall(`${m.label}: ${total} total, avg ${avg}/day over ${snapshots.length} day(s)`));
+          });
+        } else {
+          els.trendsSummaryList.appendChild(emptySmall("No snapshots yet."));
+        }
+      }
+
+      // Chart grid
+      if (els.trendsChartGrid) {
+        els.trendsChartGrid.innerHTML = "";
+        // Reverse so oldest is on left
+        const orderedSnaps = snapshots.slice().reverse();
+        TREND_METRICS.forEach(function(m) {
+          const card = document.createElement("div");
+          card.className = "trend-chart-card";
+          const maxVal = Math.max(...orderedSnaps.map(function(s) { return s[m.key] || 0; }), 1);
+          const total = orderedSnaps.reduce(function(s, sn) { return s + (sn[m.key] || 0); }, 0);
+          card.innerHTML = `<div class="trend-chart-title">${escapeHtml(m.label)}</div><div class="trend-chart-kicker">${total} total over ${orderedSnaps.length} day(s)</div>`;
+          const canvas = document.createElement("canvas");
+          canvas.className = "trend-canvas";
+          canvas.style.height = "120px";
+          card.appendChild(canvas);
+          els.trendsChartGrid.appendChild(card);
+          const data = orderedSnaps.map(function(s) {
+            const d = new Date(s.date + "T00:00:00");
+            return { label: `${d.getMonth() + 1}/${d.getDate()}`, value: s[m.key] || 0 };
+          });
+          // defer draw until after layout
+          requestAnimationFrame(function() {
+            drawBarChart(canvas, data, { color: m.color, accent: m.color, showEveryLabel: 1, emptyLabel: "No data yet" });
+          });
+        });
+      }
+
+      // Raw snapshot table
+      renderTrendsTable(snapshots);
+    }
+
+    function renderTrendsTable(snapshots) {
+      const thead = els.trendsTable.querySelector("thead");
+      const tbody = els.trendsTable.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Date", "Trucks", "PO Errors", "Lead Misses", "Wrong Dates", "Spill Risks", "Billing Issues"];
+      const hr = document.createElement("tr");
+      headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
+      thead.appendChild(hr);
+      const frag = document.createDocumentFragment();
+      snapshots.forEach(function(s) {
+        const tr = document.createElement("tr");
+        [s.date, s.totalTrucks, s.clerkPoErrors, s.leadMissed, s.wrongDates, s.spillRisks, s.billingIssues].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v ?? "—"; tr.appendChild(td);
+        });
+        frag.appendChild(tr);
+      });
+      tbody.appendChild(frag);
+      if (!snapshots.length) appendEmptyRow(tbody, headers.length, "No snapshots saved yet.");
+      if (els.trendsTableMeta) els.trendsTableMeta.textContent = `${snapshots.length} snapshot${snapshots.length !== 1 ? "s" : ""} stored`;
+    }
+
+    function exportTrendsCsv() {
+      const snapshots = getTrendSnapshots();
+      if (!snapshots.length) { showToast("No snapshots to export."); return; }
+      const headers = ["Date", "Trucks", "PO Errors", "Lead Misses", "Wrong Dates", "Spill Risks", "Billing Issues"];
+      const csvRows = snapshots.map(function(s) {
+        return [s.date, s.totalTrucks, s.clerkPoErrors, s.leadMissed, s.wrongDates, s.spillRisks, s.billingIssues]
+          .map(function(v) { return `"${String(v ?? "").replace(/"/g, '""')}"`; }).join(",");
+      });
+      const csv = [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = "trends_history.csv"; a.click();
       URL.revokeObjectURL(url);
     }
 
@@ -9496,6 +10369,10 @@
       if (name === "breakdownsAudit") renderBreakdownsAudit();
       if (name === "truckChargeAudit") renderTruckChargeAudit();
       if (name === "bizDateAudit") renderBusinessDateAudit();
+      if (name === "exceptions") renderExceptions();
+      if (name === "turnTracker") renderTurnTracker();
+      if (name === "clerkBoard") renderClerkLeaderboard();
+      if (name === "trends") renderTrends();
       if (name === "detention") {
         var df = document.getElementById("detentionFrame");
         if (df && !df.getAttribute("data-loaded")) { df.src = "detention-section.html"; df.setAttribute("data-loaded", "1"); }
