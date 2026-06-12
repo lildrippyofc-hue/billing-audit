@@ -3564,63 +3564,84 @@
         <div class="portal-header-bar" style="margin-bottom:12px;">
           <div class="portal-live-badge">
             <span class="portal-live-dot" id="dmsStampDot" style="background:#718096;"></span>
-            <span style="font-weight:700; color:var(--text,#1a202c);">DMS Stamp</span>
+            <span style="font-weight:700; color:var(--text,#1a202c);">DMS Stamp Board</span>
           </div>
-          <div style="font-size:0.82em; color:var(--muted,#888);" id="dmsStampStatus">Connect to DMS to stamp trucks directly from this screen.</div>
-          <div>
+          <div style="font-size:0.82em; color:var(--muted,#888);" id="dmsStampStatus">Click a stamp button to record a timestamp locally and push it to DMS.</div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button id="dmsStampRefreshBoardBtn" type="button" class="secondary-btn" style="font-size:0.82em;">&#8635; Refresh Trucks</button>
             <button id="dmsStampTestBtn" type="button" class="secondary-btn" style="font-size:0.82em;">Test DMS Connection</button>
           </div>
         </div>
 
-        <!-- Info note -->
-        <div class="friendly-note" style="margin-bottom:12px;">
-          <strong>How this works:</strong> Pick a stamp type, paste the Load ID from My Portal (or DMS), optionally set a custom time, then hit Stamp. The app sends the stamp to DMS through the same login it uses for My Portal. If a stamp type fails, open Chrome DevTools → Network while stamping in DMS and look for the POST URL — paste it in <code>dms_config.json</code> as <code>"stamp_endpoint"</code>.
+        <!-- Truck stamp board -->
+        <div class="table-wrap" style="margin-bottom:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title">Truck Board</div>
+              <div class="table-meta" id="dmsStampBoardMeta">Trucks pulled from My Portal. Click any stamp button to record the time and send to DMS.</div>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="dmsStampBoardTable" style="width:100%; border-collapse:collapse; font-size:0.84em; min-width:820px;">
+              <thead>
+                <tr style="background:var(--header-bg,#f7fafc);">
+                  <th style="text-align:left; padding:9px 10px; white-space:nowrap;">Truck / Load ID</th>
+                  <th style="text-align:left; padding:9px 10px; white-space:nowrap;">Vendor</th>
+                  <th style="text-align:left; padding:9px 10px; white-space:nowrap;">Door</th>
+                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Check In</th>
+                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Driver @ Door</th>
+                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Unload Start</th>
+                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Unload Finish</th>
+                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Rcv Finish</th>
+                </tr>
+              </thead>
+              <tbody id="dmsStampBoardBody">
+                <tr><td colspan="8" style="padding:18px 10px; color:var(--muted,#888); text-align:center; font-style:italic;">Open My Portal first to clock in trucks — they will appear here automatically.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <!-- Stamp form -->
-        <div class="panel" style="padding:20px 22px; margin-bottom:14px;">
-          <div class="panel-kicker">New Stamp</div>
-          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px;">
-
-            <div>
-              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Load ID</label>
-              <input id="dmsStampLoadId" type="text" class="lookup-input" placeholder="Paste Load ID from portal" autocomplete="off" style="width:100%;">
-            </div>
-
-            <div>
-              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">PO # (optional)</label>
-              <input id="dmsStampPo" type="text" class="lookup-input" placeholder="e.g. 1234567" autocomplete="off" style="width:100%;">
-            </div>
-
-            <div>
-              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Stamp Type</label>
-              <select id="dmsStampType" class="lookup-input" style="width:100%;">
-                <option value="checkin">Check In</option>
-                <option value="driveratdoor">Driver At Door</option>
-                <option value="unloadstart">Unload Start</option>
-                <option value="unloadfinish">Unload Finish</option>
-                <option value="receivingfinish">Receiving Finish</option>
-              </select>
-            </div>
-
-            <div>
-              <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Time <span style="font-weight:400; text-transform:none; letter-spacing:0;">(defaults to now)</span></label>
-              <div style="display:flex; gap:6px;">
-                <input id="dmsStampTime" type="datetime-local" class="lookup-input" style="flex:1;">
-                <button id="dmsStampNowBtn" type="button" class="secondary-btn" style="font-size:0.8em; white-space:nowrap;">Now</button>
+        <!-- Manual stamp (fallback) -->
+        <details style="margin-bottom:14px;">
+          <summary style="cursor:pointer; font-size:0.84em; font-weight:700; color:var(--label,#00A9CA); padding:8px 0; user-select:none;">&#9654; Manual Stamp — enter Load ID by hand</summary>
+          <div class="panel" style="padding:18px 20px; margin-top:10px;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;">
+              <div>
+                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Load ID</label>
+                <input id="dmsStampLoadId" type="text" class="lookup-input" placeholder="Paste Load ID" autocomplete="off" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">PO # (optional)</label>
+                <input id="dmsStampPo" type="text" class="lookup-input" placeholder="e.g. 1234567" autocomplete="off" style="width:100%;">
+              </div>
+              <div>
+                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Stamp Type</label>
+                <select id="dmsStampType" class="lookup-input" style="width:100%;">
+                  <option value="checkin">Check In</option>
+                  <option value="driveratdoor">Driver At Door</option>
+                  <option value="unloadstart">Unload Start</option>
+                  <option value="unloadfinish">Unload Finish</option>
+                  <option value="receivingfinish">Receiving Finish</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Time (defaults to now)</label>
+                <div style="display:flex; gap:6px;">
+                  <input id="dmsStampTime" type="datetime-local" class="lookup-input" style="flex:1;">
+                  <button id="dmsStampNowBtn" type="button" class="secondary-btn" style="font-size:0.8em; white-space:nowrap;">Now</button>
+                </div>
               </div>
             </div>
-
+            <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              <button id="dmsStampSubmitBtn" type="button" class="primary-btn" style="font-size:0.92em; font-weight:700; padding:9px 22px;">Stamp Truck</button>
+              <span id="dmsStampSpinner" style="display:none; font-size:0.82em; color:var(--muted,#888);">Stamping...</span>
+            </div>
+            <div id="dmsStampResult" style="margin-top:12px; display:none; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600;"></div>
           </div>
+        </details>
 
-          <div style="margin-top:16px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <button id="dmsStampSubmitBtn" type="button" class="primary-btn" style="font-size:0.92em; font-weight:700; padding:9px 22px;">Stamp Truck</button>
-            <span id="dmsStampSpinner" style="display:none; font-size:0.82em; color:var(--muted,#888);">Stamping...</span>
-          </div>
-          <div id="dmsStampResult" style="margin-top:12px; display:none; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600;"></div>
-        </div>
-
-        <!-- Recent stamp log -->
+        <!-- Stamp log -->
         <div class="table-wrap">
           <div class="table-toolbar">
             <div>
@@ -3633,8 +3654,9 @@
             <table id="dmsStampLogTable" style="width:100%; border-collapse:collapse; font-size:0.84em;">
               <thead>
                 <tr>
-                  <th style="text-align:left; padding:8px 10px;">Time Sent</th>
+                  <th style="text-align:left; padding:8px 10px;">Sent At</th>
                   <th style="text-align:left; padding:8px 10px;">Load ID</th>
+                  <th style="text-align:left; padding:8px 10px;">Vendor</th>
                   <th style="text-align:left; padding:8px 10px;">Stamp Type</th>
                   <th style="text-align:left; padding:8px 10px;">Stamp Time</th>
                   <th style="text-align:left; padding:8px 10px;">Result</th>
@@ -3648,7 +3670,7 @@
         <!-- DevTools tip -->
         <div class="panel" style="margin-top:14px; padding:16px 20px; border-left:4px solid #d69e2e; background:var(--warn-bg,#fffbeb);">
           <div style="font-size:0.78em; font-weight:700; color:#744210; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">Can't find the stamp endpoint?</div>
-          <p style="margin:0; font-size:0.85em; color:var(--text,#1a202c); line-height:1.6;">Open DMS in Chrome, press <strong>F12</strong> → Network tab → filter by <strong>XHR</strong>. Stamp a truck the normal way. Look for a POST request with "stamp" in the URL. Right-click it → Copy → Copy URL. Paste that URL into <code>dms_config.json</code> as <code>"stamp_endpoint"</code> and restart the server.</p>
+          <p style="margin:0; font-size:0.85em; color:var(--text,#1a202c); line-height:1.6;">Open DMS in Chrome, press <strong>F12</strong> → Network tab → filter by <strong>XHR</strong>. Stamp a truck the normal way. Look for a POST request with "stamp" in the URL. Right-click → Copy URL → paste into <code>dms_config.json</code> as <code>"stamp_endpoint"</code> and restart the server.</p>
         </div>
 
       </section>
@@ -11921,6 +11943,16 @@
     // ── DMS Stamp ──────────────────────────────────────────────────────────────
 
     var _dmsStampLog = [];
+    // key: "truckKey:stampType" → { timeIso, timeLabel, status: "pending"|"ok"|"error" }
+    var _dmsStampOverrides = {};
+
+    var _DMS_STAMP_COLS = [
+      { key: "checkin",        label: "Check In",      msField: "checkInMs"        },
+      { key: "driveratdoor",   label: "Driver @ Door", msField: "driverAtDoorMs"   },
+      { key: "unloadstart",    label: "Unload Start",  msField: "unloadStartMs"    },
+      { key: "unloadfinish",   label: "Unload Finish", msField: "unloadFinishMs"   },
+      { key: "receivingfinish",label: "Rcv Finish",    msField: "receivingFinishMs"},
+    ];
 
     function dmsStampSetDot(color, msg) {
       if (els.dmsStampDot) els.dmsStampDot.style.background = color;
@@ -11930,21 +11962,144 @@
     function dmsStampRenderLog() {
       if (!els.dmsStampLogBody) return;
       if (_dmsStampLog.length === 0) {
-        els.dmsStampLogBody.innerHTML = '<tr><td colspan="5" style="padding:12px 10px; color:var(--muted,#888); font-style:italic;">No stamps sent yet this session.</td></tr>';
+        els.dmsStampLogBody.innerHTML = '<tr><td colspan="6" style="padding:12px 10px; color:var(--muted,#888); font-style:italic;">No stamps sent yet this session.</td></tr>';
         if (els.dmsStampLogMeta) els.dmsStampLogMeta.textContent = "Stamps you send this session appear here.";
         return;
       }
       if (els.dmsStampLogMeta) els.dmsStampLogMeta.textContent = _dmsStampLog.length + " stamp" + (_dmsStampLog.length !== 1 ? "s" : "") + " sent this session.";
       els.dmsStampLogBody.innerHTML = _dmsStampLog.slice().reverse().map(function(e) {
-        const okStyle = e.ok ? "color:#276749; font-weight:700;" : "color:#c53030; font-weight:700;";
+        const okStyle = e.ok === "pending" ? "color:#d69e2e; font-weight:700;" : e.ok ? "color:#276749; font-weight:700;" : "color:#c53030; font-weight:700;";
+        const okLabel = e.ok === "pending" ? "Sending..." : e.ok ? "OK" : "FAILED";
         return "<tr>" +
           "<td style='padding:7px 10px; color:var(--muted,#888); font-size:0.82em;'>" + e.sentAt + "</td>" +
-          "<td style='padding:7px 10px;'>" + (e.loadId || "—") + "</td>" +
+          "<td style='padding:7px 10px; font-weight:600;'>" + (e.loadId || "—") + "</td>" +
+          "<td style='padding:7px 10px;'>" + (e.supplier || "—") + "</td>" +
           "<td style='padding:7px 10px;'>" + e.stampType + "</td>" +
           "<td style='padding:7px 10px;'>" + e.stampTime + "</td>" +
-          "<td style='padding:7px 10px; " + okStyle + "'>" + (e.ok ? "OK" : "FAILED") + (e.endpoint ? " · " + e.endpoint.split("/").pop() : "") + "</td>" +
+          "<td style='padding:7px 10px; " + okStyle + "'>" + okLabel + (e.endpoint ? " · " + e.endpoint.split("/").pop() : "") + "</td>" +
         "</tr>";
       }).join("");
+    }
+
+    function dmsStampBoardRender() {
+      const tbody = document.getElementById("dmsStampBoardBody");
+      const meta  = document.getElementById("dmsStampBoardMeta");
+      if (!tbody) return;
+
+      // Gather trucks from portal (live DMS rows + manual clocked-in trucks)
+      const live = state.portal.liveRows || [];
+      const manual = portalLoadTrucks();
+      const seen = new Set();
+      const trucks = [];
+      live.forEach(function(t)   { seen.add(t.id || t.ref); trucks.push(t); });
+      manual.forEach(function(t) { if (!seen.has(t.id || t.ref)) trucks.push(t); });
+
+      if (meta) meta.textContent = trucks.length
+        ? trucks.length + " truck" + (trucks.length !== 1 ? "s" : "") + " on board — click any cell to stamp."
+        : "No trucks found. Clock trucks in on My Portal first, then refresh.";
+
+      if (!trucks.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:18px 10px; color:var(--muted,#888); text-align:center; font-style:italic;">No trucks on the board yet. Go to My Portal and clock in some trucks, then click Refresh Trucks.</td></tr>';
+        return;
+      }
+
+      function fmtMs(ms) {
+        if (!ms) return null;
+        return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      }
+
+      tbody.innerHTML = "";
+      trucks.forEach(function(t) {
+        const truckKey = t.id || t.ref || (t.supplier + "_" + t.door);
+        const tr = document.createElement("tr");
+        tr.style.borderBottom = "1px solid var(--border,#e2e8f0)";
+
+        // Info cells
+        [[t.ref || t.loadId || "—", "font-weight:600;"], [t.supplier || "—", ""], [t.door || "—", "color:var(--muted,#888);"]].forEach(function(pair) {
+          const td = document.createElement("td");
+          td.style.cssText = "padding:9px 10px; " + pair[1];
+          td.textContent = pair[0];
+          tr.appendChild(td);
+        });
+
+        // Stamp columns
+        _DMS_STAMP_COLS.forEach(function(col) {
+          const td = document.createElement("td");
+          td.style.cssText = "padding:6px 8px; text-align:center;";
+
+          const overrideKey = truckKey + ":" + col.key;
+          const override = _dmsStampOverrides[overrideKey];
+          const dmsTimeMs = t[col.msField];
+
+          if (override) {
+            // Locally stamped this session
+            const color = override.status === "ok" ? "#276749" : override.status === "error" ? "#c53030" : "#d69e2e";
+            const icon  = override.status === "ok" ? "✓" : override.status === "error" ? "✗" : "…";
+            td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:' + color + ';">' + icon + ' ' + override.timeLabel + '</div>' +
+              '<div style="font-size:0.7em; color:' + color + '; opacity:0.8;">' + (override.status === "pending" ? "sending" : override.status) + '</div>';
+          } else if (dmsTimeMs) {
+            // Already stamped in DMS
+            td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:#276749;">✓ ' + fmtMs(dmsTimeMs) + '</div>' +
+              '<div style="font-size:0.7em; color:#276749; opacity:0.7;">from DMS</div>';
+          } else {
+            // Stamp button
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = "Stamp";
+            btn.style.cssText = "font-size:0.75em; font-weight:700; padding:4px 10px; border-radius:5px; border:1.5px solid #00A9CA; color:#00A9CA; background:transparent; cursor:pointer; white-space:nowrap;";
+            btn.addEventListener("mouseenter", function() { btn.style.background = "#00A9CA"; btn.style.color = "#fff"; });
+            btn.addEventListener("mouseleave", function() { btn.style.background = "transparent"; btn.style.color = "#00A9CA"; });
+            btn.addEventListener("click", function() {
+              dmsStampFromBoard(t, truckKey, col.key);
+            });
+            td.appendChild(btn);
+          }
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function dmsStampFromBoard(truck, truckKey, stampTypeKey) {
+      const overrideKey = truckKey + ":" + stampTypeKey;
+      const stampTimeIso = new Date().toISOString();
+      const timeLabel = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      const sentAt = new Date().toLocaleTimeString();
+      const loadId = truck.loadId || truck.ref || truck.id || "";
+      const supplier = truck.supplier || "";
+
+      // Record locally immediately
+      _dmsStampOverrides[overrideKey] = { timeIso: stampTimeIso, timeLabel, status: "pending" };
+      dmsStampBoardRender();
+
+      const logEntry = { sentAt, loadId, supplier, stampType: stampTypeKey, stampTime: timeLabel, ok: "pending", endpoint: "" };
+      _dmsStampLog.push(logEntry);
+      dmsStampRenderLog();
+
+      try {
+        const resp = await fetch("/api/dms/stamp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ load_id: loadId || null, po: truck.po || null, stamp_type: stampTypeKey, stamp_time: stampTimeIso })
+        });
+        const data = await resp.json().catch(function() { return {}; });
+        const ok = resp.ok && (data.ok !== false);
+        _dmsStampOverrides[overrideKey].status = ok ? "ok" : "error";
+        logEntry.ok = ok;
+        logEntry.endpoint = data.endpoint || "";
+        if (ok) {
+          dmsStampSetDot("#38a169", "Last stamp OK — " + supplier + " · " + stampTypeKey + " at " + timeLabel);
+        } else {
+          dmsStampSetDot("#e53e3e", "Stamp failed for " + (loadId || supplier) + " — " + (data.detail || "DMS error"));
+        }
+      } catch (err) {
+        _dmsStampOverrides[overrideKey].status = "error";
+        logEntry.ok = false;
+        dmsStampSetDot("#e53e3e", "Network error — stamp not sent to DMS");
+      }
+      dmsStampBoardRender();
+      dmsStampRenderLog();
     }
 
     async function dmsStampSend() {
@@ -11955,20 +12110,18 @@
 
       if (!loadId && !po) {
         if (els.dmsStampResult) {
-          els.dmsStampResult.style.display = "block";
           els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
           els.dmsStampResult.textContent = "Enter a Load ID or PO number before stamping.";
         }
         return;
       }
-
       if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.disabled = true;
       if (els.dmsStampSpinner) els.dmsStampSpinner.style.display = "inline";
       if (els.dmsStampResult) els.dmsStampResult.style.display = "none";
 
       const stampTimeIso = time ? new Date(time).toISOString() : new Date().toISOString();
       const sentAt = new Date().toLocaleTimeString();
-
+      const timeLabel = new Date(stampTimeIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
       try {
         const resp = await fetch("/api/dms/stamp", {
           method: "POST",
@@ -11976,25 +12129,23 @@
           body: JSON.stringify({ load_id: loadId || null, po: po || null, stamp_type: type, stamp_time: stampTimeIso })
         });
         const data = await resp.json().catch(function() { return {}; });
-
         const ok = resp.ok && (data.ok !== false);
-        _dmsStampLog.push({ sentAt, loadId, po, stampType: type, stampTime: new Date(stampTimeIso).toLocaleTimeString(), ok, endpoint: data.endpoint || "" });
+        _dmsStampLog.push({ sentAt, loadId, supplier: "", stampType: type, stampTime: timeLabel, ok, endpoint: data.endpoint || "" });
         dmsStampRenderLog();
-
         if (els.dmsStampResult) {
           if (ok) {
             els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#f0fff4; border:1.5px solid #38a169; color:#276749;";
-            els.dmsStampResult.textContent = "Stamp sent successfully via " + (data.endpoint || "DMS") + ".";
-            dmsStampSetDot("#38a169", "Connected — last stamp OK at " + sentAt);
+            els.dmsStampResult.textContent = "Stamp sent via " + (data.endpoint || "DMS") + ".";
+            dmsStampSetDot("#38a169", "Connected — stamp OK at " + sentAt);
           } else {
-            const detail = data.detail || (data.response && (data.response.message || data.response.error)) || "DMS returned an error.";
+            const detail = data.detail || "DMS returned an error.";
             els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
             els.dmsStampResult.textContent = "Stamp failed: " + detail;
             dmsStampSetDot("#e53e3e", "Stamp failed at " + sentAt);
           }
         }
       } catch (err) {
-        _dmsStampLog.push({ sentAt, loadId, po, stampType: type, stampTime: new Date(stampTimeIso).toLocaleTimeString(), ok: false, endpoint: "" });
+        _dmsStampLog.push({ sentAt, loadId, supplier: "", stampType: type, stampTime: timeLabel, ok: false, endpoint: "" });
         dmsStampRenderLog();
         if (els.dmsStampResult) {
           els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
@@ -12027,13 +12178,8 @@
     }
 
     function renderDmsStamp() {
+      dmsStampBoardRender();
       dmsStampRenderLog();
-      dmsStampSetDot("#718096", "Connect to DMS to stamp trucks directly from this screen.");
-      if (els.dmsStampTime) {
-        const now = new Date();
-        now.setSeconds(0, 0);
-        els.dmsStampTime.value = now.toISOString().slice(0, 16);
-      }
     }
 
     // Wire DMS Stamp buttons (runs after DOM ready via existing init block)
@@ -12054,6 +12200,8 @@
           dmsStampRenderLog();
         });
       }
+      const refreshBoardBtn = document.getElementById("dmsStampRefreshBoardBtn");
+      if (refreshBoardBtn) refreshBoardBtn.addEventListener("click", dmsStampBoardRender);
     });
 
     // ── End DMS Stamp ──────────────────────────────────────────────────────────
