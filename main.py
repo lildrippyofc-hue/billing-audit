@@ -157,18 +157,26 @@ _dms_session_cache: Dict[str, Any] = {}
 def _load_dms_config() -> Dict[str, Any]:
     cfg_path = BASE_DIR / "dms_config.json"
     cfg: Dict[str, Any] = {}
+    parse_error: str = ""
     if cfg_path.exists():
         try:
-            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-        except Exception:
+            raw = cfg_path.read_text(encoding="utf-8-sig")  # utf-8-sig strips BOM if present
+            cfg = json.loads(raw)
+        except Exception as e:
+            parse_error = str(e)
             cfg = {}
+    username = os.environ.get("DMS_USERNAME") or cfg.get("username") or ""
+    password = os.environ.get("DMS_PASSWORD") or cfg.get("password") or ""
+    base = (os.environ.get("DMS_BASE_URL") or cfg.get("base_url") or "https://dms.eclipseia.com").rstrip("/")
     return {
-        "username": os.environ.get("DMS_USERNAME") or cfg.get("username") or "",
-        "password": os.environ.get("DMS_PASSWORD") or cfg.get("password") or "",
-        "base_url": (os.environ.get("DMS_BASE_URL") or cfg.get("base_url") or "https://dms.eclipseia.com").rstrip("/"),
+        "username": username,
+        "password": password,
+        "base_url": base,
         "location_code": os.environ.get("DMS_LOCATION_CODE") or cfg.get("location_code") or "OLA",
         "location_name": os.environ.get("DMS_LOCATION_NAME") or cfg.get("location_name") or "ALDIOKS",
         "timeout": int(os.environ.get("DMS_TIMEOUT_SECONDS") or cfg.get("timeout_seconds") or 25),
+        "_parse_error": parse_error,
+        "_cfg_path": str(cfg_path),
     }
 
 
@@ -269,10 +277,15 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     username = str(config["username"]).strip()
     password = str(config["password"]).strip()
     if not username or not password or "YOUR_" in username or "YOUR_" in password:
-        raise HTTPException(
-            status_code=400,
-            detail="DMS credentials are not configured. Set DMS_USERNAME and DMS_PASSWORD, or fill dms_config.json locally.",
+        parse_err = config.get("_parse_error", "")
+        cfg_path  = config.get("_cfg_path", "dms_config.json")
+        detail = (
+            f"DMS credentials are not configured. "
+            f"Config file: {cfg_path}. "
+            + (f"JSON parse error: {parse_err}. " if parse_err else "File parsed OK but username/password missing. ")
+            + "Fill in username and password in dms_config.json."
         )
+        raise HTTPException(status_code=400, detail=detail)
 
     config["_opener"] = urllib.request.build_opener(
         urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
