@@ -3548,6 +3548,7 @@
           </div>
           <div class="portal-header-right">
             <button id="portalDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn">Pull Live DMS</button>
+            <button id="portalDmsDiagBtn" type="button" class="secondary-btn" style="font-size:0.8em;">🔍 Diagnose DMS</button>
             <label style="font-size:0.78em; color:var(--muted,#888);">Receiving grace (min):</label>
             <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
             <button id="portalExportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">&#8595; Export Shift</button>
@@ -3556,6 +3557,7 @@
           </div>
         </div>
         <div class="friendly-note" id="portalDmsStatus" style="margin:8px 0;">Live DMS not pulled yet. Manual clock-in is still available.</div>
+        <div id="portalDmsDiag" style="display:none; margin:8px 0; padding:12px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); font-size:0.82em;"></div>
 
         <!-- Add truck form -->
         <div class="portal-add-form" id="portalAddForm">
@@ -4662,7 +4664,7 @@
         liveError: "",
         liveAttempted: false,
         liveBusy: false,
-        livePollMs: 120000,
+        livePollMs: 30000,
         credentialBlocked: false,
         uiTickInterval: null,
         liveClockInterval: null,
@@ -5552,6 +5554,70 @@
         portalPullLiveDms(true);
       });
     }
+
+    (function(){
+      const diagBtn = document.getElementById("portalDmsDiagBtn");
+      const diagBox = document.getElementById("portalDmsDiag");
+      if (!diagBtn || !diagBox) return;
+      diagBtn.addEventListener("click", async function() {
+        diagBtn.disabled = true;
+        const oldLabel = diagBtn.textContent;
+        diagBtn.textContent = "Checking DMS…";
+        diagBox.style.display = "";
+        diagBox.innerHTML = "Contacting DMS…";
+        try {
+          const resp = await fetch("/api/dms/portal?debug=true", { headers: { "Accept": "application/json" } });
+          const data = await resp.json().catch(function(){ return {}; });
+          const d = data.debug || {};
+          const esc = function(s){ return String(s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); };
+
+          if (d.stage === "login" || (data.ok === false && d.error)) {
+            diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;margin-bottom:6px;">❌ DMS login failed</div>'
+              + '<div style="color:var(--muted,#888);">' + esc(d.error || "Unknown error") + '</div>'
+              + '<div style="margin-top:8px;">The board can\'t show live trucks until login works. Credentials live in Railway env vars DMS_USERNAME / DMS_PASSWORD.</div>';
+            return;
+          }
+
+          const tsFields = ["checkInIso","driverAtDoorIso","unloadStartIso","unloadFinishIso","receivingFinishIso"];
+          const tsLabels = { checkInIso:"Check In", driverAtDoorIso:"Driver @ Door", unloadStartIso:"Unload Start", unloadFinishIso:"Unload Finish", receivingFinishIso:"Rcv Finish" };
+          const ft = d.first_truck_normalized || {};
+          const tsRows = tsFields.map(function(f){
+            const ok = !!ft[f];
+            return '<tr><td style="padding:2px 10px 2px 0;">' + tsLabels[f] + '</td>'
+              + '<td style="padding:2px 0;color:' + (ok ? "#276749" : "#c53030") + ';font-weight:700;">'
+              + (ok ? "✓ " + esc(ft[f]) : "✗ missing (field name not matched)") + '</td></tr>';
+          }).join("");
+          const anyTs = tsFields.some(function(f){ return !!ft[f]; });
+
+          const raw = JSON.stringify(d, null, 2);
+          diagBox.innerHTML =
+            '<div style="font-weight:800;color:#276749;margin-bottom:6px;">✅ DMS connected — '
+              + (d.load_count || 0) + ' loads, ' + (d.stamp_count || 0) + ' stamps (business date ' + esc(d.business_date || "?") + ')</div>'
+            + '<div style="margin:6px 0;font-weight:700;">Timestamps detected on first truck:</div>'
+            + '<table style="font-size:0.92em;">' + tsRows + '</table>'
+            + (anyTs
+                ? '<div style="margin-top:8px;color:#276749;">At least some timestamps mapped — statuses should populate.</div>'
+                : '<div style="margin-top:8px;color:#c53030;font-weight:700;">No timestamps matched. This is why the ring/bar/est don\'t move. Send me the field names below and I\'ll map them.</div>')
+            + '<div style="margin-top:10px;font-weight:700;">DMS load field names:</div>'
+            + '<div style="font-family:monospace;font-size:0.85em;word-break:break-all;color:var(--muted,#666);">' + esc((d.load_keys||[]).join(", ") || "(none)") + '</div>'
+            + '<div style="margin-top:6px;font-weight:700;">DMS stamp field names:</div>'
+            + '<div style="font-family:monospace;font-size:0.85em;word-break:break-all;color:var(--muted,#666);">' + esc((d.stamp_keys||[]).join(", ") || "(none)") + '</div>'
+            + '<button id="portalDmsDiagCopy" type="button" class="secondary-btn" style="margin-top:10px;font-size:0.8em;">📋 Copy full diagnostic</button>'
+            + '<details style="margin-top:8px;"><summary style="cursor:pointer;color:var(--muted,#888);">Show raw data</summary>'
+            + '<pre style="white-space:pre-wrap;word-break:break-all;font-size:0.78em;max-height:280px;overflow:auto;background:var(--bg,#f7fafc);padding:8px;border-radius:6px;">' + esc(raw) + '</pre></details>';
+
+          const copyBtn = document.getElementById("portalDmsDiagCopy");
+          if (copyBtn) copyBtn.addEventListener("click", function(){
+            navigator.clipboard.writeText(raw).then(function(){ copyBtn.textContent = "✓ Copied — paste it to me"; }, function(){ copyBtn.textContent = "Copy failed — select the raw data manually"; });
+          });
+        } catch (err) {
+          diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;">❌ Could not reach the diagnostic endpoint</div><div style="color:var(--muted,#888);margin-top:4px;">' + String(err && err.message || err) + '</div>';
+        } finally {
+          diagBtn.disabled = false;
+          diagBtn.textContent = oldLabel;
+        }
+      });
+    })();
 
     els.portalClockInBtn.addEventListener("click", function() {
       const ref = els.portalInputRef.value.trim();
@@ -9044,8 +9110,15 @@
         if (els.portalDmsStatus) {
           const loc = data.location || {};
           const locName = loc.name || loc.locName || loc.cCode || "ALDIOKS";
-          const pulledAt = new Date().toLocaleTimeString();
-          els.portalDmsStatus.textContent = `Live DMS active: ${state.portal.liveRows.length} truck rows for ${locName}, business date ${data.business_date}. Last refresh ${pulledAt}. Auto-refreshes every ${Math.round((state.portal.livePollMs || 120000) / 60000)} min while this tab is open.`;
+          const everySec = Math.round((state.portal.livePollMs || 30000) / 1000);
+          const everyStr = everySec >= 60 ? Math.round(everySec / 60) + " min" : everySec + " sec";
+          els.portalDmsStatus.dataset.live = "1";
+          els.portalDmsStatus.dataset.count = state.portal.liveRows.length;
+          els.portalDmsStatus.dataset.loc = locName;
+          els.portalDmsStatus.dataset.bizdate = data.business_date || "";
+          els.portalDmsStatus.dataset.every = everyStr;
+          // Text (incl. "updated Xs ago") is kept fresh every second by portalLiveClock.
+          portalUpdateLiveStatusText();
         }
       } catch (err) {
         state.portal.liveError = err.message || String(err);
@@ -9062,6 +9135,20 @@
         els.portalDmsSyncBtn.textContent = "Pull Live DMS";
         renderPortalBoard();
       }
+    }
+
+    // Keeps the "Live DMS active … updated Xs ago" line ticking every second.
+    function portalUpdateLiveStatusText() {
+      const el = els.portalDmsStatus;
+      if (!el || el.dataset.live !== "1") return;
+      let agoStr = "just now";
+      if (state.portal.liveUpdatedAt) {
+        const secs = Math.max(0, Math.round((Date.now() - Date.parse(state.portal.liveUpdatedAt)) / 1000));
+        agoStr = secs < 5 ? "just now" : secs < 60 ? secs + "s ago" : Math.floor(secs / 60) + "m " + (secs % 60) + "s ago";
+      }
+      el.textContent = "🟢 Live DMS: " + el.dataset.count + " trucks for " + el.dataset.loc
+        + " · business date " + el.dataset.bizdate
+        + " · updated " + agoStr + " · auto-refresh every " + el.dataset.every + ".";
     }
 
     function portalFmtCountdown(ms) {
@@ -9084,6 +9171,7 @@
       // Refresh metrics, charts, est-time, ring and progress bar live every second
       // (metricsOnly = true skips the table rebuild so rows/buttons don't flicker).
       renderPortalBoard(true);
+      portalUpdateLiveStatusText();
 
       // Tick every countdown cell in the board
       const cells = document.querySelectorAll("[data-countdown-deadline]");
