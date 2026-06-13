@@ -438,6 +438,43 @@
     .portal-progress-fill { height: 100%; background: linear-gradient(90deg, #38a169, #68d391); border-radius: 8px; transition: width 0.6s ease; }
     .portal-progress-pace { font-size: 0.78em; color: var(--muted,#a0aec0); margin-top: 3px; }
     :root.dark .portal-progress-track { background: #1e3a55; }
+    /* Portal Charts Row */
+    .portal-charts-row { display: grid; grid-template-columns: 160px 1fr 1fr; gap: 12px; margin: 10px 0 4px; align-items: start; }
+    .portal-chart-card { background: var(--card-bg,#fff); border: 1px solid var(--border,#e2e8f0); border-radius: 10px; padding: 14px 16px; }
+    .portal-chart-title { font-size: 0.76em; font-weight: 700; color: var(--label,#718096); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+    /* Completion ring */
+    .portal-ring-wrap { position: relative; width: 100px; height: 100px; margin: 0 auto 6px; }
+    .portal-ring { transform: rotate(-90deg); width: 100px; height: 100px; }
+    .portal-ring-track { fill: none; stroke: var(--border,#e2e8f0); stroke-width: 8; }
+    .portal-ring-fill { fill: none; stroke: #38a169; stroke-width: 8; stroke-linecap: round; stroke-dasharray: 213.6; stroke-dashoffset: 213.6; transition: stroke-dashoffset 0.7s ease, stroke 0.4s; }
+    .portal-ring-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; }
+    .portal-ring-pct { font-size: 1.3em; font-weight: 800; color: var(--text,#1a202c); line-height: 1; }
+    .portal-ring-sub { font-size: 0.7em; color: var(--muted,#888); margin-top: 2px; }
+    /* Status breakdown bar */
+    .portal-breakdown-bar { display: flex; height: 18px; border-radius: 9px; overflow: hidden; background: var(--border,#e2e8f0); margin-bottom: 8px; }
+    .portal-breakdown-seg { height: 100%; transition: width 0.6s ease; }
+    .seg-complete  { background: #38a169; }
+    .seg-active    { background: #3182ce; }
+    .seg-urgent    { background: #d69e2e; }
+    .seg-detention { background: #e53e3e; }
+    .portal-breakdown-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+    .portal-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.75em; color: var(--text,#1a202c); }
+    .portal-legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    /* Shift timeline */
+    .portal-timeline-track { position: relative; height: 18px; background: var(--border,#e2e8f0); border-radius: 9px; overflow: visible; margin-bottom: 6px; }
+    .portal-timeline-elapsed { position: absolute; left: 0; top: 0; height: 100%; background: linear-gradient(90deg,#00A9CA,#3182ce); border-radius: 9px 0 0 9px; transition: width 0.8s ease; }
+    .portal-timeline-needle { position: absolute; top: -4px; width: 3px; height: 26px; background: var(--text,#1a202c); border-radius: 2px; transform: translateX(-50%); transition: left 0.8s ease; z-index: 2; }
+    .portal-timeline-needle::after { content: ""; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--text,#1a202c); }
+    .portal-timeline-labels { display: flex; justify-content: space-between; font-size: 0.72em; color: var(--muted,#888); margin-top: 10px; }
+    .portal-timeline-labels span:nth-child(2) { font-weight: 700; color: var(--text,#1a202c); }
+    .portal-timeline-est { position: absolute; top: -4px; width: 3px; height: 26px; background: #e53e3e; border-radius: 2px; transform: translateX(-50%); transition: left 0.8s ease; z-index: 1; opacity: 0.85; }
+    .portal-timeline-est::after { content: ""; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid #e53e3e; }
+    .portal-timeline-pace { font-size: 0.75em; color: var(--muted,#888); margin-top: 2px; }
+    :root.dark .portal-chart-card { background: #132030; border-color: #1e3a55; }
+    :root.dark .portal-ring-track { stroke: #1e3a55; }
+    :root.dark .portal-breakdown-bar { background: #1e3a55; }
+    :root.dark .portal-timeline-track { background: #1e3a55; }
+    @media (max-width: 700px) { .portal-charts-row { grid-template-columns: 1fr; } }
     /* Board row colors */
     tr.portal-row-detention td { background: #fff5f5 !important; font-weight: 600; }
     tr.portal-row-urgent td { background: #fffbeb !important; font-weight: 600; }
@@ -3509,13 +3546,60 @@
         <!-- Shift pace / 4AM goal banner -->
         <div id="portalPaceAlert" class="portal-pace-alert" style="display:none;"></div>
 
-        <!-- Progress bar -->
-        <div class="portal-progress-wrap" id="portalProgressWrap" style="display:none;">
-          <div class="portal-progress-label" id="portalProgressLabel">Day progress</div>
-          <div class="portal-progress-track">
-            <div class="portal-progress-fill" id="portalProgressFill" style="width:0%;"></div>
+        <!-- Charts row -->
+        <div class="portal-charts-row" id="portalChartsRow" style="display:none;">
+
+          <!-- Completion ring -->
+          <div class="portal-chart-card" style="text-align:center;">
+            <div class="portal-chart-title">Shift Progress</div>
+            <div class="portal-ring-wrap">
+              <svg class="portal-ring" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                <circle class="portal-ring-track" cx="40" cy="40" r="34"/>
+                <circle class="portal-ring-fill" id="portalRingFill" cx="40" cy="40" r="34"/>
+              </svg>
+              <div class="portal-ring-center">
+                <div class="portal-ring-pct" id="portalRingPct">0%</div>
+                <div class="portal-ring-sub" id="portalRingSubPct">done</div>
+              </div>
+            </div>
+            <div id="portalProgressLabel" style="font-size:0.75em;color:var(--muted,#888);margin-top:2px;"></div>
           </div>
-          <div class="portal-progress-pace" id="portalProgressPace"></div>
+
+          <!-- Status breakdown bar -->
+          <div class="portal-chart-card">
+            <div class="portal-chart-title">Status Breakdown</div>
+            <div class="portal-breakdown-bar" id="portalBreakdownBar">
+              <div class="portal-breakdown-seg seg-complete"  id="portalSegComplete"  style="width:0%;" title="Complete"></div>
+              <div class="portal-breakdown-seg seg-active"    id="portalSegActive"    style="width:0%;" title="Active"></div>
+              <div class="portal-breakdown-seg seg-urgent"    id="portalSegUrgent"    style="width:0%;" title="Urgent/Warning"></div>
+              <div class="portal-breakdown-seg seg-detention" id="portalSegDetention" style="width:0%;" title="In Detention"></div>
+            </div>
+            <div class="portal-breakdown-legend" id="portalBreakdownLegend"></div>
+            <div id="portalProgressPace" style="font-size:0.75em;color:var(--muted,#888);margin-top:8px;"></div>
+          </div>
+
+          <!-- Shift timeline -->
+          <div class="portal-chart-card">
+            <div class="portal-chart-title">Shift Timeline — 8 PM → 4 AM</div>
+            <div class="portal-timeline-track" id="portalTimelineTrack">
+              <div class="portal-timeline-elapsed" id="portalTimelineElapsed" style="width:0%;"></div>
+              <div class="portal-timeline-needle"  id="portalTimelineNeedle"  style="left:0%;"></div>
+              <div class="portal-timeline-est"     id="portalTimelineEst"     style="left:0%; display:none;"></div>
+            </div>
+            <div class="portal-timeline-labels">
+              <span>8 PM</span>
+              <span id="portalTimelineNowLabel">Now</span>
+              <span>4 AM</span>
+            </div>
+            <div class="portal-timeline-pace" id="portalTimelinePace"></div>
+          </div>
+
+        </div>
+
+        <!-- legacy ids kept for JS compatibility -->
+        <div style="display:none;">
+          <div id="portalProgressWrap"></div>
+          <div id="portalProgressFill"></div>
         </div>
 
         <!-- Operations board -->
@@ -9285,20 +9369,99 @@
         }
       }
 
-      // Progress bar
-      if (enriched.length > 0 && els.portalProgressWrap) {
-        const pct = Math.round((complete.length / enriched.length) * 100);
-        els.portalProgressWrap.style.display = "";
-        if (els.portalProgressFill)  els.portalProgressFill.style.width  = pct + "%";
-        if (els.portalProgressLabel) els.portalProgressLabel.textContent = "Day Progress: " + complete.length + " of " + enriched.length + " trucks complete (" + pct + "%)";
-        if (els.portalProgressPace) {
-          const firstMs = enriched.reduce(function(min, r) { return r.checkInMs < min ? r.checkInMs : min; }, Infinity);
+      // ── Charts row ─────────────────────────────────────────────────────────
+      const chartsRow = document.getElementById("portalChartsRow");
+      if (enriched.length > 0 && chartsRow) {
+        chartsRow.style.display = "";
+        const total = enriched.length;
+        const donePct = Math.round((complete.length / total) * 100);
+
+        // 1. Completion ring (circumference = 2π×34 ≈ 213.6)
+        const ringFill = document.getElementById("portalRingFill");
+        const ringPct  = document.getElementById("portalRingPct");
+        const ringSub  = document.getElementById("portalRingSubPct");
+        const CIRC = 213.6;
+        if (ringFill) {
+          const offset = CIRC * (1 - donePct / 100);
+          ringFill.style.strokeDashoffset = offset;
+          ringFill.style.stroke = donePct >= 100 ? "#38a169" : donePct >= 60 ? "#3182ce" : donePct >= 30 ? "#d69e2e" : "#e53e3e";
+        }
+        if (ringPct) ringPct.textContent = donePct + "%";
+        if (ringSub) ringSub.textContent = complete.length + " / " + total;
+        const progLabel = document.getElementById("portalProgressLabel");
+        if (progLabel) progLabel.textContent = complete.length + " done · " + (total - complete.length) + " remaining";
+
+        // 2. Status breakdown segmented bar
+        const activeLen   = active.length + warning.length;
+        const urgentLen   = urgent.length + startSoon.length;
+        const detentionLen = detention.length;
+        const completeLen  = complete.length;
+        const seg = function(id, count) {
+          const el = document.getElementById(id);
+          if (el) el.style.width = (count > 0 ? Math.max(4, Math.round(count / total * 100)) : 0) + "%";
+        };
+        seg("portalSegComplete",  completeLen);
+        seg("portalSegActive",    activeLen);
+        seg("portalSegUrgent",    urgentLen);
+        seg("portalSegDetention", detentionLen);
+        const legend = document.getElementById("portalBreakdownLegend");
+        if (legend) {
+          const items = [
+            { color: "#38a169", label: "Complete",  count: completeLen  },
+            { color: "#3182ce", label: "Active",    count: activeLen    },
+            { color: "#d69e2e", label: "Urgent",    count: urgentLen    },
+            { color: "#e53e3e", label: "Detention", count: detentionLen },
+          ].filter(function(i) { return i.count > 0; });
+          legend.innerHTML = items.map(function(i) {
+            return '<span class="portal-legend-item"><span class="portal-legend-dot" style="background:' + i.color + ';"></span>' + i.label + ' (' + i.count + ')</span>';
+          }).join("");
+        }
+        const paceEl = document.getElementById("portalProgressPace");
+        if (paceEl) {
+          const firstMs = enriched.reduce(function(mn, r) { return r.checkInMs && r.checkInMs < mn ? r.checkInMs : mn; }, Infinity);
           const elapsedH = firstMs < Infinity ? (now - firstMs) / 3600000 : 0;
           const rate = elapsedH > 0.1 ? (complete.length / elapsedH).toFixed(1) : 0;
-          els.portalProgressPace.textContent = rate > 0 ? ("Rate: ~" + rate + " trucks/hr") : "";
+          paceEl.textContent = rate > 0 ? ("Pace: ~" + rate + " trucks / hr") : "";
         }
-      } else if (els.portalProgressWrap) {
-        els.portalProgressWrap.style.display = "none";
+
+        // 3. Shift timeline (8PM → 4AM = 8 hrs = 28800000 ms)
+        const shiftTotalMs = 8 * 3600000;
+        const elapsedMs = Math.min(Math.max(now - shiftStartMs, 0), shiftTotalMs);
+        const shiftPct  = Math.round(elapsedMs / shiftTotalMs * 100);
+        const elapsedEl = document.getElementById("portalTimelineElapsed");
+        const needleEl  = document.getElementById("portalTimelineNeedle");
+        const estEl     = document.getElementById("portalTimelineEst");
+        const nowLabel  = document.getElementById("portalTimelineNowLabel");
+        if (elapsedEl) elapsedEl.style.width  = shiftPct + "%";
+        if (needleEl)  needleEl.style.left    = shiftPct + "%";
+        if (nowLabel) {
+          const nowH = new Date(now);
+          nowLabel.textContent = nowH.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        }
+        if (estEl && state.portal.estMs) {
+          const estPct = Math.round(Math.min(Math.max((state.portal.estMs - shiftStartMs) / shiftTotalMs * 100, 0), 100));
+          estEl.style.left = estPct + "%";
+          estEl.style.display = "";
+          estEl.title = "Est. finish: " + new Date(state.portal.estMs).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        } else if (estEl) {
+          estEl.style.display = "none";
+        }
+        const tlPace = document.getElementById("portalTimelinePace");
+        if (tlPace) {
+          const behindMs = state.portal.estMs ? state.portal.estMs - goal4amMs : 0;
+          if (state.portal.estMs && behindMs > 60000) {
+            const behindMin = Math.round(behindMs / 60000);
+            tlPace.style.color = "#e53e3e";
+            tlPace.textContent = "⚠ Est. finish " + behindMin + " min past 4 AM — pace up";
+          } else if (state.portal.estMs && state.portal.estMs <= goal4amMs) {
+            tlPace.style.color = "#38a169";
+            tlPace.textContent = "On track to finish before 4 AM";
+          } else {
+            tlPace.textContent = "";
+          }
+        }
+      } else if (chartsRow) {
+        chartsRow.style.display = "none";
       }
 
       // Alert strip
