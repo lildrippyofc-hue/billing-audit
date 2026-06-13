@@ -711,8 +711,9 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
             "sample_load": loads[0] if loads else None,
             "sample_stamp": stamps[0] if stamps else None,
             "first_truck_normalized": trucks[0] if trucks else None,
+            "truck_count": len(trucks),
         })
-        return {"ok": True, "debug": dbg, "trucks": trucks}
+        return {"ok": True, "debug": dbg}
 
     session = _ensure_dms_session(force=force)
     info = _dms_business_date(date)
