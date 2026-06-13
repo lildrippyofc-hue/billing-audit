@@ -168,6 +168,8 @@ def _load_dms_config() -> Dict[str, Any]:
     username = os.environ.get("DMS_USERNAME") or cfg.get("username") or ""
     password = os.environ.get("DMS_PASSWORD") or cfg.get("password") or ""
     base = (os.environ.get("DMS_BASE_URL") or cfg.get("base_url") or "https://dms.eclipseia.com").rstrip("/")
+    # The DMS API is served on 443; :5055 is dead and only causes connect timeouts.
+    base = base.replace(":5055", "")
     return {
         "username": username,
         "password": password,
@@ -217,7 +219,8 @@ def _first_list(value: Any) -> List[Any]:
     if isinstance(value, list):
         return value
     if isinstance(value, dict):
-        for key in ("data", "rows", "loads", "stamps", "result", "results", "Table"):
+        # NOTE: DMS api/stamp/getStamps wraps the rows under "list".
+        for key in ("list", "data", "rows", "loads", "stamps", "result", "results", "Table"):
             found = _first_list(value.get(key))
             if found:
                 return found
@@ -359,14 +362,23 @@ def _parse_dms_time(value: Any) -> Optional[str]:
     text = str(value).strip()
     if not text:
         return None
+    # DMS stamp times look like "06/13/2026 03:46 AM UTC" (always UTC).
+    # Strip a trailing UTC/GMT marker so the AM/PM formats below match; the
+    # value is UTC either way and we tag it as such.
+    text = text.replace("+00:00", "Z")
+    low = text.lower()
+    for suffix in (" utc", " gmt"):
+        if low.endswith(suffix):
+            text = text[: -len(suffix)].strip()
+            break
     formats = [
         "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S",
         "%m/%d/%Y %I:%M:%S %p", "%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M:%S",
-        "%Y-%m-%d %H:%M:%S",
+        "%m/%d/%Y %H:%M", "%Y-%m-%d %H:%M:%S",
     ]
     for fmt in formats:
         try:
-            dt = datetime.strptime(text.replace("+00:00", "Z"), fmt)
+            dt = datetime.strptime(text, fmt)
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt.isoformat()
@@ -388,13 +400,19 @@ def _dms_key(row: Dict[str, Any]) -> str:
 
 
 def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict[str, Any]:
+    # Merge load (truck info: qty/desc/notes) with stamp (the timestamps), joined
+    # by rowid. DMS field names confirmed from a live shift:
+    #   drchk = driver check-in, drdoor = driver at door, clrkchk = clerk check-in,
+    #   unstart = unload start, unfin = unload finish, recstart = receiving start,
+    #   recfin = receiving finish, drleft = driver left, drstat = status.
     merged = {**load, **stamp}
     appointment = _parse_dms_time(
         merged.get("appt") or merged.get("apptDisplay") or merged.get("appointment") or merged.get("appointmentTime")
     )
+    # Real driver/clerk check-in only — do NOT fall back to the appointment, or
+    # every scheduled-but-not-arrived truck would look "checked in".
     check_in = _parse_dms_time(
-        merged.get("drchk") or merged.get("driverCheckIn") or merged.get("driver_check_in") or
-        merged.get("clrkchk") or appointment
+        merged.get("drchk") or merged.get("driverCheckIn") or merged.get("driver_check_in") or merged.get("clrkchk")
     )
     driver_at_door = _parse_dms_time(
         merged.get("drdoor") or merged.get("driverAtDoor") or merged.get("driver_at_door")
@@ -405,10 +423,17 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
     unload_finish = _parse_dms_time(
         merged.get("unfin") or merged.get("unloadFinish") or merged.get("unload_finish")
     )
+    receiving_start = _parse_dms_time(
+        merged.get("recstart") or merged.get("receivingStart") or merged.get("receiving_start")
+    )
     receiving_finish = _parse_dms_time(
         merged.get("recfin") or merged.get("receivingFinish") or merged.get("receiving_finish")
     )
-    ref = merged.get("trkNum") or merged.get("truck") or merged.get("cabNum") or merged.get("rowid") or merged.get("poNum") or ""
+    driver_left = _parse_dms_time(merged.get("drleft") or merged.get("driverLeft"))
+    ref = (
+        merged.get("trkNum") or merged.get("trk") or merged.get("truck")
+        or merged.get("cabNum") or merged.get("rowid") or merged.get("poNum") or ""
+    )
     return {
         "id": f"dms-{_dms_key(merged) or ref}",
         "source": "DMS",
@@ -416,6 +441,7 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
         "ref": str(ref or "").strip(),
         "door": str(merged.get("doorNum") or merged.get("door") or "").strip(),
         "supplier": str(merged.get("sup") or merged.get("supplier") or merged.get("vendor") or "").strip(),
+        "carrier": str(merged.get("trnum") or merged.get("carr") or "").strip(),
         "po": str(merged.get("poNum") or merged.get("po") or "").strip(),
         "area": str(merged.get("area") or "").strip(),
         "comments": str(merged.get("comments") or merged.get("notes") or "").strip(),
@@ -424,7 +450,9 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
         "driverAtDoorIso": driver_at_door,
         "unloadStartIso": unload_start,
         "unloadFinishIso": unload_finish,
+        "receivingStartIso": receiving_start,
         "receivingFinishIso": receiving_finish,
+        "driverLeftIso": driver_left,
         "finishIso": receiving_finish,
         "statusText": str(merged.get("drstat") or "").strip(),
     }

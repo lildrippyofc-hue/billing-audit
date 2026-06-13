@@ -24,6 +24,12 @@ __pycache__/
 # Environment / secrets
 .env
 *.env
+dms_config.json
+
+# Local-only scratch / DMS probe scripts (read creds from dms_config.json)
+probe_dms.py
+probe_stamps.py
+verify_mapping.py
 
 # OS junk
 .DS_Store
