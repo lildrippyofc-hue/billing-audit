@@ -9012,6 +9012,10 @@
       if (!portalPanelIsActive()) return;
       const now = Date.now();
 
+      // Refresh metrics, charts, est-time, ring and progress bar live every second
+      // (metricsOnly = true skips the table rebuild so rows/buttons don't flicker).
+      renderPortalBoard(true);
+
       // Tick every countdown cell in the board
       const cells = document.querySelectorAll("[data-countdown-deadline]");
       cells.forEach(function(td) {
@@ -9290,7 +9294,7 @@
       portalLoadExportsList();
     }
 
-    function renderPortalBoard() {
+    function renderPortalBoard(metricsOnly) {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
       const manualTrucks = portalLoadTrucks().map(function(t) {
@@ -9355,7 +9359,7 @@
 
       // 4AM cutoff tracker
       if (els.portal4amCard && els.portal4amCount && els.portal4amNote) {
-        const cutoff4am = (function() { const d = new Date(); d.setHours(4,0,0,0); return d.getTime(); })();
+        const cutoff4am = (function() { const d = new Date(); d.setHours(20,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime() + 8*3600000; })();
         const msTo4am = cutoff4am - now;
         const notStarted = enriched.filter(function(t) { return t.status !== "complete" && !t.checkInMs; });
         const n = notStarted.length;
@@ -9617,6 +9621,10 @@
           els.portalAlertStrip.style.display = "none";
         }
       }
+
+      // When called from the per-second live clock, refresh metrics/charts only —
+      // skip the table DOM rebuild to avoid flicker and resetting button clicks.
+      if (metricsOnly) return;
 
       // Filter for table
       const filtered = statusFilter === "all" ? enriched : enriched.filter(function(r) {
