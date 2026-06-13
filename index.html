@@ -507,6 +507,21 @@
     td.portal-countdown-detention { color: #e53e3e; font-weight: 700; font-variant-numeric: tabular-nums; }
     td.portal-countdown-urgent { color: #dd6b20; font-weight: 700; font-variant-numeric: tabular-nums; }
     td.portal-countdown-warning { color: #d69e2e; font-weight: 600; font-variant-numeric: tabular-nums; }
+    /* Load progress pipeline */
+    .load-pipeline { display: flex; align-items: center; gap: 0; white-space: nowrap; }
+    .load-step { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 42px; cursor: default; }
+    .load-step-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid #cbd5e0; background: #f7fafc; transition: background 0.3s; flex-shrink: 0; }
+    .load-step.done   .load-step-dot { background: #38a169; border-color: #38a169; }
+    .load-step.current .load-step-dot { background: #3182ce; border-color: #3182ce; animation: portal-pulse 1.5s ease-in-out infinite; }
+    .load-step-label { font-size: 0.62em; font-weight: 700; color: var(--muted,#a0aec0); text-transform: uppercase; letter-spacing: .03em; line-height: 1; }
+    .load-step.done    .load-step-label { color: #38a169; }
+    .load-step.current .load-step-label { color: #3182ce; }
+    .load-step-time { font-size: 0.6em; color: var(--muted,#a0aec0); font-variant-numeric: tabular-nums; line-height: 1; }
+    .load-step.done .load-step-time { color: #276749; }
+    .load-connector { width: 12px; height: 2px; background: #e2e8f0; margin-bottom: 14px; flex-shrink: 0; }
+    .load-connector.done { background: #38a169; }
+    :root.dark .load-step-dot { background: #1e3a55; border-color: #2d5a7a; }
+    :root.dark .load-connector { background: #1e3a55; }
     td.portal-countdown-active { color: #38a169; font-variant-numeric: tabular-nums; }
     /* Trend charts grid */
     .trends-chart-grid {
@@ -9602,7 +9617,7 @@
       const tbody = els.portalBoard.querySelector("tbody");
       thead.innerHTML = "";
       tbody.innerHTML = "";
-      const colHeaders = ["Source", "Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Receiving Clock", "Turn Time", "Actions"];
+      const colHeaders = ["Source", "Status", "Ref #", "Door", "Supplier", "PO", "Check-In", "Receiving Clock", "Turn Time", "Load Progress", "Actions"];
       const hr = document.createElement("tr");
       colHeaders.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; hr.appendChild(th); });
       thead.appendChild(hr);
@@ -9663,6 +9678,47 @@
           turnTd.style.fontSize = "0.85em";
         }
         tr.appendChild(turnTd);
+
+        // Load progress pipeline
+        const progTd = document.createElement("td");
+        progTd.style.padding = "4px 6px";
+        const PIPELINE_STEPS = [
+          { abbr: "CI",  title: "Check In",       field: "checkInMs"        },
+          { abbr: "D@D", title: "Driver @ Door",  field: "driverAtDoorMs"   },
+          { abbr: "US",  title: "Unload Start",   field: "unloadStartMs"    },
+          { abbr: "UF",  title: "Unload Finish",  field: "unloadFinishMs"   },
+          { abbr: "RF",  title: "Rcv Finish",     field: "receivingFinishMs"},
+        ];
+        const pipe = document.createElement("div");
+        pipe.className = "load-pipeline";
+        PIPELINE_STEPS.forEach(function(step, idx) {
+          if (idx > 0) {
+            const conn = document.createElement("div");
+            const prevDone = !!r[PIPELINE_STEPS[idx-1].field];
+            conn.className = "load-connector" + (prevDone ? " done" : "");
+            pipe.appendChild(conn);
+          }
+          const msVal = r[step.field];
+          const done = !!msVal;
+          const current = !done && (idx === 0 || !!r[PIPELINE_STEPS[idx-1].field]);
+          const stepDiv = document.createElement("div");
+          stepDiv.className = "load-step" + (done ? " done" : current ? " current" : "");
+          let timeStr = "";
+          if (msVal) {
+            const d = new Date(msVal);
+            const hh = d.getHours() % 12 || 12;
+            const mm = String(d.getMinutes()).padStart(2, "0");
+            const ap = d.getHours() >= 12 ? "p" : "a";
+            timeStr = hh + ":" + mm + ap;
+          }
+          stepDiv.title = step.title + (timeStr ? " — " + timeStr : " — pending");
+          stepDiv.innerHTML = '<div class="load-step-dot"></div>'
+            + '<div class="load-step-label">' + step.abbr + '</div>'
+            + '<div class="load-step-time">' + (timeStr || (current ? "●" : "")) + '</div>';
+          pipe.appendChild(stepDiv);
+        });
+        progTd.appendChild(pipe);
+        tr.appendChild(progTd);
 
         const actTd = document.createElement("td");
         actTd.style.whiteSpace = "nowrap";
