@@ -407,6 +407,18 @@
     #portalLiveClock { font-size: 1.1em; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
     .portal-header-center { font-weight: 600; color: var(--label, #718096); font-size: 0.9em; }
     .portal-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    /* 4AM Countdown */
+    .portal-4am-wrap { display: flex; flex-direction: column; align-items: center; background: var(--card-bg,#fff); border: 1.5px solid var(--border,#e2e8f0); border-radius: 10px; padding: 6px 16px; min-width: 120px; }
+    .portal-4am-timer { font-size: 1.6em; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .04em; line-height: 1; color: #38a169; transition: color 0.5s; }
+    .portal-4am-timer.timer-amber { color: #d69e2e; }
+    .portal-4am-timer.timer-red   { color: #e53e3e; }
+    .portal-4am-timer.timer-pulse { animation: portal-pulse 1.2s ease-in-out infinite; }
+    .portal-4am-sublabel { font-size: 0.65em; font-weight: 700; color: var(--muted,#888); text-transform: uppercase; letter-spacing: .07em; margin-top: 1px; }
+    :root.dark .portal-4am-wrap { background: #132030; border-color: #1e3a55; }
+    /* Notification permission banner */
+    .portal-notif-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#ebf8ff; border:1.5px solid #90cdf4; border-radius:8px; padding:8px 14px; margin:6px 0; font-size:0.84em; color:#2b6cb0; }
+    .portal-notif-banner button { font-size:0.82em; font-weight:700; padding:4px 12px; border-radius:6px; border:1.5px solid #3182ce; background:#3182ce; color:#fff; cursor:pointer; white-space:nowrap; }
+    .portal-notif-banner .notif-dismiss { background:transparent; border-color:#90cdf4; color:#3182ce; margin-left:6px; }
     .portal-refresh-btn { padding: 6px 12px; font-size: 0.82em; font-weight: 600; display: flex; align-items: center; gap: 5px; }
     /* Alert strip */
     .portal-alert-strip {
@@ -3448,6 +3460,15 @@
       <section id="myPortalPanel" class="tab-panel" aria-label="My Portal">
         <div class="motivation-bar" id="motivBar_myPortal"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
 
+        <!-- Notification permission banner -->
+        <div class="portal-notif-banner" id="portalNotifBanner" style="display:none;">
+          <span>&#128276; Enable notifications to get alerted when trucks go into detention or the shift falls behind pace.</span>
+          <div style="display:flex;gap:6px;flex-shrink:0;">
+            <button id="portalNotifEnableBtn" type="button">Enable Alerts</button>
+            <button id="portalNotifDismissBtn" type="button" class="notif-dismiss">Not now</button>
+          </div>
+        </div>
+
         <!-- Live header bar -->
         <div class="portal-header-bar">
           <div class="portal-live-badge">
@@ -3456,6 +3477,11 @@
           </div>
           <div class="portal-header-center">
             <span class="portal-day-label" id="portalDayLabel">Loading...</span>
+          </div>
+          <!-- 4AM countdown -->
+          <div class="portal-4am-wrap">
+            <div class="portal-4am-timer" id="portal4amTimer">--:--:--</div>
+            <div class="portal-4am-sublabel">to 4:00 AM</div>
           </div>
           <div class="portal-header-right">
             <button id="portalDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn">Pull Live DMS</button>
@@ -5337,10 +5363,31 @@
         const ampm = h >= 12 ? "PM" : "AM";
         const h12 = h % 12 || 12;
         if (els.portalLiveClock) els.portalLiveClock.textContent = h12 + ":" + m + ":" + s + " " + ampm;
-        const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+        const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturn"];
+        const days2 = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
         const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        if (els.portalDayLabel) els.portalDayLabel.textContent = days[now.getDay()] + ", " + months[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
+        if (els.portalDayLabel) els.portalDayLabel.textContent = days2[now.getDay()] + ", " + months[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
         if (els.portalLiveDot) els.portalLiveDot.style.opacity = now.getSeconds() % 2 === 0 ? "1" : "0.3";
+
+        // 4AM countdown
+        const timer = document.getElementById("portal4amTimer");
+        if (timer) {
+          const goal = new Date();
+          goal.setHours(4, 0, 0, 0);
+          if (goal <= now) goal.setDate(goal.getDate() + 1);
+          const diffMs = goal - now;
+          const totalSec = Math.floor(diffMs / 1000);
+          const hh = Math.floor(totalSec / 3600);
+          const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+          const ss = String(totalSec % 60).padStart(2, "0");
+          timer.textContent = hh + ":" + mm + ":" + ss;
+          timer.className = "portal-4am-timer";
+          if (hh >= 3)      { /* green — default */ }
+          else if (hh >= 1) { timer.className += " timer-amber"; }
+          else if (totalSec > 1800) { timer.className += " timer-red"; }
+          else              { timer.className += " timer-red timer-pulse"; }
+        }
+
         if (now.getSeconds() % 30 === 0) {
           const panel = document.getElementById("myPortalPanel");
           if (panel && panel.classList.contains("active")) renderPortalBoard();
@@ -5349,6 +5396,40 @@
       tick();
       setInterval(tick, 1000);
     })();
+
+    // ── Push notifications ────────────────────────────────────────────────────
+    var _portalNotifiedTags = new Set();
+
+    function portalNotify(title, body, tag) {
+      if (!tag || _portalNotifiedTags.has(tag)) return;
+      _portalNotifiedTags.add(tag);
+      if ("Notification" in window && Notification.permission === "granted") {
+        try { new Notification(title, { body: body, tag: tag, icon: "/favicon.ico" }); } catch(e) {}
+      }
+    }
+
+    function portalRequestNotifPermission() {
+      if (!("Notification" in window)) return;
+      if (Notification.permission === "granted") return;
+      if (Notification.permission === "denied") return;
+      const banner = document.getElementById("portalNotifBanner");
+      if (banner) banner.style.display = "";
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const enableBtn  = document.getElementById("portalNotifEnableBtn");
+      const dismissBtn = document.getElementById("portalNotifDismissBtn");
+      const banner     = document.getElementById("portalNotifBanner");
+      if (enableBtn) enableBtn.addEventListener("click", function() {
+        Notification.requestPermission().then(function(perm) {
+          if (banner) banner.style.display = "none";
+          if (perm === "granted") showToast("Alerts enabled — you'll be notified when trucks go into detention.");
+        });
+      });
+      if (dismissBtn) dismissBtn.addEventListener("click", function() {
+        if (banner) banner.style.display = "none";
+      });
+    });
 
     els.historyDoorDetailClose.addEventListener("click", function() {
       if (els.historyDoorDetail) els.historyDoorDetail.style.display = "none";
@@ -9174,6 +9255,7 @@
       portalStartLivePolling();
       if (!state.portal.liveAttempted) portalPullLiveDms(false);
       portalFetchVendorAvgs();
+      portalRequestNotifPermission();
       renderPortalBoard();
       portalLoadExportsList();
     }
@@ -9211,6 +9293,28 @@
       const detention = enriched.filter(function(r) { return r.status === "detention"; });
       const complete  = enriched.filter(function(r) { return r.status === "complete"; });
       const waiting   = enriched.filter(function(r) { return r.status === "waiting"; });
+
+      // Push notifications — detention + urgent per-truck
+      detention.forEach(function(t) {
+        const tag = "detention:" + (t.id || t.ref);
+        if (!_portalNotifiedTags.has(tag)) {
+          _portalNotifiedTags.add(tag);
+          portalMaybeNotify(
+            "🔴 Detention — " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " · Receiving overdue. Clock it out now."
+          );
+        }
+      });
+      urgent.forEach(function(t) {
+        const tag = "urgent:" + (t.id || t.ref);
+        if (!_portalNotifiedTags.has(tag)) {
+          _portalNotifiedTags.add(tag);
+          portalMaybeNotify(
+            "⚠️ Urgent — " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " · Under 30 min to finish receiving."
+          );
+        }
+      });
 
       // Summary cards
       if (els.portalActiveCount)    els.portalActiveCount.textContent    = active.length + urgent.length + warning.length + detention.length;
