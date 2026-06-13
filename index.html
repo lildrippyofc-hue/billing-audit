@@ -492,6 +492,21 @@
     tr.portal-row-urgent td { background: #fffbeb !important; font-weight: 600; }
     tr.portal-row-warning td { background: #fefcbf !important; }
     tr.portal-row-complete td { opacity: 0.55; }
+    /* Load progress pipeline */
+    .load-pipeline { display:flex; align-items:flex-start; white-space:nowrap; }
+    .load-connector { width:14px; height:2px; background:#e2e8f0; align-self:21px; margin:11px -1px 0; flex-shrink:0; }
+    .load-connector.done { background:#38a169; }
+    .load-step { display:flex; flex-direction:column; align-items:center; gap:1px; width:34px; flex-shrink:0; }
+    .load-step-dot { width:10px; height:10px; border-radius:50%; border:2px solid #cbd5e0; background:var(--card,#fff); margin-top:6px; }
+    .load-step.done .load-step-dot { background:#38a169; border-color:#38a169; }
+    .load-step.current .load-step-dot { background:#3182ce; border-color:#3182ce; animation:step-pulse 1.4s ease-in-out infinite; }
+    .load-step-label { font-size:0.6em; color:#a0aec0; font-weight:700; margin-top:2px; }
+    .load-step.done .load-step-label { color:#38a169; }
+    .load-step.current .load-step-label { color:#3182ce; }
+    .load-step-time { font-size:0.58em; color:#a0aec0; min-height:0.8em; }
+    .load-step.done .load-step-time { color:#276749; }
+    .load-step.current .load-step-time { color:#3182ce; }
+    @keyframes step-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(49,130,206,0.5)} 60%{box-shadow:0 0 0 5px rgba(49,130,206,0)} }
     :root.dark tr.portal-row-detention td { background: #2d1515 !important; }
     :root.dark tr.portal-row-urgent td { background: #2a1f00 !important; }
     :root.dark tr.portal-row-warning td { background: #2a2300 !important; }
@@ -9022,7 +9037,7 @@
       const estMs = state.portal.estMs;
       if (estMs && els.portalEstNote && state.portal.estMs !== null) {
         const remaining = estMs - now;
-        const goal4amMs = (function(){ const d = new Date(); d.setHours(4,0,0,0); return d.getTime(); })();
+        const goal4amMs = (function(){ const d = new Date(); d.setHours(20,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime() + 8*3600000; })();
         const behindMs = Math.max(0, estMs - goal4amMs);
         let countStr;
         if (remaining <= 0) {
@@ -9213,7 +9228,7 @@
 
     function portalCalcStatus(truck, freeTimeMs, now) {
       const isDms = truck.source === "DMS";
-      if (isDms && truck.receivingFinishMs) {
+      if (truck.receivingFinishMs) {
         const startMs = truck.checkInMs || truck.unloadFinishMs || truck.receivingFinishMs;
         const turnMin = Math.round((truck.receivingFinishMs - startMs) / 60000);
         return { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Finished receiving", countdownClass: "portal-countdown-active", minutesInDetention: null };
@@ -9387,9 +9402,9 @@
       if (completedWithTime.length) avgTurn = Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMin; }, 0) / completedWithTime.length);
       if (els.portalAvgTurn) els.portalAvgTurn.textContent = Math.floor(avgTurn/60) + "h " + (avgTurn%60) + "m";
 
-      // Shift window: 8PM → 4AM
-      const goal4amMs = (function() { const d = new Date(); d.setHours(4,0,0,0); return d.getTime(); })();
+      // Shift window: 8PM → 4AM (always compute 4AM as 8h after shift start)
       const shiftStartMs = (function() { const d = new Date(); d.setHours(20,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime(); })();
+      const goal4amMs = shiftStartMs + 8 * 3600000;
       const timeRemainingToGoalMs = Math.max(0, goal4amMs - now);
       const shiftElapsedMs = Math.max(0, now - shiftStartMs);
 
@@ -12394,6 +12409,20 @@
 
       // Record locally immediately
       _dmsStampOverrides[overrideKey] = { timeIso: stampTimeIso, timeLabel, status: "pending" };
+
+      // Write timestamp back to manual truck in localStorage so portal board reflects it
+      const _stampCol = _DMS_STAMP_COLS.find(function(c) { return c.key === stampTypeKey; });
+      if (_stampCol) {
+        const _manualTrucks = portalLoadTrucks();
+        const _match = _manualTrucks.find(function(x) { return (x.id || x.ref) === (truck.id || truck.ref); });
+        if (_match) {
+          _match[_stampCol.msField] = Date.parse(stampTimeIso);
+          if (stampTypeKey === "receivingfinish") _match.finishMs = Date.parse(stampTimeIso);
+          portalSaveTrucks(_manualTrucks);
+          setTimeout(function() { if (typeof renderPortalBoard === "function") renderPortalBoard(); }, 50);
+        }
+      }
+
       dmsStampBoardRender();
 
       const logEntry = { sentAt, loadId, supplier, stampType: stampTypeKey, stampTime: timeLabel, ok: "pending", endpoint: "" };
