@@ -180,25 +180,27 @@ def _load_dms_config() -> Dict[str, Any]:
     }
 
 
-def _dms_json_request(path: str, payload: Dict[str, Any], config: Dict[str, Any]) -> Any:
+def _dms_request(path: str, payload: Dict[str, Any], config: Dict[str, Any], content_type: str = "application/json") -> Any:
     url = f"{config['base_url']}/{path.lstrip('/')}"
-    body = json.dumps(payload).encode("utf-8")
+    if content_type == "application/x-www-form-urlencoded":
+        body = urllib.parse.urlencode(payload).encode("utf-8")
+    else:
+        body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,
         data=body,
         headers={
-            "Content-Type": "application/json",
+            "Content-Type": content_type,
             "Accept": "application/json",
-            "User-Agent": "OKS-Billing-Audit/1.0",
+            "User-Agent": "Mozilla/5.0 (compatible; OKS-Billing-Audit/1.0)",
+            "Origin": config["base_url"],
+            "Referer": f"{config['base_url']}/login",
         },
         method="POST",
     )
+    opener = config.get("_opener")
     try:
-        opener = config.get("_opener")
-        if opener:
-            resp_ctx = opener.open(req, timeout=config["timeout"])
-        else:
-            resp_ctx = urllib.request.urlopen(req, timeout=config["timeout"])
+        resp_ctx = opener.open(req, timeout=config["timeout"]) if opener else urllib.request.urlopen(req, timeout=config["timeout"])
         with resp_ctx as resp:
             text = resp.read().decode("utf-8", errors="replace")
             return json.loads(text) if text else {}
@@ -207,6 +209,22 @@ def _dms_json_request(path: str, payload: Dict[str, Any], config: Dict[str, Any]
         raise HTTPException(status_code=502, detail=f"DMS returned {exc.code}: {detail}")
     except urllib.error.URLError as exc:
         raise HTTPException(status_code=502, detail=f"Could not reach DMS: {exc.reason}")
+
+
+def _dms_json_request(path: str, payload: Dict[str, Any], config: Dict[str, Any]) -> Any:
+    # Try JSON first, then fall back to form-encoded (DMS may require either)
+    last_exc = None
+    for ct in ("application/json", "application/x-www-form-urlencoded"):
+        try:
+            result = _dms_request(path, payload, config, ct)
+            # Accept if it looks like a real response (not an empty failed login)
+            if isinstance(result, dict) and result:
+                return result
+        except HTTPException as e:
+            last_exc = e
+    if last_exc:
+        raise last_exc
+    return {}
 
 
 def _dms_login_payloads(username: str, password: str) -> List[Dict[str, Any]]:
@@ -292,33 +310,54 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     )
     last_error = None
     login_data: Dict[str, Any] = {}
-    for payload in _dms_login_payloads(username, password):
-        try:
-            response = _dms_json_request("api/login/trylogin", payload, config)
-            if isinstance(response, dict) and (response.get("userinfo") or response.get("user") or response.get("locations") or response.get("loc")):
-                login_data = response
-                break
-        except HTTPException as exc:
-            last_error = exc
+    login_endpoints = ["api/login/trylogin", "api/login/login", "api/user/login", "login/trylogin"]
+    for endpoint in login_endpoints:
+        if login_data:
+            break
+        for payload in _dms_login_payloads(username, password):
+            try:
+                response = _dms_request(endpoint, payload, config, "application/x-www-form-urlencoded")
+                ui = response.get("userinfo") or {}
+                if isinstance(response, dict) and ui.get("login"):
+                    login_data = response
+                    break
+                # Also try JSON
+                response2 = _dms_request(endpoint, payload, config, "application/json")
+                ui2 = response2.get("userinfo") or {}
+                if isinstance(response2, dict) and ui2.get("login"):
+                    login_data = response2
+                    break
+            except HTTPException as exc:
+                last_error = exc
+        if login_data:
+            break
     if not login_data:
         if last_error:
             raise last_error
-        raise HTTPException(status_code=502, detail="DMS login did not return session data.")
+        raise HTTPException(status_code=502, detail="DMS login did not return session data. Credentials may be wrong or DMS endpoint changed.")
 
-    locations = _find_dms_locations(login_data)
-    if not locations:
-        try:
-            loc_response = _dms_json_request("api/location/getLocations", {"userinfo": login_data.get("userinfo") or login_data.get("user") or login_data}, config)
-            locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
-        except HTTPException:
-            locations = []
+    # DMS returns selLoc directly on login — use it if present
+    sel_loc = login_data.get("selLoc")
+    if isinstance(sel_loc, dict) and sel_loc:
+        loc = sel_loc
+    else:
+        locations = _find_dms_locations(login_data)
+        if not locations:
+            try:
+                loc_response = _dms_json_request("api/location/getLocations", {"userinfo": login_data.get("userinfo") or login_data}, config)
+                locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
+            except HTTPException:
+                locations = []
+        loc = _select_dms_location(locations, config) if locations else sel_loc or {}
 
-    loc = _select_dms_location(locations, config)
     session = {
         "base_url": config["base_url"],
         "userinfo": login_data.get("userinfo") or login_data.get("user") or login_data,
         "buck": login_data.get("buck") or login_data.get("bucket") or {},
         "loc": loc,
+        "sel_loc": sel_loc or loc,
+        "appts": login_data.get("appts") or [],
+        "sel_appt": login_data.get("selAppt") or "",
         "config": config,
         "cached_at": datetime.now(timezone.utc).isoformat(),
     }
