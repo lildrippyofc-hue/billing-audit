@@ -3,12 +3,12 @@ import secrets
 import hashlib
 import sqlite3
 import json
-import http.cookiejar
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Any, Dict
+
+import requests as req_lib
+from requests import Session as ReqSession
 
 from fastapi import FastAPI, HTTPException, Cookie, Response, Depends
 from fastapi.responses import FileResponse
@@ -180,51 +180,29 @@ def _load_dms_config() -> Dict[str, Any]:
     }
 
 
-def _dms_request(path: str, payload: Dict[str, Any], config: Dict[str, Any], content_type: str = "application/json") -> Any:
+_EDGE_HEADERS = {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/plain, */*",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+}
+
+
+def _dms_post(path: str, payload: Dict[str, Any], config: Dict[str, Any]) -> Any:
     url = f"{config['base_url']}/{path.lstrip('/')}"
-    if content_type == "application/x-www-form-urlencoded":
-        body = urllib.parse.urlencode(payload).encode("utf-8")
-    else:
-        body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers={
-            "Content-Type": content_type,
-            "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; OKS-Billing-Audit/1.0)",
-            "Origin": config["base_url"],
-            "Referer": f"{config['base_url']}/login",
-        },
-        method="POST",
-    )
-    opener = config.get("_opener")
+    session = config.get("_session") or req_lib
     try:
-        resp_ctx = opener.open(req, timeout=config["timeout"]) if opener else urllib.request.urlopen(req, timeout=config["timeout"])
-        with resp_ctx as resp:
-            text = resp.read().decode("utf-8", errors="replace")
-            return json.loads(text) if text else {}
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:500]
-        raise HTTPException(status_code=502, detail=f"DMS returned {exc.code}: {detail}")
-    except urllib.error.URLError as exc:
-        raise HTTPException(status_code=502, detail=f"Could not reach DMS: {exc.reason}")
+        resp = session.post(url, json=payload, headers=_EDGE_HEADERS, timeout=config["timeout"])
+        if not resp.ok:
+            raise HTTPException(status_code=502, detail=f"DMS returned {resp.status_code}: {resp.text[:500]}")
+        return resp.json() if resp.text.strip() else {}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not reach DMS: {exc}")
 
 
 def _dms_json_request(path: str, payload: Dict[str, Any], config: Dict[str, Any]) -> Any:
-    # Try JSON first, then fall back to form-encoded (DMS may require either)
-    last_exc = None
-    for ct in ("application/json", "application/x-www-form-urlencoded"):
-        try:
-            result = _dms_request(path, payload, config, ct)
-            # Accept if it looks like a real response (not an empty failed login)
-            if isinstance(result, dict) and result:
-                return result
-        except HTTPException as e:
-            last_exc = e
-    if last_exc:
-        raise last_exc
-    return {}
+    return _dms_post(path, payload, config)
 
 
 def _dms_login_payloads(username: str, password: str) -> List[Dict[str, Any]]:
@@ -304,44 +282,32 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
         )
         raise HTTPException(status_code=400, detail=detail)
 
-    jar = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
-    config["_opener"] = opener
+    # Use a requests Session so cookies persist across the login + data calls
+    dms_session = ReqSession()
+    dms_session.headers.update(_EDGE_HEADERS)
+    config["_session"] = dms_session
 
-    # Seed cookies by loading the login page first (some apps require this for CSRF)
+    # Seed cookies by loading the login page first
     try:
-        login_page_req = urllib.request.Request(
-            f"{config['base_url']}/login",
-            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36"},
-        )
-        opener.open(login_page_req, timeout=config["timeout"])
+        dms_session.get(f"{config['base_url']}/login", timeout=config["timeout"])
     except Exception:
-        pass  # best-effort — proceed even if page load fails
+        pass
 
     last_error = None
     login_data: Dict[str, Any] = {}
-    login_endpoints = ["api/login/trylogin", "api/login/login", "api/user/login", "login/trylogin"]
-    for endpoint in login_endpoints:
-        if login_data:
-            break
-        for payload in _dms_login_payloads(username, password):
-            for ct in ("application/json", "application/x-www-form-urlencoded"):
-                try:
-                    response = _dms_request(endpoint, payload, config, ct)
-                    ui = response.get("userinfo") or {}
-                    if isinstance(response, dict) and ui.get("login"):
-                        login_data = response
-                        break
-                except HTTPException as exc:
-                    last_error = exc
-            if login_data:
+    for payload in _dms_login_payloads(username, password):
+        try:
+            response = _dms_post("api/login/trylogin", payload, config)
+            ui = response.get("userinfo") or {}
+            if isinstance(response, dict) and ui.get("login"):
+                login_data = response
                 break
-        if login_data:
-            break
+        except HTTPException as exc:
+            last_error = exc
     if not login_data:
         if last_error:
             raise last_error
-        raise HTTPException(status_code=502, detail="DMS login did not return session data. Credentials may be wrong or DMS endpoint changed.")
+        raise HTTPException(status_code=502, detail="DMS login did not return session data. Credentials may be wrong.")
 
     # DMS returns selLoc directly on login — use it if present
     sel_loc = login_data.get("selLoc")
