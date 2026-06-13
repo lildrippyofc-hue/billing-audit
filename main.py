@@ -229,10 +229,9 @@ def _dms_json_request(path: str, payload: Dict[str, Any], config: Dict[str, Any]
 
 def _dms_login_payloads(username: str, password: str) -> List[Dict[str, Any]]:
     return [
+        {"un": username, "pw": password},
         {"username": username, "password": password},
         {"user": username, "password": password},
-        {"email": username, "password": password},
-        {"usr": username, "pwd": password},
     ]
 
 
@@ -326,7 +325,7 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
         if login_data:
             break
         for payload in _dms_login_payloads(username, password):
-            for ct in ("application/x-www-form-urlencoded", "application/json"):
+            for ct in ("application/json", "application/x-www-form-urlencoded"):
                 try:
                     response = _dms_request(endpoint, payload, config, ct)
                     ui = response.get("userinfo") or {}
