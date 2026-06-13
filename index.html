@@ -538,6 +538,10 @@
     .load-step-time { font-size:0.58em; color:#a0aec0; min-height:0.8em; }
     .load-step.done .load-step-time { color:#276749; }
     .load-step.current .load-step-time { color:#3182ce; }
+    .load-step.clickable { cursor:pointer; }
+    .load-step.clickable:hover .load-step-dot { border-color:#3182ce; box-shadow:0 0 0 3px rgba(49,130,206,0.22); }
+    .load-step.clickable:hover .load-step-label { color:#3182ce; }
+    .load-step.clickable:active .load-step-dot { transform:scale(0.85); }
     @keyframes step-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(49,130,206,0.5)} 60%{box-shadow:0 0 0 5px rgba(49,130,206,0)} }
     :root.dark tr.portal-row-detention td { background: #2d1515 !important; }
     :root.dark tr.portal-row-urgent td { background: #2a1f00 !important; }
@@ -9544,6 +9548,56 @@
       }).join("");
     }
 
+    // The 5 load stages shown on the board pipeline. `key` matches the DMS stamp type.
+    var PORTAL_PIPELINE_STEPS = [
+      { abbr: "CI",  title: "Check In",       field: "checkInMs",         key: "checkin"         },
+      { abbr: "D@D", title: "Driver @ Door",  field: "driverAtDoorMs",    key: "driveratdoor"    },
+      { abbr: "US",  title: "Unload Start",   field: "unloadStartMs",     key: "unloadstart"     },
+      { abbr: "UF",  title: "Unload Finish",  field: "unloadFinishMs",    key: "unloadfinish"    },
+      { abbr: "RF",  title: "Rcv Finish",     field: "receivingFinishMs", key: "receivingfinish" },
+    ];
+
+    // Stamp (or clear) a single load stage right from the board.
+    // Manual trucks persist to localStorage; DMS trucks update in-memory and
+    // attempt a best-effort push to DMS. Marking "Rcv Finish" completes the truck
+    // (drives the shift-progress ring); clearing a stage undoes it.
+    function portalStampStage(truck, field, stampKey, alreadyDone) {
+      const truckId = truck.id || truck.ref;
+      const newVal = alreadyDone ? null : Date.now();
+      const isDms = truck.source === "DMS";
+
+      if (isDms) {
+        const live = state.portal.liveRows || [];
+        const orig = live.find(function(x) { return (x.id || x.ref) === truckId; });
+        if (orig) {
+          orig[field] = newVal;
+          if (field === "receivingFinishMs") orig.finishMs = newVal;
+        }
+        if (!alreadyDone) {
+          // Best-effort push to DMS; board already reflects it locally.
+          fetch("/api/dms/stamp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              load_id: truck.loadId || truck.ref || null,
+              po: truck.po || null,
+              stamp_type: stampKey,
+              stamp_time: new Date(newVal).toISOString()
+            })
+          }).catch(function() {});
+        }
+      } else {
+        const trucks = portalLoadTrucks();
+        const t = trucks.find(function(x) { return (x.id || x.ref) === truckId; });
+        if (t) {
+          t[field] = newVal;
+          if (field === "receivingFinishMs") t.finishMs = newVal;
+          portalSaveTrucks(trucks);
+        }
+      }
+      renderPortalBoard();
+    }
+
     function renderPortalBoard(metricsOnly) {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
@@ -9918,30 +9972,23 @@
         }
         tr.appendChild(turnTd);
 
-        // Load progress pipeline
+        // Load progress pipeline — click a dot to stamp that stage
         const progTd = document.createElement("td");
         progTd.style.padding = "4px 6px";
-        const PIPELINE_STEPS = [
-          { abbr: "CI",  title: "Check In",       field: "checkInMs"        },
-          { abbr: "D@D", title: "Driver @ Door",  field: "driverAtDoorMs"   },
-          { abbr: "US",  title: "Unload Start",   field: "unloadStartMs"    },
-          { abbr: "UF",  title: "Unload Finish",  field: "unloadFinishMs"   },
-          { abbr: "RF",  title: "Rcv Finish",     field: "receivingFinishMs"},
-        ];
         const pipe = document.createElement("div");
         pipe.className = "load-pipeline";
-        PIPELINE_STEPS.forEach(function(step, idx) {
+        PORTAL_PIPELINE_STEPS.forEach(function(step, idx) {
           if (idx > 0) {
             const conn = document.createElement("div");
-            const prevDone = !!r[PIPELINE_STEPS[idx-1].field];
+            const prevDone = !!r[PORTAL_PIPELINE_STEPS[idx-1].field];
             conn.className = "load-connector" + (prevDone ? " done" : "");
             pipe.appendChild(conn);
           }
           const msVal = r[step.field];
           const done = !!msVal;
-          const current = !done && (idx === 0 || !!r[PIPELINE_STEPS[idx-1].field]);
+          const current = !done && (idx === 0 || !!r[PORTAL_PIPELINE_STEPS[idx-1].field]);
           const stepDiv = document.createElement("div");
-          stepDiv.className = "load-step" + (done ? " done" : current ? " current" : "");
+          stepDiv.className = "load-step clickable" + (done ? " done" : current ? " current" : "");
           let timeStr = "";
           if (msVal) {
             const d = new Date(msVal);
@@ -9950,10 +9997,15 @@
             const ap = d.getHours() >= 12 ? "p" : "a";
             timeStr = hh + ":" + mm + ap;
           }
-          stepDiv.title = step.title + (timeStr ? " — " + timeStr : " — pending");
+          stepDiv.title = done
+            ? step.title + " — " + timeStr + " (click to clear)"
+            : "Click to mark " + step.title + " now";
           stepDiv.innerHTML = '<div class="load-step-dot"></div>'
             + '<div class="load-step-label">' + step.abbr + '</div>'
-            + '<div class="load-step-time">' + (timeStr || (current ? "●" : "")) + '</div>';
+            + '<div class="load-step-time">' + (timeStr || (current ? "tap" : "")) + '</div>';
+          stepDiv.addEventListener("click", function() {
+            portalStampStage(r, step.field, step.key, done);
+          });
           pipe.appendChild(stepDiv);
         });
         progTd.appendChild(pipe);
