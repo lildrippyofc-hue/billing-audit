@@ -676,8 +676,44 @@ def dms_session_status():
 
 
 @app.get("/api/dms/portal")
-def dms_portal(date: Optional[str] = None, force: bool = False):
+def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False):
     """Read DMS load/stamp rows for My Portal. This route never writes to DMS."""
+    # In debug mode, never 500 — capture and return whatever we can learn.
+    if debug:
+        dbg: Dict[str, Any] = {}
+        try:
+            session = _ensure_dms_session(force=force)
+        except Exception as e:
+            return {"ok": False, "debug": {"stage": "login", "error": str(e)}}
+        info = _dms_business_date(date)
+        base_payload = {
+            "info": info, "loc": session["loc"],
+            "userinfo": session["userinfo"], "buck": session.get("buck") or {},
+        }
+        dbg["business_date"] = info
+        dbg["location"] = session["loc"]
+        try:
+            loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
+            loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
+        except Exception as e:
+            loads, dbg["loads_error"] = [], str(e)
+        try:
+            stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
+            stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
+        except Exception as e:
+            stamps, dbg["stamps_error"] = [], str(e)
+        trucks = _merge_dms_portal_rows(loads, stamps)
+        dbg.update({
+            "load_count": len(loads),
+            "stamp_count": len(stamps),
+            "load_keys": sorted(loads[0].keys()) if loads else [],
+            "stamp_keys": sorted(stamps[0].keys()) if stamps else [],
+            "sample_load": loads[0] if loads else None,
+            "sample_stamp": stamps[0] if stamps else None,
+            "first_truck_normalized": trucks[0] if trucks else None,
+        })
+        return {"ok": True, "debug": dbg, "trucks": trucks}
+
     session = _ensure_dms_session(force=force)
     info = _dms_business_date(date)
     base_payload = {
