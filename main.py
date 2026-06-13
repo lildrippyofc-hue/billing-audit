@@ -305,9 +305,20 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
         )
         raise HTTPException(status_code=400, detail=detail)
 
-    config["_opener"] = urllib.request.build_opener(
-        urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
-    )
+    jar = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar))
+    config["_opener"] = opener
+
+    # Seed cookies by loading the login page first (some apps require this for CSRF)
+    try:
+        login_page_req = urllib.request.Request(
+            f"{config['base_url']}/login",
+            headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36"},
+        )
+        opener.open(login_page_req, timeout=config["timeout"])
+    except Exception:
+        pass  # best-effort — proceed even if page load fails
+
     last_error = None
     login_data: Dict[str, Any] = {}
     login_endpoints = ["api/login/trylogin", "api/login/login", "api/user/login", "login/trylogin"]
@@ -315,20 +326,17 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
         if login_data:
             break
         for payload in _dms_login_payloads(username, password):
-            try:
-                response = _dms_request(endpoint, payload, config, "application/x-www-form-urlencoded")
-                ui = response.get("userinfo") or {}
-                if isinstance(response, dict) and ui.get("login"):
-                    login_data = response
-                    break
-                # Also try JSON
-                response2 = _dms_request(endpoint, payload, config, "application/json")
-                ui2 = response2.get("userinfo") or {}
-                if isinstance(response2, dict) and ui2.get("login"):
-                    login_data = response2
-                    break
-            except HTTPException as exc:
-                last_error = exc
+            for ct in ("application/x-www-form-urlencoded", "application/json"):
+                try:
+                    response = _dms_request(endpoint, payload, config, ct)
+                    ui = response.get("userinfo") or {}
+                    if isinstance(response, dict) and ui.get("login"):
+                        login_data = response
+                        break
+                except HTTPException as exc:
+                    last_error = exc
+            if login_data:
+                break
         if login_data:
             break
     if not login_data:
