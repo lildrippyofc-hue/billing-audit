@@ -433,6 +433,38 @@
     }
     :root.dark .portal-alert-strip { background: #3d1515; border-color: #fc8181; color: #fca5a5; }
     .portal-alert-item { display: flex; align-items: center; gap: 8px; }
+    /* Alerts tab badge on the tab button */
+    .alerts-tab-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px;
+      border-radius: 9px; background: #e53e3e; color: #fff;
+      font-size: 0.72em; font-weight: 800; line-height: 1; vertical-align: middle;
+    }
+    .alerts-tab-badge.badge-quiet { background: #a0aec0; }
+    /* Alerts tab cards */
+    .alerts-list { display: flex; flex-direction: column; gap: 10px; }
+    .alert-card {
+      display: flex; align-items: flex-start; gap: 12px;
+      border-radius: 10px; padding: 12px 16px; border-left: 5px solid #e53e3e;
+      background: var(--card-bg, #fff); border: 1px solid var(--border, #e2e8f0);
+      border-left-width: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .alert-card.alert-detention { border-left-color: #e53e3e; }
+    .alert-card.alert-startsoon { border-left-color: #d69e2e; }
+    .alert-card.alert-urgent    { border-left-color: #dd6b20; }
+    .alert-card-icon { font-size: 1.5em; line-height: 1; flex-shrink: 0; }
+    .alert-card-body { flex: 1; }
+    .alert-card-title { font-weight: 800; font-size: 0.98em; color: var(--text, #1a202c); margin-bottom: 2px; }
+    .alert-card-detail { font-size: 0.86em; color: var(--muted, #718096); line-height: 1.45; }
+    .alert-card-sev { font-size: 0.72em; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 5px; flex-shrink: 0; align-self: center; }
+    .alert-card-sev.sev-detention { background: #fff5f5; color: #c53030; }
+    .alert-card-sev.sev-startsoon { background: #fffaf0; color: #b7791f; }
+    .alert-card-sev.sev-urgent    { background: #fffaf0; color: #c05621; }
+    .alerts-empty { text-align: center; padding: 48px 20px; color: var(--muted, #a0aec0); }
+    .alerts-empty-icon { font-size: 3em; margin-bottom: 10px; }
+    :root.dark .alert-card { background: #1a2942; border-color: #2d4a6b; }
+    :root.dark .alert-card-sev.sev-detention { background: #3d1515; }
+    :root.dark .alert-card-sev.sev-startsoon, :root.dark .alert-card-sev.sev-urgent { background: #3d2f15; }
     /* Shift pace banner */
     .portal-pace-alert { border-radius: 8px; padding: 9px 14px; font-size: 0.9em; font-weight: 600; margin: 8px 0; line-height: 1.5; transition: background 0.3s, border-color 0.3s; }
     .portal-pace-alert.pace-good    { background:#f0fff4; border:2px solid #38a169; color:#276749; }
@@ -2369,6 +2401,7 @@
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
         <div class="menu-group">
@@ -3557,9 +3590,6 @@
           <div id="portalAddError" class="portal-add-error" style="display:none;"></div>
         </div>
 
-        <!-- Urgent alert strip -->
-        <div id="portalAlertStrip" class="portal-alert-strip" style="display:none;"></div>
-
         <!-- Summary cards -->
         <div class="summary-grid" style="margin:10px 0;">
           <article class="metric-card">
@@ -3694,6 +3724,21 @@
           <div id="portalExportsList" style="padding:4px 14px 10px;"></div>
         </section>
 
+      </section>
+
+      <!-- ═══ ALERTS ═══════════════════════════════════════════════════════════ -->
+      <section id="alertsPanel" class="tab-panel" aria-label="Alerts">
+        <div class="motivation-bar" id="motivBar_alerts"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="table-card" style="margin-top:10px;">
+          <div class="table-header">
+            <div>
+              <div class="table-title">⚠️ Active Alerts</div>
+              <div class="table-meta" id="alertsTabMeta">Trucks needing attention show up here. The portal board stays clean.</div>
+            </div>
+            <button id="alertsTestNotifBtn" type="button" class="secondary-btn" style="font-size:0.8em;">🔔 Test Alert</button>
+          </div>
+          <div id="alertsTabList" class="alerts-list" style="padding:14px 16px;"></div>
+        </div>
       </section>
 
       <!-- ═══ DMS STAMP ═══════════════════════════════════════════════════════ -->
@@ -4896,7 +4941,6 @@
       portalInputTime: document.getElementById("portalInputTime"),
       portalClockInBtn: document.getElementById("portalClockInBtn"),
       portalAddError: document.getElementById("portalAddError"),
-      portalAlertStrip: document.getElementById("portalAlertStrip"),
       portalActiveCount: document.getElementById("portalActiveCount"),
       portalUrgentCount: document.getElementById("portalUrgentCount"),
       portalDetentionCount: document.getElementById("portalDetentionCount"),
@@ -5422,6 +5466,11 @@
           const panel = document.getElementById("myPortalPanel");
           if (panel && panel.classList.contains("active")) renderPortalBoard();
         }
+
+        // Keep alerts + notifications + tab badge live from any tab.
+        if (typeof renderAlertsTab === "function") {
+          try { renderAlertsTab(); } catch (e) {}
+        }
       }
       tick();
       setInterval(tick, 1000);
@@ -5458,6 +5507,26 @@
       });
       if (dismissBtn) dismissBtn.addEventListener("click", function() {
         if (banner) banner.style.display = "none";
+      });
+
+      const testBtn = document.getElementById("alertsTestNotifBtn");
+      if (testBtn) testBtn.addEventListener("click", function() {
+        if (!("Notification" in window)) { showToast("This browser doesn't support notifications."); return; }
+        if (Notification.permission === "granted") {
+          try { new Notification("🔔 Test alert", { body: "Alerts are working. Detention and urgent trucks will notify you here.", tag: "test:" + Date.now() }); } catch (e) {}
+          showToast("Test alert sent.");
+        } else if (Notification.permission === "denied") {
+          showToast("Notifications are blocked. Enable them in your browser's site settings.");
+        } else {
+          Notification.requestPermission().then(function(perm) {
+            if (perm === "granted") {
+              try { new Notification("🔔 Test alert", { body: "Alerts are now enabled.", tag: "test:" + Date.now() }); } catch (e) {}
+              showToast("Alerts enabled — test sent.");
+            } else {
+              showToast("Notification permission not granted.");
+            }
+          });
+        }
       });
     });
 
@@ -9294,6 +9363,99 @@
       portalLoadExportsList();
     }
 
+    // Compute the current per-truck alerts (detention / start-soon / urgent).
+    // Used by the dedicated Alerts tab and its badge. Self-contained so it works
+    // from any tab without depending on renderPortalBoard's locals.
+    function portalGetAlerts() {
+      const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      const manualTrucks = portalLoadTrucks().map(function(t) { return Object.assign({ source: "Manual" }, t); });
+      const liveTrucks = state.portal.liveRows || [];
+      const trucks = [...liveTrucks, ...manualTrucks];
+      const enriched = trucks.map(function(t) { return Object.assign({}, t, portalCalcStatus(t, freeTimeMs, now)); });
+      const order = { detention: 0, startsoon: 1, urgent: 2 };
+      return enriched
+        .filter(function(r) { return r.status === "detention" || r.status === "startsoon" || r.status === "urgent"; })
+        .sort(function(a, b) { return (order[a.status] - order[b.status]); });
+    }
+
+    // Render the Alerts tab list + tab badge, and fire push notifications.
+    // Runs from renderPortalBoard, on tab open, and on a global interval so
+    // alerts are "sent" even when the portal/alerts tab isn't being viewed.
+    function renderAlertsTab() {
+      const alerts = portalGetAlerts();
+      const badge = document.getElementById("alertsTabBadge");
+      const list  = document.getElementById("alertsTabList");
+      const meta  = document.getElementById("alertsTabMeta");
+
+      // Fire notifications (deduped via _portalNotifiedTags).
+      alerts.forEach(function(t) {
+        if (t.status === "detention") {
+          portalNotify("🔴 Detention — " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " · Receiving overdue. Clock it out now.",
+            "detention:" + (t.id || t.ref));
+        } else if (t.status === "urgent") {
+          portalNotify("⚠️ Urgent — " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " · Under 30 min to finish receiving.",
+            "urgent:" + (t.id || t.ref));
+        } else if (t.status === "startsoon") {
+          portalNotify("🟡 Start soon — " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " · Driver at door, unload not started.",
+            "startsoon:" + (t.id || t.ref));
+        }
+      });
+
+      // Tab badge
+      if (badge) {
+        if (alerts.length > 0) {
+          badge.textContent = alerts.length;
+          badge.style.display = "";
+          const hasDetention = alerts.some(function(a) { return a.status === "detention"; });
+          badge.className = "alerts-tab-badge" + (hasDetention ? "" : " badge-quiet");
+        } else {
+          badge.style.display = "none";
+        }
+      }
+
+      // Meta line
+      if (meta) {
+        meta.textContent = alerts.length
+          ? alerts.length + " truck" + (alerts.length !== 1 ? "s" : "") + " need attention · updated " + new Date().toLocaleTimeString()
+          : "All clear — no trucks need attention right now.";
+      }
+
+      // Alert cards list
+      if (!list) return;
+      if (!alerts.length) {
+        list.innerHTML = '<div class="alerts-empty"><div class="alerts-empty-icon">✅</div><div style="font-weight:700;font-size:1.05em;">All clear</div><div style="margin-top:4px;">No detention, urgent, or start-soon trucks right now.</div></div>';
+        return;
+      }
+      list.innerHTML = alerts.map(function(r) {
+        const door = r.door ? "Door " + escapeHtml(String(r.door)) : "No door";
+        const sup  = r.supplier ? escapeHtml(r.supplier) : "";
+        const ref  = escapeHtml(String(r.ref || "?"));
+        let icon, sev, sevLabel, detail;
+        if (r.status === "detention") {
+          icon = "🔴"; sev = "detention"; sevLabel = "Detention";
+          detail = "Receiving detention for " + r.minutesInDetention + " min — clock it out now.";
+        } else if (r.status === "startsoon") {
+          icon = "🟡"; sev = "startsoon"; sevLabel = "Start Soon";
+          detail = (r.startLateMin || 0) + " min past appointment · driver at door, unload not started.";
+        } else {
+          icon = "🟠"; sev = "urgent"; sevLabel = "Urgent";
+          detail = "Only " + Math.max(0, Math.round((r.msRemaining || 0) / 60000)) + " min left to finish receiving.";
+        }
+        return '<div class="alert-card alert-' + sev + '">'
+          + '<div class="alert-card-icon">' + icon + '</div>'
+          + '<div class="alert-card-body">'
+          +   '<div class="alert-card-title">Truck ' + ref + (sup ? " — " + sup : "") + '</div>'
+          +   '<div class="alert-card-detail">' + door + ' · ' + detail + '</div>'
+          + '</div>'
+          + '<div class="alert-card-sev sev-' + sev + '">' + sevLabel + '</div>'
+          + '</div>';
+      }).join("");
+    }
+
     function renderPortalBoard(metricsOnly) {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
@@ -9328,27 +9490,10 @@
       const complete  = enriched.filter(function(r) { return r.status === "complete"; });
       const waiting   = enriched.filter(function(r) { return r.status === "waiting"; });
 
-      // Push notifications — detention + urgent per-truck
-      detention.forEach(function(t) {
-        const tag = "detention:" + (t.id || t.ref);
-        if (!_portalNotifiedTags.has(tag)) {
-          _portalNotifiedTags.add(tag);
-          portalMaybeNotify(
-            "🔴 Detention — " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " · Receiving overdue. Clock it out now."
-          );
-        }
-      });
-      urgent.forEach(function(t) {
-        const tag = "urgent:" + (t.id || t.ref);
-        if (!_portalNotifiedTags.has(tag)) {
-          _portalNotifiedTags.add(tag);
-          portalMaybeNotify(
-            "⚠️ Urgent — " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " · Under 30 min to finish receiving."
-          );
-        }
-      });
+      // Alerts (per-truck detention/urgent list + push notifications) live on the
+      // dedicated Alerts tab now, not on the portal board. renderAlertsTab() handles
+      // sending notifications and updating the tab badge; it also runs on its own
+      // global interval so alerts fire even when this tab isn't open.
 
       // Summary cards
       if (els.portalActiveCount)    els.portalActiveCount.textContent    = active.length + urgent.length + warning.length + detention.length;
@@ -9602,25 +9747,8 @@
         chartsRow.style.display = "none";
       }
 
-      // Alert strip
-      const alerts = [...detention, ...startSoon, ...urgent];
-      if (els.portalAlertStrip) {
-        if (alerts.length) {
-          els.portalAlertStrip.style.display = "";
-          els.portalAlertStrip.innerHTML = "⚠️ " + alerts.map(function(r) {
-            const doorStr = r.door ? (" • Door " + escapeHtml(r.door)) : "";
-            if (r.status === "detention") {
-              return '<span class="portal-alert-item">🔴 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — receiving detention for " + r.minutesInDetention + " min</span>";
-            }
-            if (r.status === "startsoon") {
-              return '<span class="portal-alert-item">🟡 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — THIS truck needs to be started soon. It is " + r.startLateMin + " min past appointment, driver is at door, unload not started.</span>";
-            }
-            return '<span class="portal-alert-item">🟠 Truck <strong>' + escapeHtml(r.ref) + '</strong>' + doorStr + (r.supplier ? " — " + escapeHtml(r.supplier) : "") + " — only " + Math.round(r.msRemaining/60000) + " min left to finish receiving</span>";
-          }).join("<br>");
-        } else {
-          els.portalAlertStrip.style.display = "none";
-        }
-      }
+      // Per-truck alerts now render on the dedicated Alerts tab (keeps the board clean).
+      renderAlertsTab();
 
       // When called from the per-second live clock, refresh metrics/charts only —
       // skip the table DOM rebuild to avoid flicker and resetting button clicks.
@@ -12593,6 +12721,7 @@
       if (name === "bizDateAudit") renderBusinessDateAudit();
       if (name === "myPortal") renderPortal();
       else portalStopLivePolling();
+      if (name === "alerts") renderAlertsTab();
       if (name === "exceptions") renderExceptions();
       if (name === "turnTracker") renderTurnTracker();
       if (name === "clerkBoard") renderClerkLeaderboard();
