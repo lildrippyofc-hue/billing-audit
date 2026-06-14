@@ -468,14 +468,12 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
     trucks = []
 
     def _keep(truck: Dict[str, Any]) -> bool:
-        # Only show trucks that have actually arrived (have a driver/clerk
-        # check-in stamp). Scheduled-but-not-checked-in loads are dropped.
-        if not truck["checkInIso"]:
-            return False
-        # Drop rejected loads — we won't be unloading those trucks.
+        # Keep every real, non-rejected truck for the shift (whether or not it has
+        # checked in yet) so shift progress can be measured against the FULL set.
+        # The endpoint hides not-yet-checked-in trucks from the board separately.
         if str(truck.get("statusText") or "").strip().lower() == "rejected":
-            return False
-        return True
+            return False  # rejected loads — we won't be unloading those trucks
+        return bool(truck["checkInIso"] or truck["door"] or truck["ref"] or truck["po"])
 
     for load in loads:
         key = _dms_key(load)
@@ -805,17 +803,23 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
     stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
     loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
     stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
-    trucks = _merge_dms_portal_rows(loads, stamps)
+    all_trucks = _merge_dms_portal_rows(loads, stamps)
+    # Board shows only trucks physically here (checked in). Not-yet-checked-in
+    # trucks stay off the board but still count toward total_expected, so shift
+    # progress is measured against the whole shift, not just what's on the dock.
+    board = [t for t in all_trucks if t.get("checkInIso")]
     # Learn from completed trucks automatically (deduped) so the completion
     # estimate sharpens over time with zero manual save.
-    _learn_from_dms(trucks, info)
+    _learn_from_dms(board, info)
     return {
         "ok": True,
         "business_date": info,
         "location": session["loc"],
         "load_count": len(loads),
         "stamp_count": len(stamps),
-        "trucks": trucks,
+        "trucks": board,
+        "total_expected": len(all_trucks),
+        "checked_in_count": len(board),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 

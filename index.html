@@ -4661,6 +4661,7 @@
         liveError: "",
         liveAttempted: false,
         liveBusy: false,
+        totalExpected: 0,
         livePollMs: 30000,
         credentialBlocked: false,
         uiTickInterval: null,
@@ -9121,6 +9122,8 @@
         state.portal.liveRows = rawDmsRows
           .filter(function(row) { return Boolean(portalIsoToMs(row.checkInIso)); })
           .map(portalLiveToBoardTruck);
+        // Total trucks expected this shift (incl. not-yet-checked-in) for shift progress.
+        state.portal.totalExpected = (typeof data.total_expected === "number") ? data.total_expected : state.portal.liveRows.length;
         state.portal.liveUpdatedAt = data.updated_at || new Date().toISOString();
         state.portal.liveError = "";
         state.portal.credentialBlocked = false;
@@ -9409,46 +9412,48 @@
         .catch(function() {});
     }
 
+    // Receiving clock rule: the clock starts at the truck's APPOINTMENT time and
+    // we have `freeTimeMs` (default 2 hours) after appt to finish receiving before
+    // it's detention. DMS trucks key off appointment; manual trucks off check-in.
     function portalCalcStatus(truck, freeTimeMs, now) {
       const isDms = truck.source === "DMS";
+
+      // Completed — receiving finished. Turn time = actual dwell (check-in -> finish).
       if (truck.receivingFinishMs) {
-        const startMs = truck.checkInMs || truck.unloadFinishMs || truck.receivingFinishMs;
+        const startMs = truck.checkInMs || truck.appointmentMs || truck.receivingFinishMs;
         const turnMin = Math.round((truck.receivingFinishMs - startMs) / 60000);
         return { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Finished receiving", countdownClass: "portal-countdown-active", minutesInDetention: null };
       }
+      // Manual "Done" completion.
+      if (!isDms && truck.finishMs) {
+        const startMs = truck.checkInMs || truck.finishMs;
+        const turnMin = Math.round((truck.finishMs - startMs) / 60000);
+        return { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Done ✓", countdownClass: "portal-countdown-active", minutesInDetention: null };
+      }
+
+      // Driver at the door, appointment passed, but unload not started -> start soon.
       if (isDms && truck.appointmentMs && truck.driverAtDoorMs && !truck.unloadStartMs) {
         const startLateMin = Math.floor((now - truck.appointmentMs) / 60000);
         if (startLateMin >= 30) {
           return { status: "startsoon", turnMin: null, msRemaining: null, countdownLabel: "Needs unload start now", countdownClass: "portal-countdown-urgent", minutesInDetention: null, startLateMin };
         }
       }
-      if (isDms && truck.unloadFinishMs) {
-        const msRemaining = truck.unloadFinishMs + freeTimeMs - now;
-        const minsRem = Math.round(msRemaining / 60000);
-        if (msRemaining < 0) {
-          const det = Math.abs(minsRem);
-          return { status: "detention", msRemaining, countdownLabel: "REC DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null };
-        }
-        if (minsRem < 30) return { status: "urgent",  msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-urgent",  minutesInDetention: null, turnMin: null };
-        if (minsRem < 60) return { status: "warning", msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-warning", minutesInDetention: null, turnMin: null };
-        return { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m to finish receiving", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
+
+      // Receiving clock = appointment (DMS) or check-in (manual) + free time.
+      const clockBase = isDms ? (truck.appointmentMs || truck.checkInMs)
+                              : (truck.checkInMs || truck.appointmentMs);
+      if (!clockBase) {
+        return { status: "waiting", turnMin: null, msRemaining: null, countdownLabel: isDms ? "Waiting for appointment" : "Waiting for check-in", countdownClass: "", minutesInDetention: null };
       }
-      if (!truck.checkInMs) {
-        return { status: "waiting", turnMin: null, msRemaining: null, countdownLabel: isDms ? "Waiting for unload finish" : "Waiting for check-in", countdownClass: "", minutesInDetention: null };
-      }
-      if (truck.finishMs) {
-        const turnMin = Math.round((truck.finishMs - truck.checkInMs) / 60000);
-        return { status: "complete", turnMin, msRemaining: null, countdownLabel: "Done ✓", countdownClass: "portal-countdown-active", minutesInDetention: null };
-      }
-      const msRemaining = truck.checkInMs + freeTimeMs - now;
+      const msRemaining = clockBase + freeTimeMs - now;
       const minsRem = Math.round(msRemaining / 60000);
       if (msRemaining < 0) {
         const det = Math.abs(minsRem);
-        return { status: "detention", msRemaining, countdownLabel: "IN DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null };
+        return { status: "detention", msRemaining, countdownLabel: "DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null };
       }
-      if (minsRem < 30) return { status: "urgent",  msRemaining, countdownLabel: minsRem + " min left", countdownClass: "portal-countdown-urgent",  minutesInDetention: null, turnMin: null };
-      if (minsRem < 60) return { status: "warning", msRemaining, countdownLabel: minsRem + " min left", countdownClass: "portal-countdown-warning", minutesInDetention: null, turnMin: null };
-      return { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m left", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
+      if (minsRem < 30) return { status: "urgent",  msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-urgent",  minutesInDetention: null, turnMin: null };
+      if (minsRem < 60) return { status: "warning", msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-warning", minutesInDetention: null, turnMin: null };
+      return { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m to finish receiving", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
     }
 
     function portalFetchVendorAvgs() {
@@ -9825,8 +9830,12 @@
       const chartsRow = document.getElementById("portalChartsRow");
       if (enriched.length > 0 && chartsRow) {
         chartsRow.style.display = "";
-        const total = enriched.length;
-        const donePct = Math.round((complete.length / total) * 100);
+        const total = enriched.length;  // trucks currently on the board (for the status bar)
+        // Shift progress is measured against ALL trucks expected this shift —
+        // including ones not yet checked in — not just what's on the dock.
+        const manualCount = enriched.filter(function(r) { return r.source !== "DMS"; }).length;
+        const shiftTotal = Math.max(total, (state.portal.totalExpected || 0) + manualCount);
+        const donePct = shiftTotal ? Math.round((complete.length / shiftTotal) * 100) : 0;
 
         // 1. Completion ring (circumference = 2π×34 ≈ 213.6)
         const ringFill = document.getElementById("portalRingFill");
@@ -9839,9 +9848,9 @@
           ringFill.style.stroke = donePct >= 100 ? "#38a169" : donePct >= 60 ? "#3182ce" : donePct >= 30 ? "#d69e2e" : "#e53e3e";
         }
         if (ringPct) ringPct.textContent = donePct + "%";
-        if (ringSub) ringSub.textContent = complete.length + " / " + total;
+        if (ringSub) ringSub.textContent = complete.length + " / " + shiftTotal;
         const progLabel = document.getElementById("portalProgressLabel");
-        if (progLabel) progLabel.textContent = complete.length + " done · " + (total - complete.length) + " remaining";
+        if (progLabel) progLabel.textContent = complete.length + " done · " + (shiftTotal - complete.length) + " remaining of " + shiftTotal + " this shift";
 
         // 2. Status breakdown segmented bar
         const activeLen   = active.length + warning.length;
@@ -9977,9 +9986,10 @@
         cntTd.textContent = r.countdownLabel;
         if (r.countdownClass) cntTd.className = r.countdownClass;
         if (r.status !== "complete" && r.status !== "waiting" && r.status !== "startsoon") {
-          const deadlineMs = r.unloadFinishMs ? r.unloadFinishMs + freeTimeMs
-                           : r.checkInMs     ? r.checkInMs + freeTimeMs
-                           : 0;
+          // Receiving clock = appointment + free time (2h) for DMS; check-in for manual.
+          const clockBase = r.source === "DMS" ? (r.appointmentMs || r.checkInMs)
+                                               : (r.checkInMs || r.appointmentMs);
+          const deadlineMs = clockBase ? clockBase + freeTimeMs : 0;
           if (deadlineMs) cntTd.dataset.countdownDeadline = deadlineMs;
         }
         tr.appendChild(cntTd);
