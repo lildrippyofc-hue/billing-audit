@@ -9505,17 +9505,19 @@
       const shouldBePortal = currentLabel.toLowerCase().includes("my portal") ||
         Boolean(document.querySelector('.tab-button[data-tab="myPortal"][aria-selected="true"]'));
       if (!shouldBePortal || !panel) return;
+      // Make sure the portal panel is the visible one.
       document.querySelectorAll(".tab-panel").forEach(function(other) {
         other.classList.toggle("active", other === panel);
       });
       panel.style.display = "block";
-      if (!panel.textContent.trim() || !document.getElementById("portalDmsStatus")) {
-        panel.innerHTML = '<div class="friendly-note" style="margin:12px 0;">My Portal is loading. Refresh the page once if this message stays on screen.</div>';
-      }
-      try { renderPortal(); } catch (err) {
-        if (els.portalDmsStatus) {
-          els.portalDmsStatus.textContent = "My Portal had trouble loading: " + (err && err.message ? err.message : err);
-        }
+      // IMPORTANT: never wipe panel.innerHTML. The static markup (form, cards,
+      // chart containers) lives in the document and renderPortal only *updates*
+      // those elements — it can't rebuild them. Destroying the HTML here blanked
+      // the panel permanently. If the portal hasn't initialized yet (its live
+      // clock isn't running), kick it off once; otherwise just leave it alone
+      // (portalLiveClock already refreshes it every second).
+      if (!state.portal.liveClockInterval) {
+        try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
       }
     }
 

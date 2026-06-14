@@ -1021,4 +1021,14 @@ def portal_vendor_stats():
 
 @app.get("/")
 def serve_app():
-    return FileResponse(str(BASE_DIR / "index.html"))
+    # Never cache the app shell — the whole UI is inline in index.html, so a stale
+    # cached copy serves stale JS and can blank the page after a deploy. Force the
+    # browser to revalidate every load so users always get the latest code.
+    return FileResponse(
+        str(BASE_DIR / "index.html"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
