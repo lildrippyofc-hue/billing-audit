@@ -1010,6 +1010,11 @@
       display: block;
     }
 
+    #myPortalPanel.active {
+      display: block !important;
+      min-height: 420px;
+    }
+
     .data-view {
       display: none;
     }
@@ -5480,6 +5485,11 @@
         if (typeof renderAlertsTab === "function") {
           try { renderAlertsTab(); } catch (e) {}
         }
+
+        // If the menu says My Portal but the panel was left hidden, repair it.
+        if (typeof repairMyPortalPanel === "function") {
+          try { repairMyPortalPanel(); } catch (e) {}
+        }
       }
       tick();
       setInterval(tick, 1000);
@@ -7598,7 +7608,7 @@
       renderDailyOverview();
       renderDdpDockFilter();
       renderTruckFinderDockFilter();
-      renderCharts();
+      try { renderCharts(); } catch (err) { console.warn("Chart render skipped:", err); }
       renderTable();
       renderPoLookup(false);
       renderDdpTable();
@@ -9487,6 +9497,26 @@
       portalRequestNotifPermission();
       renderPortalBoard();
       portalLoadExportsList();
+    }
+
+    function repairMyPortalPanel() {
+      const currentLabel = els.sectionMenuCurrent ? els.sectionMenuCurrent.textContent || "" : "";
+      const panel = document.getElementById("myPortalPanel");
+      const shouldBePortal = currentLabel.toLowerCase().includes("my portal") ||
+        Boolean(document.querySelector('.tab-button[data-tab="myPortal"][aria-selected="true"]'));
+      if (!shouldBePortal || !panel) return;
+      document.querySelectorAll(".tab-panel").forEach(function(other) {
+        other.classList.toggle("active", other === panel);
+      });
+      panel.style.display = "block";
+      if (!panel.textContent.trim() || !document.getElementById("portalDmsStatus")) {
+        panel.innerHTML = '<div class="friendly-note" style="margin:12px 0;">My Portal is loading. Refresh the page once if this message stays on screen.</div>';
+      }
+      try { renderPortal(); } catch (err) {
+        if (els.portalDmsStatus) {
+          els.portalDmsStatus.textContent = "My Portal had trouble loading: " + (err && err.message ? err.message : err);
+        }
+      }
     }
 
     // Compute the current operational alerts. Each truck can raise several:
@@ -12937,12 +12967,14 @@
         els.sectionMenuCurrent.textContent = activeButton.dataset.menuLabel || activeButton.textContent.trim();
       }
 
-      renderCharts();
+      try { renderCharts(); } catch (err) { console.warn("Chart render skipped:", err); }
       if (name === "breakdownsAudit") renderBreakdownsAudit();
       if (name === "truckChargeAudit") renderTruckChargeAudit();
       if (name === "bizDateAudit") renderBusinessDateAudit();
-      if (name === "myPortal") renderPortal();
-      else portalStopLivePolling();
+      if (name === "myPortal") {
+        try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
+        setTimeout(repairMyPortalPanel, 0);
+      } else portalStopLivePolling();
       if (name === "alerts") renderAlertsTab();
       if (name === "exceptions") renderExceptions();
       if (name === "turnTracker") renderTurnTracker();
