@@ -466,11 +466,14 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
             stamps_by_key[key] = stamp
     seen = set()
     trucks = []
+    # Only show trucks that have actually arrived — i.e. have a driver/clerk
+    # check-in stamp. Scheduled-but-not-checked-in loads (door/PO/appt only)
+    # are dropped so the board reflects trucks physically on site.
     for load in loads:
         key = _dms_key(load)
         stamp = stamps_by_key.get(key, {})
         truck = _normalize_portal_truck(load, stamp)
-        if truck["checkInIso"] or truck["door"] or truck["ref"] or truck["po"]:
+        if truck["checkInIso"]:
             trucks.append(truck)
             if key:
                 seen.add(key)
@@ -479,7 +482,7 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
         if key and key in seen:
             continue
         truck = _normalize_portal_truck({}, stamp)
-        if truck["checkInIso"] or truck["door"] or truck["ref"] or truck["po"]:
+        if truck["checkInIso"]:
             trucks.append(truck)
     return trucks
 
