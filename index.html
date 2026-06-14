@@ -445,6 +445,9 @@
     .alert-card.alert-detention { border-left-color: #e53e3e; }
     .alert-card.alert-startsoon { border-left-color: #d69e2e; }
     .alert-card.alert-urgent    { border-left-color: #dd6b20; }
+    .alert-card.alert-needstart     { border-left-color: #dd6b20; }
+    .alert-card.alert-unloaderdelay { border-left-color: #dd6b20; }
+    .alert-card.alert-recdelay      { border-left-color: #d69e2e; }
     .alert-card-icon { font-size: 1.5em; line-height: 1; flex-shrink: 0; }
     .alert-card-body { flex: 1; }
     .alert-card-title { font-weight: 800; font-size: 0.98em; color: var(--text, #1a202c); margin-bottom: 2px; }
@@ -453,11 +456,17 @@
     .alert-card-sev.sev-detention { background: #fff5f5; color: #c53030; }
     .alert-card-sev.sev-startsoon { background: #fffaf0; color: #b7791f; }
     .alert-card-sev.sev-urgent    { background: #fffaf0; color: #c05621; }
+    .alert-card-sev.sev-needstart     { background: #fffaf0; color: #c05621; }
+    .alert-card-sev.sev-unloaderdelay { background: #fffaf0; color: #c05621; }
+    .alert-card-sev.sev-recdelay      { background: #fffaf0; color: #b7791f; }
+    .alerts-tab-badge.badge-orange { background: #dd6b20; }
     .alerts-empty { text-align: center; padding: 48px 20px; color: var(--muted, #a0aec0); }
     .alerts-empty-icon { font-size: 3em; margin-bottom: 10px; }
     :root.dark .alert-card { background: #1a2942; border-color: #2d4a6b; }
     :root.dark .alert-card-sev.sev-detention { background: #3d1515; }
-    :root.dark .alert-card-sev.sev-startsoon, :root.dark .alert-card-sev.sev-urgent { background: #3d2f15; }
+    :root.dark .alert-card-sev.sev-startsoon, :root.dark .alert-card-sev.sev-urgent,
+    :root.dark .alert-card-sev.sev-needstart, :root.dark .alert-card-sev.sev-unloaderdelay,
+    :root.dark .alert-card-sev.sev-recdelay { background: #3d2f15; }
     /* Shift pace banner */
     .portal-pace-alert { border-radius: 8px; padding: 9px 14px; font-size: 0.9em; font-weight: 600; margin: 8px 0; line-height: 1.5; transition: background 0.3s, border-color 0.3s; }
     .portal-pace-alert.pace-good    { background:#f0fff4; border:2px solid #38a169; color:#276749; }
@@ -9061,6 +9070,7 @@
       const driverAtDoorMs = portalIsoToMs(row.driverAtDoorIso);
       const unloadStartMs = portalIsoToMs(row.unloadStartIso);
       const unloadFinishMs = portalIsoToMs(row.unloadFinishIso);
+      const receivingStartMs = portalIsoToMs(row.receivingStartIso);
       const receivingFinishMs = portalIsoToMs(row.receivingFinishIso || row.finishIso);
       return {
         id: row.id || ("dms-" + (row.rowid || row.po || row.ref || Math.random().toString(36).slice(2))),
@@ -9076,6 +9086,7 @@
         driverAtDoorMs: driverAtDoorMs,
         unloadStartMs: unloadStartMs,
         unloadFinishMs: unloadFinishMs,
+        receivingStartMs: receivingStartMs,
         receivingFinishMs: receivingFinishMs,
         finishMs: receivingFinishMs,
         date: new Date().toLocaleDateString()
@@ -9478,15 +9489,20 @@
       portalLoadExportsList();
     }
 
-    // Compute the current per-truck alerts (detention / start-soon / urgent).
-    // Used by the dedicated Alerts tab and its badge. Self-contained so it works
-    // from any tab without depending on renderPortalBoard's locals.
+    // Compute the current operational alerts. Each truck can raise several:
+    //   detention      - receiving not finished within (appt + free time)
+    //   needstart      - checked in, not unload-started, >=30 min past appt (ORANGE:
+    //                    tell a lead to start it)
+    //   unloaderdelay  - unload started >=45 min ago, still not unload-finished
+    //   recdelay       - unload finished >=45 min ago, receiving not started
+    //   urgent         - within 30 min of the receiving deadline
+    // Self-contained so it works from any tab without renderPortalBoard's locals.
     function portalGetAlerts() {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
+      const MS = 60000;
       // Current shift start (8 PM today, or 8 PM yesterday if before 8 PM now).
-      // Trucks checked in before this are from a previous shift — never alert on
-      // them, so stale "detention" notifications from the previous day stop.
+      // Trucks checked in before this are from a previous shift — never alert.
       const shiftStartMs = (function() {
         const d = new Date(); d.setHours(20, 0, 0, 0);
         if (d.getTime() > now) d.setDate(d.getDate() - 1);
@@ -9496,11 +9512,66 @@
       const liveTrucks = state.portal.liveRows || [];
       const trucks = [...liveTrucks, ...manualTrucks];
       const enriched = trucks.map(function(t) { return Object.assign({}, t, portalCalcStatus(t, freeTimeMs, now)); });
-      const order = { detention: 0, startsoon: 1, urgent: 2 };
-      return enriched
-        .filter(function(r) { return r.status === "detention" || r.status === "startsoon" || r.status === "urgent"; })
-        .filter(function(r) { return !(r.checkInMs && r.checkInMs < shiftStartMs); })
-        .sort(function(a, b) { return (order[a.status] - order[b.status]); });
+      const freeMin = Math.round(freeTimeMs / 60000);
+      const alerts = [];
+      enriched.forEach(function(r) {
+        if (r.checkInMs && r.checkInMs < shiftStartMs) return;   // previous shift
+        if (r.status === "complete") return;                     // already done
+        const who = r.supplier || r.ref || "Truck";
+        const doorStr = "Door " + (r.door || "?");
+        const id = r.id || r.ref;
+
+        // 1) Detention — receiving not finished within appt + free time
+        if (r.status === "detention") {
+          alerts.push({ truck: r, sev: "detention", order: 0, icon: "🔴", sevLabel: "Detention",
+            title: "Detention - " + who,
+            detail: doorStr + " | Past the " + freeMin + "-min receiving window (appt + clock). Clock it out now.",
+            notifyTitle: "🔴 Detention - " + who,
+            notifyBody: doorStr + " | Receiving past appt + " + freeMin + " min. Clock it out.",
+            tag: "detention:" + id });
+        }
+        // 2) Needs unload start — checked in, not started, >=30 min past appt (ORANGE)
+        if (r.appointmentMs && r.checkInMs && !r.unloadStartMs && now >= r.appointmentMs + 30 * MS) {
+          const lateMin = Math.floor((now - r.appointmentMs) / MS);
+          alerts.push({ truck: r, sev: "needstart", order: 1, icon: "🟠", sevLabel: "Needs Start",
+            title: "Needs unload start - " + who,
+            detail: doorStr + " | Checked in, " + lateMin + " min past appt, not started. Tell a lead to start this truck.",
+            notifyTitle: "🟠 Needs unload start - " + who,
+            notifyBody: doorStr + " | " + lateMin + " min past appt, not started. Tell a lead to start it.",
+            tag: "needstart:" + id });
+        }
+        // 3) Unloader delay — unloading >=45 min, no unload-finish stamp
+        if (r.unloadStartMs && !r.unloadFinishMs && now >= r.unloadStartMs + 45 * MS) {
+          const dur = Math.floor((now - r.unloadStartMs) / MS);
+          alerts.push({ truck: r, sev: "unloaderdelay", order: 2, icon: "🟠", sevLabel: "Unloader Delay",
+            title: "Unloader delay - " + who,
+            detail: doorStr + " | Unloading " + dur + " min with no unload-finish stamp. Check the unloader.",
+            notifyTitle: "🟠 Unloader delay - " + who,
+            notifyBody: doorStr + " | Unloading " + dur + " min, not finished. Check the unloader.",
+            tag: "unloaderdelay:" + id });
+        }
+        // 4) Receiving not started — unload finished >=45 min ago, receiving not started
+        if (r.unloadFinishMs && !r.receivingStartMs && !r.receivingFinishMs && now >= r.unloadFinishMs + 45 * MS) {
+          const dur = Math.floor((now - r.unloadFinishMs) / MS);
+          alerts.push({ truck: r, sev: "recdelay", order: 3, icon: "🟡", sevLabel: "Receiving Delay",
+            title: "Receiving not started - " + who,
+            detail: doorStr + " | Unload finished " + dur + " min ago, receiving not started yet.",
+            notifyTitle: "🟡 Receiving not started - " + who,
+            notifyBody: doorStr + " | Unload done " + dur + " min ago, receiving not started.",
+            tag: "recdelay:" + id });
+        }
+        // 5) Urgent — within 30 min of the receiving deadline
+        if (r.status === "urgent") {
+          alerts.push({ truck: r, sev: "urgent", order: 4, icon: "🟠", sevLabel: "Urgent",
+            title: "Urgent - " + who,
+            detail: doorStr + " | Only " + Math.max(0, Math.round((r.msRemaining || 0) / MS)) + " min left to finish receiving.",
+            notifyTitle: "🟠 Urgent - " + who,
+            notifyBody: doorStr + " | Under 30 min to finish receiving.",
+            tag: "urgent:" + id });
+        }
+      });
+      alerts.sort(function(a, b) { return a.order - b.order; });
+      return alerts;
     }
 
     // Render the Alerts tab list + tab badge, and fire push notifications.
@@ -9512,70 +9583,41 @@
       const list  = document.getElementById("alertsTabList");
       const meta  = document.getElementById("alertsTabMeta");
 
-      // Fire notifications (deduped via _portalNotifiedTags).
-      alerts.forEach(function(t) {
-        if (t.status === "detention") {
-          portalNotify("Detention - " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " | Receiving overdue. Clock it out now.",
-            "detention:" + (t.id || t.ref));
-        } else if (t.status === "urgent") {
-          portalNotify("Urgent - " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " | Under 30 min to finish receiving.",
-            "urgent:" + (t.id || t.ref));
-        } else if (t.status === "startsoon") {
-          portalNotify("Start soon - " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " | Driver at door, unload not started.",
-            "startsoon:" + (t.id || t.ref));
-        }
-      });
+      // Fire notifications (deduped per kind+truck via _portalNotifiedTags).
+      alerts.forEach(function(a) { portalNotify(a.notifyTitle, a.notifyBody, a.tag); });
 
-      // Tab badge
+      // Tab badge — red if any detention, otherwise orange.
       if (badge) {
         if (alerts.length > 0) {
           badge.textContent = alerts.length;
           badge.style.display = "";
-          const hasDetention = alerts.some(function(a) { return a.status === "detention"; });
-          badge.className = "alerts-tab-badge" + (hasDetention ? "" : " badge-quiet");
+          const hasRed = alerts.some(function(a) { return a.sev === "detention"; });
+          badge.className = "alerts-tab-badge" + (hasRed ? "" : " badge-orange");
         } else {
           badge.style.display = "none";
         }
       }
 
-      // Meta line
       if (meta) {
         meta.textContent = alerts.length
-          ? alerts.length + " truck" + (alerts.length !== 1 ? "s" : "") + " need attention · updated " + new Date().toLocaleTimeString()
+          ? alerts.length + " alert" + (alerts.length !== 1 ? "s" : "") + " need attention · updated " + new Date().toLocaleTimeString()
           : "All clear - no trucks need attention right now.";
       }
 
-      // Alert cards list
       if (!list) return;
       if (!alerts.length) {
-        list.innerHTML = '<div class="alerts-empty"><div class="alerts-empty-icon">OK</div><div style="font-weight:700;font-size:1.05em;">All clear</div><div style="margin-top:4px;">No detention, urgent, or start-soon trucks right now.</div></div>';
+        list.innerHTML = '<div class="alerts-empty"><div class="alerts-empty-icon">OK</div><div style="font-weight:700;font-size:1.05em;">All clear</div><div style="margin-top:4px;">No trucks need attention right now.</div></div>';
         return;
       }
-      list.innerHTML = alerts.map(function(r) {
-        const door = r.door ? "Door " + escapeHtml(String(r.door)) : "No door";
-        const sup  = r.supplier ? escapeHtml(r.supplier) : "";
-        const ref  = escapeHtml(String(r.ref || "?"));
-        let icon, sev, sevLabel, detail;
-        if (r.status === "detention") {
-          icon = "DET"; sev = "detention"; sevLabel = "Detention";
-          detail = "Receiving detention for " + r.minutesInDetention + " min - clock it out now.";
-        } else if (r.status === "startsoon") {
-          icon = "SOON"; sev = "startsoon"; sevLabel = "Start Soon";
-          detail = (r.startLateMin || 0) + " min past appointment | driver at door, unload not started.";
-        } else {
-          icon = "URG"; sev = "urgent"; sevLabel = "Urgent";
-          detail = "Only " + Math.max(0, Math.round((r.msRemaining || 0) / 60000)) + " min left to finish receiving.";
-        }
-        return '<div class="alert-card alert-' + sev + '">'
-          + '<div class="alert-card-icon">' + icon + '</div>'
+      list.innerHTML = alerts.map(function(a) {
+        const ref = escapeHtml(String(a.truck.ref || "?"));
+        return '<div class="alert-card alert-' + a.sev + '">'
+          + '<div class="alert-card-icon">' + a.icon + '</div>'
           + '<div class="alert-card-body">'
-          +   '<div class="alert-card-title">Truck ' + ref + (sup ? " - " + sup : "") + '</div>'
-          +   '<div class="alert-card-detail">' + door + ' | ' + detail + '</div>'
+          +   '<div class="alert-card-title">' + escapeHtml(a.title) + ' (Truck ' + ref + ')</div>'
+          +   '<div class="alert-card-detail">' + escapeHtml(a.detail) + '</div>'
           + '</div>'
-          + '<div class="alert-card-sev sev-' + sev + '">' + sevLabel + '</div>'
+          + '<div class="alert-card-sev sev-' + a.sev + '">' + escapeHtml(a.sevLabel) + '</div>'
           + '</div>';
       }).join("");
     }
