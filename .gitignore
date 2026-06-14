@@ -27,9 +27,8 @@ __pycache__/
 dms_config.json
 
 # Local-only scratch / DMS probe scripts (read creds from dms_config.json)
-probe_dms.py
-probe_stamps.py
-verify_mapping.py
+probe_*.py
+verify_*.py
 
 # OS junk
 .DS_Store

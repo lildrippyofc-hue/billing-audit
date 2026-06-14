@@ -466,25 +466,72 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
             stamps_by_key[key] = stamp
     seen = set()
     trucks = []
-    # Only show trucks that have actually arrived — i.e. have a driver/clerk
-    # check-in stamp. Scheduled-but-not-checked-in loads (door/PO/appt only)
-    # are dropped so the board reflects trucks physically on site.
+
+    def _keep(truck: Dict[str, Any]) -> bool:
+        # Only show trucks that have actually arrived (have a driver/clerk
+        # check-in stamp). Scheduled-but-not-checked-in loads are dropped.
+        if not truck["checkInIso"]:
+            return False
+        # Drop rejected loads — we won't be unloading those trucks.
+        if str(truck.get("statusText") or "").strip().lower() == "rejected":
+            return False
+        return True
+
     for load in loads:
         key = _dms_key(load)
-        stamp = stamps_by_key.get(key, {})
-        truck = _normalize_portal_truck(load, stamp)
-        if truck["checkInIso"]:
+        if key:
+            seen.add(key)
+        truck = _normalize_portal_truck(load, stamps_by_key.get(key, {}))
+        if _keep(truck):
             trucks.append(truck)
-            if key:
-                seen.add(key)
     for stamp in stamps:
         key = _dms_key(stamp)
         if key and key in seen:
             continue
         truck = _normalize_portal_truck({}, stamp)
-        if truck["checkInIso"]:
+        if _keep(truck):
             trucks.append(truck)
     return trucks
+
+
+def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str) -> int:
+    """Record each completed truck's real turn time (check-in -> receiving
+    finish) per vendor so the completion estimate gets more accurate over time.
+    Idempotent per (vendor, truck_ref, shift_date) so repeated pulls of the same
+    shift don't double-count. Best-effort; never raises into the request."""
+    inserted = 0
+    try:
+        conn = get_db()
+        now_str = datetime.now(timezone.utc).isoformat()
+        for t in trucks:
+            vendor = (t.get("supplier") or "").strip().upper()
+            ci, rf = t.get("checkInIso"), t.get("receivingFinishIso")
+            ref = str(t.get("rowid") or t.get("ref") or "").strip()
+            if not vendor or not ci or not rf or not ref:
+                continue
+            try:
+                dock_min = round((datetime.fromisoformat(rf) - datetime.fromisoformat(ci)).total_seconds() / 60)
+            except Exception:
+                continue
+            if dock_min <= 0 or dock_min > 720:
+                continue
+            exists = conn.execute(
+                "SELECT 1 FROM vendor_unload_times WHERE vendor=? AND truck_ref=? AND shift_date=? LIMIT 1",
+                (vendor, ref, shift_date),
+            ).fetchone()
+            if exists:
+                continue
+            conn.execute(
+                "INSERT INTO vendor_unload_times (vendor, dock_min, shift_date, source, truck_ref, recorded_at) "
+                "VALUES (?,?,?,?,?,?)",
+                (vendor, dock_min, shift_date, "DMS", ref, now_str),
+            )
+            inserted += 1
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+    return inserted
 
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -759,6 +806,9 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
     loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
     stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
     trucks = _merge_dms_portal_rows(loads, stamps)
+    # Learn from completed trucks automatically (deduped) so the completion
+    # estimate sharpens over time with zero manual save.
+    _learn_from_dms(trucks, info)
     return {
         "ok": True,
         "business_date": info,
@@ -768,6 +818,34 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "trucks": trucks,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.post("/api/portal/learn-history")
+def portal_learn_history(days: int = 7):
+    """Backfill vendor learning from the last N days of real DMS shifts so the
+    completion estimate is accurate right away instead of only over time."""
+    session = _ensure_dms_session()
+    days = max(1, min(int(days or 7), 30))
+    total_learned = 0
+    dates_done = []
+    base_loc = session["loc"]
+    base_user = session["userinfo"]
+    base_buck = session.get("buck") or {}
+    today = datetime.now()
+    for back in range(days):
+        d = today - timedelta(days=back)
+        info = f"{d.month}/{d.day}/{d.year}"
+        payload = {"info": info, "loc": base_loc, "userinfo": base_user, "buck": base_buck}
+        try:
+            loads = [x for x in _first_list(_dms_json_request("api/load/getloaddetails", payload, session["config"])) if isinstance(x, dict)]
+            stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
+            trucks = _merge_dms_portal_rows(loads, stamps)
+            learned = _learn_from_dms(trucks, info)
+            total_learned += learned
+            dates_done.append({"date": info, "trucks": len(trucks), "learned": learned})
+        except Exception as e:
+            dates_done.append({"date": info, "error": str(e)})
+    return {"ok": True, "days": days, "total_learned": total_learned, "by_date": dates_done}
 
 class DmsStampIn(BaseModel):
     load_id: Optional[str] = None

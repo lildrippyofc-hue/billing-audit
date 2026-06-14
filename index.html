@@ -10,13 +10,6 @@
   <title>Daily Truck Operations</title>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5098781549114915"
      crossorigin="anonymous"></script>
-  <!-- AdSense Auto Ads â€” programmatic activation (belt+suspenders with dashboard toggle) -->
-  <script>
-    (adsbygoogle = window.adsbygoogle || []).push({
-      google_ad_client: "ca-pub-5098781549114915",
-      enable_page_level_ads: true
-    });
-  </script>
   <style>
     :root {
       color-scheme: light;
@@ -3309,7 +3302,7 @@
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="bananaTitle">Banana Charge Check</div>
-              <div class="table-kicker">OPS must show a banana charge to ALDIOKS every day â€” not on DMS</div>
+              <div class="table-kicker">OPS must show a banana charge to ALDIOKS every day - not on DMS</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               <span class="stat-chip">
@@ -3331,7 +3324,7 @@
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="recycleTitle">Recycle Charge Check</div>
-              <div class="table-kicker">OPS must show a recycle charge to ALDIOKS every day â€” not on DMS</div>
+              <div class="table-kicker">OPS must show a recycle charge to ALDIOKS every day - not on DMS</div>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
               <span class="stat-chip">
@@ -3389,8 +3382,6 @@
           </div>
         </section>
 
-      </section>
-
         <section class="table-wrap" aria-labelledby="historyDoorTitle" style="margin-top: 14px;">
           <div class="table-toolbar">
             <div>
@@ -3426,9 +3417,12 @@
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="historyVendorTitle">Vendor Performance</div>
-              <div class="table-meta" id="historyVendorMeta">Learned from exported shifts — improves completion estimates over time</div>
+              <div class="table-meta" id="historyVendorMeta">Learns from every completed DMS truck - improves completion estimates over time</div>
             </div>
-            <button id="refreshVendorStatsBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Refresh</button>
+            <div style="display:flex; gap:6px;">
+              <button id="trainFromDmsBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">📈 Train from last 7 days</button>
+              <button id="refreshVendorStatsBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Refresh</button>
+            </div>
           </div>
           <div class="table-scroller">
             <table id="historyVendorTable">
@@ -3438,7 +3432,6 @@
           </div>
         </section>
 
-      </section>
       </section>
 
       <!-- DETENTION REPORT PANEL -->
@@ -3467,7 +3460,7 @@
               This tool reads the date embedded inside each PO number (e.g. <code>oks.75180579811.ks071126</code> encodes <strong>07/11/26</strong>).
               Set the expected business date below and any PO whose embedded date does not match will be flagged.
             </div>
-            <div class="friendly-note" id="bizDateSourceNote">Load OPS or DMS files in <strong>Breakdowns Audit</strong> first — this section reads those same files automatically.</div>
+            <div class="friendly-note" id="bizDateSourceNote">Load OPS or DMS files in <strong>Breakdowns Audit</strong> first - this section reads those same files automatically.</div>
             <div class="lookup-row" style="flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;">
               <label style="font-weight:600; white-space:nowrap;">Expected Business Date:</label>
               <input id="bizDateInput" type="date" class="lookup-input" style="max-width:180px;">
@@ -3529,7 +3522,7 @@
 
         <!-- Notification permission banner -->
         <div class="portal-notif-banner" id="portalNotifBanner" style="display:none;">
-          <span>&#128276; Enable notifications to get alerted when trucks go into detention or the shift falls behind pace.</span>
+          <span>Enable desktop alerts for detention, urgent trucks, and shift pace warnings.</span>
           <div style="display:flex;gap:6px;flex-shrink:0;">
             <button id="portalNotifEnableBtn" type="button">Enable Alerts</button>
             <button id="portalNotifDismissBtn" type="button" class="notif-dismiss">Not now</button>
@@ -3551,24 +3544,24 @@
             <div class="portal-4am-sublabel">to 4:00 AM</div>
           </div>
           <div class="portal-header-right">
-            <button id="portalDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn">Pull Live DMS</button>
-            <button id="portalDmsDiagBtn" type="button" class="secondary-btn" style="font-size:0.8em;">🔍 Diagnose DMS</button>
+            <button id="portalDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn">Refresh DMS</button>
+            <button id="portalDmsDiagBtn" type="button" class="secondary-btn" style="font-size:0.8em;">DMS Status</button>
             <label style="font-size:0.78em; color:var(--muted,#888);">Receiving grace (min):</label>
             <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
-            <button id="portalExportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">&#8595; Export Shift</button>
+            <button id="portalExportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">Export Shift</button>
             <button id="portalClearDoneBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Done</button>
             <button id="portalClearAllBtn" type="button" class="secondary-btn" style="font-size:0.8em; color:#e53e3e;">Clear All</button>
           </div>
         </div>
-        <div class="friendly-note" id="portalDmsStatus" style="margin:8px 0;">Live DMS not pulled yet. Manual clock-in is still available.</div>
+        <div class="friendly-note" id="portalDmsStatus" style="margin:8px 0;">DMS has not refreshed yet. Manual entry is still available.</div>
         <div id="portalDmsDiag" style="display:none; margin:8px 0; padding:12px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); font-size:0.82em;"></div>
 
         <!-- Add truck form -->
         <div class="portal-add-form" id="portalAddForm">
-          <div class="portal-add-title">Clock In a Truck</div>
+          <div class="portal-add-title">Manual Truck Entry</div>
           <div class="portal-add-fields">
             <div class="portal-field">
-              <label for="portalInputRef">Truck / Ref #</label>
+              <label for="portalInputRef">Truck / Reference</label>
               <input id="portalInputRef" type="text" class="lookup-input" placeholder="e.g. 47" autocomplete="off">
             </div>
             <div class="portal-field">
@@ -3584,12 +3577,12 @@
               <input id="portalInputPo" type="text" class="lookup-input" placeholder="e.g. oks.123.ks061226" autocomplete="off">
             </div>
             <div class="portal-field">
-              <label for="portalInputTime">Check-In Time <span style="font-weight:400;color:var(--muted,#888)">(defaults to now)</span></label>
+              <label for="portalInputTime">Driver Check-In <span style="font-weight:400;color:var(--muted,#888)">(defaults to now)</span></label>
               <input id="portalInputTime" type="time" class="lookup-input">
             </div>
             <div class="portal-field portal-field-btn">
               <button id="portalClockInBtn" type="button" class="primary-btn portal-clockin-btn">
-                ⏱ Clock In
+                Add Truck
               </button>
             </div>
           </div>
@@ -3614,12 +3607,12 @@
             <div class="metric-note">Unload finished, receiving still open past grace.</div>
           </article>
           <article class="metric-card" id="portal4amCard" style="transition:border-color 0.3s;">
-            <div class="metric-label">4AM Cutoff</div>
+            <div class="metric-label">4:00 AM Target</div>
             <div class="metric-value" id="portal4amCount" style="font-size:1.3em;">—</div>
             <div class="metric-note" id="portal4amNote">Must start receiving by 4:00 AM.</div>
           </article>
           <article class="metric-card" id="portalEstCard" style="transition:border-color 0.3s;">
-            <div class="metric-label">Est. Day Complete</div>
+            <div class="metric-label">Projected Finish</div>
             <div class="metric-value" id="portalEstComplete" style="font-size:1.3em; transition:color 0.3s;">—</div>
             <div class="metric-note" id="portalEstNote">Based on avg turn time.</div>
           </article>
@@ -3629,7 +3622,7 @@
             <div class="metric-note" id="portalProgressNote">of 0 today.</div>
           </article>
           <article class="metric-card">
-            <div class="metric-label">Avg Turn Time</div>
+            <div class="metric-label">Avg Turn</div>
             <div class="metric-value" id="portalAvgTurn">—</div>
             <div class="metric-note">Completed trucks today.</div>
           </article>
@@ -3698,7 +3691,7 @@
         <section class="table-wrap" aria-labelledby="portalBoardTitle" style="margin-top:10px;">
           <div class="table-toolbar">
             <div>
-              <div class="table-title" id="portalBoardTitle">Live Operations Board</div>
+              <div class="table-title" id="portalBoardTitle">Live Dock Board</div>
               <div class="table-meta" id="portalBoardMeta">No trucks clocked in yet. Use the form above to add a truck.</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -3719,11 +3712,11 @@
           </div>
         </section>
 
-        <!-- Past Shift Exports -->
+        <!-- Shift exports -->
         <section class="table-wrap" style="margin-top:10px;" id="portalExportsSection">
           <div class="table-toolbar" style="align-items:center;">
             <div>
-              <div class="table-title">Past Shift Exports</div>
+              <div class="table-title">Shift Exports</div>
               <div class="table-meta" id="portalExportsMeta">No exports saved yet.</div>
             </div>
           </div>
@@ -3738,10 +3731,10 @@
         <div class="table-card" style="margin-top:10px;">
           <div class="table-header">
             <div>
-              <div class="table-title">⚠️ Active Alerts</div>
+              <div class="table-title">Active Alerts</div>
               <div class="table-meta" id="alertsTabMeta">Trucks needing attention show up here. The portal board stays clean.</div>
             </div>
-            <button id="alertsTestNotifBtn" type="button" class="secondary-btn" style="font-size:0.8em;">🔔 Test Alert</button>
+            <button id="alertsTestNotifBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Test Alert</button>
           </div>
           <div id="alertsTabList" class="alerts-list" style="padding:14px 16px;"></div>
         </div>
@@ -3755,7 +3748,7 @@
         <div class="portal-header-bar" style="margin-bottom:12px;">
           <div class="portal-live-badge">
             <span class="portal-live-dot" id="dmsStampDot" style="background:#718096;"></span>
-            <span style="font-weight:700; color:var(--text,#1a202c);">DMS Stamp Board</span>
+            <span style="font-weight:700; color:var(--text,#1a202c);">DMS Timestamp Board</span>
           </div>
           <div style="font-size:0.82em; color:var(--muted,#888);" id="dmsStampStatus">Click a stamp button to record a timestamp locally and push it to DMS.</div>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -4573,7 +4566,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">How do I know when the shift will be done?</p>
-                <p class="faq-a">My Portal shows an <strong>Est. Day Complete</strong> card at the top. It calculates the estimated finish time based on the average turn time of trucks already processed. The estimate updates live every second as the night progresses. The pace alert banner tells you if you are on track for the 4:00 AM goal.</p>
+                <p class="faq-a">My Portal shows a <strong>Projected Finish</strong> card at the top. It calculates the estimated finish time based on the average turn time of trucks already processed. The estimate updates live every second as the night progresses. The pace alert banner tells you if you are on track for the 4:00 AM goal.</p>
               </div>
 
               <div class="faq-item">
@@ -4583,7 +4576,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">How do I know if I did everything right today?</p>
-                <p class="faq-a">Go to <strong>Roll Off Audit</strong>. If the list is empty, you are done — every truck that needed a decision has been handled. Go to <strong>History</strong> to see your full record. That log is proof of your work. The fact that you are asking this question means you care about doing a good job, and that matters.</p>
+                <p class="faq-a">Go to <strong>Roll Off Audit</strong>. If the list is empty, every truck that needed a decision has been handled. Go to <strong>History</strong> to see the full record. That log is the audit trail for the day.</p>
               </div>
 
             </div>
@@ -5189,11 +5182,11 @@
         ],
         myPortal: [
           { sel: ".portal-header-bar", title: "Your Live Shift Board", msg: "This is My Portal — your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
-          { sel: "#portalDmsSyncBtn", title: "Pull Live DMS Data", msg: "Click this button to pull the latest truck data from DMS automatically. It refreshes every 2 minutes on its own, but you can force a refresh any time by clicking here." },
-          { sel: ".summary-grid", title: "Your Shift Snapshot", msg: "These four cards update live — trucks docked, trucks complete, how many trucks must start by 4AM, and the estimated shift completion time. Watch the Est. Day Complete card: if it turns red, you are running behind the 4AM goal." },
+          { sel: "#portalDmsSyncBtn", title: "Refresh DMS Data", msg: "Click this button to pull the latest truck data from DMS. It refreshes automatically, but you can force a refresh any time by clicking here." },
+          { sel: ".summary-grid", title: "Your Shift Snapshot", msg: "These cards update live: trucks docked, trucks complete, how many trucks still need attention before 4AM, and the projected finish time. Watch the Projected Finish card: if it turns red, you are running behind the 4AM goal." },
           { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and flashes red when the estimated finish time goes past 4AM." },
-          { sel: "#portalBoard", title: "Live Operations Board", msg: "Every truck clocked in appears here with a live countdown. DETENTION means the truck is past its free time — act on those first. URGENT means under 30 minutes left. Rows update every second without any page reload." },
-          { sel: "#portalExportBtn", title: "Export Shift at End of Night", msg: "When the shift is over, click Export Shift to download a CSV with every truck, check-in time, finish time, and detention minutes. A copy also saves to the server so you can pull it up later from the Past Shift Exports section below." }
+          { sel: "#portalBoard", title: "Live Dock Board", msg: "Every truck clocked in appears here with a live countdown. DETENTION means the truck is past its free time; act on those first. URGENT means under 30 minutes left. Rows update every second without any page reload." },
+          { sel: "#portalExportBtn", title: "Export Shift at End of Night", msg: "When the shift is over, click Export Shift to download a CSV with every truck, check-in time, finish time, and detention minutes. A copy also saves to the server so you can pull it up later from the Shift Exports section below." }
         ],
         dmsStamp: [
           { sel: "#dmsStampTestBtn", title: "Test Your DMS Connection First", msg: "Before stamping anything, click this button to make sure the app can reach DMS. It will show a green message if everything is connected, or a red message telling you what to fix." },
@@ -5519,14 +5512,14 @@
       if (testBtn) testBtn.addEventListener("click", function() {
         if (!("Notification" in window)) { showToast("This browser doesn't support notifications."); return; }
         if (Notification.permission === "granted") {
-          try { new Notification("🔔 Test alert", { body: "Alerts are working. Detention and urgent trucks will notify you here.", tag: "test:" + Date.now() }); } catch (e) {}
+          try { new Notification("Test alert", { body: "Alerts are working. Detention and urgent trucks will notify you here.", tag: "test:" + Date.now() }); } catch (e) {}
           showToast("Test alert sent.");
         } else if (Notification.permission === "denied") {
           showToast("Notifications are blocked. Enable them in your browser's site settings.");
         } else {
           Notification.requestPermission().then(function(perm) {
             if (perm === "granted") {
-              try { new Notification("🔔 Test alert", { body: "Alerts are now enabled.", tag: "test:" + Date.now() }); } catch (e) {}
+              try { new Notification("Test alert", { body: "Alerts are now enabled.", tag: "test:" + Date.now() }); } catch (e) {}
               showToast("Alerts enabled — test sent.");
             } else {
               showToast("Notification permission not granted.");
@@ -5735,6 +5728,23 @@
           state.portal.vendorAvgs = avgs;
           renderVendorPerformance();
         }).catch(function() {});
+    });
+    const trainFromDmsBtn = document.getElementById("trainFromDmsBtn");
+    if (trainFromDmsBtn) trainFromDmsBtn.addEventListener("click", function() {
+      const btn = this;
+      btn.disabled = true; const orig = btn.textContent; btn.textContent = "Training from DMS…";
+      fetch("/api/portal/learn-history?days=7", { method: "POST" })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data && data.ok) {
+            showToast("Learned " + (data.total_learned || 0) + " trucks from the last " + (data.days || 7) + " days of DMS.");
+            if (refreshVendorStatsBtn) refreshVendorStatsBtn.click();
+          } else {
+            showToast("Training failed: " + ((data && data.detail) || "DMS unavailable."));
+          }
+        })
+        .catch(function() { showToast("Training failed — could not reach DMS."); })
+        .finally(function() { btn.disabled = false; btn.textContent = orig; });
     });
     els.lumperValidationFilter.addEventListener("change", renderLumperValidationTable);
     els.lumperValidationSearch.addEventListener("input", renderLumperValidationTable);
@@ -9095,9 +9105,9 @@
       if (!force && state.portal.credentialBlocked) return;
       state.portal.liveBusy = true;
       els.portalDmsSyncBtn.disabled = true;
-      els.portalDmsSyncBtn.textContent = quiet ? "Live..." : "Pulling...";
+      els.portalDmsSyncBtn.textContent = quiet ? "Live..." : "Refreshing...";
       if (els.portalDmsStatus && !quiet) {
-        els.portalDmsStatus.textContent = "Pulling live ALDIOKS rows from DMS...";
+        els.portalDmsStatus.textContent = "Refreshing live ALDIOKS rows from DMS...";
       }
       try {
         state.portal.liveAttempted = true;
@@ -9107,7 +9117,10 @@
         if (!resp.ok || !data.ok) {
           throw new Error(data.detail || "DMS pull failed.");
         }
-        state.portal.liveRows = (data.trucks || []).map(portalLiveToBoardTruck);
+        const rawDmsRows = data.trucks || [];
+        state.portal.liveRows = rawDmsRows
+          .filter(function(row) { return Boolean(portalIsoToMs(row.checkInIso)); })
+          .map(portalLiveToBoardTruck);
         state.portal.liveUpdatedAt = data.updated_at || new Date().toISOString();
         state.portal.liveError = "";
         state.portal.credentialBlocked = false;
@@ -9118,6 +9131,7 @@
           const everyStr = everySec >= 60 ? Math.round(everySec / 60) + " min" : everySec + " sec";
           els.portalDmsStatus.dataset.live = "1";
           els.portalDmsStatus.dataset.count = state.portal.liveRows.length;
+          els.portalDmsStatus.dataset.hidden = Math.max(0, rawDmsRows.length - state.portal.liveRows.length);
           els.portalDmsStatus.dataset.loc = locName;
           els.portalDmsStatus.dataset.bizdate = data.business_date || "";
           els.portalDmsStatus.dataset.every = everyStr;
@@ -9136,7 +9150,7 @@
       } finally {
         state.portal.liveBusy = false;
         els.portalDmsSyncBtn.disabled = false;
-        els.portalDmsSyncBtn.textContent = "Pull Live DMS";
+        els.portalDmsSyncBtn.textContent = "Refresh DMS";
         renderPortalBoard();
       }
     }
@@ -9150,9 +9164,13 @@
         const secs = Math.max(0, Math.round((Date.now() - Date.parse(state.portal.liveUpdatedAt)) / 1000));
         agoStr = secs < 5 ? "just now" : secs < 60 ? secs + "s ago" : Math.floor(secs / 60) + "m " + (secs % 60) + "s ago";
       }
-      el.textContent = "🟢 Live DMS: " + el.dataset.count + " trucks for " + el.dataset.loc
-        + " · business date " + el.dataset.bizdate
-        + " · updated " + agoStr + " · auto-refresh every " + el.dataset.every + ".";
+      const hiddenCount = parseInt(el.dataset.hidden || "0", 10) || 0;
+      const hiddenText = hiddenCount > 0
+        ? " | hidden " + hiddenCount + " without driver check-in stamp"
+        : "";
+      el.textContent = "Live DMS: " + el.dataset.count + " trucks for " + el.dataset.loc
+        + " | business date " + el.dataset.bizdate
+        + " | updated " + agoStr + " | auto-refresh every " + el.dataset.every + hiddenText + ".";
     }
 
     function portalFmtCountdown(ms) {
@@ -9461,6 +9479,14 @@
     function portalGetAlerts() {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
+      // Current shift start (8 PM today, or 8 PM yesterday if before 8 PM now).
+      // Trucks checked in before this are from a previous shift — never alert on
+      // them, so stale "detention" notifications from the previous day stop.
+      const shiftStartMs = (function() {
+        const d = new Date(); d.setHours(20, 0, 0, 0);
+        if (d.getTime() > now) d.setDate(d.getDate() - 1);
+        return d.getTime();
+      })();
       const manualTrucks = portalLoadTrucks().map(function(t) { return Object.assign({ source: "Manual" }, t); });
       const liveTrucks = state.portal.liveRows || [];
       const trucks = [...liveTrucks, ...manualTrucks];
@@ -9468,6 +9494,7 @@
       const order = { detention: 0, startsoon: 1, urgent: 2 };
       return enriched
         .filter(function(r) { return r.status === "detention" || r.status === "startsoon" || r.status === "urgent"; })
+        .filter(function(r) { return !(r.checkInMs && r.checkInMs < shiftStartMs); })
         .sort(function(a, b) { return (order[a.status] - order[b.status]); });
     }
 
@@ -9483,16 +9510,16 @@
       // Fire notifications (deduped via _portalNotifiedTags).
       alerts.forEach(function(t) {
         if (t.status === "detention") {
-          portalNotify("🔴 Detention — " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " · Receiving overdue. Clock it out now.",
+          portalNotify("Detention - " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " | Receiving overdue. Clock it out now.",
             "detention:" + (t.id || t.ref));
         } else if (t.status === "urgent") {
-          portalNotify("⚠️ Urgent — " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " · Under 30 min to finish receiving.",
+          portalNotify("Urgent - " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " | Under 30 min to finish receiving.",
             "urgent:" + (t.id || t.ref));
         } else if (t.status === "startsoon") {
-          portalNotify("🟡 Start soon — " + (t.supplier || t.ref || "Truck"),
-            "Door " + (t.door || "?") + " · Driver at door, unload not started.",
+          portalNotify("Start soon - " + (t.supplier || t.ref || "Truck"),
+            "Door " + (t.door || "?") + " | Driver at door, unload not started.",
             "startsoon:" + (t.id || t.ref));
         }
       });
@@ -9513,13 +9540,13 @@
       if (meta) {
         meta.textContent = alerts.length
           ? alerts.length + " truck" + (alerts.length !== 1 ? "s" : "") + " need attention · updated " + new Date().toLocaleTimeString()
-          : "All clear — no trucks need attention right now.";
+          : "All clear - no trucks need attention right now.";
       }
 
       // Alert cards list
       if (!list) return;
       if (!alerts.length) {
-        list.innerHTML = '<div class="alerts-empty"><div class="alerts-empty-icon">✅</div><div style="font-weight:700;font-size:1.05em;">All clear</div><div style="margin-top:4px;">No detention, urgent, or start-soon trucks right now.</div></div>';
+        list.innerHTML = '<div class="alerts-empty"><div class="alerts-empty-icon">OK</div><div style="font-weight:700;font-size:1.05em;">All clear</div><div style="margin-top:4px;">No detention, urgent, or start-soon trucks right now.</div></div>';
         return;
       }
       list.innerHTML = alerts.map(function(r) {
@@ -9528,20 +9555,20 @@
         const ref  = escapeHtml(String(r.ref || "?"));
         let icon, sev, sevLabel, detail;
         if (r.status === "detention") {
-          icon = "🔴"; sev = "detention"; sevLabel = "Detention";
-          detail = "Receiving detention for " + r.minutesInDetention + " min — clock it out now.";
+          icon = "DET"; sev = "detention"; sevLabel = "Detention";
+          detail = "Receiving detention for " + r.minutesInDetention + " min - clock it out now.";
         } else if (r.status === "startsoon") {
-          icon = "🟡"; sev = "startsoon"; sevLabel = "Start Soon";
-          detail = (r.startLateMin || 0) + " min past appointment · driver at door, unload not started.";
+          icon = "SOON"; sev = "startsoon"; sevLabel = "Start Soon";
+          detail = (r.startLateMin || 0) + " min past appointment | driver at door, unload not started.";
         } else {
-          icon = "🟠"; sev = "urgent"; sevLabel = "Urgent";
+          icon = "URG"; sev = "urgent"; sevLabel = "Urgent";
           detail = "Only " + Math.max(0, Math.round((r.msRemaining || 0) / 60000)) + " min left to finish receiving.";
         }
         return '<div class="alert-card alert-' + sev + '">'
           + '<div class="alert-card-icon">' + icon + '</div>'
           + '<div class="alert-card-body">'
-          +   '<div class="alert-card-title">Truck ' + ref + (sup ? " — " + sup : "") + '</div>'
-          +   '<div class="alert-card-detail">' + door + ' · ' + detail + '</div>'
+          +   '<div class="alert-card-title">Truck ' + ref + (sup ? " - " + sup : "") + '</div>'
+          +   '<div class="alert-card-detail">' + door + ' | ' + detail + '</div>'
           + '</div>'
           + '<div class="alert-card-sev sev-' + sev + '">' + sevLabel + '</div>'
           + '</div>';
@@ -9766,18 +9793,18 @@
         } else if (stillRunning === 0) {
           els.portalPaceAlert.className = "portal-pace-alert pace-good";
           els.portalPaceAlert.style.display = "";
-          els.portalPaceAlert.innerHTML = "✅ <strong>All receiving done!</strong> Shift complete before the 4AM goal.";
+          els.portalPaceAlert.innerHTML = "<strong>Complete.</strong> Shift finished before the 4:00 AM goal.";
           state.portal.notifiedBehind = false;
         } else if (behindMs > 0) {
           const behindMin = Math.round(behindMs / 60000);
           const ef2 = new Date(estMs);
           const hh2 = ef2.getHours(), mm2 = String(ef2.getMinutes()).padStart(2,"0");
           const ampm2 = hh2 >= 12 ? "PM" : "AM"; const h12b = hh2 % 12 || 12;
-          const paceStr = (actualRate && needRate) ? " Pace: " + actualRate + " trucks/hr — need " + needRate + " trucks/hr to finish by 4AM." : "";
+          const paceStr = (actualRate && needRate) ? " Pace: " + actualRate + " trucks/hr; need " + needRate + " trucks/hr to finish by 4:00 AM." : "";
           els.portalPaceAlert.className = "portal-pace-alert " + (behindMin > 30 ? "pace-behind" : "pace-warning");
           els.portalPaceAlert.style.display = "";
-          els.portalPaceAlert.innerHTML = (behindMin > 30 ? "🔴" : "🟡") +
-            " <strong>Running " + behindMin + " min behind the 4AM goal.</strong>" +
+          els.portalPaceAlert.innerHTML =
+            "<strong>Behind pace: " + behindMin + " min past the 4:00 AM goal.</strong>" +
             " Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr;
           if (!state.portal.notifiedBehind) {
             state.portal.notifiedBehind = true;
@@ -9789,7 +9816,7 @@
           const paceStr = actualRate ? " Pace: " + actualRate + " trucks/hr." : "";
           els.portalPaceAlert.className = "portal-pace-alert pace-good";
           els.portalPaceAlert.style.display = "";
-          els.portalPaceAlert.innerHTML = "✅ <strong>On track</strong> — est. finish " + bufStr + " before the 4AM goal." + paceStr;
+          els.portalPaceAlert.innerHTML = "<strong>On track.</strong> Projected finish is " + bufStr + " before the 4:00 AM goal." + paceStr;
           state.portal.notifiedBehind = false;
         }
       }
