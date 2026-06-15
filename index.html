@@ -371,6 +371,13 @@
     }
     :root.dark .portal-add-form { background: #0e1e30; border-color: #1e3a55; }
     .portal-add-title { font-weight: 700; font-size: 0.9em; color: var(--label, #718096); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .portal-add-collapse { margin: 8px 0 4px; }
+    .portal-add-collapse > summary.portal-add-summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center;
+      font-size: 0.82em; font-weight: 700; color: var(--muted, #718096); padding: 7px 13px; border: 1px dashed var(--border, #cbd5e0);
+      border-radius: 8px; user-select: none; }
+    .portal-add-collapse > summary.portal-add-summary::-webkit-details-marker { display: none; }
+    .portal-add-collapse[open] > summary.portal-add-summary { color: var(--text, #1a202c); border-style: solid; margin-bottom: 8px; }
+    .portal-add-collapse .portal-add-form { margin-bottom: 0; }
     .portal-add-fields { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
     .portal-field { display: flex; flex-direction: column; gap: 3px; min-width: 100px; }
     .portal-field label { font-size: 0.75em; font-weight: 600; color: var(--label, #718096); }
@@ -3625,9 +3632,10 @@
         <div class="friendly-note" id="portalDmsStatus" style="margin:8px 0;">DMS has not refreshed yet. Manual entry is still available.</div>
         <div id="portalDmsDiag" style="display:none; margin:8px 0; padding:12px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); font-size:0.82em;"></div>
 
-        <!-- Add truck form -->
-        <div class="portal-add-form" id="portalAddForm">
-          <div class="portal-add-title">Manual Truck Entry</div>
+        <!-- Add truck form (collapsed by default — DMS auto-populates the board) -->
+        <details class="portal-add-collapse">
+          <summary class="portal-add-summary">＋ Add a truck manually</summary>
+          <div class="portal-add-form" id="portalAddForm">
           <div class="portal-add-fields">
             <div class="portal-field">
               <label for="portalInputRef">Truck / Reference</label>
@@ -3656,7 +3664,8 @@
             </div>
           </div>
           <div id="portalAddError" class="portal-add-error" style="display:none;"></div>
-        </div>
+          </div>
+        </details>
 
         <!-- Summary cards -->
         <div class="summary-grid" style="margin:10px 0;">
