@@ -515,6 +515,26 @@
     .door-range-row label { font-size:0.82em; font-weight:700; color:var(--label,#718096); }
     .door-range-hint { font-size:0.74em; color:var(--muted,#a0aec0); }
     .door-empty { text-align:center; padding:30px; color:var(--muted,#a0aec0); grid-column:1/-1; }
+    /* Sheets sync bar */
+    .sheets-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; padding:8px 10px; background:var(--card-bg,#fff); border:1px solid var(--border,#e2e8f0); border-radius:8px; }
+    .sheets-bar-label { font-size:0.8em; font-weight:700; color:var(--label,#718096); display:flex; align-items:center; gap:5px; }
+    .sheets-sync-ok { color:#38a169; font-weight:800; }
+    .sheets-sync-err { color:#e53e3e; font-weight:800; }
+    .sheets-sync-idle { color:#a0aec0; }
+    /* Clerk assignment badge on door tile */
+    .door-tile .clerk-badge { font-size:0.68em; font-weight:800; color:#fff; background:#6b21a8; border-radius:4px; padding:1px 5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    /* Sheets setup modal */
+    .sheets-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9900; display:flex; align-items:center; justify-content:center; padding:16px; }
+    .sheets-modal { background:var(--card-bg,#fff); border-radius:12px; max-width:680px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+    .sheets-modal-head { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 12px; border-bottom:1px solid var(--border,#e2e8f0); }
+    .sheets-modal-title { font-size:1.05em; font-weight:800; }
+    .sheets-modal-body { padding:18px; font-size:0.88em; line-height:1.65; }
+    .sheets-modal-body ol { padding-left:18px; margin:10px 0 16px; }
+    .sheets-modal-body li { margin-bottom:6px; }
+    .sheets-script-block { position:relative; background:#0f172a; color:#e2e8f0; border-radius:8px; padding:12px 12px 12px; font-size:0.76em; font-family:monospace; white-space:pre-wrap; overflow:auto; max-height:260px; }
+    .sheets-script-copy { position:absolute; top:8px; right:8px; font-size:0.78em; padding:3px 8px; }
+    :root.dark .sheets-modal { background:#1a2437; }
+    :root.dark .sheets-bar { background:#17263f; }
     /* ── Area breakdown ── */
     .area-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
     .area-card { border-radius:10px; padding:13px 15px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); }
@@ -3836,9 +3856,52 @@
             <input id="portalDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = only scheduled doors)" autocomplete="off" style="max-width:260px;">
             <span class="door-range-hint">Set your full door range to see open doors too.</span>
           </div>
+          <!-- Google Sheets live sync bar -->
+          <div class="sheets-bar">
+            <span class="sheets-bar-label">&#x1F4CA; Live Clerk Sheet:</span>
+            <button type="button" id="portalSheetsOpenBtn" class="secondary-btn" style="font-size:0.8em; display:none;">Open Sheet</button>
+            <button type="button" id="portalSheetsSetupBtn" class="secondary-btn" style="font-size:0.8em;">Setup Sheets Sync</button>
+            <span id="portalSheetsSyncStatus" class="sheets-sync-idle" style="font-size:0.78em;"></span>
+          </div>
           <div class="dms-scorecard" id="portalScorecardDoors"></div>
           <div class="door-map" id="portalDoorMap"></div>
         </section>
+
+        <!-- Sheets setup modal -->
+        <div class="sheets-modal-overlay" id="portalSheetsModal" style="display:none;">
+          <div class="sheets-modal">
+            <div class="sheets-modal-head">
+              <div class="sheets-modal-title">&#x1F4CA; Google Sheets Live Dock Sync</div>
+              <button type="button" id="portalSheetsModalClose" class="secondary-btn" style="font-size:0.82em;">Close</button>
+            </div>
+            <div class="sheets-modal-body">
+              <p>Clerks open the Google Sheet on any phone or tablet and see every door live. Empty doors are highlighted with a <strong>yellow "Load Here"</strong> column — clerks write a truck number there to send a load request back to the portal.</p>
+              <ol>
+                <li>Create a new <strong>Google Sheet</strong> and name it anything you want.</li>
+                <li>In the sheet: click <strong>Extensions &#x2192; Apps Script</strong>.</li>
+                <li>Delete the default code, paste the script below, and click <strong>Save</strong>.</li>
+                <li>Click <strong>Deploy &#x2192; New Deployment &#x2192; Web App</strong>.<br>
+                  Set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>. Click Deploy and <strong>copy the Web App URL</strong>.</li>
+                <li>Go back to your Google Sheet and copy its URL from the browser bar.</li>
+                <li>Paste both URLs below and click <strong>Save &amp; Activate</strong>.</li>
+              </ol>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                <label style="font-weight:700; font-size:0.9em;">Apps Script Web App URL (webhook):</label>
+                <input id="portalSheetsWebhookUrl" type="url" class="lookup-input" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;">
+                <label style="font-weight:700; font-size:0.9em;">Google Sheet URL (for Open Sheet button):</label>
+                <input id="portalSheetsViewUrl" type="url" class="lookup-input" placeholder="https://docs.google.com/spreadsheets/d/…" style="width:100%;">
+                <button type="button" id="portalSheetsSaveConfig" class="primary-btn" style="align-self:flex-start;">Save &amp; Activate</button>
+                <span id="portalSheetsSaveMsg" style="font-size:0.8em; color:#38a169; display:none;">Saved! Door map will sync on next render.</span>
+              </div>
+              <hr style="border:none; border-top:1px solid var(--border,#e2e8f0); margin:14px 0;">
+              <div style="font-weight:700; margin-bottom:8px;">Paste this script into Apps Script:</div>
+              <div style="position:relative;">
+                <button type="button" id="portalSheetsScriptCopyBtn" class="secondary-btn sheets-script-copy">Copy</button>
+                <pre class="sheets-script-block" id="portalSheetsScriptBlock"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Area Breakdown view -->
         <section id="portalAreaView" style="display:none; margin-top:10px;">
@@ -4822,7 +4885,9 @@
         liveClockInterval: null,
         estMs: null,
         notifiedBehind: false,
-        vendorAvgs: {}
+        vendorAvgs: {},
+        sheetAssignments: {},   // { doorNumber: truckRef } — from clerk Google Sheet
+        sheetsLastPushMs: 0     // debounce: don't push more than once per 45s
       },
       truckChargeAudit: {
         ops: null,
@@ -5763,6 +5828,73 @@
         portalPullLiveDms(true);
       });
     }
+
+    // ── Google Sheets sync setup ───────────────────────────────────────────────
+    (function() {
+      const openBtn   = document.getElementById("portalSheetsOpenBtn");
+      const setupBtn  = document.getElementById("portalSheetsSetupBtn");
+      const modal     = document.getElementById("portalSheetsModal");
+      const closeBtn  = document.getElementById("portalSheetsModalClose");
+      const webhookIn = document.getElementById("portalSheetsWebhookUrl");
+      const viewIn    = document.getElementById("portalSheetsViewUrl");
+      const saveBtn   = document.getElementById("portalSheetsSaveConfig");
+      const saveMsg   = document.getElementById("portalSheetsSaveMsg");
+      const scriptPre = document.getElementById("portalSheetsScriptBlock");
+      const scriptCpy = document.getElementById("portalSheetsScriptCopyBtn");
+
+      // Populate the script block
+      if (scriptPre) scriptPre.textContent = SHEETS_APPS_SCRIPT;
+
+      // Load saved config and show "Open Sheet" if configured
+      var cfg = portalGetSheetsConfig();
+      if (cfg.webhookUrl && openBtn) openBtn.style.display = "";
+      if (cfg.viewUrl && openBtn) openBtn.href = cfg.viewUrl;
+
+      if (openBtn) {
+        openBtn.addEventListener("click", function() {
+          var c = portalGetSheetsConfig();
+          if (c.viewUrl) window.open(c.viewUrl, "_blank");
+        });
+      }
+      if (setupBtn) {
+        setupBtn.addEventListener("click", function() {
+          var c = portalGetSheetsConfig();
+          if (webhookIn) webhookIn.value = c.webhookUrl || "";
+          if (viewIn)    viewIn.value    = c.viewUrl    || "";
+          if (saveMsg)   saveMsg.style.display = "none";
+          if (modal)     modal.style.display = "";
+        });
+      }
+      if (closeBtn && modal) {
+        closeBtn.addEventListener("click", function() { modal.style.display = "none"; });
+        modal.addEventListener("click", function(ev) { if (ev.target === modal) modal.style.display = "none"; });
+      }
+      if (saveBtn) {
+        saveBtn.addEventListener("click", function() {
+          var wh = (webhookIn ? webhookIn.value : "").trim();
+          var vu = (viewIn    ? viewIn.value    : "").trim();
+          portalSaveSheetsConfig(wh, vu);
+          if (openBtn) { openBtn.style.display = wh ? "" : "none"; }
+          if (saveMsg) { saveMsg.style.display = ""; }
+          // Reset debounce so next door map render pushes immediately
+          state.portal.sheetsLastPushMs = 0;
+          if (modal) modal.style.display = "none";
+          showToast("Sheets config saved. Door map will sync on next render.");
+        });
+      }
+      if (scriptCpy) {
+        scriptCpy.addEventListener("click", function() {
+          navigator.clipboard.writeText(SHEETS_APPS_SCRIPT).then(function() {
+            showToast("Apps Script copied to clipboard.");
+          }, function() {
+            showToast("Copy failed — select the script text manually.");
+          });
+        });
+      }
+
+      // Poll for clerk "load here" assignments every 60 s
+      setInterval(portalPollSheetAssignments, 60000);
+    })();
 
     (function(){
       const diagBtn = document.getElementById("portalDmsDiagBtn");
@@ -9772,6 +9904,163 @@
       }).join("");
     }
 
+    // ── Google Sheets live dock sync ─────────────────────────────────────────
+
+    var SHEETS_APPS_SCRIPT = [
+      "// ================================================================",
+      "// ALDI OKS Joliet — Dock Status (paste into Apps Script, deploy as Web App)",
+      "// Deploy > New Deployment > Web App",
+      "//   Execute as: Me   |   Who has access: Anyone",
+      "// ================================================================",
+      "",
+      "const DOCK_SHEET = 'Dock Status';",
+      "",
+      "function doPost(e) {",
+      "  try {",
+      "    const data = JSON.parse(e.postData.contents);",
+      "    if (data.action === 'push_doors') _writeDockStatus(data.doors || [], data.updated_at || '');",
+      "    return ContentService.createTextOutput(JSON.stringify({ ok: true }))",
+      "      .setMimeType(ContentService.MimeType.JSON);",
+      "  } catch(err) {",
+      "    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message }))",
+      "      .setMimeType(ContentService.MimeType.JSON);",
+      "  }",
+      "}",
+      "",
+      "function doGet(e) {",
+      "  try {",
+      "    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(DOCK_SHEET);",
+      "    const assignments = [];",
+      "    if (sheet) {",
+      "      const last = sheet.getLastRow();",
+      "      for (let i = 2; i <= last; i++) {",
+      "        const assignCell = sheet.getRange(i, 8);",
+      "        const val = assignCell.getValue();",
+      "        if (val && String(val).trim()) {",
+      "          assignments.push({ door: String(sheet.getRange(i,1).getValue()), assign: String(val).trim() });",
+      "          assignCell.clearContent();",
+      "        }",
+      "      }",
+      "    }",
+      "    return ContentService.createTextOutput(JSON.stringify({ ok: true, assignments }))",
+      "      .setMimeType(ContentService.MimeType.JSON);",
+      "  } catch(err) {",
+      "    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err.message, assignments: [] }))",
+      "      .setMimeType(ContentService.MimeType.JSON);",
+      "  }",
+      "}",
+      "",
+      "function _writeDockStatus(doors, updatedAt) {",
+      "  const ss = SpreadsheetApp.getActiveSpreadsheet();",
+      "  let sheet = ss.getSheetByName(DOCK_SHEET);",
+      "  if (!sheet) sheet = ss.insertSheet(DOCK_SHEET);",
+      "  // Preserve any unread clerk assignments",
+      "  const preserved = {};",
+      "  const lastRow = sheet.getLastRow();",
+      "  if (lastRow > 1) {",
+      "    const existing = sheet.getRange(2, 1, lastRow - 1, 8).getValues();",
+      "    existing.forEach(r => { if (r[7] && String(r[7]).trim()) preserved[String(r[0])] = String(r[7]).trim(); });",
+      "  }",
+      "  const headers = ['Door','Status','Truck Ref','Supplier','Appt','Dwell','PO','<-- Write truck # here to LOAD an empty door'];",
+      "  const rows = [headers, ...doors.map(d => [d.door, d.status, d.ref||'', d.supplier||'', d.appt||'', d.dwell||'', d.po||'', preserved[String(d.door)]||''])];",
+      "  sheet.clearContents();",
+      "  sheet.getRange(1, 1, rows.length, 8).setValues(rows);",
+      "  // Header style",
+      "  const hdr = sheet.getRange(1,1,1,8);",
+      "  hdr.setBackground('#1e293b'); hdr.setFontColor('#f8fafc'); hdr.setFontWeight('bold');",
+      "  // Status colours + Load Here column",
+      "  for (let i = 1; i < rows.length; i++) {",
+      "    const status = rows[i][1];",
+      "    const sc = sheet.getRange(i+1,2), ac = sheet.getRange(i+1,8);",
+      "    if (status==='Open')      { sc.setBackground('#dcfce7'); sc.setFontColor('#14532d'); ac.setBackground('#fef08a'); ac.setNote('Write the truck ref here to assign this door. Portal picks it up in ~60 s.'); }",
+      "    else if (status==='Active')    { sc.setBackground('#fef9c3'); sc.setFontColor('#713f12'); ac.setBackground('#f1f5f9'); ac.setNote(''); }",
+      "    else if (status==='Complete')  { sc.setBackground('#dbeafe'); sc.setFontColor('#1e3a8a'); ac.setBackground('#f1f5f9'); ac.setNote(''); }",
+      "    else if (status==='Detention') { sc.setBackground('#fee2e2'); sc.setFontColor('#7f1d1d'); ac.setBackground('#f1f5f9'); ac.setNote(''); }",
+      "    else if (status==='Urgent')    { sc.setBackground('#ffedd5'); sc.setFontColor('#7c2d12'); ac.setBackground('#f1f5f9'); ac.setNote(''); }",
+      "  }",
+      "  sheet.getRange(rows.length+2,1).setValue('Updated: '+updatedAt).setFontColor('#94a3b8').setFontSize(9);",
+      "  sheet.setFrozenRows(1);",
+      "  try { sheet.autoResizeColumns(1,8); sheet.setColumnWidth(8,260); } catch(e){}",
+      "}"
+    ].join("\n");
+
+    function portalGetSheetsConfig() {
+      try {
+        return {
+          webhookUrl: localStorage.getItem("portalSheetsWebhook") || "",
+          viewUrl:    localStorage.getItem("portalSheetsViewUrl") || ""
+        };
+      } catch(e) { return { webhookUrl: "", viewUrl: "" }; }
+    }
+
+    function portalSaveSheetsConfig(webhookUrl, viewUrl) {
+      try {
+        localStorage.setItem("portalSheetsWebhook", webhookUrl || "");
+        localStorage.setItem("portalSheetsViewUrl", viewUrl || "");
+      } catch(e) {}
+    }
+
+    // Build a door object array from the door map data for Sheets push.
+    function portalBuildSheetsPayload(allDoors, byDoor) {
+      var statusLabel = { active:"Active", detention:"Detention", urgent:"Urgent", startsoon:"Urgent", warning:"Urgent", waiting:"Active", complete:"Complete" };
+      return allDoors.map(function(dn) {
+        var r = byDoor[dn];
+        if (!r) return { door: dn, status: "Open", ref: "", supplier: "", appt: "", dwell: "", po: "" };
+        var st = statusLabel[r.status] || "Active";
+        var apptStr = r.appointmentMs ? new Date(r.appointmentMs).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}) : "";
+        var dwellStr = r.countdownLabel || portalStatusLabel(r.status);
+        return { door: dn, status: st, ref: r.ref || "", supplier: r.supplier || "", appt: apptStr, dwell: dwellStr, po: r.po || "" };
+      });
+    }
+
+    // POST door status to Google Apps Script (browser → Apps Script directly).
+    // Debounced to at most once every 45 s.
+    function portalPushToSheets(allDoors, byDoor) {
+      var cfg = portalGetSheetsConfig();
+      if (!cfg.webhookUrl) return;
+      var now = Date.now();
+      if (now - state.portal.sheetsLastPushMs < 45000) return;   // debounce
+      state.portal.sheetsLastPushMs = now;
+      var statusEl = document.getElementById("portalSheetsSyncStatus");
+      var payload = {
+        action: "push_doors",
+        doors: portalBuildSheetsPayload(allDoors, byDoor),
+        updated_at: new Date().toLocaleString("en-US", { hour12: true })
+      };
+      if (statusEl) { statusEl.className = "sheets-sync-idle"; statusEl.textContent = "Syncing…"; }
+      fetch(cfg.webhookUrl, {
+        method: "POST",
+        mode: "no-cors",                // Apps Script doesn't set CORS headers for all origins
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(function() {
+        if (statusEl) { statusEl.className = "sheets-sync-ok"; statusEl.textContent = "Synced at " + new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); }
+      }).catch(function(err) {
+        if (statusEl) { statusEl.className = "sheets-sync-err"; statusEl.textContent = "Sync failed — check Apps Script URL"; }
+      });
+    }
+
+    // Poll the Apps Script for clerk "load here" assignments.
+    function portalPollSheetAssignments() {
+      var cfg = portalGetSheetsConfig();
+      if (!cfg.webhookUrl) return;
+      fetch(cfg.webhookUrl + "?t=" + Date.now(), { method: "GET" })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data || !Array.isArray(data.assignments)) return;
+          data.assignments.forEach(function(a) {
+            if (a.door && a.assign) {
+              state.portal.sheetAssignments[String(a.door)] = a.assign;
+            }
+          });
+          if (data.assignments.length) {
+            // Re-render the door map so clerk requests appear immediately
+            if (state.portal.portalView === "doors") portalRenderActiveView();
+          }
+        })
+        .catch(function() { /* silent — network or CORS, will retry */ });
+    }
+
     // Parse a door-range string like "1-120" or "1-50, 80, 90-100" into a list of numbers.
     function portalParseDoorRange(str) {
       const out = [];
@@ -9826,26 +10115,33 @@
         { value: det, label: "Detention", sub: "Past receiving clock", color: "red" }
       ]);
 
+      // Push to Google Sheets (debounced) so clerks see the live dock
+      portalPushToSheets(allDoors, byDoor);
+
       if (!els.portalDoorMap) return;
       if (!allDoors.length) {
-        els.portalDoorMap.innerHTML = '<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load today’s scheduled doors.</div>';
+        els.portalDoorMap.innerHTML = ‘<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load today’s scheduled doors.</div>’;
         return;
       }
       const classByStatus = { detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" };
       els.portalDoorMap.innerHTML = allDoors.map(function(dn) {
         const r = byDoor[dn];
+        // Clerk assignment from Google Sheet (door number keyed as string)
+        const clerkReq = state.portal.sheetAssignments[String(dn)] || "";
         if (!r) {
-          return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
-            + '<div class="door-open-label">Open</div>'
-            + '<div class="door-dwell">&nbsp;</div></div>';
+          return ‘<div class="door-tile open"><div class="door-no">’ + dn + ‘</div>’
+            + ‘<div class="door-open-label">Open</div>’
+            + (clerkReq ? ‘<div class="clerk-badge">Clerk: ‘ + escapeHtml(clerkReq) + ‘</div>’ : ‘<div class="door-dwell">&nbsp;</div>’)
+            + ‘</div>’;
         }
         const cls = classByStatus[r.status] || "blue";
         const detail = r.countdownLabel || portalStatusLabel(r.status);
-        return '<div class="door-tile ' + cls + '">'
-          + '<div class="door-no">' + dn + '</div>'
-          + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
-          + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
-          + '</div>';
+        return ‘<div class="door-tile ‘ + cls + ‘">’
+          + ‘<div class="door-no">’ + dn + ‘</div>’
+          + ‘<div class="door-sup">’ + escapeHtml(r.supplier || r.ref || "Truck") + ‘</div>’
+          + ‘<div class="door-dwell">’ + escapeHtml(detail) + ‘</div>’
+          + (clerkReq ? ‘<div class="clerk-badge">Clerk: ‘ + escapeHtml(clerkReq) + ‘</div>’ : ‘’)
+          + ‘</div>’;
       }).join("");
     }
 
