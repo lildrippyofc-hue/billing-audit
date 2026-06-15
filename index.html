@@ -3780,6 +3780,14 @@
               <div class="table-meta" id="portalBoardMeta">No trucks clocked in yet. Use the form above to add a truck.</div>
             </div>
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input id="portalSearch" type="search" class="lookup-input" placeholder="Search door, PO, supplier, carrier…" autocomplete="off" style="max-width:230px;">
+              <select id="portalSortBy" class="lookup-input" style="max-width:160px;" title="Sort the board">
+                <option value="smart">Sort: Priority</option>
+                <option value="door">Sort: Door #</option>
+                <option value="timeleft">Sort: Time left</option>
+                <option value="supplier">Sort: Supplier</option>
+                <option value="checkin">Sort: Check-in time</option>
+              </select>
               <select id="portalStatusFilter" class="lookup-input" style="max-width:160px;">
                 <option value="all">All Trucks</option>
                 <option value="active">Active Only</option>
@@ -5076,6 +5084,8 @@
       portalProgressPace: document.getElementById("portalProgressPace"),
       portalBoardMeta: document.getElementById("portalBoardMeta"),
       portalStatusFilter: document.getElementById("portalStatusFilter"),
+      portalSearch: document.getElementById("portalSearch"),
+      portalSortBy: document.getElementById("portalSortBy"),
       portalBoard: document.getElementById("portalBoard"),
       portalBoardView: document.getElementById("portalBoardView"),
       portalDoorView: document.getElementById("portalDoorView"),
@@ -5678,6 +5688,8 @@
       renderPortalBoard();
     });
     els.portalStatusFilter.addEventListener("change", renderPortalBoard);
+    if (els.portalSearch) els.portalSearch.addEventListener("input", function() { renderPortalBoard(); });
+    if (els.portalSortBy) els.portalSortBy.addEventListener("change", function() { renderPortalBoard(); });
 
     document.querySelectorAll(".portal-view-btn").forEach(function(button) {
       button.addEventListener("click", function() {
@@ -10106,6 +10118,7 @@
       const liveTrucks = state.portal.liveRows || [];
       const trucks = [...liveTrucks, ...manualTrucks];
       const statusFilter = els.portalStatusFilter ? els.portalStatusFilter.value : "all";
+      const sortBy = els.portalSortBy ? els.portalSortBy.value : "smart";
 
       // Enrich with computed status
       const enriched = trucks.map(function(t) {
@@ -10115,6 +10128,23 @@
 
       const statusOrder = { detention: 0, startsoon: 1, urgent: 2, warning: 3, active: 4, waiting: 5, complete: 6 };
       enriched.sort(function(a, b) {
+        if (sortBy === "door") {
+          return ((parseInt(a.door, 10) || 99999) - (parseInt(b.door, 10) || 99999));
+        }
+        if (sortBy === "timeleft") {
+          const am = a.msRemaining, bm = b.msRemaining;
+          if (am === null && bm === null) return 0;
+          if (am === null) return 1;   // complete/waiting sink to the bottom
+          if (bm === null) return -1;
+          return am - bm;              // soonest deadline (incl. most-overdue) first
+        }
+        if (sortBy === "supplier") {
+          return String(a.supplier || "").localeCompare(String(b.supplier || ""));
+        }
+        if (sortBy === "checkin") {
+          return (a.checkInMs || 0) - (b.checkInMs || 0);
+        }
+        // smart (default): worst status first, then soonest deadline
         const ao = statusOrder[a.status] !== undefined ? statusOrder[a.status] : 5;
         const bo = statusOrder[b.status] !== undefined ? statusOrder[b.status] : 5;
         if (ao !== bo) return ao - bo;
@@ -10403,12 +10433,17 @@
       // skip the table DOM rebuild to avoid flicker and resetting button clicks.
       if (metricsOnly) return;
 
-      // Filter for table
-      const filtered = statusFilter === "all" ? enriched : enriched.filter(function(r) {
-        if (statusFilter === "active")    return r.status === "active";
-        if (statusFilter === "urgent")    return r.status === "startsoon" || r.status === "urgent" || r.status === "warning";
-        if (statusFilter === "detention") return r.status === "detention";
-        if (statusFilter === "complete")  return r.status === "complete";
+      // Filter for table — status dropdown + free-text search (door / PO / supplier / carrier / ref)
+      const searchTerm = (els.portalSearch ? els.portalSearch.value : "").trim().toLowerCase();
+      const filtered = enriched.filter(function(r) {
+        if (statusFilter === "active"    && r.status !== "active") return false;
+        if (statusFilter === "urgent"    && !(r.status === "startsoon" || r.status === "urgent" || r.status === "warning")) return false;
+        if (statusFilter === "detention" && r.status !== "detention") return false;
+        if (statusFilter === "complete"  && r.status !== "complete") return false;
+        if (searchTerm) {
+          const hay = [r.ref, r.door, r.po, r.supplier, r.carrier].map(function(v) { return String(v || "").toLowerCase(); }).join(" ");
+          if (hay.indexOf(searchTerm) === -1) return false;
+        }
         return true;
       });
 
