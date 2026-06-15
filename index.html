@@ -9954,8 +9954,10 @@
             notifyBody: doorStr + " | " + lateMin + " min past appt, not started. Tell a lead to start it.",
             tag: "needstart:" + id });
         }
-        // 3) Unloader delay â€” unloading >=45 min, no unload-finish stamp
-        if (r.unloadStartMs && !r.unloadFinishMs && now >= r.unloadStartMs + 45 * MS) {
+        // 3) Unloader delay — unloading >=45 min, no unload-finish stamp.
+        //    Skip if a spill is noted in comments — spills legitimately take longer.
+        if (r.unloadStartMs && !r.unloadFinishMs && now >= r.unloadStartMs + 45 * MS
+            && !/spill/i.test(r.comments || "")) {
           const dur = Math.floor((now - r.unloadStartMs) / MS);
           alerts.push({ truck: r, sev: "unloaderdelay", order: 2, icon: "ðŸŸ ", sevLabel: "Unloader Delay",
             title: "Unloader delay - " + who,
