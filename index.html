@@ -9573,6 +9573,21 @@
     // Receiving clock rule: the clock starts at the truck's APPOINTMENT time and
     // we have `freeTimeMs` (default 2 hours) after appt to finish receiving before
     // it's detention. DMS trucks key off appointment; manual trucks off check-in.
+    // A truck is exempt from detention when:
+    //  - it checked in LATE (DMS drstat "Late") — the late arrival isn't on us,
+    //  - a spill is noted in the comments — needs extra cleanup time, or
+    //  - it has a 6:00 AM appointment.
+    // Returns the reason string (for display) or null.
+    function portalDetentionExempt(truck) {
+      if (String(truck.statusText || "").trim().toLowerCase() === "late") return "late";
+      if (/spill/i.test(truck.comments || "")) return "spill";
+      if (truck.appointmentMs) {
+        const d = new Date(truck.appointmentMs);
+        if (d.getHours() === 6 && d.getMinutes() === 0) return "6 AM appt";
+      }
+      return null;
+    }
+
     function portalCalcStatus(truck, freeTimeMs, now) {
       const isDms = truck.source === "DMS";
 
@@ -9607,6 +9622,13 @@
       const minsRem = Math.round(msRemaining / 60000);
       if (msRemaining < 0) {
         const det = Math.abs(minsRem);
+        const exemptReason = portalDetentionExempt(truck);
+        if (exemptReason) {
+          // Past the receiving clock, but exempt — never flag detention.
+          return { status: "active", msRemaining, exempt: exemptReason,
+            countdownLabel: "No detention (" + exemptReason + ")",
+            countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null };
+        }
         return { status: "detention", msRemaining, countdownLabel: "DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null };
       }
       if (minsRem < 30) return { status: "urgent",  msRemaining, countdownLabel: minsRem + " min to finish receiving", countdownClass: "portal-countdown-urgent",  minutesInDetention: null, turnMin: null };
