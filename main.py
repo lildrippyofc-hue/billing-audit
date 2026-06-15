@@ -811,6 +811,26 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
     # Learn from completed trucks automatically (deduped) so the completion
     # estimate sharpens over time with zero manual save.
     _learn_from_dms(board, info)
+    # Counts for the end-of-shift report.
+    def _stat(st):
+        return str(st.get("drstat") or "").strip().lower()
+    rejected_count = sum(1 for st in stamps if _stat(st) == "rejected")
+    no_show_count = sum(
+        1 for st in stamps
+        if _stat(st) == "late" and not (st.get("drchk") or st.get("clrkchk"))
+    )
+    # Per-area summary across ALL scheduled (non-rejected) trucks — feeds both the
+    # shift report and the Area Breakdown view.
+    area_summary: Dict[str, Dict[str, Any]] = {}
+    for t in all_trucks:
+        a = (t.get("area") or "").strip() or "—"
+        s = area_summary.setdefault(a, {"area": a, "scheduled": 0, "checked_in": 0, "completed": 0})
+        s["scheduled"] += 1
+        if t.get("checkInIso"):
+            s["checked_in"] += 1
+        if t.get("receivingFinishIso"):
+            s["completed"] += 1
+    area_list = sorted(area_summary.values(), key=lambda x: -x["scheduled"])
     return {
         "ok": True,
         "business_date": info,
@@ -820,6 +840,9 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "trucks": board,
         "total_expected": len(all_trucks),
         "checked_in_count": len(board),
+        "rejected_count": rejected_count,
+        "no_show_count": no_show_count,
+        "area_summary": area_list,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 

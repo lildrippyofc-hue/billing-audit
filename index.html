@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -311,7 +311,7 @@
     }
     .lookup-row { position: relative; }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Dark mode overrides Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Dark mode overrides ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
     :root.dark body { background: linear-gradient(180deg, rgba(0,180,220,0.08), transparent 400px), #0b1520; }
     :root.dark header { background: #0d1d2e; border-bottom-color: #1e3a55; }
     :root.dark .status-line { background: #132030; border-color: #1e3a55; color: #7faec8; }
@@ -361,7 +361,7 @@
     :root.dark input[type="text"], :root.dark input[type="search"] { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
     :root.dark select { background: #1a2d40; border-color: #2e5070; color: #eaf4ff; }
 
-    /* ── My Portal ───────────────────────────────────────────── */
+    /* â”€â”€ My Portal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .portal-add-form {
       background: var(--card-bg, #fff);
       border: 1px solid var(--border, #e2e8f0);
@@ -468,6 +468,55 @@
     :root.dark .alert-card-sev.sev-startsoon, :root.dark .alert-card-sev.sev-urgent,
     :root.dark .alert-card-sev.sev-needstart, :root.dark .alert-card-sev.sev-unloaderdelay,
     :root.dark .alert-card-sev.sev-recdelay { background: #3d2f15; }
+    /* â”€â”€ Portal view switcher (Board / Doors / Areas) â”€â”€ */
+    .portal-view-switch { display:flex; gap:6px; margin:10px 0 0; flex-wrap:wrap; }
+    .portal-view-btn { font-size:0.85em; font-weight:700; padding:7px 14px; border-radius:8px; cursor:pointer;
+      border:1.5px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--muted,#718096); }
+    .portal-view-btn.active { background:#1e3a5f; color:#fff; border-color:#1e3a5f; }
+    :root.dark .portal-view-btn { background:#17263f; }
+    :root.dark .portal-view-btn.active { background:#2b6cb0; border-color:#2b6cb0; }
+    /* â”€â”€ DMS-style green/yellow/red dwell scorecard â”€â”€ */
+    .dms-scorecard { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:12px; }
+    .dms-score { border-radius:10px; padding:12px 14px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff);
+      display:flex; flex-direction:column; gap:2px; border-left:6px solid #cbd5e0; }
+    .dms-score .num { font-size:1.9em; font-weight:800; line-height:1; }
+    .dms-score .lbl { font-size:0.78em; font-weight:700; color:var(--muted,#718096); text-transform:uppercase; letter-spacing:0.03em; }
+    .dms-score .sub { font-size:0.72em; color:var(--muted,#a0aec0); }
+    .dms-score.green  { border-left-color:#38a169; } .dms-score.green  .num { color:#2f855a; }
+    .dms-score.yellow { border-left-color:#d69e2e; } .dms-score.yellow .num { color:#b7791f; }
+    .dms-score.red    { border-left-color:#e53e3e; } .dms-score.red    .num { color:#c53030; }
+    .dms-score.blue   { border-left-color:#3182ce; } .dms-score.blue   .num { color:#2b6cb0; }
+    :root.dark .dms-score { background:#17263f; }
+    /* â”€â”€ Door map â”€â”€ */
+    .door-map { display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
+    .door-tile { border-radius:9px; padding:9px 10px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff);
+      border-top:5px solid #cbd5e0; min-height:74px; display:flex; flex-direction:column; gap:2px; cursor:default; transition:transform .08s; }
+    .door-tile:hover { transform:translateY(-2px); box-shadow:0 3px 10px rgba(0,0,0,0.1); }
+    .door-tile.green  { border-top-color:#38a169; } .door-tile.yellow { border-top-color:#d69e2e; }
+    .door-tile.red    { border-top-color:#e53e3e; } .door-tile.done { border-top-color:#3182ce; opacity:0.7; }
+    .door-tile .door-no { font-size:1.05em; font-weight:800; color:var(--text,#1a202c); }
+    .door-tile .door-sup { font-size:0.74em; color:var(--muted,#718096); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .door-tile .door-dwell { font-size:0.72em; font-weight:700; margin-top:auto; }
+    .door-tile.green .door-dwell { color:#2f855a; } .door-tile.yellow .door-dwell { color:#b7791f; }
+    .door-tile.red .door-dwell { color:#c53030; } .door-tile.done .door-dwell { color:#2b6cb0; }
+    :root.dark .door-tile { background:#17263f; }
+    .door-empty { text-align:center; padding:30px; color:var(--muted,#a0aec0); grid-column:1/-1; }
+    /* â”€â”€ Area breakdown â”€â”€ */
+    .area-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; }
+    .area-card { border-radius:10px; padding:13px 15px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); }
+    .area-card .area-name { font-size:1.05em; font-weight:800; color:var(--text,#1a202c); margin-bottom:6px; }
+    .area-card .area-nums { font-size:0.82em; color:var(--muted,#718096); margin-bottom:8px; }
+    .area-bar { height:10px; border-radius:6px; background:var(--border,#e2e8f0); overflow:hidden; }
+    .area-bar > i { display:block; height:100%; background:linear-gradient(90deg,#38a169,#68d391); border-radius:6px; }
+    .area-card .area-pct { font-size:0.78em; font-weight:700; color:#2f855a; margin-top:4px; }
+    :root.dark .area-card { background:#17263f; }
+    /* â”€â”€ Shift report modal â”€â”€ */
+    .report-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .report-modal { background:var(--card-bg,#fff); border-radius:12px; max-width:680px; width:100%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.3); }
+    .report-modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border,#e2e8f0); }
+    .report-modal-title { font-size:1.1em; font-weight:800; color:var(--text,#1a202c); }
+    .report-body { margin:0; padding:18px; overflow:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:0.84em; line-height:1.5; color:var(--text,#1a202c); white-space:pre-wrap; }
+    :root.dark .report-modal { background:#1a2942; }
     /* Shift pace banner */
     .portal-pace-alert { border-radius: 8px; padding: 9px 14px; font-size: 0.9em; font-weight: 600; margin: 8px 0; line-height: 1.5; transition: background 0.3s, border-color 0.3s; }
     .portal-pace-alert.pace-good    { background:#f0fff4; border:2px solid #38a169; color:#276749; }
@@ -1840,7 +1889,7 @@
       }
     }
 
-    /* â”€â”€ Global touch / iOS improvements (all screen sizes) â”€â”€â”€â”€â”€â”€ */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Global touch / iOS improvements (all screen sizes) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
     * { -webkit-tap-highlight-color: transparent; }
     button, label[for], .tab-button, .file-button, .dark-toggle {
       touch-action: manipulation;
@@ -1855,9 +1904,9 @@
       padding-right:  env(safe-area-inset-right,  0px);
     }
 
-    /* â”€â”€ iPhone-specific (â‰¤ 480px) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ iPhone-specific (Ã¢â€°Â¤ 480px) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
     @media (max-width: 480px) {
-      /* Prevent iOS Safari auto-zoom on input focus â€” must be â‰¥ 16px */
+      /* Prevent iOS Safari auto-zoom on input focus Ã¢â‚¬â€ must be Ã¢â€°Â¥ 16px */
       input, select, textarea { font-size: 16px !important; }
 
       /* Tighter shell */
@@ -1877,7 +1926,7 @@
       .file-button { padding: 8px 12px; font-size: 0.78rem; }
       .file-button svg.icon { width: 14px; height: 14px; }
 
-      /* Dark-mode toggle â€” hide the sliding track, keep icon + label */
+      /* Dark-mode toggle Ã¢â‚¬â€ hide the sliding track, keep icon + label */
       .dark-toggle-track { display: none !important; }
       .dark-toggle { padding: 7px 10px; gap: 5px; font-size: 0.78rem; }
 
@@ -1893,7 +1942,7 @@
       .tab-button    { min-height: 44px; font-size: 0.85rem; padding: 10px 14px; }
       button         { min-height: 40px; }
 
-      /* Tables â€” horizontal scroll, iOS smooth */
+      /* Tables Ã¢â‚¬â€ horizontal scroll, iOS smooth */
       .table-wrap {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
@@ -1906,7 +1955,7 @@
       .chart-box { height: 200px; }
 
 
-      /* Game frames â€” use svh (small viewport height) so address bar doesn't break it */
+      /* Game frames Ã¢â‚¬â€ use svh (small viewport height) so address bar doesn't break it */
       .game-frame-wrap { height: calc(100svh - 82px); }
 
       /* Summary 1 col */
@@ -1955,7 +2004,7 @@
       line-height: 1;
     }
 
-    /* Ã¢â€â‚¬Ã¢â€â‚¬ Tutorial / Help Panel Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+    /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Tutorial / Help Panel ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
     .help-panel-inner {
       max-width: 960px;
       margin: 0 auto;
@@ -2331,7 +2380,7 @@
       .help-quick-ref { padding: 24px 20px; }
     }
   
-    /* â”€â”€ Game frame panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* Ã¢â€â‚¬Ã¢â€â‚¬ Game frame panels Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
     #detentionPanel    { padding: 0; }
     .game-frame-wrap {
       width: 100%;
@@ -3357,8 +3406,8 @@
           </div>
         </section>
       </section>
-      <!-- /truckChargeAuditPanel — this close was missing, which nested every
-           panel below (History, My Portal, Alerts, DMS Stamp, …) inside it and
+      <!-- /truckChargeAuditPanel â€” this close was missing, which nested every
+           panel below (History, My Portal, Alerts, DMS Stamp, â€¦) inside it and
            hid them whenever Truck Charge Audit wasn't the active tab. -->
 
       <section id="historyPanel" class="tab-panel" aria-label="History">
@@ -3439,7 +3488,7 @@
               <div class="table-meta" id="historyVendorMeta">Learns from every completed DMS truck - improves completion estimates over time</div>
             </div>
             <div style="display:flex; gap:6px;">
-              <button id="trainFromDmsBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">📈 Train from last 7 days</button>
+              <button id="trainFromDmsBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">ðŸ“ˆ Train from last 7 days</button>
               <button id="refreshVendorStatsBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Refresh</button>
             </div>
           </div>
@@ -3567,6 +3616,7 @@
             <button id="portalDmsDiagBtn" type="button" class="secondary-btn" style="font-size:0.8em;">DMS Status</button>
             <label style="font-size:0.78em; color:var(--muted,#888);">Receiving grace (min):</label>
             <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
+            <button id="portalShiftReportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">Shift Report</button>
             <button id="portalExportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">Export Shift</button>
             <button id="portalClearDoneBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Done</button>
             <button id="portalClearAllBtn" type="button" class="secondary-btn" style="font-size:0.8em; color:#e53e3e;">Clear All</button>
@@ -3627,12 +3677,12 @@
           </article>
           <article class="metric-card" id="portal4amCard" style="transition:border-color 0.3s;">
             <div class="metric-label">4:00 AM Target</div>
-            <div class="metric-value" id="portal4amCount" style="font-size:1.3em;">—</div>
+            <div class="metric-value" id="portal4amCount" style="font-size:1.3em;">--</div>
             <div class="metric-note" id="portal4amNote">Must start receiving by 4:00 AM.</div>
           </article>
           <article class="metric-card" id="portalEstCard" style="transition:border-color 0.3s;">
             <div class="metric-label">Projected Finish</div>
-            <div class="metric-value" id="portalEstComplete" style="font-size:1.3em; transition:color 0.3s;">—</div>
+            <div class="metric-value" id="portalEstComplete" style="font-size:1.3em; transition:color 0.3s;">--</div>
             <div class="metric-note" id="portalEstNote">Based on avg turn time.</div>
           </article>
           <article class="metric-card">
@@ -3642,7 +3692,7 @@
           </article>
           <article class="metric-card">
             <div class="metric-label">Avg Turn</div>
-            <div class="metric-value" id="portalAvgTurn">—</div>
+            <div class="metric-value" id="portalAvgTurn">--</div>
             <div class="metric-note">Completed trucks today.</div>
           </article>
         </div>
@@ -3684,7 +3734,7 @@
 
           <!-- Shift timeline -->
           <div class="portal-chart-card">
-            <div class="portal-chart-title">Shift Timeline — 8 PM → 4 AM</div>
+            <div class="portal-chart-title">Shift Timeline - 8 PM to 4 AM</div>
             <div class="portal-timeline-track" id="portalTimelineTrack">
               <div class="portal-timeline-elapsed" id="portalTimelineElapsed" style="width:0%;"></div>
               <div class="portal-timeline-needle"  id="portalTimelineNeedle"  style="left:0%;"></div>
@@ -3706,8 +3756,15 @@
           <div id="portalProgressFill"></div>
         </div>
 
+        <!-- View switcher: Board / Doors / Areas -->
+        <div class="portal-view-switch" id="portalViewSwitch">
+          <button type="button" class="portal-view-btn active" data-view="board">Board</button>
+          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
+        </div>
+
         <!-- Operations board -->
-        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="margin-top:10px;">
+        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="margin-top:10px;" id="portalBoardView">
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="portalBoardTitle">Live Dock Board</div>
@@ -3731,6 +3788,32 @@
           </div>
         </section>
 
+        <!-- Door Map view (DMS-style dwell coloring) -->
+        <section id="portalDoorView" style="display:none; margin-top:10px;">
+          <div class="dms-scorecard" id="portalScorecardDoors"></div>
+          <div class="door-map" id="portalDoorMap"></div>
+        </section>
+
+        <!-- Area Breakdown view -->
+        <section id="portalAreaView" style="display:none; margin-top:10px;">
+          <div class="dms-scorecard" id="portalScorecardAreas"></div>
+          <div class="area-grid" id="portalAreaGrid"></div>
+        </section>
+
+        <!-- End-of-shift report modal -->
+        <div class="report-modal-overlay" id="portalReportModal" style="display:none;">
+          <div class="report-modal">
+            <div class="report-modal-head">
+              <div class="report-modal-title">End-of-Shift Report</div>
+              <div style="display:flex; gap:8px;">
+                <button type="button" id="portalReportCopyBtn" class="secondary-btn" style="font-size:0.82em; font-weight:700;">Copy</button>
+                <button type="button" id="portalReportCloseBtn" class="secondary-btn" style="font-size:0.82em;">Close</button>
+              </div>
+            </div>
+            <pre class="report-body" id="portalReportBody"></pre>
+          </div>
+        </div>
+
         <!-- Shift exports -->
         <section class="table-wrap" style="margin-top:10px;" id="portalExportsSection">
           <div class="table-toolbar" style="align-items:center;">
@@ -3744,7 +3827,7 @@
 
       </section>
 
-      <!-- ═══ ALERTS ═══════════════════════════════════════════════════════════ -->
+      <!-- â•â•â• ALERTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
       <section id="alertsPanel" class="tab-panel" aria-label="Alerts">
         <div class="motivation-bar" id="motivBar_alerts"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="table-card" style="margin-top:10px;">
@@ -3759,7 +3842,7 @@
         </div>
       </section>
 
-      <!-- ═══ DMS STAMP ═══════════════════════════════════════════════════════ -->
+      <!-- â•â•â• DMS STAMP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
       <section id="dmsStampPanel" class="tab-panel" aria-label="DMS Stamp">
         <div class="motivation-bar" id="motivBar_dmsStamp"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
 
@@ -3799,7 +3882,7 @@
                 </tr>
               </thead>
               <tbody id="dmsStampBoardBody">
-                <tr><td colspan="8" style="padding:18px 10px; color:var(--muted,#888); text-align:center; font-style:italic;">Open My Portal first to clock in trucks — they will appear here automatically.</td></tr>
+                <tr><td colspan="8" style="padding:18px 10px; color:var(--muted,#888); text-align:center; font-style:italic;">Open My Portal first to clock in trucks â€” they will appear here automatically.</td></tr>
               </tbody>
             </table>
           </div>
@@ -3807,7 +3890,7 @@
 
         <!-- Manual stamp (fallback) -->
         <details style="margin-bottom:14px;">
-          <summary style="cursor:pointer; font-size:0.84em; font-weight:700; color:var(--label,#00A9CA); padding:8px 0; user-select:none;">&#9654; Manual Stamp — enter Load ID by hand</summary>
+          <summary style="cursor:pointer; font-size:0.84em; font-weight:700; color:var(--label,#00A9CA); padding:8px 0; user-select:none;">&#9654; Manual Stamp â€” enter Load ID by hand</summary>
           <div class="panel" style="padding:18px 20px; margin-top:10px;">
             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;">
               <div>
@@ -3873,11 +3956,11 @@
         <!-- DevTools tip -->
         <div class="panel" style="margin-top:14px; padding:16px 20px; border-left:4px solid #d69e2e; background:var(--warn-bg,#fffbeb);">
           <div style="font-size:0.78em; font-weight:700; color:#744210; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">Can't find the stamp endpoint?</div>
-          <p style="margin:0; font-size:0.85em; color:var(--text,#1a202c); line-height:1.6;">Open DMS in Chrome, press <strong>F12</strong> → Network tab → filter by <strong>XHR</strong>. Stamp a truck the normal way. Look for a POST request with "stamp" in the URL. Right-click → Copy URL → paste into <code>dms_config.json</code> as <code>"stamp_endpoint"</code> and restart the server.</p>
+          <p style="margin:0; font-size:0.85em; color:var(--text,#1a202c); line-height:1.6;">Open DMS in Chrome, press <strong>F12</strong> â†’ Network tab â†’ filter by <strong>XHR</strong>. Stamp a truck the normal way. Look for a POST request with "stamp" in the URL. Right-click â†’ Copy URL â†’ paste into <code>dms_config.json</code> as <code>"stamp_endpoint"</code> and restart the server.</p>
         </div>
 
       </section>
-      <!-- ═══ END DMS STAMP ════════════════════════════════════════════════════ -->
+      <!-- â•â•â• END DMS STAMP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 
       <section id="exceptionsPanel" class="tab-panel" aria-label="Exceptions Queue">
         <div class="motivation-bar" id="motivBar_exceptions"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
@@ -3952,7 +4035,7 @@
           <section class="panel lookup-box" aria-labelledby="turnTrackerTitle">
             <div class="panel-header">
               <h2 id="turnTrackerTitle">Truck Turn-Time Tracker</h2>
-              <span class="panel-kicker">Driver Check-In → Finish Receiving</span>
+              <span class="panel-kicker">Driver Check-In â†’ Finish Receiving</span>
             </div>
             <div class="friendly-note">Uses the DMS report (loaded in Breakdowns Audit) to calculate how long each truck took. Set the slow-truck threshold below. Trucks over the threshold are flagged and added to the Exceptions Queue.</div>
             <div class="lookup-row" style="flex-wrap:wrap; gap:10px; align-items:center; margin-top:8px;">
@@ -3977,12 +4060,12 @@
         <div class="summary-grid" style="margin-top:14px;">
           <article class="metric-card">
             <div class="metric-label">Avg Turn Time</div>
-            <div class="metric-value" id="turnAvgTime">—</div>
+            <div class="metric-value" id="turnAvgTime">â€”</div>
             <div class="metric-note">Average across all trucks with both timestamps.</div>
           </article>
           <article class="metric-card">
             <div class="metric-label">Slowest Truck</div>
-            <div class="metric-value" id="turnSlowestTime">—</div>
+            <div class="metric-value" id="turnSlowestTime">â€”</div>
             <div class="metric-note">Longest unload time recorded today.</div>
           </article>
           <article class="metric-card">
@@ -3995,7 +4078,7 @@
         <section class="table-wrap" aria-labelledby="turnTableTitle" style="margin-top:14px;">
           <div class="table-toolbar">
             <div>
-              <div class="table-title" id="turnTableTitle">Turn Time — All Trucks</div>
+              <div class="table-title" id="turnTableTitle">Turn Time â€” All Trucks</div>
               <div class="table-meta" id="turnTableMeta">Load DMS report in Breakdowns Audit first</div>
             </div>
             <div style="display:flex; gap:8px;">
@@ -4121,7 +4204,7 @@
 
           <!-- HERO -->
           <div class="help-hero">
-            <div class="help-hero-badge">Your Complete Guide — No Experience Needed</div>
+            <div class="help-hero-badge">Your Complete Guide â€” No Experience Needed</div>
             <h2 class="help-hero-title">Welcome! This App Is Made For You.</h2>
             <p class="help-hero-sub">You do not need to be a tech person. You do not need to know anything special. Every single thing you need is right here on this page. Scroll down slowly. Read one part at a time. You got this.</p>
           </div>
@@ -4139,12 +4222,12 @@
               <div class="qs-step">
                 <div class="qs-num">2</div>
                 <h3>Look Up Any Truck By PO Number</h3>
-                <p>Go to Truck Finder. Type the PO number from your paperwork. The app tells you the answer in one second — Roll Off, Breakdown, or Needs Review.</p>
+                <p>Go to Truck Finder. Type the PO number from your paperwork. The app tells you the answer in one second â€” Roll Off, Breakdown, or Needs Review.</p>
               </div>
               <div class="qs-step">
                 <div class="qs-num">3</div>
                 <h3>Make The Call On Needs Review Trucks</h3>
-                <p>If it says Needs Review, go to Roll Off Audit. Find the truck. Click Roll Off or Breakdown. It saves automatically. Done. You can always change it if you picked wrong — no stress.</p>
+                <p>If it says Needs Review, go to Roll Off Audit. Find the truck. Click Roll Off or Breakdown. It saves automatically. Done. You can always change it if you picked wrong â€” no stress.</p>
               </div>
             </div>
           </div>
@@ -4157,9 +4240,9 @@
               <div class="help-step-num">1</div>
               <div class="help-step-content">
                 <h3>Find Your Truck File On The Computer</h3>
-                <p>Before anything else, you need a file from your manager. This file holds all of today's truck information. It lives on the computer or in a shared folder. The file ends in <strong>.csv</strong> or <strong>.xlsx</strong> — those are just file types, like how a photo ends in .jpg. Nothing scary.</p>
+                <p>Before anything else, you need a file from your manager. This file holds all of today's truck information. It lives on the computer or in a shared folder. The file ends in <strong>.csv</strong> or <strong>.xlsx</strong> â€” those are just file types, like how a photo ends in .jpg. Nothing scary.</p>
                 <div class="help-step-tip">The file name usually has today's date in it. Example: TruckCount_06122026.csv. Look for today's date and you will find the right one.</div>
-                <div class="help-step-tip" style="margin-top:8px; border-left-color:#DC582A; background:#FFF0F0;">Always use today's file — not yesterday's, not last week's. If you cannot find it, just ask your manager. There are no dumb questions here. Everyone has to ask at first.</div>
+                <div class="help-step-tip" style="margin-top:8px; border-left-color:#DC582A; background:#FFF0F0;">Always use today's file â€” not yesterday's, not last week's. If you cannot find it, just ask your manager. There are no dumb questions here. Everyone has to ask at first.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -4192,9 +4275,9 @@
               <div class="help-step-num">2</div>
               <div class="help-step-content">
                 <h3>Click The Orange Upload Button</h3>
-                <p>Look at the very top right of the screen. There is an <strong>orange button</strong> — you cannot miss it. Click it one time. A window pops up. Find your file in that window. Double-click it. The app loads it all by itself. You do not have to do anything else.</p>
+                <p>Look at the very top right of the screen. There is an <strong>orange button</strong> â€” you cannot miss it. Click it one time. A window pops up. Find your file in that window. Double-click it. The app loads it all by itself. You do not have to do anything else.</p>
                 <div class="help-step-tip">If the window closes and nothing happened, that just means you closed it before picking a file. Click the orange button again and this time pick the file before closing.</div>
-                <div class="help-step-tip" style="margin-top:8px;">How do you know it worked? The big numbers on the screen will change from 0 to real numbers. If the numbers updated — you did it perfectly.</div>
+                <div class="help-step-tip" style="margin-top:8px;">How do you know it worked? The big numbers on the screen will change from 0 to real numbers. If the numbers updated â€” you did it perfectly.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -4224,8 +4307,8 @@
               <div class="help-step-num">3</div>
               <div class="help-step-content">
                 <h3>Check The Big Numbers On Overview</h3>
-                <p>Right after uploading, you will see four big-number boxes at the top of the page. These tell you: how many trucks came in today, which hour was the busiest, which truck type showed up most, and how many different types there were total. You do not type anything here — they fill in all by themselves the moment your file loads.</p>
-                <div class="help-step-tip">If all the numbers still say 0 after uploading, the file did not load correctly. Try uploading again. Make sure you picked the right file — not a different document or a blank one.</div>
+                <p>Right after uploading, you will see four big-number boxes at the top of the page. These tell you: how many trucks came in today, which hour was the busiest, which truck type showed up most, and how many different types there were total. You do not type anything here â€” they fill in all by themselves the moment your file loads.</p>
+                <div class="help-step-tip">If all the numbers still say 0 after uploading, the file did not load correctly. Try uploading again. Make sure you picked the right file â€” not a different document or a blank one.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -4258,9 +4341,9 @@
               <div class="help-step-num">4</div>
               <div class="help-step-content">
                 <h3>Look Up Any Truck With Its PO Number</h3>
-                <p>Click the menu button at the top left to open the menu. Go to <strong>Lead Tools</strong>, then click <strong>Truck Finder</strong>. A box appears. Type the PO number from your paperwork exactly as it looks — just the numbers, no spaces, no dashes. Then press <strong>Enter</strong> on your keyboard or click Search. The answer shows up in one second.</p>
-                <div class="help-step-tip">A PO number is usually 7 digits. Example: 1234567. Type it just like that — nothing extra, nothing missing.</div>
-                <div class="help-step-tip" style="margin-top:8px;">The answer will say <strong>Roll Off</strong>, <strong>Breakdown Truck</strong>, or <strong>Needs Review</strong>. If it says Needs Review, that means a person needs to make the call. That is Step 5 — and that person is you. You are capable of this.</div>
+                <p>Click the menu button at the top left to open the menu. Go to <strong>Lead Tools</strong>, then click <strong>Truck Finder</strong>. A box appears. Type the PO number from your paperwork exactly as it looks â€” just the numbers, no spaces, no dashes. Then press <strong>Enter</strong> on your keyboard or click Search. The answer shows up in one second.</p>
+                <div class="help-step-tip">A PO number is usually 7 digits. Example: 1234567. Type it just like that â€” nothing extra, nothing missing.</div>
+                <div class="help-step-tip" style="margin-top:8px;">The answer will say <strong>Roll Off</strong>, <strong>Breakdown Truck</strong>, or <strong>Needs Review</strong>. If it says Needs Review, that means a person needs to make the call. That is Step 5 â€” and that person is you. You are capable of this.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -4291,8 +4374,8 @@
               <div class="help-step-num">5</div>
               <div class="help-step-content">
                 <h3>Decide Roll Off Or Breakdown When It Says Needs Review</h3>
-                <p>When Truck Finder says <strong>Needs Review</strong>, the app could not figure it out on its own — so it is asking for your help. Go to <strong>Lead Tools → Roll Off Audit</strong>. You will see the trucks waiting for a decision. Each one has two buttons. Click the right one. It saves instantly, no Save button needed.</p>
-                <div class="help-step-tip">Not sure which to pick? That is completely okay — ask your supervisor. You are not expected to know everything on day one. And if you click the wrong one by accident, just go back and click the right one. It updates immediately. No drama, no judgment, no lost data.</div>
+                <p>When Truck Finder says <strong>Needs Review</strong>, the app could not figure it out on its own â€” so it is asking for your help. Go to <strong>Lead Tools â†’ Roll Off Audit</strong>. You will see the trucks waiting for a decision. Each one has two buttons. Click the right one. It saves instantly, no Save button needed.</p>
+                <div class="help-step-tip">Not sure which to pick? That is completely okay â€” ask your supervisor. You are not expected to know everything on day one. And if you click the wrong one by accident, just go back and click the right one. It updates immediately. No drama, no judgment, no lost data.</div>
               </div>
               <div class="help-illustration">
                 <svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
@@ -4323,7 +4406,7 @@
               <div class="help-step-num">6</div>
               <div class="help-step-content">
                 <h3>See Your Full Work History Any Time</h3>
-                <p>Every decision you make saves automatically — you never lose anything. To see your history, click the menu button, go to <strong>Database → History</strong>, then click the <strong>Refresh</strong> button on that page. Two tables appear: one for every file you ever uploaded, and one for every single Roll Off and Breakdown decision ever made. This record stays saved even after you close the browser and come back days later.</p>
+                <p>Every decision you make saves automatically â€” you never lose anything. To see your history, click the menu button, go to <strong>Database â†’ History</strong>, then click the <strong>Refresh</strong> button on that page. Two tables appear: one for every file you ever uploaded, and one for every single Roll Off and Breakdown decision ever made. This record stays saved even after you close the browser and come back days later.</p>
                 <div class="help-step-tip">Want to reload a past report? Find it in the top table and click its Load button. Everything comes back exactly as it was. Your work is always safe here.</div>
               </div>
               <div class="help-illustration">
@@ -4366,9 +4449,9 @@
               <div class="help-step-num">7</div>
               <div class="help-step-content">
                 <h3>Use My Portal To Watch Trucks Live During The Shift</h3>
-                <p>Go to <strong>Live → My Portal</strong> in the menu. This is your live operations board for the overnight shift. Every truck you clock in shows up here with a countdown timer. The board tracks who is in detention, who is urgent, who is active, and what time the shift is estimated to finish. It also shows you how many trucks need to start receiving before the 4:00 AM cutoff.</p>
+                <p>Go to <strong>Live â†’ My Portal</strong> in the menu. This is your live operations board for the overnight shift. Every truck you clock in shows up here with a countdown timer. The board tracks who is in detention, who is urgent, who is active, and what time the shift is estimated to finish. It also shows you how many trucks need to start receiving before the 4:00 AM cutoff.</p>
                 <div class="help-step-tip">Clock in a truck by filling in Truck/Ref #, Door, Supplier, and PO at the bottom of the page, then click Clock In. The truck appears on the board immediately with a live countdown.</div>
-                <div class="help-step-tip" style="margin-top:8px;">Click <strong>Export Shift</strong> at the end of the night to download a full CSV of the shift — every truck, every time, detention minutes included. The file also saves to the website so you can pull it up later.</div>
+                <div class="help-step-tip" style="margin-top:8px;">Click <strong>Export Shift</strong> at the end of the night to download a full CSV of the shift â€” every truck, every time, detention minutes included. The file also saves to the website so you can pull it up later.</div>
               </div>
             </div>
 
@@ -4377,9 +4460,9 @@
               <div class="help-step-num">8</div>
               <div class="help-step-content">
                 <h3>Stamp Trucks To DMS Without Leaving This App</h3>
-                <p>Go to <strong>Live → DMS Stamp</strong> in the menu. If your DMS credentials are set up in <code>dms_config.json</code>, you can send time stamps directly to DMS from here. Pick the stamp type (Check In, Unload Start, Unload Finish, etc.), paste the Load ID from My Portal, set the time, and hit <strong>Stamp Truck</strong>. Every stamp you send appears in the Stamp Log at the bottom.</p>
-                <div class="help-step-tip">First time? Click <strong>Test DMS Connection</strong> to make sure the app can reach DMS. If it fails, check that your username and password are filled in inside <code>dms_config.json</code> — or ask whoever set up the server.</div>
-                <div class="help-step-tip" style="margin-top:8px; border-left-color:#d69e2e; background:#fffbeb;">If the stamp fails on the first try, the app automatically tries a few other common DMS endpoints. If all fail, open Chrome DevTools → Network tab, stamp a truck normally in DMS, copy the POST URL, and add it to <code>dms_config.json</code> as <code>"stamp_endpoint"</code>.</div>
+                <p>Go to <strong>Live â†’ DMS Stamp</strong> in the menu. If your DMS credentials are set up in <code>dms_config.json</code>, you can send time stamps directly to DMS from here. Pick the stamp type (Check In, Unload Start, Unload Finish, etc.), paste the Load ID from My Portal, set the time, and hit <strong>Stamp Truck</strong>. Every stamp you send appears in the Stamp Log at the bottom.</p>
+                <div class="help-step-tip">First time? Click <strong>Test DMS Connection</strong> to make sure the app can reach DMS. If it fails, check that your username and password are filled in inside <code>dms_config.json</code> â€” or ask whoever set up the server.</div>
+                <div class="help-step-tip" style="margin-top:8px; border-left-color:#d69e2e; background:#fffbeb;">If the stamp fails on the first try, the app automatically tries a few other common DMS endpoints. If all fail, open Chrome DevTools â†’ Network tab, stamp a truck normally in DMS, copy the POST URL, and add it to <code>dms_config.json</code> as <code>"stamp_endpoint"</code>.</div>
               </div>
             </div>
 
@@ -4387,7 +4470,7 @@
 
           <!-- CHEAT SHEET -->
           <div class="help-cheatsheet">
-            <h2>Quick Cheat Sheet — Print This And Keep It At Your Desk</h2>
+            <h2>Quick Cheat Sheet â€” Print This And Keep It At Your Desk</h2>
             <p>Four answers. That is all this job needs. If you know these four things, you know the whole billing side of this app.</p>
             <div class="cheat-grid">
               <div class="cheat-card">
@@ -4400,11 +4483,11 @@
               </div>
               <div class="cheat-card">
                 <h4>Driver Unload (DU) = Skip It</h4>
-                <p>The truck driver unloaded their own truck. The lumper crew did not touch it. No invoice. You do not have to do anything — the app automatically skips DU trucks. They will never show up in Roll Off Audit.</p>
+                <p>The truck driver unloaded their own truck. The lumper crew did not touch it. No invoice. You do not have to do anything â€” the app automatically skips DU trucks. They will never show up in Roll Off Audit.</p>
               </div>
               <div class="cheat-card">
                 <h4>Needs Review = You Make The Call</h4>
-                <p>The app looked at the data and could not tell for certain. So it is asking a real human — you — to look and decide. Not sure? That is what supervisors are for. Ask them. You are not alone, and being uncertain is perfectly normal.</p>
+                <p>The app looked at the data and could not tell for certain. So it is asking a real human â€” you â€” to look and decide. Not sure? That is what supervisors are for. Ask them. You are not alone, and being uncertain is perfectly normal.</p>
               </div>
             </div>
           </div>
@@ -4428,7 +4511,7 @@
               </div>
               <div class="glossary-item">
                 <h4>Driver Unload (DU)</h4>
-                <p>The truck driver unloaded their own truck themselves. The lumper crew was not involved at all. No invoice needed. The app automatically skips these — you never have to deal with DU trucks.</p>
+                <p>The truck driver unloaded their own truck themselves. The lumper crew was not involved at all. No invoice needed. The app automatically skips these â€” you never have to deal with DU trucks.</p>
               </div>
               <div class="glossary-item">
                 <h4>Needs Review</h4>
@@ -4440,7 +4523,7 @@
               </div>
               <div class="glossary-item">
                 <h4>DMS</h4>
-                <p>The Document Management System — the main warehouse software at Eclipse Advantage. This app can connect to DMS to pull live truck data and even send time stamps directly. Your DMS login goes in <code>dms_config.json</code>.</p>
+                <p>The Document Management System â€” the main warehouse software at Eclipse Advantage. This app can connect to DMS to pull live truck data and even send time stamps directly. Your DMS login goes in <code>dms_config.json</code>.</p>
               </div>
               <div class="glossary-item">
                 <h4>DMS Report</h4>
@@ -4448,7 +4531,7 @@
               </div>
               <div class="glossary-item">
                 <h4>Dock Section</h4>
-                <p>The part of the warehouse where trucks unload. Different sections handle different kinds of products — for example: Dry, Freezer, Egg. Trucks are sorted by dock section in the charts.</p>
+                <p>The part of the warehouse where trucks unload. Different sections handle different kinds of products â€” for example: Dry, Freezer, Egg. Trucks are sorted by dock section in the charts.</p>
               </div>
               <div class="glossary-item">
                 <h4>Free Time / Grace Period</h4>
@@ -4464,11 +4547,11 @@
               </div>
               <div class="glossary-item">
                 <h4>DMS Stamp</h4>
-                <p>A time stamp sent to DMS marking a specific event for a truck — like when it checked in, when unloading started, or when receiving finished. You can send stamps directly from this app using the DMS Stamp tab.</p>
+                <p>A time stamp sent to DMS marking a specific event for a truck â€” like when it checked in, when unloading started, or when receiving finished. You can send stamps directly from this app using the DMS Stamp tab.</p>
               </div>
               <div class="glossary-item">
                 <h4>Export Shift</h4>
-                <p>A button in My Portal that saves a complete record of the shift — every truck, check-in time, finish time, and detention minutes — as a CSV file. It also saves a copy on the server so you can download it later.</p>
+                <p>A button in My Portal that saves a complete record of the shift â€” every truck, check-in time, finish time, and detention minutes â€” as a CSV file. It also saves a copy on the server so you can download it later.</p>
               </div>
               <div class="glossary-item">
                 <h4>Truck Finder</h4>
@@ -4476,7 +4559,7 @@
               </div>
               <div class="glossary-item">
                 <h4>History</h4>
-                <p>A complete log of everything ever saved — every file uploaded and every billing decision ever made. Found under Database in the menu. Your work is always here, even days later.</p>
+                <p>A complete log of everything ever saved â€” every file uploaded and every billing decision ever made. Found under Database in the menu. Your work is always here, even days later.</p>
               </div>
             </div>
           </div>
@@ -4484,10 +4567,10 @@
           <!-- WARNING BOX -->
           <div class="help-warning-box">
             <h3>Things Worth Knowing Before You Start</h3>
-            <p style="margin-top:0; margin-bottom:14px; opacity:0.9;">Not warnings — just helpful reminders. You are doing great.</p>
+            <p style="margin-top:0; margin-bottom:14px; opacity:0.9;">Not warnings â€” just helpful reminders. You are doing great.</p>
             <p><strong>Always use today's file.</strong> If you accidentally uploaded the wrong one, click Clear Report and upload the right file. No harm done.</p>
             <p><strong>Wait until the file finishes loading.</strong> When it says "Report loaded," you are ready to go. If the browser closed before it finished, just reopen it and upload again. Your saved decisions are always still there.</p>
-            <p><strong>Not sure if it is Roll Off or Breakdown?</strong> Ask your supervisor — that is exactly what they are there for. And you can change your answer any time just by going back to Roll Off Audit and clicking the correct button. Nothing is permanent.</p>
+            <p><strong>Not sure if it is Roll Off or Breakdown?</strong> Ask your supervisor â€” that is exactly what they are there for. And you can change your answer any time just by going back to Roll Off Audit and clicking the correct button. Nothing is permanent.</p>
             <p><strong>The app only accepts .csv and .xlsx files.</strong> If your file will not upload, ask your manager for the correct file format. It is probably just the wrong file type.</p>
             <p><strong>Your work is always saved.</strong> Decisions save automatically the moment you click them. Closing the browser does not erase anything. Come back tomorrow and your history is still there waiting for you.</p>
           </div>
@@ -4500,7 +4583,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">The page is completely blank or white. What do I do?</p>
-                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> on your keyboard to force-reload the page. If it is still blank, close the tab, then open the app again fresh. Your saved decisions are not gone — they live in the browser and survive reloads.</p>
+                <p class="faq-a">Press <strong>Ctrl + Shift + R</strong> on your keyboard to force-reload the page. If it is still blank, close the tab, then open the app again fresh. Your saved decisions are not gone â€” they live in the browser and survive reloads.</p>
               </div>
 
               <div class="faq-item">
@@ -4510,27 +4593,27 @@
 
               <div class="faq-item">
                 <p class="faq-q">I cannot find the file on my computer. Where is it?</p>
-                <p class="faq-a">Ask your manager — seriously, that is the right move. The file is usually in a shared folder or sent by email each morning. The file name typically has today's date in it. Look for something ending in .csv or .xlsx.</p>
+                <p class="faq-a">Ask your manager â€” seriously, that is the right move. The file is usually in a shared folder or sent by email each morning. The file name typically has today's date in it. Look for something ending in .csv or .xlsx.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">What is a PO number and where do I find it?</p>
-                <p class="faq-a">A PO number is just a unique ID for one truck. It is on your physical paperwork or shown in the truck list on screen. It usually looks like 7 digits: <span class="good">1234567</span>. Not sure which number it is? Ask your supervisor to point it out the first time — after that you will know it by sight.</p>
+                <p class="faq-a">A PO number is just a unique ID for one truck. It is on your physical paperwork or shown in the truck list on screen. It usually looks like 7 digits: <span class="good">1234567</span>. Not sure which number it is? Ask your supervisor to point it out the first time â€” after that you will know it by sight.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">The app is frozen or not responding. Help!</p>
-                <p class="faq-a">Wait 30 seconds without clicking anything — sometimes it just needs a moment. If it is still stuck, press <strong>Ctrl + Shift + R</strong> to reload. Your saved decisions come back automatically. You do not lose anything.</p>
+                <p class="faq-a">Wait 30 seconds without clicking anything â€” sometimes it just needs a moment. If it is still stuck, press <strong>Ctrl + Shift + R</strong> to reload. Your saved decisions come back automatically. You do not lose anything.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">I clicked the wrong answer for a truck. Can I fix it?</p>
-                <p class="faq-a">Yes, easily. Go to Roll Off Audit, find the truck, and click the correct button. It updates immediately. You can change it as many times as you need. Mistakes happen to everyone — this app makes them easy to fix.</p>
+                <p class="faq-a">Yes, easily. Go to Roll Off Audit, find the truck, and click the correct button. It updates immediately. You can change it as many times as you need. Mistakes happen to everyone â€” this app makes them easy to fix.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">I genuinely do not know if a truck is Roll Off or Breakdown.</p>
-                <p class="faq-a">Ask your supervisor. Full stop. That is the right answer. There is no shame in not knowing — this stuff is not obvious at first. Your supervisor will tell you which one to pick, and next time it will be easier.</p>
+                <p class="faq-a">Ask your supervisor. Full stop. That is the right answer. There is no shame in not knowing â€” this stuff is not obvious at first. Your supervisor will tell you which one to pick, and next time it will be easier.</p>
               </div>
 
               <div class="faq-item">
@@ -4560,22 +4643,22 @@
 
               <div class="faq-item">
                 <p class="faq-q">Can more than one person use this app at the same time?</p>
-                <p class="faq-a">Yes — multiple people can be logged in at once. Just coordinate so only one person is uploading a file at a time, to avoid overwriting each other's work. Decisions are saved individually so those are fine to make in parallel.</p>
+                <p class="faq-a">Yes â€” multiple people can be logged in at once. Just coordinate so only one person is uploading a file at a time, to avoid overwriting each other's work. Decisions are saved individually so those are fine to make in parallel.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">History shows no saved reports. Why?</p>
-                <p class="faq-a">Click the <strong>Refresh</strong> button on the History page first — it does not auto-load. If it still shows nothing after refreshing, press <strong>Ctrl + Shift + R</strong> on the whole page. If reports are still missing, ask your manager to check the server database.</p>
+                <p class="faq-a">Click the <strong>Refresh</strong> button on the History page first â€” it does not auto-load. If it still shows nothing after refreshing, press <strong>Ctrl + Shift + R</strong> on the whole page. If reports are still missing, ask your manager to check the server database.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">My manager wants to see all the decisions I made. What do I show them?</p>
-                <p class="faq-a">Open the menu → <strong>Database → History</strong> → click Refresh. Scroll to the bottom table called Audit Decision Log. That table shows every single Roll Off and Breakdown decision ever made, with the exact date and time of each one. That is your complete record.</p>
+                <p class="faq-a">Open the menu â†’ <strong>Database â†’ History</strong> â†’ click Refresh. Scroll to the bottom table called Audit Decision Log. That table shows every single Roll Off and Breakdown decision ever made, with the exact date and time of each one. That is your complete record.</p>
               </div>
 
               <div class="faq-item">
                 <p class="faq-q">The app keeps asking me to reload the page. Should I?</p>
-                <p class="faq-a">Yes, go ahead. Press <strong>Ctrl + Shift + R</strong>. Reloading does not delete your decisions — they are stored safely in the browser. You will need to re-upload your file for the current session, but your history and all past decisions are completely untouched.</p>
+                <p class="faq-a">Yes, go ahead. Press <strong>Ctrl + Shift + R</strong>. Reloading does not delete your decisions â€” they are stored safely in the browser. You will need to re-upload your file for the current session, but your history and all past decisions are completely untouched.</p>
               </div>
 
               <div class="faq-item">
@@ -4590,7 +4673,7 @@
 
               <div class="faq-item">
                 <p class="faq-q">The DMS Stamp tab says the connection failed. What now?</p>
-                <p class="faq-a">Check that your DMS username and password are filled in inside <code>dms_config.json</code> — that file lives in the same folder as the app. Restart the server after saving changes. If credentials look right but it still fails, ask whoever manages the server to check the DMS connection.</p>
+                <p class="faq-a">Check that your DMS username and password are filled in inside <code>dms_config.json</code> â€” that file lives in the same folder as the app. Restart the server after saving changes. If credentials look right but it still fails, ask whoever manages the server to check the DMS connection.</p>
               </div>
 
               <div class="faq-item">
@@ -4605,17 +4688,17 @@
           <div class="help-stuck">
             <h2>Still Stuck? Here Is Exactly What To Do.</h2>
             <p style="margin-bottom:16px; opacity:0.9;">Go through these in order. One of them will fix it.</p>
-            <p><strong>1.</strong> Read this help page again from the top. The answer to almost every question is already written here — sometimes you just have to scroll to the right part.</p>
+            <p><strong>1.</strong> Read this help page again from the top. The answer to almost every question is already written here â€” sometimes you just have to scroll to the right part.</p>
             <p><strong>2.</strong> Try the action one more time. Many issues fix themselves on the second attempt.</p>
-            <p><strong>3.</strong> Press <strong>Ctrl + Shift + R</strong> to fully reload the page. Your saved decisions stay safe — reloading never deletes them.</p>
+            <p><strong>3.</strong> Press <strong>Ctrl + Shift + R</strong> to fully reload the page. Your saved decisions stay safe â€” reloading never deletes them.</p>
             <p><strong>4.</strong> Ask your supervisor. Show them this help page and describe what you were trying to do when it broke. That context helps them help you faster.</p>
             <p style="margin-top:16px;">You are not doing anything wrong by asking for help. Every single person who works here had to ask questions at some point. That is how learning works, and it is completely valid.</p>
           </div>
 
           <!-- QUICK REF -->
           <div class="help-quick-ref">
-            <h3>If You Forget Everything Else — Remember Just These Two</h3>
-            <p><strong>Upload the file every morning</strong> — orange button, top right corner of the screen. And <strong>mark Roll Off or Breakdown</strong> for trucks in Roll Off Audit that are waiting on a decision. Those two things are the core of the daily job. Everything else in this app supports those two actions.</p>
+            <h3>If You Forget Everything Else â€” Remember Just These Two</h3>
+            <p><strong>Upload the file every morning</strong> â€” orange button, top right corner of the screen. And <strong>mark Roll Off or Breakdown</strong> for trucks in Roll Off Audit that are waiting on a decision. Those two things are the core of the daily job. Everything else in this app supports those two actions.</p>
             <p style="margin-top:14px; color:#004976; font-weight:600;">Made a mistake somewhere? Go back and fix it. Every single thing in this app can be changed. Nothing is permanent until you want it to be.</p>
           </div>
 
@@ -4681,6 +4764,11 @@
         liveAttempted: false,
         liveBusy: false,
         totalExpected: 0,
+        rejectedCount: 0,
+        noShowCount: 0,
+        areaSummary: [],
+        businessDate: "",
+        portalView: "board",
         livePollMs: 30000,
         credentialBlocked: false,
         uiTickInterval: null,
@@ -4980,6 +5068,18 @@
       portalBoardMeta: document.getElementById("portalBoardMeta"),
       portalStatusFilter: document.getElementById("portalStatusFilter"),
       portalBoard: document.getElementById("portalBoard"),
+      portalBoardView: document.getElementById("portalBoardView"),
+      portalDoorView: document.getElementById("portalDoorView"),
+      portalAreaView: document.getElementById("portalAreaView"),
+      portalScorecardDoors: document.getElementById("portalScorecardDoors"),
+      portalScorecardAreas: document.getElementById("portalScorecardAreas"),
+      portalDoorMap: document.getElementById("portalDoorMap"),
+      portalAreaGrid: document.getElementById("portalAreaGrid"),
+      portalShiftReportBtn: document.getElementById("portalShiftReportBtn"),
+      portalReportModal: document.getElementById("portalReportModal"),
+      portalReportBody: document.getElementById("portalReportBody"),
+      portalReportCopyBtn: document.getElementById("portalReportCopyBtn"),
+      portalReportCloseBtn: document.getElementById("portalReportCloseBtn"),
       historyDoorMeta: document.getElementById("historyDoorMeta"),
       historyDoorTable: document.getElementById("historyDoorTable"),
       historyDoorDetail: document.getElementById("historyDoorDetail"),
@@ -5201,7 +5301,7 @@
           { sel: "#doorSuggestorPanel .lookup-box", title: "Get a Door Suggestion", msg: "This tool looks at your truck data and suggests which door a truck should go to. Fill in the boxes here to get a recommendation." }
         ],
         myPortal: [
-          { sel: ".portal-header-bar", title: "Your Live Shift Board", msg: "This is My Portal — your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
+          { sel: ".portal-header-bar", title: "Your Live Shift Board", msg: "This is My Portal â€” your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
           { sel: "#portalDmsSyncBtn", title: "Refresh DMS Data", msg: "Click this button to pull the latest truck data from DMS. It refreshes automatically, but you can force a refresh any time by clicking here." },
           { sel: ".summary-grid", title: "Your Shift Snapshot", msg: "These cards update live: trucks docked, trucks complete, how many trucks still need attention before 4AM, and the projected finish time. Watch the Projected Finish card: if it turns red, you are running behind the 4AM goal." },
           { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and flashes red when the estimated finish time goes past 4AM." },
@@ -5211,36 +5311,36 @@
         dmsStamp: [
           { sel: "#dmsStampTestBtn", title: "Test Your DMS Connection First", msg: "Before stamping anything, click this button to make sure the app can reach DMS. It will show a green message if everything is connected, or a red message telling you what to fix." },
           { sel: "#dmsStampLoadId", title: "Paste the Load ID Here", msg: "The Load ID comes from DMS or from the truck row in My Portal. Paste it here exactly as it appears. This tells DMS which specific truck you are stamping." },
-          { sel: "#dmsStampType", title: "Pick the Stamp Type", msg: "Choose what event you are recording — Check In, Driver At Door, Unload Start, Unload Finish, or Receiving Finish. Pick the one that matches what just happened with the truck." },
+          { sel: "#dmsStampType", title: "Pick the Stamp Type", msg: "Choose what event you are recording â€” Check In, Driver At Door, Unload Start, Unload Finish, or Receiving Finish. Pick the one that matches what just happened with the truck." },
           { sel: "#dmsStampSubmitBtn", title: "Hit Stamp Truck to Send It", msg: "After filling in the Load ID and stamp type, click Stamp Truck. The app sends the stamp to DMS through the same login it uses for My Portal. The result shows up instantly below the button, and a log entry appears in the Stamp Log table." }
         ],
         exceptions: [
-          { sel: "#exceptionsPanel .summary-grid", title: "Exceptions Overview", msg: "These cards show how many exception items are flagged across the operation — high priority, medium priority, and total open items. High priority items need your attention first." },
-          { sel: "#exceptionsPanel .table-wrap", title: "Exception Items List", msg: "Each row here is a flagged issue — a billing mismatch, a date error, a missing stamp, or another operational problem. Review each one and take the action described. Items clear automatically when the underlying issue is resolved." }
+          { sel: "#exceptionsPanel .summary-grid", title: "Exceptions Overview", msg: "These cards show how many exception items are flagged across the operation â€” high priority, medium priority, and total open items. High priority items need your attention first." },
+          { sel: "#exceptionsPanel .table-wrap", title: "Exception Items List", msg: "Each row here is a flagged issue â€” a billing mismatch, a date error, a missing stamp, or another operational problem. Review each one and take the action described. Items clear automatically when the underlying issue is resolved." }
         ],
         spillTracker: [
           { sel: "#spillTrackerPanel .lookup-box, #spillTrackerPanel .portal-add-form", title: "Log a Spill Here", msg: "Use this form to record any spill event on the dock. Fill in the location, description, and time. Each entry is timestamped and saved so you have a complete record if it is ever needed for safety reports or billing disputes." }
         ],
         turnTracker: [
-          { sel: "#turnTrackerPanel .summary-grid, #turnTrackerPanel .metric-card", title: "Turn Time Summary", msg: "These numbers show the average, fastest, and slowest truck turn times based on the data you have loaded. Turn time is how long a truck takes from check-in to finish — shorter is better, especially on nights when you have a lot of trucks." },
+          { sel: "#turnTrackerPanel .summary-grid, #turnTrackerPanel .metric-card", title: "Turn Time Summary", msg: "These numbers show the average, fastest, and slowest truck turn times based on the data you have loaded. Turn time is how long a truck takes from check-in to finish â€” shorter is better, especially on nights when you have a lot of trucks." },
           { sel: "#turnTrackerPanel .table-wrap", title: "Per-Truck Turn Times", msg: "This table shows the individual turn time for every truck in the current data. Sort it to find your fastest and slowest trucks. Use this information to identify which doors or suppliers consistently take longer." }
         ],
         detention: [
-          { sel: "#detentionFrame", title: "Detention Report", msg: "This section shows every truck that has gone into or is currently in detention — meaning they stayed at the dock past the allowed free time. Use this report to track detention charges and identify patterns in which carriers or doors run long." }
+          { sel: "#detentionFrame", title: "Detention Report", msg: "This section shows every truck that has gone into or is currently in detention â€” meaning they stayed at the dock past the allowed free time. Use this report to track detention charges and identify patterns in which carriers or doors run long." }
         ],
         bizDateAudit: [
           { sel: "#bizDateAuditPanel .table-wrap, #bizDateAuditPanel .summary-grid", title: "Business Date Audit", msg: "This audit checks whether trucks in the system have the correct business date attached to them. Trucks with a business date that is 2 or more days off are flagged here. Review each one and correct the date in DMS if needed." }
         ],
         clerkBoard: [
-          { sel: "#clerkBoardPanel .summary-grid, #clerkBoardPanel .metric-card", title: "Clerk Leaderboard Overview", msg: "This shows clerk performance metrics — number of POs processed, accuracy rate, and how each clerk ranks against the others. Use it to recognize strong performance and spot anyone who may need support." },
-          { sel: "#clerkBoardPanel .table-wrap", title: "Clerk Detail Table", msg: "Each row is one clerk with their full stats. The table is sortable — click any column header to rank by that metric. This data comes from the uploaded report so it reflects the current file you have loaded." }
+          { sel: "#clerkBoardPanel .summary-grid, #clerkBoardPanel .metric-card", title: "Clerk Leaderboard Overview", msg: "This shows clerk performance metrics â€” number of POs processed, accuracy rate, and how each clerk ranks against the others. Use it to recognize strong performance and spot anyone who may need support." },
+          { sel: "#clerkBoardPanel .table-wrap", title: "Clerk Detail Table", msg: "Each row is one clerk with their full stats. The table is sortable â€” click any column header to rank by that metric. This data comes from the uploaded report so it reflects the current file you have loaded." }
         ],
         trends: [
-          { sel: "#trendsPanel .summary-grid, #trendsPanel .metric-card", title: "Trends Overview", msg: "These cards show high-level patterns across multiple shifts or time periods — which days are busiest, which truck types are increasing, and where volume is shifting. Upload multiple reports over time to get more accurate trend data." },
-          { sel: "#trendsPanel .table-wrap, #trendsPanel canvas", title: "Trend Charts and Tables", msg: "The charts and tables here visualize patterns over time. Look for spikes, dips, and consistent patterns — those tell you when to staff up, when problems tend to happen, and which parts of the operation are growing." }
+          { sel: "#trendsPanel .summary-grid, #trendsPanel .metric-card", title: "Trends Overview", msg: "These cards show high-level patterns across multiple shifts or time periods â€” which days are busiest, which truck types are increasing, and where volume is shifting. Upload multiple reports over time to get more accurate trend data." },
+          { sel: "#trendsPanel .table-wrap, #trendsPanel canvas", title: "Trend Charts and Tables", msg: "The charts and tables here visualize patterns over time. Look for spikes, dips, and consistent patterns â€” those tell you when to staff up, when problems tend to happen, and which parts of the operation are growing." }
         ],
         help: [
-          { sel: "#helpPanel .help-hero", title: "Welcome to the Help Page", msg: "Every question about this app is answered right here. Scroll down slowly — there are step-by-step instructions for every feature, a plain-English glossary of every word the app uses, and a FAQ section for common problems. Come back any time you are confused." }
+          { sel: "#helpPanel .help-hero", title: "Welcome to the Help Page", msg: "Every question about this app is answered right here. Scroll down slowly â€” there are step-by-step instructions for every feature, a plain-English glossary of every word the app uses, and a FAQ section for common problems. Come back any time you are confused." }
         ],
       };
 
@@ -5365,7 +5465,7 @@
         turnTracker:      [["CLOCK","Every minute counts."],["FAST","Efficiency is a habit."],["TRACK","Know your numbers. Improve them."]],
         clerkBoard:       [["DATA","Numbers show the truth."],["GROW","Every mistake is a coaching opportunity."],["BEST","Top performers built their skill."]],
         trends:           [["CHART","Patterns reveal the real story."],["WEEK","One week of data beats a gut feeling."],["RISE","Improvement you can see is improvement that sticks."]],
-        audit:            [["CALL","Roll Off or Breakdown â€” make the call."],["DECIDE","Your decision locks the record."],["AUDIT","Every catch saves money."],["SHARP","Good calls here save time later."]],
+        audit:            [["CALL","Roll Off or Breakdown Ã¢â‚¬â€ make the call."],["DECIDE","Your decision locks the record."],["AUDIT","Every catch saves money."],["SHARP","Good calls here save time later."]],
         breakdownsAudit:  [["AUDIT","Every catch saves money."],["BILL","Billing errors stop here."],["CHECK","Audit mode is active."],["PIN","Details matter here."]],
         truckChargeAudit: [["PAY","Wrong charges cost money."],["FEE","Every FSPAY check matters."],["TEST","Precision billing audit in progress."],["WARN","Catch it here before it becomes a problem."]],
         history:          [["LOG","This is the saved work record."],["DONE","Every entry here is documented."],["SAVE","Saved, logged, and ready."]],
@@ -5446,7 +5546,7 @@
       els.bizDateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
     }
     els.bizDateRunButton.addEventListener("click", renderBusinessDateAudit);
-    // Portal live clock — starts immediately, ticks every second
+    // Portal live clock â€” starts immediately, ticks every second
     (function startPortalClock() {
       function tick() {
         const now = new Date();
@@ -5475,7 +5575,7 @@
           const ss = String(totalSec % 60).padStart(2, "0");
           timer.textContent = hh + ":" + mm + ":" + ss;
           timer.className = "portal-4am-timer";
-          if (hh >= 3)      { /* green — default */ }
+          if (hh >= 3)      { /* green â€” default */ }
           else if (hh >= 1) { timer.className += " timer-amber"; }
           else if (totalSec > 1800) { timer.className += " timer-red"; }
           else              { timer.className += " timer-red timer-pulse"; }
@@ -5500,7 +5600,7 @@
       setInterval(tick, 1000);
     })();
 
-    // ── Push notifications ────────────────────────────────────────────────────
+    // â”€â”€ Push notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     var _portalNotifiedTags = new Set();
 
     function portalNotify(title, body, tag) {
@@ -5526,7 +5626,7 @@
       if (enableBtn) enableBtn.addEventListener("click", function() {
         Notification.requestPermission().then(function(perm) {
           if (banner) banner.style.display = "none";
-          if (perm === "granted") showToast("Alerts enabled — you'll be notified when trucks go into detention.");
+          if (perm === "granted") showToast("Alerts enabled â€” you'll be notified when trucks go into detention.");
         });
       });
       if (dismissBtn) dismissBtn.addEventListener("click", function() {
@@ -5545,7 +5645,7 @@
           Notification.requestPermission().then(function(perm) {
             if (perm === "granted") {
               try { new Notification("Test alert", { body: "Alerts are now enabled.", tag: "test:" + Date.now() }); } catch (e) {}
-              showToast("Alerts enabled — test sent.");
+              showToast("Alerts enabled â€” test sent.");
             } else {
               showToast("Notification permission not granted.");
             }
@@ -5570,6 +5670,34 @@
     });
     els.portalStatusFilter.addEventListener("change", renderPortalBoard);
 
+    document.querySelectorAll(".portal-view-btn").forEach(function(button) {
+      button.addEventListener("click", function() {
+        portalSetView(button.dataset.view || "board");
+      });
+    });
+    if (els.portalShiftReportBtn) {
+      els.portalShiftReportBtn.addEventListener("click", portalOpenShiftReport);
+    }
+    if (els.portalReportCloseBtn) {
+      els.portalReportCloseBtn.addEventListener("click", portalCloseShiftReport);
+    }
+    if (els.portalReportModal) {
+      els.portalReportModal.addEventListener("click", function(event) {
+        if (event.target === els.portalReportModal) portalCloseShiftReport();
+      });
+    }
+    if (els.portalReportCopyBtn) {
+      els.portalReportCopyBtn.addEventListener("click", function() {
+        const text = els.portalReportBody ? els.portalReportBody.textContent : "";
+        if (!text) return;
+        navigator.clipboard.writeText(text).then(function() {
+          showToast("Shift report copied.");
+        }, function() {
+          showToast("Copy failed. Select the report text manually.");
+        });
+      });
+    }
+
     if (els.portalDmsSyncBtn) {
       els.portalDmsSyncBtn.addEventListener("click", function() {
         state.portal.credentialBlocked = false;
@@ -5584,9 +5712,9 @@
       diagBtn.addEventListener("click", async function() {
         diagBtn.disabled = true;
         const oldLabel = diagBtn.textContent;
-        diagBtn.textContent = "Checking DMS…";
+        diagBtn.textContent = "Checking DMSâ€¦";
         diagBox.style.display = "";
-        diagBox.innerHTML = "Contacting DMS…";
+        diagBox.innerHTML = "Contacting DMSâ€¦";
         try {
           const resp = await fetch("/api/dms/portal?debug=true", { headers: { "Accept": "application/json" } });
           const data = await resp.json().catch(function(){ return {}; });
@@ -5594,7 +5722,7 @@
           const esc = function(s){ return String(s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); };
 
           if (d.stage === "login" || (data.ok === false && d.error)) {
-            diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;margin-bottom:6px;">❌ DMS login failed</div>'
+            diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;margin-bottom:6px;">âŒ DMS login failed</div>'
               + '<div style="color:var(--muted,#888);">' + esc(d.error || "Unknown error") + '</div>'
               + '<div style="margin-top:8px;">The board can\'t show live trucks until login works. Credentials live in Railway env vars DMS_USERNAME / DMS_PASSWORD.</div>';
             return;
@@ -5607,33 +5735,33 @@
             const ok = !!ft[f];
             return '<tr><td style="padding:2px 10px 2px 0;">' + tsLabels[f] + '</td>'
               + '<td style="padding:2px 0;color:' + (ok ? "#276749" : "#c53030") + ';font-weight:700;">'
-              + (ok ? "✓ " + esc(ft[f]) : "✗ missing (field name not matched)") + '</td></tr>';
+              + (ok ? "âœ“ " + esc(ft[f]) : "âœ— missing (field name not matched)") + '</td></tr>';
           }).join("");
           const anyTs = tsFields.some(function(f){ return !!ft[f]; });
 
           const raw = JSON.stringify(d, null, 2);
           diagBox.innerHTML =
-            '<div style="font-weight:800;color:#276749;margin-bottom:6px;">✅ DMS connected — '
+            '<div style="font-weight:800;color:#276749;margin-bottom:6px;">âœ… DMS connected â€” '
               + (d.load_count || 0) + ' loads, ' + (d.stamp_count || 0) + ' stamps (business date ' + esc(d.business_date || "?") + ')</div>'
             + '<div style="margin:6px 0;font-weight:700;">Timestamps detected on first truck:</div>'
             + '<table style="font-size:0.92em;">' + tsRows + '</table>'
             + (anyTs
-                ? '<div style="margin-top:8px;color:#276749;">At least some timestamps mapped — statuses should populate.</div>'
+                ? '<div style="margin-top:8px;color:#276749;">At least some timestamps mapped â€” statuses should populate.</div>'
                 : '<div style="margin-top:8px;color:#c53030;font-weight:700;">No timestamps matched. This is why the ring/bar/est don\'t move. Send me the field names below and I\'ll map them.</div>')
             + '<div style="margin-top:10px;font-weight:700;">DMS load field names:</div>'
             + '<div style="font-family:monospace;font-size:0.85em;word-break:break-all;color:var(--muted,#666);">' + esc((d.load_keys||[]).join(", ") || "(none)") + '</div>'
             + '<div style="margin-top:6px;font-weight:700;">DMS stamp field names:</div>'
             + '<div style="font-family:monospace;font-size:0.85em;word-break:break-all;color:var(--muted,#666);">' + esc((d.stamp_keys||[]).join(", ") || "(none)") + '</div>'
-            + '<button id="portalDmsDiagCopy" type="button" class="secondary-btn" style="margin-top:10px;font-size:0.8em;">📋 Copy full diagnostic</button>'
+            + '<button id="portalDmsDiagCopy" type="button" class="secondary-btn" style="margin-top:10px;font-size:0.8em;">ðŸ“‹ Copy full diagnostic</button>'
             + '<details style="margin-top:8px;"><summary style="cursor:pointer;color:var(--muted,#888);">Show raw data</summary>'
             + '<pre style="white-space:pre-wrap;word-break:break-all;font-size:0.78em;max-height:280px;overflow:auto;background:var(--bg,#f7fafc);padding:8px;border-radius:6px;">' + esc(raw) + '</pre></details>';
 
           const copyBtn = document.getElementById("portalDmsDiagCopy");
           if (copyBtn) copyBtn.addEventListener("click", function(){
-            navigator.clipboard.writeText(raw).then(function(){ copyBtn.textContent = "✓ Copied — paste it to me"; }, function(){ copyBtn.textContent = "Copy failed — select the raw data manually"; });
+            navigator.clipboard.writeText(raw).then(function(){ copyBtn.textContent = "âœ“ Copied â€” paste it to me"; }, function(){ copyBtn.textContent = "Copy failed â€” select the raw data manually"; });
           });
         } catch (err) {
-          diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;">❌ Could not reach the diagnostic endpoint</div><div style="color:var(--muted,#888);margin-top:4px;">' + String(err && err.message || err) + '</div>';
+          diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;">âŒ Could not reach the diagnostic endpoint</div><div style="color:var(--muted,#888);margin-top:4px;">' + String(err && err.message || err) + '</div>';
         } finally {
           diagBtn.disabled = false;
           diagBtn.textContent = oldLabel;
@@ -5757,7 +5885,7 @@
     const trainFromDmsBtn = document.getElementById("trainFromDmsBtn");
     if (trainFromDmsBtn) trainFromDmsBtn.addEventListener("click", function() {
       const btn = this;
-      btn.disabled = true; const orig = btn.textContent; btn.textContent = "Training from DMS…";
+      btn.disabled = true; const orig = btn.textContent; btn.textContent = "Training from DMSâ€¦";
       fetch("/api/portal/learn-history?days=7", { method: "POST" })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -5768,7 +5896,7 @@
             showToast("Training failed: " + ((data && data.detail) || "DMS unavailable."));
           }
         })
-        .catch(function() { showToast("Training failed — could not reach DMS."); })
+        .catch(function() { showToast("Training failed â€” could not reach DMS."); })
         .finally(function() { btn.disabled = false; btn.textContent = orig; });
     });
     els.lumperValidationFilter.addEventListener("change", renderLumperValidationTable);
@@ -5809,7 +5937,7 @@
     });
     loadLiveDoorSheet(false);
 
-    // Auth removed — open access
+    // Auth removed â€” open access
     loadDecisionsFromBackend();
 
     async function handleFile(event) {
@@ -7169,7 +7297,7 @@
       return key.includes("absopure");
     }
 
-    // ── Spill tracking ──────────────────────────────────────────
+    // â”€â”€ Spill tracking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function getSpillRecords() {
       try { return JSON.parse(localStorage.getItem("spillRecords") || "[]"); } catch(e) { return []; }
     }
@@ -7227,18 +7355,18 @@
       if (rate <= 0.30) return "";
       const pct = Math.round(rate * 100);
       const note = supplierSpillNote(supplier) || "";
-      return `<div class="spill-alert-banner">⚠️ <strong>Warning: Truck may be spilled</strong> — ${escapeHtml(supplier)} has a ${pct}% spill rate. Alert the receiving team.${note ? " " + escapeHtml(note) : ""}</div>`;
+      return `<div class="spill-alert-banner">âš ï¸ <strong>Warning: Truck may be spilled</strong> â€” ${escapeHtml(supplier)} has a ${pct}% spill rate. Alert the receiving team.${note ? " " + escapeHtml(note) : ""}</div>`;
     }
 
-    // ── Area-based door fallback (no supplier history) ────────────
+    // â”€â”€ Area-based door fallback (no supplier history) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     function areaFallbackDoor(truck) {
       if (!truck) return null;
       const text = normalizeText((truck.dockType || "") + " " + (truck.area || ""));
-      if (/\b(freezer|frozen)\b/.test(text)) return { door: 98, reason: "Area fallback: freezer truck → freezer doors (95-103). No supplier history found." };
-      if (/\b(cooler|cold|chill|chl|meat|dairy)\b/.test(text)) return { door: 88, reason: "Area fallback: cooler/CHL truck → cooler doors (87-94). No supplier history found." };
-      if (/\b(produce|salad)\b/.test(text)) return { door: 80, reason: "Area fallback: produce truck → produce doors (79-86). No supplier history found." };
-      if (/\b(a\s*wall|awall|chip|paper|water)\b/.test(text)) return { door: 28, reason: "Area fallback: A-Wall truck → doors 27-33. No supplier history found." };
-      if (/\b(dry|front|ambient|amb|grocery)\b/.test(text)) return { door: 54, reason: "Area fallback: dry/AMB truck → dry doors (46-74). No supplier history found." };
+      if (/\b(freezer|frozen)\b/.test(text)) return { door: 98, reason: "Area fallback: freezer truck â†’ freezer doors (95-103). No supplier history found." };
+      if (/\b(cooler|cold|chill|chl|meat|dairy)\b/.test(text)) return { door: 88, reason: "Area fallback: cooler/CHL truck â†’ cooler doors (87-94). No supplier history found." };
+      if (/\b(produce|salad)\b/.test(text)) return { door: 80, reason: "Area fallback: produce truck â†’ produce doors (79-86). No supplier history found." };
+      if (/\b(a\s*wall|awall|chip|paper|water)\b/.test(text)) return { door: 28, reason: "Area fallback: A-Wall truck â†’ doors 27-33. No supplier history found." };
+      if (/\b(dry|front|ambient|amb|grocery)\b/.test(text)) return { door: 54, reason: "Area fallback: dry/AMB truck â†’ dry doors (46-74). No supplier history found." };
       return null;
     }
 
@@ -8682,7 +8810,7 @@
         const spillRate = supplierSpillRate(truck.supplier);
         return {
           supplier: truck.supplier,
-          spillRisk: spillRate > 0.30 ? `⚠️ HIGH (${Math.round(spillRate * 100)}%)` : (spillRate > 0 ? `${Math.round(spillRate * 100)}%` : "—"),
+          spillRisk: spillRate > 0.30 ? `âš ï¸ HIGH (${Math.round(spillRate * 100)}%)` : (spillRate > 0 ? `${Math.round(spillRate * 100)}%` : "â€”"),
           spillHigh: spillRate > 0.30,
           range: recommendedDoorLabel(history, truck),
           live: liveDoorTextForHistory(history, truck),
@@ -8720,9 +8848,9 @@
       }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // DOOR SUGGESTOR HISTORY
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     const DOOR_HISTORY_KEY = "doorSuggestorHistory";
     const DOOR_HISTORY_MAX_DAYS = 90;
@@ -8744,10 +8872,10 @@
             supplier: r.supplier || "",
             reference: r.reference || "",
             po: r.po || "",
-            recommendedDoor: r.range || "—",
+            recommendedDoor: r.range || "â€”",
             dockType: r.dockType || "",
             spillHigh: Boolean(r.spillHigh),
-            spillRisk: r.spillRisk || "—",
+            spillRisk: r.spillRisk || "â€”",
             hourLabel: r.hourLabel || ""
           };
         })
@@ -8790,7 +8918,7 @@
         const spillCount = (snap.trucks || []).filter(function(t) { return t.spillHigh; }).length;
         const truckCount = snap.truckCount || (snap.trucks || []).length;
 
-        [dateStr, truckCount, topSuppliers || "—", spillCount > 0 ? ("⚠️ " + spillCount) : "—", snap.filename || "—"].forEach(function(v) {
+        [dateStr, truckCount, topSuppliers || "â€”", spillCount > 0 ? ("âš ï¸ " + spillCount) : "â€”", snap.filename || "â€”"].forEach(function(v) {
           const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
         });
 
@@ -8823,7 +8951,7 @@
       if (!els.historyDoorDetail) return;
       const dt = new Date(snap.savedAt);
       const dateStr = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-      if (els.historyDoorDetailTitle) els.historyDoorDetailTitle.textContent = "Door Suggestions — " + dateStr;
+      if (els.historyDoorDetailTitle) els.historyDoorDetailTitle.textContent = "Door Suggestions â€” " + dateStr;
       if (els.historyDoorDetailMeta) els.historyDoorDetailMeta.textContent = (snap.trucks || []).length + " trucks | " + snap.filename;
       const thead = els.historyDoorDetailTable.querySelector("thead");
       const tbody = els.historyDoorDetailTable.querySelector("tbody");
@@ -8839,8 +8967,8 @@
       trucks.forEach(function(t) {
         const tr = document.createElement("tr");
         if (t.spillHigh) tr.classList.add("spill-risk-row");
-        [t.supplier, t.reference, t.po, t.recommendedDoor, t.dockType, t.spillRisk, t.hourLabel || "—"].forEach(function(v) {
-          const td = document.createElement("td"); td.textContent = v || "—"; tr.appendChild(td);
+        [t.supplier, t.reference, t.po, t.recommendedDoor, t.dockType, t.spillRisk, t.hourLabel || "â€”"].forEach(function(v) {
+          const td = document.createElement("td"); td.textContent = v || "â€”"; tr.appendChild(td);
         });
         frag.appendChild(tr);
       });
@@ -8850,9 +8978,9 @@
       els.historyDoorDetail.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // Business Date Audit
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function tryParsePoDateSegment(seg) {
       // Match optional 1-4 letters then exactly 6 digits = MMDDYY
@@ -8911,7 +9039,7 @@
         const poDate = extractPoBusinessDate(po);
         if (!poDate) return;
         const poYMD = dateToYMD(poDate);
-        if (poYMD === expYMD) return; // correct — skip
+        if (poYMD === expYMD) return; // correct â€” skip
         const key = `${row.source}|${row.reference}|${po}`;
         if (seen.has(key)) return;
         seen.add(key);
@@ -8943,9 +9071,9 @@
           const parts = [];
           if (hasOps) parts.push(`OPS: ${audit.opsFileName || "loaded"}`);
           if (hasDms) parts.push(`DMS: ${audit.dmsFileName || audit.dmsFileName || (state.fileName || "daily report")}`);
-          els.bizDateSourceNote.innerHTML = `Using loaded audit files — ${escapeHtml(parts.join(" | "))}`;
+          els.bizDateSourceNote.innerHTML = `Using loaded audit files â€” ${escapeHtml(parts.join(" | "))}`;
         } else {
-          els.bizDateSourceNote.innerHTML = `Load OPS or DMS files in <strong>Breakdowns Audit</strong> first — this section reads those same files automatically.`;
+          els.bizDateSourceNote.innerHTML = `Load OPS or DMS files in <strong>Breakdowns Audit</strong> first â€” this section reads those same files automatically.`;
         }
       }
 
@@ -8976,11 +9104,11 @@
       // Kicker
       if (els.bizDateKicker) {
         if (!hasDms && !hasOps) {
-          els.bizDateKicker.textContent = "No report loaded — attach OPS/DMS in Breakdowns Audit";
+          els.bizDateKicker.textContent = "No report loaded â€” attach OPS/DMS in Breakdowns Audit";
         } else if (!expectedDate) {
           els.bizDateKicker.textContent = "Select a business date then click Run Audit";
         } else if (errors.length === 0) {
-          els.bizDateKicker.textContent = `All ${posWithDates.length} PO dates match ${formatDateMDY(expectedDate)} ✓`;
+          els.bizDateKicker.textContent = `All ${posWithDates.length} PO dates match ${formatDateMDY(expectedDate)} âœ“`;
         } else {
           els.bizDateKicker.textContent = `${errors.length} PO${errors.length !== 1 ? "s" : ""} entered on wrong business date`;
         }
@@ -8994,7 +9122,7 @@
           `DMS report: ${hasDms ? (audit.dmsFileName || state.fileName || "loaded") : "not loaded"}`,
           `Business date: ${expectedDate ? formatDateMDY(expectedDate) : "not set"}`,
           `POs scanned: ${posWithPo.length} total, ${posWithDates.length} with readable dates`,
-          `Detection: reads MMDDYY from dot-segments like ks071126 → 07/11/26`,
+          `Detection: reads MMDDYY from dot-segments like ks071126 â†’ 07/11/26`,
           `Only POs where the embedded date does not match the expected date are shown.`
         ].forEach(function(msg) { els.bizDateStatus.appendChild(emptySmall(msg)); });
       }
@@ -9056,9 +9184,9 @@
     }
 
 
-    // ═══════════════════════════════════════════════════════════
-    // MY PORTAL — Manual clock-in operations dashboard
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // MY PORTAL â€” Manual clock-in operations dashboard
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     const PORTAL_STORAGE_KEY = "portalTrucks";
 
@@ -9150,6 +9278,10 @@
           .map(portalLiveToBoardTruck);
         // Total trucks expected this shift (incl. not-yet-checked-in) for shift progress.
         state.portal.totalExpected = (typeof data.total_expected === "number") ? data.total_expected : state.portal.liveRows.length;
+        state.portal.rejectedCount = data.rejected_count || 0;
+        state.portal.noShowCount = data.no_show_count || 0;
+        state.portal.areaSummary = data.area_summary || [];
+        state.portal.businessDate = data.business_date || "";
         state.portal.liveUpdatedAt = data.updated_at || new Date().toISOString();
         state.portal.liveError = "";
         state.portal.credentialBlocked = false;
@@ -9184,7 +9316,7 @@
       }
     }
 
-    // Keeps the "Live DMS active … updated Xs ago" line ticking every second.
+    // Keeps the "Live DMS active â€¦ updated Xs ago" line ticking every second.
     function portalUpdateLiveStatusText() {
       const el = els.portalDmsStatus;
       if (!el || el.dataset.live !== "1") return;
@@ -9264,7 +9396,7 @@
         }
         if (behindMs > 0) {
           const bm = Math.round(behindMs / 60000);
-          countStr += " · " + bm + " min past 4AM";
+          countStr += " Â· " + bm + " min past 4AM";
         }
         els.portalEstNote.textContent = countStr;
       }
@@ -9444,7 +9576,7 @@
     function portalCalcStatus(truck, freeTimeMs, now) {
       const isDms = truck.source === "DMS";
 
-      // Completed — receiving finished. Turn time = actual dwell (check-in -> finish).
+      // Completed â€” receiving finished. Turn time = actual dwell (check-in -> finish).
       if (truck.receivingFinishMs) {
         const startMs = truck.checkInMs || truck.appointmentMs || truck.receivingFinishMs;
         const turnMin = Math.round((truck.receivingFinishMs - startMs) / 60000);
@@ -9454,7 +9586,7 @@
       if (!isDms && truck.finishMs) {
         const startMs = truck.checkInMs || truck.finishMs;
         const turnMin = Math.round((truck.finishMs - startMs) / 60000);
-        return { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Done ✓", countdownClass: "portal-countdown-active", minutesInDetention: null };
+        return { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Done âœ“", countdownClass: "portal-countdown-active", minutesInDetention: null };
       }
 
       // Driver at the door, appointment passed, but unload not started -> start soon.
@@ -9504,26 +9636,249 @@
       portalLoadExportsList();
     }
 
+    function portalCurrentTrucks() {
+      const manualTrucks = portalLoadTrucks().map(function(t) {
+        return Object.assign({ source: "Manual" }, t);
+      });
+      const liveTrucks = state.portal.liveRows || [];
+      const seen = new Set();
+      const all = [];
+      liveTrucks.forEach(function(t) {
+        seen.add(t.id);
+        all.push(t);
+      });
+      manualTrucks.forEach(function(t) {
+        if (!seen.has(t.id)) all.push(t);
+      });
+      return all;
+    }
+
+    function portalEnrichedTrucks() {
+      const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      return portalCurrentTrucks().map(function(t) {
+        return Object.assign({}, t, portalCalcStatus(t, freeTimeMs, now));
+      });
+    }
+
+    function portalStatusLabel(status) {
+      const labels = {
+        detention: "Detention",
+        startsoon: "Needs Start",
+        urgent: "Urgent",
+        warning: "Warning",
+        active: "Active",
+        waiting: "Waiting",
+        complete: "Complete"
+      };
+      return labels[status] || (status || "Unknown");
+    }
+
+    function portalFormatTime(ms) {
+      if (!ms) return "";
+      return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    }
+
+    function portalFillScorecard(container, cards) {
+      if (!container) return;
+      container.innerHTML = cards.map(function(card) {
+        return '<div class="dms-score ' + escapeHtml(card.color || "blue") + '">'
+          + '<div class="num">' + escapeHtml(card.value) + '</div>'
+          + '<div class="lbl">' + escapeHtml(card.label) + '</div>'
+          + '<div class="sub">' + escapeHtml(card.sub || "") + '</div>'
+          + '</div>';
+      }).join("");
+    }
+
+    function renderPortalDoorMap(enriched) {
+      const rows = (enriched || portalEnrichedTrucks()).slice().sort(function(a, b) {
+        const an = parseInt(a.door || "9999", 10);
+        const bn = parseInt(b.door || "9999", 10);
+        if (an !== bn) return an - bn;
+        return String(a.supplier || "").localeCompare(String(b.supplier || ""));
+      });
+      const complete = rows.filter(function(r) { return r.status === "complete"; }).length;
+      const detention = rows.filter(function(r) { return r.status === "detention"; }).length;
+      const urgent = rows.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
+      const active = Math.max(0, rows.length - complete - detention - urgent);
+      portalFillScorecard(els.portalScorecardDoors, [
+        { value: rows.length, label: "Arrived", sub: "Checked-in trucks", color: "blue" },
+        { value: active, label: "Active", sub: "Working normally", color: "green" },
+        { value: urgent, label: "Needs Eyes", sub: "Start soon / warning", color: "yellow" },
+        { value: detention, label: "Detention", sub: "Past receiving clock", color: "red" }
+      ]);
+      if (!els.portalDoorMap) return;
+      if (!rows.length) {
+        els.portalDoorMap.innerHTML = '<div class="door-empty">No checked-in trucks are on the live board yet.</div>';
+        return;
+      }
+      const classByStatus = {
+        complete: "done",
+        detention: "red",
+        urgent: "yellow",
+        startsoon: "yellow",
+        warning: "yellow",
+        active: "green",
+        waiting: "yellow"
+      };
+      els.portalDoorMap.innerHTML = rows.map(function(r) {
+        const cls = classByStatus[r.status] || "blue";
+        const detail = r.status === "complete"
+          ? "Finished " + portalFormatTime(r.finishMs || r.receivingFinishMs)
+          : (r.countdownLabel || portalStatusLabel(r.status));
+        return '<div class="door-tile ' + cls + '">'
+          + '<div class="door-no">Door ' + escapeHtml(r.door || "No door") + '</div>'
+          + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Unknown truck") + '</div>'
+          + '<div class="door-sup">PO ' + escapeHtml(r.po || "not listed") + '</div>'
+          + '<div class="door-dwell">' + escapeHtml(portalStatusLabel(r.status) + " | " + detail) + '</div>'
+          + '</div>';
+      }).join("");
+    }
+
+    function portalAreaRows(enriched) {
+      const summary = Array.isArray(state.portal.areaSummary) ? state.portal.areaSummary : [];
+      if (summary.length) {
+        return summary.map(function(a) {
+          const areaName = String(a.area || "").trim();
+          return {
+            area: areaName && areaName !== "\u2014" ? areaName : "No area listed",
+            scheduled: Number(a.scheduled || 0),
+            checked_in: Number(a.checked_in || 0),
+            completed: Number(a.completed || 0)
+          };
+        });
+      }
+      const map = new Map();
+      (enriched || portalEnrichedTrucks()).forEach(function(r) {
+        const area = (r.area || "").trim() || "No area listed";
+        if (!map.has(area)) map.set(area, { area: area, scheduled: 0, checked_in: 0, completed: 0 });
+        const item = map.get(area);
+        item.scheduled += 1;
+        if (r.checkInMs) item.checked_in += 1;
+        if (r.status === "complete") item.completed += 1;
+      });
+      return Array.from(map.values()).sort(function(a, b) { return b.scheduled - a.scheduled; });
+    }
+
+    function renderPortalAreaView(enriched) {
+      const rows = portalAreaRows(enriched);
+      const scheduled = rows.reduce(function(sum, r) { return sum + r.scheduled; }, 0);
+      const checkedIn = rows.reduce(function(sum, r) { return sum + r.checked_in; }, 0);
+      const completed = rows.reduce(function(sum, r) { return sum + r.completed; }, 0);
+      const open = Math.max(0, scheduled - completed);
+      portalFillScorecard(els.portalScorecardAreas, [
+        { value: scheduled, label: "Scheduled", sub: "Total shift load", color: "blue" },
+        { value: checkedIn, label: "Checked In", sub: "Arrived trucks", color: "yellow" },
+        { value: completed, label: "Complete", sub: "Finished receiving", color: "green" },
+        { value: open, label: "Still Open", sub: "Not finished yet", color: open ? "red" : "green" }
+      ]);
+      if (!els.portalAreaGrid) return;
+      if (!rows.length) {
+        els.portalAreaGrid.innerHTML = '<div class="door-empty">No area totals available yet.</div>';
+        return;
+      }
+      els.portalAreaGrid.innerHTML = rows.map(function(row) {
+        const pct = row.scheduled ? Math.round((row.completed / row.scheduled) * 100) : 0;
+        const width = row.scheduled ? Math.max(3, pct) : 0;
+        return '<article class="area-card">'
+          + '<div class="area-name">' + escapeHtml(row.area) + '</div>'
+          + '<div class="area-nums">' + escapeHtml(row.completed + " complete / " + row.checked_in + " arrived / " + row.scheduled + " scheduled") + '</div>'
+          + '<div class="area-bar"><i style="width:' + width + '%;"></i></div>'
+          + '<div class="area-pct">' + pct + '% finished</div>'
+          + '</article>';
+      }).join("");
+    }
+
+    function portalRenderActiveView(enriched) {
+      const view = state.portal.portalView || "board";
+      if (view === "doors") renderPortalDoorMap(enriched);
+      if (view === "areas") renderPortalAreaView(enriched);
+    }
+
+    function portalSetView(view) {
+      view = view === "doors" || view === "areas" ? view : "board";
+      state.portal.portalView = view;
+      document.querySelectorAll(".portal-view-btn").forEach(function(button) {
+        button.classList.toggle("active", button.dataset.view === view);
+      });
+      if (els.portalBoardView) els.portalBoardView.style.display = view === "board" ? "" : "none";
+      if (els.portalDoorView) els.portalDoorView.style.display = view === "doors" ? "" : "none";
+      if (els.portalAreaView) els.portalAreaView.style.display = view === "areas" ? "" : "none";
+      if (view === "board") renderPortalBoard();
+      else portalRenderActiveView();
+    }
+
+    function portalBuildShiftReport() {
+      const rows = portalEnrichedTrucks();
+      const complete = rows.filter(function(r) { return r.status === "complete"; }).length;
+      const detention = rows.filter(function(r) { return r.status === "detention"; }).length;
+      const urgent = rows.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
+      const scheduled = Math.max(rows.length, Number(state.portal.totalExpected || 0));
+      const open = Math.max(0, scheduled - complete);
+      const alerts = portalGetAlerts();
+      const areas = portalAreaRows(rows);
+      const lines = [
+        "OKS Live Shift Report",
+        "Generated: " + new Date().toLocaleString("en-US", { hour12: true }),
+        "Business date: " + (state.portal.businessDate || "not listed"),
+        "",
+        "Shift Summary",
+        "Scheduled trucks: " + scheduled,
+        "Arrived trucks: " + rows.length,
+        "Completed trucks: " + complete,
+        "Still open: " + open,
+        "Needs attention: " + urgent,
+        "In detention: " + detention,
+        "Rejected: " + (state.portal.rejectedCount || 0),
+        "No-show / late without check-in: " + (state.portal.noShowCount || 0),
+        "",
+        "Area Summary"
+      ];
+      if (areas.length) {
+        areas.forEach(function(a) {
+          lines.push("- " + a.area + ": " + a.completed + " complete / " + a.checked_in + " arrived / " + a.scheduled + " scheduled");
+        });
+      } else {
+        lines.push("- No area totals available yet.");
+      }
+      lines.push("", "Current Alerts");
+      if (alerts.length) {
+        alerts.slice(0, 20).forEach(function(a) {
+          lines.push("- " + a.sevLabel + ": " + a.title + " | " + a.detail);
+        });
+        if (alerts.length > 20) lines.push("- " + (alerts.length - 20) + " more alerts not shown.");
+      } else {
+        lines.push("- No active alerts.");
+      }
+      return lines.join("\n");
+    }
+
+    function portalOpenShiftReport() {
+      if (els.portalReportBody) els.portalReportBody.textContent = portalBuildShiftReport();
+      if (els.portalReportModal) els.portalReportModal.style.display = "flex";
+    }
+
+    function portalCloseShiftReport() {
+      if (els.portalReportModal) els.portalReportModal.style.display = "none";
+    }
+
     function repairMyPortalPanel() {
       const currentLabel = els.sectionMenuCurrent ? els.sectionMenuCurrent.textContent || "" : "";
       const panel = document.getElementById("myPortalPanel");
       const shouldBePortal = currentLabel.toLowerCase().includes("my portal") ||
         Boolean(document.querySelector('.tab-button[data-tab="myPortal"][aria-selected="true"]'));
-      if (!shouldBePortal || !panel) return;
-      // Make sure the portal panel is the visible one.
+      if (!panel) return;
+      if (!shouldBePortal) {
+        panel.style.display = "";
+        return;
+      }
+      const needsRepair = !panel.classList.contains("active") || getComputedStyle(panel).display === "none";
+      if (!needsRepair) return;
       document.querySelectorAll(".tab-panel").forEach(function(other) {
         other.classList.toggle("active", other === panel);
       });
-      panel.style.display = "block";
-      // IMPORTANT: never wipe panel.innerHTML. The static markup (form, cards,
-      // chart containers) lives in the document and renderPortal only *updates*
-      // those elements — it can't rebuild them. Destroying the HTML here blanked
-      // the panel permanently. If the portal hasn't initialized yet (its live
-      // clock isn't running), kick it off once; otherwise just leave it alone
-      // (portalLiveClock already refreshes it every second).
-      if (!state.portal.liveClockInterval) {
-        try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
-      }
+      panel.style.display = "";
+      try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
     }
 
     // Compute the current operational alerts. Each truck can raise several:
@@ -9539,7 +9894,7 @@
       const now = Date.now();
       const MS = 60000;
       // Current shift start (8 PM today, or 8 PM yesterday if before 8 PM now).
-      // Trucks checked in before this are from a previous shift — never alert.
+      // Trucks checked in before this are from a previous shift â€” never alert.
       const shiftStartMs = (function() {
         const d = new Date(); d.setHours(20, 0, 0, 0);
         if (d.getTime() > now) d.setDate(d.getDate() - 1);
@@ -9558,51 +9913,51 @@
         const doorStr = "Door " + (r.door || "?");
         const id = r.id || r.ref;
 
-        // 1) Detention — receiving not finished within appt + free time
+        // 1) Detention â€” receiving not finished within appt + free time
         if (r.status === "detention") {
-          alerts.push({ truck: r, sev: "detention", order: 0, icon: "🔴", sevLabel: "Detention",
+          alerts.push({ truck: r, sev: "detention", order: 0, icon: "ðŸ”´", sevLabel: "Detention",
             title: "Detention - " + who,
             detail: doorStr + " | Past the " + freeMin + "-min receiving window (appt + clock). Clock it out now.",
-            notifyTitle: "🔴 Detention - " + who,
+            notifyTitle: "ðŸ”´ Detention - " + who,
             notifyBody: doorStr + " | Receiving past appt + " + freeMin + " min. Clock it out.",
             tag: "detention:" + id });
         }
-        // 2) Needs unload start — checked in, not started, >=30 min past appt (ORANGE)
+        // 2) Needs unload start â€” checked in, not started, >=30 min past appt (ORANGE)
         if (r.appointmentMs && r.checkInMs && !r.unloadStartMs && now >= r.appointmentMs + 30 * MS) {
           const lateMin = Math.floor((now - r.appointmentMs) / MS);
-          alerts.push({ truck: r, sev: "needstart", order: 1, icon: "🟠", sevLabel: "Needs Start",
+          alerts.push({ truck: r, sev: "needstart", order: 1, icon: "ðŸŸ ", sevLabel: "Needs Start",
             title: "Needs unload start - " + who,
             detail: doorStr + " | Checked in, " + lateMin + " min past appt, not started. Tell a lead to start this truck.",
-            notifyTitle: "🟠 Needs unload start - " + who,
+            notifyTitle: "ðŸŸ  Needs unload start - " + who,
             notifyBody: doorStr + " | " + lateMin + " min past appt, not started. Tell a lead to start it.",
             tag: "needstart:" + id });
         }
-        // 3) Unloader delay — unloading >=45 min, no unload-finish stamp
+        // 3) Unloader delay â€” unloading >=45 min, no unload-finish stamp
         if (r.unloadStartMs && !r.unloadFinishMs && now >= r.unloadStartMs + 45 * MS) {
           const dur = Math.floor((now - r.unloadStartMs) / MS);
-          alerts.push({ truck: r, sev: "unloaderdelay", order: 2, icon: "🟠", sevLabel: "Unloader Delay",
+          alerts.push({ truck: r, sev: "unloaderdelay", order: 2, icon: "ðŸŸ ", sevLabel: "Unloader Delay",
             title: "Unloader delay - " + who,
             detail: doorStr + " | Unloading " + dur + " min with no unload-finish stamp. Check the unloader.",
-            notifyTitle: "🟠 Unloader delay - " + who,
+            notifyTitle: "ðŸŸ  Unloader delay - " + who,
             notifyBody: doorStr + " | Unloading " + dur + " min, not finished. Check the unloader.",
             tag: "unloaderdelay:" + id });
         }
-        // 4) Receiving not started — unload finished >=45 min ago, receiving not started
+        // 4) Receiving not started â€” unload finished >=45 min ago, receiving not started
         if (r.unloadFinishMs && !r.receivingStartMs && !r.receivingFinishMs && now >= r.unloadFinishMs + 45 * MS) {
           const dur = Math.floor((now - r.unloadFinishMs) / MS);
-          alerts.push({ truck: r, sev: "recdelay", order: 3, icon: "🟡", sevLabel: "Receiving Delay",
+          alerts.push({ truck: r, sev: "recdelay", order: 3, icon: "ðŸŸ¡", sevLabel: "Receiving Delay",
             title: "Receiving not started - " + who,
             detail: doorStr + " | Unload finished " + dur + " min ago, receiving not started yet.",
-            notifyTitle: "🟡 Receiving not started - " + who,
+            notifyTitle: "ðŸŸ¡ Receiving not started - " + who,
             notifyBody: doorStr + " | Unload done " + dur + " min ago, receiving not started.",
             tag: "recdelay:" + id });
         }
-        // 5) Urgent — within 30 min of the receiving deadline
+        // 5) Urgent â€” within 30 min of the receiving deadline
         if (r.status === "urgent") {
-          alerts.push({ truck: r, sev: "urgent", order: 4, icon: "🟠", sevLabel: "Urgent",
+          alerts.push({ truck: r, sev: "urgent", order: 4, icon: "ðŸŸ ", sevLabel: "Urgent",
             title: "Urgent - " + who,
             detail: doorStr + " | Only " + Math.max(0, Math.round((r.msRemaining || 0) / MS)) + " min left to finish receiving.",
-            notifyTitle: "🟠 Urgent - " + who,
+            notifyTitle: "ðŸŸ  Urgent - " + who,
             notifyBody: doorStr + " | Under 30 min to finish receiving.",
             tag: "urgent:" + id });
         }
@@ -9623,7 +9978,7 @@
       // Fire notifications (deduped per kind+truck via _portalNotifiedTags).
       alerts.forEach(function(a) { portalNotify(a.notifyTitle, a.notifyBody, a.tag); });
 
-      // Tab badge — red if any detention, otherwise orange.
+      // Tab badge â€” red if any detention, otherwise orange.
       if (badge) {
         if (alerts.length > 0) {
           badge.textContent = alerts.length;
@@ -9637,7 +9992,7 @@
 
       if (meta) {
         meta.textContent = alerts.length
-          ? alerts.length + " alert" + (alerts.length !== 1 ? "s" : "") + " need attention · updated " + new Date().toLocaleTimeString()
+          ? alerts.length + " alert" + (alerts.length !== 1 ? "s" : "") + " need attention Â· updated " + new Date().toLocaleTimeString()
           : "All clear - no trucks need attention right now.";
       }
 
@@ -9766,12 +10121,12 @@
         const notStarted = enriched.filter(function(t) { return t.status !== "complete" && !t.checkInMs; });
         const n = notStarted.length;
         if (n === 0 && enriched.length > 0) {
-          els.portal4amCount.textContent = "✓";
+          els.portal4amCount.textContent = "âœ“";
           els.portal4amCount.style.color = "#38a169";
           els.portal4amNote.textContent = "All trucks started receiving.";
           els.portal4amCard.style.borderColor = "#38a169";
         } else if (msTo4am <= 0) {
-          els.portal4amCount.textContent = n > 0 ? n : "—";
+          els.portal4amCount.textContent = n > 0 ? n : "â€”";
           els.portal4amCount.style.color = n > 0 ? "#c53030" : "";
           els.portal4amNote.textContent = n > 0 ? n + " truck(s) missed the 4AM cutoff" : "Cutoff passed.";
           els.portal4amCard.style.borderColor = n > 0 ? "#c53030" : "";
@@ -9779,9 +10134,9 @@
           const minsTo = Math.round(msTo4am / 60000);
           const toStr = minsTo < 60 ? minsTo + " min" : Math.floor(minsTo/60) + "h " + (minsTo%60) + "m";
           if (n === 0) {
-            els.portal4amCount.textContent = "✓";
+            els.portal4amCount.textContent = "âœ“";
             els.portal4amCount.style.color = "#38a169";
-            els.portal4amNote.textContent = toStr + " to 4AM — all started.";
+            els.portal4amNote.textContent = toStr + " to 4AM â€” all started.";
             els.portal4amCard.style.borderColor = "#38a169";
           } else {
             els.portal4amCount.textContent = n;
@@ -9795,7 +10150,7 @@
               els.portal4amCount.style.color = "";
               els.portal4amCard.style.borderColor = "";
             }
-            els.portal4amNote.textContent = n + " not started · " + toStr + " to 4AM";
+            els.portal4amNote.textContent = n + " not started Â· " + toStr + " to 4AM";
           }
         }
       }
@@ -9808,13 +10163,13 @@
       if (completedWithTime.length) avgTurn = Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMin; }, 0) / completedWithTime.length);
       if (els.portalAvgTurn) els.portalAvgTurn.textContent = Math.floor(avgTurn/60) + "h " + (avgTurn%60) + "m";
 
-      // Shift window: 8PM → 4AM (always compute 4AM as 8h after shift start)
+      // Shift window: 8PM â†’ 4AM (always compute 4AM as 8h after shift start)
       const shiftStartMs = (function() { const d = new Date(); d.setHours(20,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime(); })();
       const goal4amMs = shiftStartMs + 8 * 3600000;
       const timeRemainingToGoalMs = Math.max(0, goal4amMs - now);
       const shiftElapsedMs = Math.max(0, now - shiftStartMs);
 
-      // Estimated completion — latest per-truck deadline
+      // Estimated completion â€” latest per-truck deadline
       const runningTrucks = [...active, ...startSoon, ...urgent, ...warning, ...detention];
       const stillRunning = runningTrucks.length;
       let estMs = null;
@@ -9838,16 +10193,16 @@
           if (minsOut <= 0) {
             els.portalEstNote.textContent = stillRunning + " truck(s) past deadline";
           } else if (minsOut < 60) {
-            els.portalEstNote.textContent = stillRunning + " remaining · " + minsOut + " min away";
+            els.portalEstNote.textContent = stillRunning + " remaining Â· " + minsOut + " min away";
           } else {
-            els.portalEstNote.textContent = stillRunning + " remaining · " + Math.floor(minsOut/60) + "h " + (minsOut%60) + "m away";
+            els.portalEstNote.textContent = stillRunning + " remaining Â· " + Math.floor(minsOut/60) + "h " + (minsOut%60) + "m away";
           }
         }
       } else if (enriched.length > 0) {
-        if (els.portalEstComplete) els.portalEstComplete.textContent = "Done ✓";
+        if (els.portalEstComplete) els.portalEstComplete.textContent = "Done âœ“";
         if (els.portalEstNote) els.portalEstNote.textContent = "All trucks completed!";
       } else {
-        if (els.portalEstComplete) els.portalEstComplete.textContent = "—";
+        if (els.portalEstComplete) els.portalEstComplete.textContent = "â€”";
         if (els.portalEstNote) els.portalEstNote.textContent = "Clock in trucks above.";
       }
 
@@ -9896,7 +10251,7 @@
             " Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr;
           if (!state.portal.notifiedBehind) {
             state.portal.notifiedBehind = true;
-            portalMaybeNotify("OKS Portal — Behind Schedule", "Running " + behindMin + " min behind. Est. finish " + h12b + ":" + mm2 + " " + ampm2 + ". Need " + (needRate || "?") + " trucks/hr.");
+            portalMaybeNotify("OKS Portal â€” Behind Schedule", "Running " + behindMin + " min behind. Est. finish " + h12b + ":" + mm2 + " " + ampm2 + ". Need " + (needRate || "?") + " trucks/hr.");
           }
         } else {
           const bufMin = Math.round((goal4amMs - estMs) / 60000);
@@ -9909,17 +10264,17 @@
         }
       }
 
-      // ── Charts row ─────────────────────────────────────────────────────────
+      // â”€â”€ Charts row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const chartsRow = document.getElementById("portalChartsRow");
       if (shiftTotal > 0 && chartsRow) {
         chartsRow.style.display = "";
         const total = enriched.length;  // trucks currently on the board (for the status bar)
         const boardTotal = Math.max(1, total);
-        // Shift progress is measured against ALL trucks expected this shift —
-        // including ones not yet checked in — not just what's on the dock.
+        // Shift progress is measured against ALL trucks expected this shift â€”
+        // including ones not yet checked in â€” not just what's on the dock.
         const donePct = shiftTotal ? Math.round((complete.length / shiftTotal) * 100) : 0;
 
-        // 1. Completion ring (circumference = 2π×34 ≈ 213.6)
+        // 1. Completion ring (circumference = 2Ï€Ã—34 â‰ˆ 213.6)
         const ringFill = document.getElementById("portalRingFill");
         const ringPct  = document.getElementById("portalRingPct");
         const ringSub  = document.getElementById("portalRingSubPct");
@@ -9932,7 +10287,7 @@
         if (ringPct) ringPct.textContent = donePct + "%";
         if (ringSub) ringSub.textContent = complete.length + " / " + shiftTotal;
         const progLabel = document.getElementById("portalProgressLabel");
-        if (progLabel) progLabel.textContent = complete.length + " done · " + remainingShift + " remaining of " + shiftTotal + " this shift";
+        if (progLabel) progLabel.textContent = complete.length + " done Â· " + remainingShift + " remaining of " + shiftTotal + " this shift";
 
         // 2. Status breakdown segmented bar
         const activeLen   = active.length + warning.length;
@@ -9967,7 +10322,7 @@
           paceEl.textContent = rate > 0 ? ("Pace: ~" + rate + " trucks / hr") : "";
         }
 
-        // 3. Shift timeline (8PM → 4AM = 8 hrs = 28800000 ms)
+        // 3. Shift timeline (8PM â†’ 4AM = 8 hrs = 28800000 ms)
         const shiftTotalMs = 8 * 3600000;
         const elapsedMs = Math.min(Math.max(now - shiftStartMs, 0), shiftTotalMs);
         const shiftPct  = Math.round(elapsedMs / shiftTotalMs * 100);
@@ -9995,7 +10350,7 @@
           if (state.portal.estMs && behindMs > 60000) {
             const behindMin = Math.round(behindMs / 60000);
             tlPace.style.color = "#e53e3e";
-            tlPace.textContent = "⚠ Est. finish " + behindMin + " min past 4 AM — pace up";
+            tlPace.textContent = "âš  Est. finish " + behindMin + " min past 4 AM â€” pace up";
           } else if (state.portal.estMs && state.portal.estMs <= goal4amMs) {
             tlPace.style.color = "#38a169";
             tlPace.textContent = "On track to finish before 4 AM";
@@ -10009,8 +10364,9 @@
 
       // Per-truck alerts now render on the dedicated Alerts tab (keeps the board clean).
       renderAlertsTab();
+      portalRenderActiveView(enriched);
 
-      // When called from the per-second live clock, refresh metrics/charts only —
+      // When called from the per-second live clock, refresh metrics/charts only â€”
       // skip the table DOM rebuild to avoid flicker and resetting button clicks.
       if (metricsOnly) return;
 
@@ -10052,7 +10408,7 @@
         statusTd.appendChild(badge);
         tr.appendChild(statusTd);
 
-        let checkInStr = "—";
+        let checkInStr = "â€”";
         if (r.checkInMs) {
           const checkInTime = new Date(r.checkInMs);
           const ch = checkInTime.getHours(), cm = String(checkInTime.getMinutes()).padStart(2,"0");
@@ -10060,7 +10416,7 @@
           checkInStr = ch12 + ":" + cm + " " + camp;
         }
 
-        [r.ref, r.door || "—", r.supplier || "—", r.po || "—", checkInStr].forEach(function(v) {
+        [r.ref, r.door || "â€”", r.supplier || "â€”", r.po || "â€”", checkInStr].forEach(function(v) {
           const td = document.createElement("td"); td.textContent = v; tr.appendChild(td);
         });
 
@@ -10091,7 +10447,7 @@
         }
         tr.appendChild(turnTd);
 
-        // Load progress pipeline — click a dot to stamp that stage
+        // Load progress pipeline â€” click a dot to stamp that stage
         const progTd = document.createElement("td");
         progTd.style.padding = "4px 6px";
         const pipe = document.createElement("div");
@@ -10117,7 +10473,7 @@
             timeStr = hh + ":" + mm + ap;
           }
           stepDiv.title = done
-            ? step.title + " — " + timeStr + " (click to clear)"
+            ? step.title + " â€” " + timeStr + " (click to clear)"
             : "Click to mark " + step.title + " now";
           stepDiv.innerHTML = '<div class="load-step-dot"></div>'
             + '<div class="load-step-label">' + step.abbr + '</div>'
@@ -10147,7 +10503,7 @@
           delBtn.type = "button";
           delBtn.className = "secondary-btn";
           delBtn.style.cssText = "font-size:0.75em; padding:3px 8px; color:#e53e3e; border-color:#e53e3e;";
-          delBtn.textContent = "✕";
+          delBtn.textContent = "âœ•";
           delBtn.title = "Remove";
           delBtn.dataset.id = r.id;
           delBtn.addEventListener("click", function() {
@@ -10170,14 +10526,14 @@
       }
       if (els.portalBoardMeta) {
         els.portalBoardMeta.textContent = enriched.length > 0
-          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown • " + detention.length + " in detention • " + (startSoon.length + urgent.length + warning.length) + " urgent/warning • updated " + new Date().toLocaleTimeString())
+          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown â€¢ " + detention.length + " in detention â€¢ " + (startSoon.length + urgent.length + warning.length) + " urgent/warning â€¢ updated " + new Date().toLocaleTimeString())
           : "No trucks clocked in yet. Use the form above to add a truck.";
       }
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // FEATURE 1: Clerk Leaderboard
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function extractPoClerkId(po) {
       const str = String(po || "").trim();
@@ -10257,8 +10613,8 @@
         els.clerkBoardStatus.innerHTML = "";
         const totalPOs = rows.reduce(function(s, r) { return s + r.total; }, 0);
         const sourceNote = usingNames
-          ? "Source: Manager Name column (eclipsemgr / entered by / manager name — whichever is present)"
-          : "Source: PO number initials — no Manager Name column found. Add that column to OPS/DMS for better accuracy.";
+          ? "Source: Manager Name column (eclipsemgr / entered by / manager name â€” whichever is present)"
+          : "Source: PO number initials â€” no Manager Name column found. Add that column to OPS/DMS for better accuracy.";
         [
           "Clerks found: " + rows.length,
           "Total PO rows attributed: " + totalPOs,
@@ -10289,7 +10645,7 @@
         rateTd.className = rateClass;
         tr.appendChild(rateTd);
         const watchTd = document.createElement("td");
-        watchTd.textContent = c.totalErrors ? c.worstCategory : "—";
+        watchTd.textContent = c.totalErrors ? c.worstCategory : "â€”";
         tr.appendChild(watchTd);
         frag.appendChild(tr);
       });
@@ -10303,7 +10659,7 @@
       if (!rows.length) { showToast("No clerk data to export."); return; }
       const headers = ["Clerk / Manager", "Total POs", "Date Errors", "PO Typos", "Missed Breakdowns", "Total Errors", "Error Rate %", "Watch Area"];
       const csvRows = rows.map(function(c) {
-        return [c.clerkId, c.total, c.dateErrors, c.poErrors, c.missedBreakdowns, c.totalErrors, Math.round(c.errorRate * 100), c.totalErrors ? c.worstCategory : "—"]
+        return [c.clerkId, c.total, c.dateErrors, c.poErrors, c.missedBreakdowns, c.totalErrors, Math.round(c.errorRate * 100), c.totalErrors ? c.worstCategory : "â€”"]
           .map(function(v) { return `"${String(v).replace(/"/g, '""')}"`; }).join(",");
       });
       const csv = [headers.join(","), ...csvRows].join("\n");
@@ -10313,9 +10669,9 @@
       URL.revokeObjectURL(url);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // FEATURE 3: Truck Turn-Time Tracker
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function parseDmsTs(val) {
       if (!val) return null;
@@ -10379,7 +10735,7 @@
 
       if (els.turnKicker) {
         if (!dmsReport) {
-          els.turnKicker.textContent = "No DMS report — load one in Breakdowns Audit";
+          els.turnKicker.textContent = "No DMS report â€” load one in Breakdowns Audit";
         } else if (!rows.length) {
           els.turnKicker.textContent = "No matching timestamp columns found in this report";
         } else {
@@ -10395,8 +10751,8 @@
         if (els.turnSlowestTime) els.turnSlowestTime.textContent = `${slowest.minutesLabel} (${slowest.supplier || slowest.reference})`;
         if (els.turnSlowCount) els.turnSlowCount.textContent = rows.filter(function(r) { return r.isSlow; }).length;
       } else {
-        if (els.turnAvgTime) els.turnAvgTime.textContent = "—";
-        if (els.turnSlowestTime) els.turnSlowestTime.textContent = "—";
+        if (els.turnAvgTime) els.turnAvgTime.textContent = "â€”";
+        if (els.turnSlowestTime) els.turnSlowestTime.textContent = "â€”";
         if (els.turnSlowCount) els.turnSlowCount.textContent = "0";
       }
 
@@ -10446,9 +10802,9 @@
       if (els.turnTableMeta) els.turnTableMeta.textContent = `${rows.length} truck${rows.length !== 1 ? "s" : ""} shown`;
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // FEATURE 4: Exceptions Queue
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     function buildExceptions() {
       const audit = state.breakdownAudit;
@@ -10482,12 +10838,12 @@
       // 5. Spill risks from today's trucks
       (state.normalizedRows || []).filter(function(t) { return supplierSpillRate(t.supplier) > 0.30; }).forEach(function(t) {
         add("HIGH", "Spill Risk", t.reference, t.supplier, t.poNumbers.join(", "),
-          `${Math.round(supplierSpillRate(t.supplier) * 100)}% spill rate — have spill kit ready`);
+          `${Math.round(supplierSpillRate(t.supplier) * 100)}% spill rate â€” have spill kit ready`);
       });
       // 6. Slow trucks
       (state.turnTracker.slowTrucks || []).forEach(function(t) {
         add(t.isVerySlow ? "HIGH" : "MEDIUM", "Slow Truck", t.reference, t.supplier, "",
-          `Took ${t.minutesLabel} — over ${state.turnTracker.threshold} min threshold`);
+          `Took ${t.minutesLabel} â€” over ${state.turnTracker.threshold} min threshold`);
       });
 
       const order = { HIGH: 0, MEDIUM: 1, LOW: 2 };
@@ -10551,7 +10907,7 @@
         catTd.appendChild(catBadge);
         tr.appendChild(catTd);
         [item.reference, item.supplier, item.po, item.detail].forEach(function(v) {
-          const td = document.createElement("td"); td.textContent = v || "—"; tr.appendChild(td);
+          const td = document.createElement("td"); td.textContent = v || "â€”"; tr.appendChild(td);
         });
         frag.appendChild(tr);
       });
@@ -10578,9 +10934,9 @@
       URL.revokeObjectURL(url);
     }
 
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // FEATURE 5: Trends (Weekly Rollup)
-    // ═══════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     const TREND_METRICS = [
       { key: "totalTrucks", label: "Trucks Loaded", color: "#3182ce" },
@@ -10623,7 +10979,7 @@
       if (els.trendsKicker) {
         els.trendsKicker.textContent = snapshots.length
           ? `${snapshots.length} day${snapshots.length !== 1 ? "s" : ""} of data (last 14)`
-          : "No snapshots yet — load a report and click Save Today's Snapshot";
+          : "No snapshots yet â€” load a report and click Save Today's Snapshot";
       }
 
       // Summary list
@@ -10684,7 +11040,7 @@
       snapshots.forEach(function(s) {
         const tr = document.createElement("tr");
         [s.date, s.totalTrucks, s.clerkPoErrors, s.leadMissed, s.wrongDates, s.spillRisks, s.billingIssues].forEach(function(v) {
-          const td = document.createElement("td"); td.textContent = v ?? "—"; tr.appendChild(td);
+          const td = document.createElement("td"); td.textContent = v ?? "â€”"; tr.appendChild(td);
         });
         frag.appendChild(tr);
       });
@@ -10719,7 +11075,7 @@
       els.spillRecordNotes.value = "";
       renderSpillHistoryTable();
       renderSpillTrackerTable();
-      showToast(spilled ? `⚠️ Spill recorded for ${supplier}.` : `✅ Clean truck recorded for ${supplier}.`);
+      showToast(spilled ? `âš ï¸ Spill recorded for ${supplier}.` : `âœ… Clean truck recorded for ${supplier}.`);
     }
 
     function renderSpillTrackerLookup(updateMessage = true) {
@@ -10746,11 +11102,11 @@
       const rate = supplierSpillRate(primaryTruck.supplier);
       const pct = Math.round(rate * 100);
       const isRisk = rate > 0.30;
-      const statusText = isRisk ? `⚠️ HIGH SPILL RISK (${pct}%)` : (rate > 0 ? `Low Risk (${pct}%)` : "No Spill History");
+      const statusText = isRisk ? `âš ï¸ HIGH SPILL RISK (${pct}%)` : (rate > 0 ? `Low Risk (${pct}%)` : "No Spill History");
       const note = supplierSpillNote(primaryTruck.supplier) || "";
       els.spillTrackerKicker.textContent = `${matches.length} truck${matches.length === 1 ? "" : "s"} matched`;
       els.spillTrackerResult.innerHTML = `
-        ${isRisk ? `<div class="spill-alert-banner">⚠️ <strong>Warning: Truck may be spilled</strong> — ${escapeHtml(primaryTruck.supplier)} has a ${pct}% spill rate. Alert receiving team before unloading.${note ? " " + escapeHtml(note) : ""}</div>` : ""}
+        ${isRisk ? `<div class="spill-alert-banner">âš ï¸ <strong>Warning: Truck may be spilled</strong> â€” ${escapeHtml(primaryTruck.supplier)} has a ${pct}% spill rate. Alert receiving team before unloading.${note ? " " + escapeHtml(note) : ""}</div>` : ""}
         <div class="term-pill ${isRisk ? "alert" : "ok"}">${escapeHtml(statusText)}</div>
         <div class="highlight-label">Supplier: ${escapeHtml(primaryTruck.supplier)}</div>
         <div class="highlight-label">${isRisk ? "Have spill kit at the door before the truck opens." : "No significant spill risk found for this supplier."}</div>
@@ -10771,7 +11127,7 @@
         const rate = supplierSpillRate(truck.supplier);
         return {
           supplier: truck.supplier,
-          spillRisk: rate > 0.30 ? `⚠️ HIGH (${Math.round(rate * 100)}%)` : (rate > 0 ? `${Math.round(rate * 100)}%` : "—"),
+          spillRisk: rate > 0.30 ? `âš ï¸ HIGH (${Math.round(rate * 100)}%)` : (rate > 0 ? `${Math.round(rate * 100)}%` : "â€”"),
           spillHigh: rate > 0.30,
           range: recommendedDoorLabel(history, truck),
           reference: truck.reference,
@@ -10811,7 +11167,7 @@
         const tr = document.createElement("tr");
         if (rec.spilled) tr.classList.add("spill-risk-row");
         const dateStr = rec.date ? new Date(rec.date).toLocaleString() : "";
-        [dateStr, rec.supplier || "", rec.spilled ? "⚠️ Spilled" : "✅ Clean", rec.po || "", rec.notes || ""].forEach((value) => {
+        [dateStr, rec.supplier || "", rec.spilled ? "âš ï¸ Spilled" : "âœ… Clean", rec.po || "", rec.notes || ""].forEach((value) => {
           const td = document.createElement("td"); td.textContent = value; tr.appendChild(td);
         });
         const delTd = document.createElement("td");
@@ -11117,7 +11473,7 @@
         });
       });
 
-      // â”€â”€ Uncle Ray's charge check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Uncle Ray's charge check Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       // These trucks never arrive in the ranged report, but if they
       // appear in DMS the OPS report must have:
       //   1. A floor load charge billed to DAVIS
@@ -11157,7 +11513,7 @@
         };
       });
 
-      // â”€â”€ Banana check (OPS-only, billed to ALDIOKS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Banana check (OPS-only, billed to ALDIOKS) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       // Bananas never appear on DMS. Every day OPS should have at least
       // one banana charge billed to ALDIOKS. Flag if it is missing.
       var bananaOpsRows = [];
@@ -11169,7 +11525,7 @@
         });
       }
 
-      // â”€â”€ Recycle check (OPS-only, billed to ALDIOKS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Recycle check (OPS-only, billed to ALDIOKS) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       var recycleOpsRows = [];
       if (opsReport) {
         recycleOpsRows = opsRows.filter(function(r) {
@@ -12308,7 +12664,7 @@
         hasRange ? (hasOps ? "No Uncle Ray's trucks found in DMS." : "Attach OPS report to check Uncle Ray's charges.") : "Attach ranged report to find Uncle Ray's trucks."
       );
 
-      // â”€â”€ Banana check render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Banana check render Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       var bananaOpsRows = audit.bananaOpsRows || [];
       var bananaBadge   = document.getElementById("bananaBadge");
       if (bananaBadge) bananaBadge.textContent = bananaOpsRows.length;
@@ -12326,11 +12682,11 @@
       }
 
       // Banana: only flag rows that are missing an invoice.
-      // If no banana rows at all â†’ one red MISSING row.
-      // If banana rows exist but all have invoices â†’ empty/clean.
+      // If no banana rows at all Ã¢â€ â€™ one red MISSING row.
+      // If banana rows exist but all have invoices Ã¢â€ â€™ empty/clean.
       var bananaMissingInvoice = bananaOpsRows.filter(function(r) { return !r.invoice || !String(r.invoice).trim(); });
       var bananaDisplayRows = bananaOpsRows.length === 0 && hasOps
-        ? [{ _missing: true, entryDate: "", po: "MISSING", billTo: "ALDIOKS", longDescription: "No banana charge found in OPS â€” needs investigation", amount: NaN, invoice: "" }]
+        ? [{ _missing: true, entryDate: "", po: "MISSING", billTo: "ALDIOKS", longDescription: "No banana charge found in OPS Ã¢â‚¬â€ needs investigation", amount: NaN, invoice: "" }]
         : bananaMissingInvoice;
 
       var bananaNeedsAttention = hasOps && (bananaOpsRows.length === 0 || bananaMissingInvoice.length > 0);
@@ -12341,7 +12697,7 @@
             ? "WARNING: No banana charge billed to ALDIOKS found in this OPS report."
             : bananaMissingInvoice.length > 0
               ? bananaMissingInvoice.length + " banana charge(s) missing an invoice number."
-              : bananaOpsRows.length + " banana charge(s) found â€” all have invoices.";
+              : bananaOpsRows.length + " banana charge(s) found Ã¢â‚¬â€ all have invoices.";
         bananaMeta.style.color      = bananaNeedsAttention ? "#c0392b" : "";
         bananaMeta.style.fontWeight = bananaNeedsAttention ? "700" : "";
       }
@@ -12374,7 +12730,7 @@
         }
       }
 
-      // â”€â”€ Recycle check render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Recycle check render Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       var recycleOpsRows = audit.recycleOpsRows || [];
       var recycleBadge   = document.getElementById("recycleBadge");
       if (recycleBadge) recycleBadge.textContent = recycleOpsRows.length;
@@ -12391,10 +12747,10 @@
         recycleMeta.style.fontWeight = recycleMissing ? "700" : "";
       }
 
-      // Recycle: if found in OPS â†’ table is empty/clean (no issues).
+      // Recycle: if found in OPS Ã¢â€ â€™ table is empty/clean (no issues).
       // Only flag if recycle is completely missing from OPS.
       var recycleDisplayRows = hasOps && recycleOpsRows.length === 0
-        ? [{ _missing: true, po: "MISSING", billTo: "ALDIOKS", longDescription: "No recycle charge found in OPS â€” needs investigation", amount: NaN, invoice: "" }]
+        ? [{ _missing: true, po: "MISSING", billTo: "ALDIOKS", longDescription: "No recycle charge found in OPS Ã¢â‚¬â€ needs investigation", amount: NaN, invoice: "" }]
         : [];   // found = no issues, table stays empty
 
       var recycleNeedsAttention = hasOps && recycleOpsRows.length === 0;
@@ -12403,7 +12759,7 @@
           ? "Attach OPS report to check for recycle charges."
           : recycleNeedsAttention
             ? "WARNING: No recycle charge billed to ALDIOKS found in this OPS report."
-            : recycleOpsRows.length + " recycle charge(s) found â€” no issues.";
+            : recycleOpsRows.length + " recycle charge(s) found Ã¢â‚¬â€ no issues.";
         recycleMeta.style.color      = recycleNeedsAttention ? "#c0392b" : "";
         recycleMeta.style.fontWeight = recycleNeedsAttention ? "700" : "";
       }
@@ -12512,7 +12868,7 @@
         button.type = "button";
         button.className = "sortable-header";
         button.dataset.validationSort = column.key;
-        button.textContent = `${column.label}${sort.key === column.key ? (sort.direction === "asc" ? " ↑" : " ↓") : ""}`;
+        button.textContent = `${column.label}${sort.key === column.key ? (sort.direction === "asc" ? " â†‘" : " â†“") : ""}`;
         th.appendChild(button);
         headerRow.appendChild(th);
       });
@@ -12673,10 +13029,10 @@
       els.tableMeta.textContent = `${trucks.length} trucks in ${dockLabel}, sorted by hour, area, and dock section`;
     }
 
-    // ── DMS Stamp ──────────────────────────────────────────────────────────────
+    // â”€â”€ DMS Stamp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     var _dmsStampLog = [];
-    // key: "truckKey:stampType" → { timeIso, timeLabel, status: "pending"|"ok"|"error" }
+    // key: "truckKey:stampType" â†’ { timeIso, timeLabel, status: "pending"|"ok"|"error" }
     var _dmsStampOverrides = {};
 
     var _DMS_STAMP_COLS = [
@@ -12705,11 +13061,11 @@
         const okLabel = e.ok === "pending" ? "Sending..." : e.ok ? "OK" : "FAILED";
         return "<tr>" +
           "<td style='padding:7px 10px; color:var(--muted,#888); font-size:0.82em;'>" + e.sentAt + "</td>" +
-          "<td style='padding:7px 10px; font-weight:600;'>" + (e.loadId || "—") + "</td>" +
-          "<td style='padding:7px 10px;'>" + (e.supplier || "—") + "</td>" +
+          "<td style='padding:7px 10px; font-weight:600;'>" + (e.loadId || "â€”") + "</td>" +
+          "<td style='padding:7px 10px;'>" + (e.supplier || "â€”") + "</td>" +
           "<td style='padding:7px 10px;'>" + e.stampType + "</td>" +
           "<td style='padding:7px 10px;'>" + e.stampTime + "</td>" +
-          "<td style='padding:7px 10px; " + okStyle + "'>" + okLabel + (e.endpoint ? " · " + e.endpoint.split("/").pop() : "") + "</td>" +
+          "<td style='padding:7px 10px; " + okStyle + "'>" + okLabel + (e.endpoint ? " Â· " + e.endpoint.split("/").pop() : "") + "</td>" +
         "</tr>";
       }).join("");
     }
@@ -12728,7 +13084,7 @@
       manual.forEach(function(t) { if (!seen.has(t.id || t.ref)) trucks.push(t); });
 
       if (meta) meta.textContent = trucks.length
-        ? trucks.length + " truck" + (trucks.length !== 1 ? "s" : "") + " on board — click any cell to stamp."
+        ? trucks.length + " truck" + (trucks.length !== 1 ? "s" : "") + " on board â€” click any cell to stamp."
         : "No trucks found. Clock trucks in on My Portal first, then refresh.";
 
       if (!trucks.length) {
@@ -12748,7 +13104,7 @@
         tr.style.borderBottom = "1px solid var(--border,#e2e8f0)";
 
         // Info cells
-        [[t.ref || t.loadId || "—", "font-weight:600;"], [t.supplier || "—", ""], [t.door || "—", "color:var(--muted,#888);"]].forEach(function(pair) {
+        [[t.ref || t.loadId || "â€”", "font-weight:600;"], [t.supplier || "â€”", ""], [t.door || "â€”", "color:var(--muted,#888);"]].forEach(function(pair) {
           const td = document.createElement("td");
           td.style.cssText = "padding:9px 10px; " + pair[1];
           td.textContent = pair[0];
@@ -12767,12 +13123,12 @@
           if (override) {
             // Locally stamped this session
             const color = override.status === "ok" ? "#276749" : override.status === "error" ? "#c53030" : "#d69e2e";
-            const icon  = override.status === "ok" ? "✓" : override.status === "error" ? "✗" : "…";
+            const icon  = override.status === "ok" ? "âœ“" : override.status === "error" ? "âœ—" : "â€¦";
             td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:' + color + ';">' + icon + ' ' + override.timeLabel + '</div>' +
               '<div style="font-size:0.7em; color:' + color + '; opacity:0.8;">' + (override.status === "pending" ? "sending" : override.status) + '</div>';
           } else if (dmsTimeMs) {
             // Already stamped in DMS
-            td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:#276749;">✓ ' + fmtMs(dmsTimeMs) + '</div>' +
+            td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:#276749;">âœ“ ' + fmtMs(dmsTimeMs) + '</div>' +
               '<div style="font-size:0.7em; color:#276749; opacity:0.7;">from DMS</div>';
           } else {
             // Stamp button
@@ -12836,14 +13192,14 @@
         logEntry.ok = ok;
         logEntry.endpoint = data.endpoint || "";
         if (ok) {
-          dmsStampSetDot("#38a169", "Last stamp OK — " + supplier + " · " + stampTypeKey + " at " + timeLabel);
+          dmsStampSetDot("#38a169", "Last stamp OK â€” " + supplier + " Â· " + stampTypeKey + " at " + timeLabel);
         } else {
-          dmsStampSetDot("#e53e3e", "Stamp failed for " + (loadId || supplier) + " — " + (data.detail || "DMS error"));
+          dmsStampSetDot("#e53e3e", "Stamp failed for " + (loadId || supplier) + " â€” " + (data.detail || "DMS error"));
         }
       } catch (err) {
         _dmsStampOverrides[overrideKey].status = "error";
         logEntry.ok = false;
-        dmsStampSetDot("#e53e3e", "Network error — stamp not sent to DMS");
+        dmsStampSetDot("#e53e3e", "Network error â€” stamp not sent to DMS");
       }
       dmsStampBoardRender();
       dmsStampRenderLog();
@@ -12883,7 +13239,7 @@
           if (ok) {
             els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#f0fff4; border:1.5px solid #38a169; color:#276749;";
             els.dmsStampResult.textContent = "Stamp sent via " + (data.endpoint || "DMS") + ".";
-            dmsStampSetDot("#38a169", "Connected — stamp OK at " + sentAt);
+            dmsStampSetDot("#38a169", "Connected â€” stamp OK at " + sentAt);
           } else {
             const detail = data.detail || "DMS returned an error.";
             els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
@@ -12913,7 +13269,7 @@
         const data = await resp.json().catch(function() { return {}; });
         if (resp.ok && data.ok) {
           const loc = (data.location && (data.location.name || data.location.cCode)) || "Unknown location";
-          dmsStampSetDot("#38a169", "Connected to DMS — " + loc);
+          dmsStampSetDot("#38a169", "Connected to DMS â€” " + loc);
         } else {
           dmsStampSetDot("#e53e3e", "DMS connection failed: " + (data.detail || "Check credentials in dms_config.json"));
         }
@@ -12951,7 +13307,7 @@
       if (refreshBoardBtn) refreshBoardBtn.addEventListener("click", dmsStampBoardRender);
     });
 
-    // ── End DMS Stamp ──────────────────────────────────────────────────────────
+    // â”€â”€ End DMS Stamp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     function emptySmall(message) {
       const item = document.createElement("div");
@@ -13032,7 +13388,7 @@
       return icons[name] || icons.alert;
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Backend API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Backend API ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 
     function loadDecisionsFromBackend() {
       try {
@@ -13097,8 +13453,8 @@
       tbody.innerHTML = "";
       const stats = state.portal.vendorStats || [];
       if (meta) meta.textContent = stats.length
-        ? stats.length + " vendor" + (stats.length !== 1 ? "s" : "") + " tracked — learned from exported shifts"
-        : "No data yet — export a completed shift to start learning";
+        ? stats.length + " vendor" + (stats.length !== 1 ? "s" : "") + " tracked â€” learned from exported shifts"
+        : "No data yet â€” export a completed shift to start learning";
       const hRow = document.createElement("tr");
       ["Vendor / Carrier", "Avg Min on Dock", "Fastest", "Slowest", "75th Pct", "Shifts Seen", "Last Seen"].forEach(function(h) {
         const th = document.createElement("th");
@@ -13120,7 +13476,7 @@
       }
       stats.forEach(function(s) {
         const tr = document.createElement("tr");
-        const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—";
+        const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "â€”";
         const fmtMin = function(m) { return Math.floor(m/60) + "h " + (m%60) + "m"; };
         const avgColor = s.avg_min <= 120 ? "var(--green,#38a169)" : s.avg_min <= 180 ? "var(--amber,#d69e2e)" : "var(--red,#e53e3e)";
         [
@@ -13276,7 +13632,7 @@
       renderAll();
     });
   
-    // â”€â”€ Gummy Worms (retro mode only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Gummy Worms (retro mode only) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     (function initGummyWorms() {
       var canvas = document.createElement("canvas");
       canvas.id  = "gummyCanvas";
@@ -13295,7 +13651,7 @@
         canvas.height = window.innerHeight;
       }
 
-      // â”€â”€ Worm constructor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Worm constructor Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       function Worm(idx) {
         this.idx     = idx;
         this.hueBase = (idx / 6) * 360;
@@ -13321,7 +13677,7 @@
       Worm.prototype.step = function() {
         this.wt    += this.ws;
         this.pulse += 0.038;
-        // Compound wavy steering â€” double sine for figure-8 style curves
+        // Compound wavy steering Ã¢â‚¬â€ double sine for figure-8 style curves
         var steer = Math.sin(this.wt) * this.wa * 0.055
                   + Math.cos(this.wt * 0.61) * this.wa * 0.025;
         this.ang += this.turn + steer;
@@ -13344,7 +13700,7 @@
       Worm.prototype.draw = function() {
         var t = this;
 
-        // â”€â”€ Body segments tail â†’ head â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Body segments tail Ã¢â€ â€™ head Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         ctx.save();
         for (var s = t.nSeg; s >= 0; s--) {
           var ratio = s / t.nSeg;
@@ -13383,7 +13739,7 @@
           }
         }
 
-        // â”€â”€ Eyes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Eyes Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         var er   = t.r * 0.34;
         var eOff = t.r * 0.44;
         var eAng = t.ang + Math.PI / 2;
@@ -13415,7 +13771,7 @@
         ctx.restore();
       };
 
-      // â”€â”€ Build & tick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // Ã¢â€â‚¬Ã¢â€â‚¬ Build & tick Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
       function build() {
         resize();
         worms = [];
@@ -13426,7 +13782,7 @@
       function doTick() {
         tik++;
 
-        // Clean clear each frame â€” no trails, just worms
+        // Clean clear each frame Ã¢â‚¬â€ no trails, just worms
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for (var i = 0; i < worms.length; i++) { worms[i].step(); worms[i].draw(); }
@@ -13453,7 +13809,7 @@
       document.addEventListener("visibilitychange", sync);
       sync();
     })();
-    // â”€â”€ End Gummy Worms â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ End Gummy Worms Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 </script>
   <div id="tutorialOverlay">
     <div class="tutorial-card" id="tutorialCard">
@@ -13474,5 +13830,3 @@
 
   </body>
 </html>
-
-
