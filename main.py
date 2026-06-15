@@ -831,6 +831,14 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         if t.get("receivingFinishIso"):
             s["completed"] += 1
     area_list = sorted(area_summary.values(), key=lambda x: -x["scheduled"])
+    # Every door used anywhere in today's schedule (so the door map can show the
+    # full dock, not just doors with a truck on them right now).
+    door_set = set()
+    for t in all_trucks:
+        dd = str(t.get("door") or "").strip()
+        if dd.isdigit():
+            door_set.add(int(dd))
+    doors = sorted(door_set)
     return {
         "ok": True,
         "business_date": info,
@@ -843,6 +851,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "rejected_count": rejected_count,
         "no_show_count": no_show_count,
         "area_summary": area_list,
+        "doors": doors,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
