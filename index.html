@@ -387,42 +387,95 @@
     .portal-add-error { color: #e53e3e; font-size: 0.82em; font-weight: 600; margin-top: 6px; }
     .mn-action-btn { font-size: 0.75em; padding: 3px 8px; border-radius: 5px; border: 1px solid; cursor: pointer; font-weight: 600; background: #38a169; color: #fff; border-color: #38a169; margin-right: 4px; }
     .mn-action-btn.mn-remove-btn { background: transparent; color: #e53e3e; border-color: #e53e3e; }
-    .portal-header-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      background: var(--card-bg, #fff);
-      border: 1px solid var(--border, #e2e8f0);
-      border-radius: 10px;
-      padding: 10px 16px;
-      margin-bottom: 10px;
+    /* ── Portal command bar (top info strip + controls strip) ───────── */
+    .portal-command-bar { border-radius: 14px; overflow: hidden; border: 1.5px solid var(--border,#e2e8f0); margin-bottom: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .portal-info-strip {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      background: linear-gradient(135deg, #1e3a5f 0%, #1565c0 100%);
+      padding: 13px 20px;
     }
-    :root.dark .portal-header-bar { background: #0e1e30; border-color: #1e3a55; }
     .portal-live-badge { display: flex; align-items: center; gap: 8px; }
     .portal-live-dot {
       width: 10px; height: 10px; border-radius: 50%;
-      background: #38a169; display: inline-block;
-      transition: opacity 0.3s;
-      box-shadow: 0 0 6px #38a16988;
+      background: #4ade80; display: inline-block;
+      transition: opacity 0.3s; box-shadow: 0 0 8px #4ade8099;
     }
-    #portalLiveClock { font-size: 1.1em; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .03em; }
-    .portal-header-center { font-weight: 600; color: var(--label, #718096); font-size: 0.9em; }
-    .portal-header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #portalLiveClock { font-size: 1.3em; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .03em; color: #fff; }
+    .portal-day-center { flex: 1; text-align: center; }
+    .portal-day-label { font-weight: 700; font-size: 1em; color: rgba(255,255,255,0.88); letter-spacing:.01em; }
     /* 4AM Countdown */
-    .portal-4am-wrap { display: flex; flex-direction: column; align-items: center; background: var(--card-bg,#fff); border: 1.5px solid var(--border,#e2e8f0); border-radius: 10px; padding: 6px 16px; min-width: 120px; }
-    .portal-4am-timer { font-size: 1.6em; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .04em; line-height: 1; color: #38a169; transition: color 0.5s; }
-    .portal-4am-timer.timer-amber { color: #d69e2e; }
-    .portal-4am-timer.timer-red   { color: #e53e3e; }
+    .portal-4am-wrap { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.22); border-radius: 10px; padding: 6px 18px; min-width: 130px; }
+    .portal-4am-timer { font-size: 1.55em; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .04em; line-height: 1; color: #4ade80; transition: color 0.5s; }
+    .portal-4am-timer.timer-amber { color: #fbbf24; }
+    .portal-4am-timer.timer-red   { color: #f87171; }
     .portal-4am-timer.timer-pulse { animation: portal-pulse 1.2s ease-in-out infinite; }
-    .portal-4am-sublabel { font-size: 0.65em; font-weight: 700; color: var(--muted,#888); text-transform: uppercase; letter-spacing: .07em; margin-top: 1px; }
-    :root.dark .portal-4am-wrap { background: #132030; border-color: #1e3a55; }
+    .portal-4am-sublabel { font-size: 0.62em; font-weight: 700; color: rgba(255,255,255,0.65); text-transform: uppercase; letter-spacing: .07em; margin-top: 2px; }
+    /* Controls strip */
+    .portal-controls-strip {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 16px;
+      background: var(--card-bg,#fff);
+    }
+    :root.dark .portal-controls-strip { background: #0e1e30; }
+    .portal-ctrl-cluster { display: flex; align-items: center; gap: 4px; }
+    .portal-ctrl-sep { width: 1px; height: 24px; background: var(--border,#e2e8f0); margin: 0 4px; flex-shrink: 0; }
+    .portal-sync-btn {
+      display: flex; align-items: center; gap: 5px;
+      background: #1e3a5f; color: #fff; border: none; border-radius: 8px;
+      padding: 7px 14px; font-size: 0.84em; font-weight: 700; cursor: pointer;
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .portal-sync-btn:hover { background: #2563ab; }
+    .portal-sync-btn:active { background: #163060; }
+    .portal-ctrl-btn {
+      background: transparent; border: 1.5px solid var(--border,#e2e8f0); border-radius: 7px;
+      padding: 6px 12px; font-size: 0.82em; font-weight: 600; cursor: pointer;
+      color: var(--text,#4a5568); transition: border-color 0.15s, background 0.15s; white-space: nowrap;
+    }
+    .portal-ctrl-btn:hover { background: var(--bg,#f7fafc); border-color: #a0aec0; }
+    :root.dark .portal-ctrl-btn { border-color: #1e3a55; color: #88ccee; }
+    :root.dark .portal-ctrl-btn:hover { background: #132030; }
+    .portal-freetime-wrap { display: flex; align-items: center; gap: 5px; }
+    .portal-freetime-label { font-size: 0.78em; font-weight: 600; color: var(--muted,#718096); white-space: nowrap; }
+    #portalFreeTime { width: 54px; padding: 5px 6px; border-radius: 7px; border: 1.5px solid var(--border,#e2e8f0); background: var(--card-bg,#fff); color: var(--text,#1a202c); font-size: 0.84em; text-align: center; font-weight: 700; }
+    :root.dark #portalFreeTime { background: #132030; border-color: #1e3a55; color: #eaf4ff; }
+    .portal-freetime-unit { font-size: 0.76em; color: var(--muted,#718096); }
+    .portal-danger-cluster { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+    .portal-danger-btn {
+      background: transparent; border: 1px solid #fca5a5; border-radius: 7px;
+      padding: 5px 10px; font-size: 0.78em; font-weight: 600; cursor: pointer;
+      color: #dc2626; transition: background 0.15s; white-space: nowrap;
+    }
+    .portal-danger-btn:hover { background: #fff5f5; border-color: #f87171; }
+    :root.dark .portal-danger-btn { border-color: #7f1d1d; color: #f87171; }
+    :root.dark .portal-danger-btn:hover { background: #2d1515; }
+    /* DMS status line */
+    .portal-dms-status { font-size: 0.8em; color: var(--muted,#718096); padding: 3px 4px; margin-bottom: 8px; }
     /* Notification permission banner */
-    .portal-notif-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#ebf8ff; border:1.5px solid #90cdf4; border-radius:8px; padding:8px 14px; margin:6px 0; font-size:0.84em; color:#2b6cb0; }
+    .portal-notif-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#ebf8ff; border:1.5px solid #90cdf4; border-radius:8px; padding:8px 14px; margin:6px 0 10px; font-size:0.84em; color:#2b6cb0; }
     .portal-notif-banner button { font-size:0.82em; font-weight:700; padding:4px 12px; border-radius:6px; border:1.5px solid #3182ce; background:#3182ce; color:#fff; cursor:pointer; white-space:nowrap; }
     .portal-notif-banner .notif-dismiss { background:transparent; border-color:#90cdf4; color:#3182ce; margin-left:6px; }
     .portal-refresh-btn { padding: 6px 12px; font-size: 0.82em; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    /* Metric card accent stripes */
+    .metric-card[data-accent] { border-left: 4px solid transparent; }
+    .metric-card[data-accent="blue"]   { border-left-color: #3b82f6; }
+    .metric-card[data-accent="orange"] { border-left-color: #f59e0b; }
+    .metric-card[data-accent="red"]    { border-left-color: #ef4444; }
+    .metric-card[data-accent="purple"] { border-left-color: #8b5cf6; }
+    .metric-card[data-accent="teal"]   { border-left-color: #14b8a6; }
+    .metric-card[data-accent="green"]  { border-left-color: #22c55e; }
+    .metric-card[data-accent="gray"]   { border-left-color: #94a3b8; }
+    .metric-card[data-accent="blue"]   .metric-value { color: #2563eb; }
+    .metric-card[data-accent="orange"] .metric-value { color: #d97706; }
+    .metric-card[data-accent="red"]    .metric-value { color: #dc2626; }
+    .metric-card[data-accent="green"]  .metric-value { color: #16a34a; }
+    .metric-card[data-accent="gray"]   .metric-value { color: #475569; }
+    /* Board row left-border status strip */
+    tr.portal-row-detention td:first-child { border-left: 4px solid #e53e3e !important; padding-left: 10px !important; }
+    tr.portal-row-urgent    td:first-child { border-left: 4px solid #dd6b20 !important; padding-left: 10px !important; }
+    tr.portal-row-warning   td:first-child { border-left: 4px solid #d69e2e !important; padding-left: 10px !important; }
+    tr.portal-row-active    td:first-child { border-left: 4px solid #38a169 !important; padding-left: 10px !important; }
+    tr.portal-row-complete  td:first-child { border-left: 4px solid #4299e1 !important; padding-left: 10px !important; }
     /* Alert strip */
     .portal-alert-strip {
       background: #fff5f5;
@@ -478,11 +531,15 @@
     :root.dark .alert-card-sev.sev-needstart, :root.dark .alert-card-sev.sev-unloaderdelay,
     :root.dark .alert-card-sev.sev-recdelay { background: #3d2f15; }
     /* ── Portal view switcher (Board / Doors / Areas) ── */
-    .portal-view-switch { display:flex; gap:6px; margin:10px 0 0; flex-wrap:wrap; }
-    .portal-view-btn { font-size:0.85em; font-weight:700; padding:7px 14px; border-radius:8px; cursor:pointer;
-      border:1.5px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--muted,#718096); }
-    .portal-view-btn.active { background:#1e3a5f; color:#fff; border-color:#1e3a5f; }
-    :root.dark .portal-view-btn { background:#17263f; }
+    .portal-view-switch { display:flex; gap:6px; margin:12px 0 0; flex-wrap:wrap; }
+    .portal-view-btn {
+      font-size:0.84em; font-weight:700; padding:8px 16px; border-radius:10px; cursor:pointer;
+      border:1.5px solid var(--border,#e2e8f0); background:var(--card-bg,#fff);
+      color:var(--muted,#718096); transition: all 0.15s; letter-spacing:.01em;
+    }
+    .portal-view-btn:hover:not(.active) { border-color:#a0aec0; color: var(--text,#2d3748); }
+    .portal-view-btn.active { background:#1e3a5f; color:#fff; border-color:#1e3a5f; box-shadow: 0 2px 8px rgba(30,58,95,0.25); }
+    :root.dark .portal-view-btn { background:#17263f; border-color:#1e3a55; }
     :root.dark .portal-view-btn.active { background:#2b6cb0; border-color:#2b6cb0; }
     /* ── DMS-style green/yellow/red dwell scorecard ── */
     .dms-scorecard { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:12px; }
@@ -4155,33 +4212,54 @@
           </div>
         </div>
 
-        <!-- Live header bar -->
-        <div class="portal-header-bar">
-          <div class="portal-live-badge">
-            <span class="portal-live-dot" id="portalLiveDot"></span>
-            <span id="portalLiveClock">--:-- --</span>
+        <!-- Command bar: info strip + controls strip -->
+        <div class="portal-command-bar">
+          <!-- Row 1: Live info -->
+          <div class="portal-info-strip">
+            <div class="portal-live-badge">
+              <span class="portal-live-dot" id="portalLiveDot"></span>
+              <span id="portalLiveClock">--:-- --</span>
+            </div>
+            <div class="portal-day-center">
+              <span class="portal-day-label" id="portalDayLabel">Loading...</span>
+            </div>
+            <div class="portal-4am-wrap">
+              <div class="portal-4am-timer" id="portal4amTimer">--:--:--</div>
+              <div class="portal-4am-sublabel">to 4:00 AM</div>
+            </div>
           </div>
-          <div class="portal-header-center">
-            <span class="portal-day-label" id="portalDayLabel">Loading...</span>
-          </div>
-          <!-- 4AM countdown -->
-          <div class="portal-4am-wrap">
-            <div class="portal-4am-timer" id="portal4amTimer">--:--:--</div>
-            <div class="portal-4am-sublabel">to 4:00 AM</div>
-          </div>
-          <div class="portal-header-right">
-            <button id="portalDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn">Refresh DMS</button>
-            <button id="portalDmsDiagBtn" type="button" class="secondary-btn" style="font-size:0.8em;">DMS Status</button>
-            <label style="font-size:0.78em; color:var(--muted,#888);">Receiving grace (min):</label>
-            <input id="portalFreeTime" type="number" value="120" min="30" max="480" style="width:60px; padding:3px 6px; border-radius:5px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); color:var(--text,#1a202c); font-size:0.82em;">
-            <button id="portalShiftReportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">Shift Report</button>
-            <button id="portalExportBtn" type="button" class="secondary-btn" style="font-size:0.8em; font-weight:700;">Export Shift</button>
-            <button id="portalClearDoneBtn" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Done</button>
-            <button id="portalClearAllBtn" type="button" class="secondary-btn" style="font-size:0.8em; color:#e53e3e;">Clear All</button>
+          <!-- Row 2: Controls -->
+          <div class="portal-controls-strip">
+            <!-- DMS sync cluster -->
+            <div class="portal-ctrl-cluster">
+              <button id="portalDmsSyncBtn" type="button" class="portal-sync-btn">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
+                <span id="portalDmsSyncLabel">Sync DMS</span>
+              </button>
+              <button id="portalDmsDiagBtn" type="button" class="portal-ctrl-btn">Status</button>
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <!-- Free time setting -->
+            <div class="portal-freetime-wrap">
+              <label for="portalFreeTime" class="portal-freetime-label">Free time</label>
+              <input id="portalFreeTime" type="number" value="120" min="30" max="480">
+              <span class="portal-freetime-unit">min</span>
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <!-- Report / export -->
+            <div class="portal-ctrl-cluster">
+              <button id="portalShiftReportBtn" type="button" class="portal-ctrl-btn">&#x1F4CB; Report</button>
+              <button id="portalExportBtn" type="button" class="portal-ctrl-btn">&#x2B07; Export</button>
+            </div>
+            <!-- Danger actions (pushed right) -->
+            <div class="portal-danger-cluster">
+              <button id="portalClearDoneBtn" type="button" class="portal-danger-btn">Clear Done</button>
+              <button id="portalClearAllBtn" type="button" class="portal-danger-btn">Clear All</button>
+            </div>
           </div>
         </div>
-        <div class="friendly-note" id="portalDmsStatus" style="margin:8px 0;">DMS has not refreshed yet. Manual entry is still available.</div>
-        <div id="portalDmsDiag" style="display:none; margin:8px 0; padding:12px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); font-size:0.82em;"></div>
+        <div class="portal-dms-status" id="portalDmsStatus">DMS has not refreshed yet — manual entry is still available.</div>
+        <div id="portalDmsDiag" style="display:none; margin:6px 0 10px; padding:12px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); font-size:0.82em;"></div>
 
         <!-- Add truck form (collapsed by default — DMS auto-populates the board) -->
         <details class="portal-add-collapse">
@@ -4220,38 +4298,38 @@
 
         <!-- Summary cards -->
         <div class="summary-grid" style="margin:10px 0;">
-          <article class="metric-card">
+          <article class="metric-card" data-accent="blue">
             <div class="metric-label">Trucks Active</div>
             <div class="metric-value" id="portalActiveCount">0</div>
             <div class="metric-note">On dock, not yet finished.</div>
           </article>
-          <article class="metric-card">
+          <article class="metric-card" data-accent="orange">
             <div class="metric-label">Urgent / Warning</div>
-            <div class="metric-value" id="portalUrgentCount" style="color:#e53e3e;">0</div>
+            <div class="metric-value" id="portalUrgentCount">0</div>
             <div class="metric-note">Under 60 min to finish receiving.</div>
           </article>
-          <article class="metric-card">
+          <article class="metric-card" data-accent="red">
             <div class="metric-label">In Detention</div>
-            <div class="metric-value" id="portalDetentionCount" style="color:#c53030;">0</div>
-            <div class="metric-note">Unload finished, receiving still open past grace.</div>
+            <div class="metric-value" id="portalDetentionCount">0</div>
+            <div class="metric-note">Free time window exceeded.</div>
           </article>
-          <article class="metric-card" id="portal4amCard" style="transition:border-color 0.3s;">
+          <article class="metric-card" id="portal4amCard" data-accent="purple" style="transition:border-color 0.3s;">
             <div class="metric-label">4:00 AM Target</div>
             <div class="metric-value" id="portal4amCount" style="font-size:1.3em;">--</div>
-            <div class="metric-note" id="portal4amNote">Must start receiving by 4:00 AM.</div>
+            <div class="metric-note" id="portal4amNote">Must start receiving by 4 AM.</div>
           </article>
-          <article class="metric-card" id="portalEstCard" style="transition:border-color 0.3s;">
+          <article class="metric-card" id="portalEstCard" data-accent="teal" style="transition:border-color 0.3s;">
             <div class="metric-label">Projected Finish</div>
             <div class="metric-value" id="portalEstComplete" style="font-size:1.3em; transition:color 0.3s;">--</div>
             <div class="metric-note" id="portalEstNote">Based on avg turn time.</div>
           </article>
-          <article class="metric-card">
+          <article class="metric-card" data-accent="green">
             <div class="metric-label">Trucks Done Today</div>
             <div class="metric-value" id="portalDoneCount">0</div>
             <div class="metric-note" id="portalProgressNote">of 0 today.</div>
           </article>
-          <article class="metric-card">
-            <div class="metric-label">Avg Turn</div>
+          <article class="metric-card" data-accent="gray">
+            <div class="metric-label">Avg Turn Time</div>
             <div class="metric-value" id="portalAvgTurn">--</div>
             <div class="metric-note">Completed trucks today.</div>
           </article>
@@ -4318,9 +4396,9 @@
 
         <!-- View switcher: Board / Doors / Areas -->
         <div class="portal-view-switch" id="portalViewSwitch">
-          <button type="button" class="portal-view-btn active" data-view="board">Board</button>
-          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
-          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
+          <button type="button" class="portal-view-btn active" data-view="board">&#x1F4CB; Board</button>
+          <button type="button" class="portal-view-btn" data-view="doors">&#x1F6AA; Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="areas">&#x1F4CD; Areas</button>
         </div>
 
         <!-- Operations board -->
@@ -6196,7 +6274,7 @@
           { sel: "#doorSuggestorPanel .lookup-box", title: "Get a Door Suggestion", msg: "This tool looks at your truck data and suggests which door a truck should go to. Fill in the boxes here to get a recommendation." }
         ],
         myPortal: [
-          { sel: ".portal-header-bar", title: "Your Live Shift Board", msg: "This is My Portal — your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
+          { sel: ".portal-command-bar", title: "Your Live Shift Board", msg: "This is My Portal — your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
           { sel: "#portalDmsSyncBtn", title: "Refresh DMS Data", msg: "Click this button to pull the latest truck data from DMS. It refreshes automatically, but you can force a refresh any time by clicking here." },
           { sel: ".summary-grid", title: "Your Shift Snapshot", msg: "These cards update live: trucks docked, trucks complete, how many trucks still need attention before 4AM, and the projected finish time. Watch the Projected Finish card: if it turns red, you are running behind the 4AM goal." },
           { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and flashes red when the estimated finish time goes past 4AM." },
@@ -11179,7 +11257,7 @@
       if (!force && state.portal.credentialBlocked) return;
       state.portal.liveBusy = true;
       els.portalDmsSyncBtn.disabled = true;
-      els.portalDmsSyncBtn.textContent = quiet ? "Live..." : "Refreshing...";
+      (document.getElementById("portalDmsSyncLabel") || els.portalDmsSyncBtn).textContent = quiet ? "Live…" : "Refreshing…";
       if (els.portalDmsStatus && !quiet) {
         els.portalDmsStatus.textContent = "Refreshing live ALDIOKS rows from DMS...";
       }
@@ -11231,7 +11309,7 @@
       } finally {
         state.portal.liveBusy = false;
         els.portalDmsSyncBtn.disabled = false;
-        els.portalDmsSyncBtn.textContent = "Refresh DMS";
+        (document.getElementById("portalDmsSyncLabel") || els.portalDmsSyncBtn).textContent = "Sync DMS";
         renderPortalBoard();
       }
     }
