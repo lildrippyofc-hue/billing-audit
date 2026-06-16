@@ -403,17 +403,26 @@ def _ensure_dms_mn_session(force: bool = False) -> Dict[str, Any]:
         raise HTTPException(status_code=502, detail="Minnesota DMS login failed. Check DMS_MN_USERNAME and DMS_MN_PASSWORD.")
 
     sel_loc = login_data.get("selLoc")
-    if isinstance(sel_loc, dict) and sel_loc:
+    # Always select the correct MN location by configured code/name — never trust
+    # selLoc from the login response, because the DMS user's last active location
+    # may be the OKS location, which would make the MN portal return OKS data.
+    locations = _find_dms_locations(login_data)
+    if not locations:
+        try:
+            loc_response = _dms_json_request(
+                "api/location/getLocations",
+                {"userinfo": login_data.get("userinfo") or login_data},
+                config,
+            )
+            locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
+        except HTTPException:
+            locations = []
+    if locations:
+        loc = _select_dms_location(locations, config)
+    elif isinstance(sel_loc, dict) and sel_loc:
         loc = sel_loc
     else:
-        locations = _find_dms_locations(login_data)
-        if not locations:
-            try:
-                loc_response = _dms_json_request("api/location/getLocations", {"userinfo": login_data.get("userinfo") or login_data}, config)
-                locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
-            except HTTPException:
-                locations = []
-        loc = _select_dms_location(locations, config) if locations else sel_loc or {}
+        loc = {}
 
     session = {
         "base_url": config["base_url"],
@@ -947,6 +956,8 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
 def dms_mn_session_status():
     session = _ensure_dms_mn_session()
     loc = session.get("loc") or {}
+    cfg = session.get("config") or {}
+    userinfo = session.get("userinfo") or {}
     return {
         "ok": True,
         "location": {
@@ -954,6 +965,9 @@ def dms_mn_session_status():
             "name": loc.get("name") or loc.get("locName") or loc.get("location"),
             "cCode": loc.get("cCode") or loc.get("code"),
         },
+        "login_user": userinfo.get("login") or userinfo.get("username") or userinfo.get("un"),
+        "configured_location_code": cfg.get("location_code"),
+        "configured_location_name": cfg.get("location_name"),
         "cached_at": session.get("cached_at"),
     }
 
