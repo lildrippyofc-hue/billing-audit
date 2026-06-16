@@ -7125,13 +7125,24 @@
       }
 
       // ── door map render ────────────────────────────────────────────────────
+      // DMS stage label based on actual stamp presence (same logic as old MN board).
+      function mnDmsStage(r) {
+        if (r.receivingFinishMs) return 'Done';
+        if (r.receivingStartMs)  return 'Receiving';
+        if (r.unloadFinishMs)    return 'Rec Pending';
+        if (r.unloadStartMs)     return 'Unloading';
+        if (r.driverAtDoorMs)    return 'At Door';
+        return 'Checked In';
+      }
+
       function renderMnDoorMap(enriched) {
         var rows = enriched || mnEnriched();
         var rank = { detention:0, startsoon:1, urgent:2, warning:3, active:4, waiting:5 };
         var byDoor = {};
         rows.forEach(function(r) {
           var dn = parseInt(r.door,10);
-          if (!isFinite(dn) || !r.checkInMs || r.status==='complete') return;
+          // Exclude trucks with no door, no check-in, or fully done receiving.
+          if (!isFinite(dn) || !r.checkInMs || r.status==='complete' || r.receivingFinishMs) return;
           var cur = byDoor[dn];
           var rr = rank[r.status]==null ? 9 : rank[r.status];
           var cr = cur ? (rank[cur.status]==null ? 9 : rank[cur.status]) : 99;
@@ -7159,14 +7170,19 @@
           mapEl.innerHTML = '<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load.</div>';
           return;
         }
-        var cls4st = { detention:'red', urgent:'yellow', startsoon:'yellow', warning:'yellow', active:'green', waiting:'yellow' };
+        // Color by time-based urgency; stage label from actual DMS stamps.
+        var cls4st = { detention:'red', urgent:'yellow', startsoon:'yellow', warning:'yellow', active:'green', waiting:'blue' };
         mapEl.innerHTML = allDoors.map(function(dn) {
           var r = byDoor[dn];
           if (!r) {
             return '<div class="door-tile open"><div class="door-no">'+dn+'</div><div class="door-open-label">Open</div><div class="door-dwell">&nbsp;</div></div>';
           }
           var cl = cls4st[r.status] || 'blue';
-          var detail = r.countdownLabel || portalStatusLabel(r.status);
+          var stage = mnDmsStage(r);
+          // Show DMS stage as primary label; time countdown only when urgency matters.
+          var timeInfo = (r.status==='detention'||r.status==='urgent'||r.status==='warning')
+            ? (r.countdownLabel || '') : '';
+          var detail = timeInfo ? stage + ' · ' + timeInfo : stage;
           return '<div class="door-tile '+cl+' occupied" data-mn-door="'+dn+'" title="Tap for details">'
             +'<div class="door-no">'+dn+'</div>'
             +'<div class="door-sup">'+escapeHtml(r.supplier||r.ref||'Truck')+'</div>'
