@@ -385,6 +385,8 @@
     .portal-field-btn { justify-content: flex-end; }
     .portal-clockin-btn { padding: 8px 18px; font-size: 0.88em; font-weight: 700; white-space: nowrap; }
     .portal-add-error { color: #e53e3e; font-size: 0.82em; font-weight: 600; margin-top: 6px; }
+    .mn-action-btn { font-size: 0.75em; padding: 3px 8px; border-radius: 5px; border: 1px solid; cursor: pointer; font-weight: 600; background: #38a169; color: #fff; border-color: #38a169; margin-right: 4px; }
+    .mn-action-btn.mn-remove-btn { background: transparent; color: #e53e3e; border-color: #e53e3e; }
     .portal-header-bar {
       display: flex;
       align-items: center;
@@ -4466,70 +4468,249 @@
       <section id="myPortalMnPanel" class="tab-panel" aria-label="My Portal MN">
         <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
 
-        <div class="brand-mark" style="background:linear-gradient(135deg,#1d4ed8 0%,#6d28d9 100%);padding:18px 20px 14px;">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div>
-              <div style="color:#fff;font-size:1.15em;font-weight:800;letter-spacing:.02em;">Minnesota Live Portal</div>
-              <div style="color:rgba(255,255,255,.75);font-size:0.82em;margin-top:2px;">Live dock board from MN DMS &mdash; read from their system every 2 minutes</div>
+        <!-- Live header bar -->
+        <div class="portal-header-bar" style="background:linear-gradient(135deg,#1d4ed8 0%,#6d28d9 100%);border-radius:10px;margin-bottom:6px;padding:10px 14px;">
+          <div class="portal-live-badge" style="color:#fff;">
+            <span class="portal-live-dot" id="portalMnLiveDot"></span>
+            <span id="portalMnLiveClock" style="color:#fff;">--:-- --</span>
+          </div>
+          <div class="portal-header-center">
+            <span class="portal-day-label" id="portalMnDayLabel" style="color:rgba(255,255,255,.85);">Minnesota Portal</span>
+          </div>
+          <div class="portal-4am-wrap" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.25);">
+            <div class="portal-4am-timer" id="portalMn4amTimer">--:--:--</div>
+            <div class="portal-4am-sublabel" style="color:rgba(255,255,255,.7);">to 4:00 AM</div>
+          </div>
+          <div class="portal-header-right">
+            <button id="portalMnDmsSyncBtn" type="button" class="secondary-btn portal-refresh-btn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;">Refresh DMS</button>
+            <button id="portalMnDmsDiagBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:0.8em;">DMS Status</button>
+            <label style="font-size:0.78em;color:rgba(255,255,255,.7);">Grace (min):</label>
+            <input id="portalMnFreeTime" type="number" value="120" min="30" max="480" style="width:60px;padding:3px 6px;border-radius:5px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;font-size:0.82em;">
+            <button id="portalMnShiftReportBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:0.8em;font-weight:700;">Shift Report</button>
+            <button id="portalMnExportBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:0.8em;font-weight:700;">Export Shift</button>
+            <button id="portalMnClearDoneBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:0.8em;">Clear Done</button>
+            <button id="portalMnClearAllBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#e53e3e;font-size:0.8em;">Clear All</button>
+          </div>
+        </div>
+        <div class="friendly-note" id="portalMnDmsStatus" style="margin:8px 0;">MN DMS has not refreshed yet. Click Refresh DMS to connect.</div>
+        <div id="portalMnDmsDiag" style="display:none;margin:8px 0;padding:12px 14px;border-radius:8px;border:1px solid var(--border,#e2e8f0);background:var(--card-bg,#fff);font-size:0.82em;"></div>
+
+        <!-- Add truck form -->
+        <details class="portal-add-collapse">
+          <summary class="portal-add-summary">+ Add a truck manually (MN)</summary>
+          <div class="portal-add-form" id="portalMnAddForm">
+          <div class="portal-add-fields">
+            <div class="portal-field">
+              <label for="portalMnInputRef">Truck / Reference</label>
+              <input id="portalMnInputRef" type="text" class="lookup-input" placeholder="e.g. 47" autocomplete="off">
             </div>
-            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-              <button id="portalMnRefreshBtn" type="button" class="secondary-btn portal-refresh-btn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;">Refresh DMS</button>
-              <button id="portalMnStatusBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:0.8em;">DMS Status</button>
+            <div class="portal-field">
+              <label for="portalMnInputDoor">Door #</label>
+              <input id="portalMnInputDoor" type="text" class="lookup-input" placeholder="e.g. 33" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalMnInputSupplier">Supplier</label>
+              <input id="portalMnInputSupplier" type="text" class="lookup-input" placeholder="e.g. Pepsi" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalMnInputPo">PO # <span style="font-weight:400;color:var(--muted,#888)">(optional)</span></label>
+              <input id="portalMnInputPo" type="text" class="lookup-input" placeholder="e.g. mn.123.ks061226" autocomplete="off">
+            </div>
+            <div class="portal-field">
+              <label for="portalMnInputTime">Driver Check-In <span style="font-weight:400;color:var(--muted,#888)">(defaults to now)</span></label>
+              <input id="portalMnInputTime" type="time" class="lookup-input">
+            </div>
+            <div class="portal-field portal-field-btn">
+              <button id="portalMnClockInBtn" type="button" class="primary-btn portal-clockin-btn">Add Truck</button>
             </div>
           </div>
-          <div id="portalMnDmsStatus" style="margin-top:10px;font-size:0.82em;color:rgba(255,255,255,.7);">MN DMS has not refreshed yet. Click Refresh DMS to connect.</div>
-        </div>
+          <div id="portalMnAddError" class="portal-add-error" style="display:none;"></div>
+          </div>
+        </details>
 
-        <!-- Summary stats -->
-        <div class="summary-grid" style="margin:16px 0 12px;">
+        <!-- Summary cards -->
+        <div class="summary-grid" style="margin:10px 0;">
           <article class="metric-card">
-            <div class="metric-label">TRUCKS ACTIVE</div>
+            <div class="metric-label">Trucks Active</div>
             <div class="metric-value" id="portalMnActiveCount">0</div>
             <div class="metric-note">On dock, not yet finished.</div>
           </article>
           <article class="metric-card">
-            <div class="metric-label">DONE TODAY</div>
-            <div class="metric-value" id="portalMnDoneCount">0</div>
-            <div class="metric-note">Receiving finished.</div>
+            <div class="metric-label">Urgent / Warning</div>
+            <div class="metric-value" id="portalMnUrgentCount" style="color:#e53e3e;">0</div>
+            <div class="metric-note">Under 60 min to finish receiving.</div>
           </article>
           <article class="metric-card">
-            <div class="metric-label">TOTAL SCHEDULED</div>
-            <div class="metric-value" id="portalMnTotalCount">0</div>
-            <div class="metric-note">All trucks on today&apos;s MN schedule.</div>
+            <div class="metric-label">In Detention</div>
+            <div class="metric-value" id="portalMnDetentionCount" style="color:#c53030;">0</div>
+            <div class="metric-note">Unload finished, receiving still open past grace.</div>
+          </article>
+          <article class="metric-card" id="portalMn4amCard" style="transition:border-color 0.3s;">
+            <div class="metric-label">4:00 AM Target</div>
+            <div class="metric-value" id="portalMn4amCount" style="font-size:1.3em;">--</div>
+            <div class="metric-note" id="portalMn4amNote">Must start receiving by 4:00 AM.</div>
+          </article>
+          <article class="metric-card" id="portalMnEstCard" style="transition:border-color 0.3s;">
+            <div class="metric-label">Projected Finish</div>
+            <div class="metric-value" id="portalMnEstComplete" style="font-size:1.3em;transition:color 0.3s;">--</div>
+            <div class="metric-note" id="portalMnEstNote">Based on avg turn time.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Trucks Done Today</div>
+            <div class="metric-value" id="portalMnDoneCount">0</div>
+            <div class="metric-note" id="portalMnProgressNote">of 0 today.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Avg Turn</div>
+            <div class="metric-value" id="portalMnAvgTurn">--</div>
+            <div class="metric-note">Completed trucks today.</div>
           </article>
         </div>
 
-        <!-- Live board -->
-        <div class="table-card" style="margin-top:8px;">
-          <div class="table-header">
-            <div>
-              <div class="table-title">MN Live Dock Board</div>
-              <div class="table-meta" id="portalMnBoardMeta">Pulled from Minnesota DMS. Refreshes every 2 minutes.</div>
+        <!-- Shift pace banner -->
+        <div id="portalMnPaceAlert" class="portal-pace-alert" style="display:none;"></div>
+
+        <!-- Charts row -->
+        <div class="portal-charts-row" id="portalMnChartsRow" style="display:none;">
+          <div class="portal-chart-card" style="text-align:center;">
+            <div class="portal-chart-title">Shift Progress</div>
+            <div class="portal-ring-wrap">
+              <svg class="portal-ring" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                <circle class="portal-ring-track" cx="40" cy="40" r="34"/>
+                <circle class="portal-ring-fill" id="portalMnRingFill" cx="40" cy="40" r="34"/>
+              </svg>
+              <div class="portal-ring-center">
+                <div class="portal-ring-pct" id="portalMnRingPct">0%</div>
+                <div class="portal-ring-sub" id="portalMnRingSubPct">done</div>
+              </div>
             </div>
+            <div id="portalMnProgressLabel" style="font-size:0.75em;color:var(--muted,#888);margin-top:2px;"></div>
           </div>
-          <div style="overflow-x:auto;">
-            <table class="portal-board-table" style="width:100%;border-collapse:collapse;font-size:0.86em;">
-              <thead>
-                <tr style="background:var(--card-bg,#f7fafc);text-align:left;">
-                  <th style="padding:8px 10px;font-weight:700;">REF #</th>
-                  <th style="padding:8px 10px;font-weight:700;">DOOR</th>
-                  <th style="padding:8px 10px;font-weight:700;">SUPPLIER</th>
-                  <th style="padding:8px 10px;font-weight:700;">PO</th>
-                  <th style="padding:8px 10px;font-weight:700;">CHECK-IN</th>
-                  <th style="padding:8px 10px;font-weight:700;">UNLOAD DONE</th>
-                  <th style="padding:8px 10px;font-weight:700;">REC DONE</th>
-                  <th style="padding:8px 10px;font-weight:700;">STATUS</th>
-                </tr>
-              </thead>
-              <tbody id="portalMnBoardBody">
-                <tr><td colspan="8" style="padding:18px;text-align:center;color:var(--muted,#888);">Click Refresh DMS to load the MN board.</td></tr>
-              </tbody>
-            </table>
+          <div class="portal-chart-card">
+            <div class="portal-chart-title">Status Breakdown</div>
+            <div class="portal-breakdown-bar" id="portalMnBreakdownBar">
+              <div class="portal-breakdown-seg seg-complete"  id="portalMnSegComplete"  style="width:0%;" title="Complete"></div>
+              <div class="portal-breakdown-seg seg-active"    id="portalMnSegActive"    style="width:0%;" title="Active"></div>
+              <div class="portal-breakdown-seg seg-urgent"    id="portalMnSegUrgent"    style="width:0%;" title="Urgent/Warning"></div>
+              <div class="portal-breakdown-seg seg-detention" id="portalMnSegDetention" style="width:0%;" title="In Detention"></div>
+            </div>
+            <div class="portal-breakdown-legend" id="portalMnBreakdownLegend"></div>
+            <div id="portalMnProgressPace" style="font-size:0.75em;color:var(--muted,#888);margin-top:8px;"></div>
+          </div>
+          <div class="portal-chart-card">
+            <div class="portal-chart-title">Shift Timeline - 8 PM to 4 AM</div>
+            <div class="portal-timeline-track" id="portalMnTimelineTrack">
+              <div class="portal-timeline-elapsed" id="portalMnTimelineElapsed" style="width:0%;"></div>
+              <div class="portal-timeline-needle"  id="portalMnTimelineNeedle"  style="left:0%;"></div>
+              <div class="portal-timeline-est"     id="portalMnTimelineEst"     style="left:0%;display:none;"></div>
+            </div>
+            <div class="portal-timeline-labels">
+              <span>8 PM</span>
+              <span id="portalMnTimelineNowLabel">Now</span>
+              <span>4 AM</span>
+            </div>
+            <div class="portal-timeline-pace" id="portalMnTimelinePace"></div>
           </div>
         </div>
 
-        <!-- DMS diag area -->
-        <div id="portalMnDiag" style="display:none;margin:12px 0;padding:12px 14px;border-radius:8px;background:var(--card-bg,#f7fafc);border:1px solid var(--border,#e2e8f0);font-size:0.83em;white-space:pre-wrap;word-break:break-all;"></div>
+        <!-- View switcher -->
+        <div class="portal-view-switch" id="portalMnViewSwitch">
+          <button type="button" class="portal-view-btn active" data-mn-view="board">Board</button>
+          <button type="button" class="portal-view-btn" data-mn-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-mn-view="areas">Areas</button>
+        </div>
+
+        <!-- Operations board -->
+        <section class="table-wrap" style="margin-top:10px;" id="portalMnBoardView">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="portalMnBoardTitle">MN Live Dock Board</div>
+              <div class="table-meta" id="portalMnBoardMeta">No trucks clocked in yet.</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <input id="portalMnSearch" type="search" class="lookup-input" placeholder="Search door, PO, supplier…" autocomplete="off" style="max-width:220px;">
+              <select id="portalMnSortBy" class="lookup-input" style="max-width:160px;">
+                <option value="smart">Sort: Priority</option>
+                <option value="door">Sort: Door #</option>
+                <option value="timeleft">Sort: Time left</option>
+                <option value="supplier">Sort: Supplier</option>
+                <option value="checkin">Sort: Check-in time</option>
+              </select>
+              <select id="portalMnStatusFilter" class="lookup-input" style="max-width:160px;">
+                <option value="all">All Trucks</option>
+                <option value="active">Active Only</option>
+                <option value="urgent">Urgent / Warning</option>
+                <option value="detention">In Detention</option>
+                <option value="complete">Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="portalMnBoard">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Door map view -->
+        <section id="portalMnDoorView" style="display:none;margin-top:10px;">
+          <div class="door-range-row">
+            <label for="portalMnDoorRange">Doors on dock</label>
+            <input id="portalMnDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = only scheduled doors)" autocomplete="off" style="max-width:260px;">
+            <span class="door-range-hint">Set your full door range to see open doors too.</span>
+          </div>
+          <div class="dms-scorecard" id="portalMnScorecardDoors"></div>
+          <div class="door-map" id="portalMnDoorMap"></div>
+        </section>
+
+        <!-- Area breakdown view -->
+        <section id="portalMnAreaView" style="display:none;margin-top:10px;">
+          <div class="dms-scorecard" id="portalMnScorecardAreas"></div>
+          <div class="area-grid" id="portalMnAreaGrid"></div>
+        </section>
+
+        <!-- Door detail modal (MN) -->
+        <div class="report-modal-overlay" id="portalMnDoorDetailModal" style="display:none;" role="dialog" aria-modal="true" aria-label="MN Door detail">
+          <div class="report-modal" style="max-width:480px;width:95%;">
+            <div class="report-modal-head" style="display:flex;align-items:center;justify-content:space-between;">
+              <div class="report-modal-title" id="mnDoorDetailTitle">Door —</div>
+              <button type="button" id="mnDoorDetailCloseBtn" class="secondary-btn" style="font-size:0.82em;padding:4px 12px;" aria-label="Close">&times; Close</button>
+            </div>
+            <div style="padding:16px 20px 20px;">
+              <div id="mnDoorDetailStatus" style="margin-bottom:14px;"></div>
+              <div id="mnDoorDetailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:0.88em;margin-bottom:16px;"></div>
+              <div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:8px;">Timeline</div>
+              <div id="mnDoorDetailTimeline" style="display:flex;flex-direction:column;gap:6px;font-size:0.85em;"></div>
+              <div id="mnDoorDetailComments" style="margin-top:14px;font-size:0.84em;color:var(--muted,#64748b);display:none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shift report modal (MN) -->
+        <div class="report-modal-overlay" id="portalMnReportModal" style="display:none;">
+          <div class="report-modal">
+            <div class="report-modal-head">
+              <div class="report-modal-title">MN End-of-Shift Report</div>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="portalMnReportCopyBtn" class="secondary-btn" style="font-size:0.82em;font-weight:700;">Copy</button>
+                <button type="button" id="portalMnReportCloseBtn" class="secondary-btn" style="font-size:0.82em;">Close</button>
+              </div>
+            </div>
+            <pre class="report-body" id="portalMnReportBody"></pre>
+          </div>
+        </div>
+
+        <!-- Shift exports -->
+        <section class="table-wrap" style="margin-top:10px;" id="portalMnExportsSection">
+          <div class="table-toolbar" style="align-items:center;">
+            <div>
+              <div class="table-title">MN Shift Exports</div>
+              <div class="table-meta" id="portalMnExportsMeta">No exports saved yet.</div>
+            </div>
+          </div>
+          <div id="portalMnExportsList" style="padding:4px 14px 10px;"></div>
+        </section>
 
       </section>
       <!-- /myPortalMnPanel -->
@@ -6694,120 +6875,792 @@
       });
     })();
 
-    // ── Minnesota Portal ────────────────────────────────────────────────────────
+    // ── Minnesota Portal (full replica of OKS My Portal) ───────────────────────
     (function() {
-      var mnState = { trucks: [], totalExpected: 0, loading: false, error: null };
+      // ── state ──────────────────────────────────────────────────────────────
+      var mnS = {
+        liveRows: [], totalExpected: 0, areaSummary: [], doors: [],
+        businessDate: '', liveUpdatedAt: null, liveError: '', liveBusy: false,
+        liveAttempted: false, credentialBlocked: false,
+        freeTimeMinutes: 120, view: 'board', vendorAvgs: {}, estMs: null,
+        byDoor: {}, notifiedBehind: false,
+        refreshInterval: null, uiTickInterval: null, clockInterval: null
+      };
 
-      function fmtTime(iso) {
-        if (!iso) return '--';
-        try {
-          return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' });
-        } catch(e) { return '--'; }
+      // ── element refs ───────────────────────────────────────────────────────
+      function g(id) { return document.getElementById(id); }
+
+      // ── local truck storage (manual clock-in, MN-specific) ─────────────────
+      var MN_STORAGE_KEY = 'portalMnManualTrucks_v1';
+      function mnLoadTrucks() {
+        try { return JSON.parse(localStorage.getItem(MN_STORAGE_KEY) || '[]'); } catch(e) { return []; }
+      }
+      function mnSaveTrucks(arr) {
+        try { localStorage.setItem(MN_STORAGE_KEY, JSON.stringify(arr)); } catch(e) {}
+      }
+      function mnGenId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+      function mnClockIn(ref, door, supplier, po, checkInMs) {
+        var arr = mnLoadTrucks();
+        arr.push({ id: mnGenId(), source: 'Manual', ref: ref, door: door, supplier: supplier, po: po, checkInMs: checkInMs, finishMs: null, date: new Date().toLocaleDateString() });
+        mnSaveTrucks(arr);
+      }
+      function mnMarkDone(id) {
+        var arr = mnLoadTrucks();
+        var t = arr.find(function(x) { return x.id === id; });
+        if (t) t.finishMs = Date.now();
+        mnSaveTrucks(arr);
+      }
+      function mnRemoveTruck(id) {
+        mnSaveTrucks(mnLoadTrucks().filter(function(x) { return x.id !== id; }));
+      }
+      function mnClearDone() {
+        mnSaveTrucks(mnLoadTrucks().filter(function(x) { return !x.finishMs; }));
+      }
+      function mnClearAll() { mnSaveTrucks([]); }
+
+      // ── combined truck list ────────────────────────────────────────────────
+      function mnCurrentTrucks() {
+        var manual = mnLoadTrucks().map(function(t) { return Object.assign({ source: 'Manual' }, t); });
+        var seen = new Set();
+        var all = [];
+        (mnS.liveRows || []).forEach(function(t) { seen.add(t.id); all.push(t); });
+        manual.forEach(function(t) { if (!seen.has(t.id)) all.push(t); });
+        return all;
+      }
+      function mnEnriched() {
+        var ft = (mnS.freeTimeMinutes || 120) * 60000;
+        var now = Date.now();
+        return mnCurrentTrucks().map(function(t) { return Object.assign({}, t, portalCalcStatus(t, ft, now)); });
       }
 
-      function renderMnBoard() {
-        var trucks = mnState.trucks;
-        var activeCount = 0, doneCount = 0;
-        for (var i = 0; i < trucks.length; i++) {
-          if (trucks[i].receivingFinishIso) doneCount++;
-          else activeCount++;
-        }
-        var el = document.getElementById('portalMnActiveCount');
-        if (el) el.textContent = activeCount;
-        el = document.getElementById('portalMnDoneCount');
-        if (el) el.textContent = doneCount;
-        el = document.getElementById('portalMnTotalCount');
-        if (el) el.textContent = mnState.totalExpected;
-
-        var tbody = document.getElementById('portalMnBoardBody');
-        if (!tbody) return;
-        if (!trucks.length) {
-          tbody.innerHTML = '<tr><td colspan="8" style="padding:18px;text-align:center;color:var(--muted,#888);">No trucks checked in yet at MN.</td></tr>';
-          return;
-        }
-        var esc = function(s) { return String(s || '').replace(/[&<>"]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
-        var html = '';
-        for (var j = 0; j < trucks.length; j++) {
-          var t = trucks[j];
-          var status = t.receivingFinishIso ? '<span style="color:#276749;font-weight:700;">Done</span>'
-            : t.unloadFinishIso ? '<span style="color:#1d4ed8;font-weight:700;">Receiving</span>'
-            : t.unloadStartIso ? '<span style="color:#92400e;font-weight:700;">Unloading</span>'
-            : '<span style="color:#374151;">Checked In</span>';
-          var rowStyle = t.receivingFinishIso ? 'opacity:0.55;' : '';
-          html += '<tr style="border-bottom:1px solid var(--border,#e2e8f0);' + rowStyle + '">'
-            + '<td style="padding:8px 10px;">' + esc(t.ref) + '</td>'
-            + '<td style="padding:8px 10px;font-weight:700;">' + esc(t.door) + '</td>'
-            + '<td style="padding:8px 10px;">' + esc(t.supplier) + '</td>'
-            + '<td style="padding:8px 10px;font-size:0.88em;color:var(--muted,#666);">' + esc(t.po) + '</td>'
-            + '<td style="padding:8px 10px;">' + fmtTime(t.checkInIso) + '</td>'
-            + '<td style="padding:8px 10px;">' + fmtTime(t.unloadFinishIso) + '</td>'
-            + '<td style="padding:8px 10px;">' + fmtTime(t.receivingFinishIso) + '</td>'
-            + '<td style="padding:8px 10px;">' + status + '</td>'
-            + '</tr>';
-        }
-        tbody.innerHTML = html;
+      // ── panel active check ─────────────────────────────────────────────────
+      function mnPanelActive() {
+        var p = document.getElementById('myPortalMnPanel');
+        return Boolean(p && p.classList.contains('active'));
       }
 
-      function portalMnRefresh(force) {
-        if (mnState.loading) return;
-        mnState.loading = true;
-        var statusEl = document.getElementById('portalMnDmsStatus');
-        var refreshBtn = document.getElementById('portalMnRefreshBtn');
-        if (statusEl) statusEl.textContent = 'Refreshing MN DMS...';
-        if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = 'Refreshing...'; }
+      // ── DMS pull ───────────────────────────────────────────────────────────
+      function mnPullLiveDms(force, quiet) {
+        if (mnS.liveBusy) return;
+        if (!force && mnS.credentialBlocked) return;
+        var btn = g('portalMnDmsSyncBtn');
+        var statusEl = g('portalMnDmsStatus');
+        mnS.liveBusy = true;
+        if (btn) { btn.disabled = true; btn.textContent = quiet ? 'Live...' : 'Refreshing...'; }
+        if (statusEl && !quiet) statusEl.textContent = 'Refreshing MN DMS...';
+        mnS.liveAttempted = true;
         var url = '/api/dms/mn/portal' + (force ? '?force=true' : '');
-        fetch(url, { credentials: 'include' })
+        fetch(url, { headers: { 'Accept': 'application/json' } })
           .then(function(r) { return r.json(); })
           .then(function(data) {
-            mnState.loading = false;
-            if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = 'Refresh DMS'; }
-            if (!data.ok) throw new Error(data.detail || 'MN DMS returned an error');
-            mnState.trucks = data.trucks || [];
-            mnState.totalExpected = data.total_expected || 0;
-            mnState.error = null;
-            var now = new Date();
-            var meta = document.getElementById('portalMnBoardMeta');
-            if (meta) meta.textContent = 'Last updated ' + now.toLocaleTimeString() + '. Refreshes every 2 minutes.';
-            if (statusEl) statusEl.textContent = 'MN DMS connected. Updated ' + now.toLocaleTimeString() + '.';
-            renderMnBoard();
+            mnS.liveBusy = false;
+            if (btn) { btn.disabled = false; btn.textContent = 'Refresh DMS'; }
+            if (!data.ok) throw new Error(data.detail || 'MN DMS error');
+            mnS.liveRows = (data.trucks || [])
+              .filter(function(row) { return Boolean(portalIsoToMs(row.checkInIso)); })
+              .map(portalLiveToBoardTruck);
+            mnS.totalExpected = typeof data.total_expected === 'number' ? data.total_expected : mnS.liveRows.length;
+            mnS.areaSummary = data.area_summary || [];
+            mnS.doors = Array.isArray(data.doors) ? data.doors : [];
+            mnS.businessDate = data.business_date || '';
+            mnS.liveUpdatedAt = data.updated_at || new Date().toISOString();
+            mnS.liveError = '';
+            mnS.credentialBlocked = false;
+            if (statusEl) {
+              var loc = data.location || {};
+              var locName = loc.name || loc.locName || loc.cCode || 'ALDIFMN';
+              statusEl.dataset.mnLive = '1';
+              statusEl.dataset.mnCount = mnS.liveRows.length;
+              statusEl.dataset.mnHidden = Math.max(0, (data.trucks || []).length - mnS.liveRows.length);
+              statusEl.dataset.mnLoc = locName;
+              statusEl.dataset.mnBizdate = data.business_date || '';
+              mnUpdateStatusText();
+            }
+            renderMnPortalBoard();
           })
           .catch(function(err) {
-            mnState.loading = false;
-            if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = 'Refresh DMS'; }
-            var msg = err && err.message ? err.message : String(err);
-            if (statusEl) statusEl.textContent = 'MN DMS pull failed: ' + msg;
+            mnS.liveBusy = false;
+            mnS.liveError = err && err.message ? err.message : String(err);
+            mnS.liveRows = [];
+            if (/credentials are not configured/i.test(mnS.liveError)) mnS.credentialBlocked = true;
+            if (btn) { btn.disabled = false; btn.textContent = 'Refresh DMS'; }
+            if (statusEl) statusEl.textContent = 'MN DMS unavailable: ' + mnS.liveError + ' Manual clock-in still works.';
+            renderMnPortalBoard();
           });
       }
 
-      var refreshBtn = document.getElementById('portalMnRefreshBtn');
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', function() { portalMnRefresh(true); });
+      function mnUpdateStatusText() {
+        var el = g('portalMnDmsStatus');
+        if (!el || el.dataset.mnLive !== '1') return;
+        var agoStr = 'just now';
+        if (mnS.liveUpdatedAt) {
+          var secs = Math.max(0, Math.round((Date.now() - Date.parse(mnS.liveUpdatedAt)) / 1000));
+          agoStr = secs < 5 ? 'just now' : secs < 60 ? secs + 's ago' : Math.floor(secs/60) + 'm ' + (secs%60) + 's ago';
+        }
+        var hidden = parseInt(el.dataset.mnHidden || '0', 10) || 0;
+        el.textContent = 'Live MN DMS: ' + el.dataset.mnCount + ' trucks for ' + el.dataset.mnLoc
+          + ' | business date ' + el.dataset.mnBizdate
+          + ' | updated ' + agoStr
+          + (hidden > 0 ? ' | hidden ' + hidden + ' without check-in stamp' : '') + '.';
       }
 
-      var statusBtn = document.getElementById('portalMnStatusBtn');
-      var diagBox = document.getElementById('portalMnDiag');
-      if (statusBtn && diagBox) {
-        statusBtn.addEventListener('click', function() {
-          if (diagBox.style.display === 'none') {
-            diagBox.style.display = '';
-            diagBox.textContent = 'Checking MN DMS session...';
-            fetch('/api/dms/mn/session', { credentials: 'include' })
-              .then(function(r) { return r.json(); })
-              .then(function(d) {
-                var loc = d.location || {};
-                diagBox.textContent = d.ok
-                  ? 'MN DMS connected. Location: ' + (loc.name || loc.cCode || JSON.stringify(loc)) + '. Cached at: ' + (d.cached_at || 'unknown')
-                  : 'MN DMS session error: ' + JSON.stringify(d);
-              })
-              .catch(function(e) { diagBox.textContent = 'Could not reach MN DMS session endpoint: ' + e.message; });
+      // ── live clock tick ────────────────────────────────────────────────────
+      function mnLiveClock() {
+        if (!mnPanelActive()) return;
+        var now = new Date();
+        var nowMs = now.getTime();
+        var h = now.getHours(), m = String(now.getMinutes()).padStart(2,'0'), s = String(now.getSeconds()).padStart(2,'0');
+        var ampm = h >= 12 ? 'PM' : 'AM'; var h12 = h % 12 || 12;
+        var clockEl = g('portalMnLiveClock');
+        if (clockEl) clockEl.textContent = h12 + ':' + m + ':' + s + ' ' + ampm;
+        var dotEl = g('portalMnLiveDot');
+        if (dotEl) dotEl.style.opacity = now.getSeconds() % 2 === 0 ? '1' : '0.3';
+        var dayEl = g('portalMnDayLabel');
+        if (dayEl) dayEl.textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) + ' — Minnesota';
+        // 4AM countdown
+        var timer = g('portalMn4amTimer');
+        if (timer) {
+          var d4 = new Date(); d4.setHours(20,0,0,0);
+          if (d4.getTime() > nowMs) d4.setDate(d4.getDate()-1);
+          var goal4 = d4.getTime() + 8*3600000;
+          var remaining = goal4 - nowMs;
+          if (remaining <= 0) {
+            timer.textContent = '0:00:00';
+            timer.className = 'portal-4am-timer timer-red timer-pulse';
           } else {
-            diagBox.style.display = 'none';
+            var rh = Math.floor(remaining/3600000);
+            var rm = Math.floor((remaining%3600000)/60000);
+            var rs = Math.floor((remaining%60000)/1000);
+            timer.textContent = rh + ':' + String(rm).padStart(2,'0') + ':' + String(rs).padStart(2,'0');
+            timer.className = remaining < 1800000 ? 'portal-4am-timer timer-red timer-pulse'
+              : remaining < 3600000 ? 'portal-4am-timer timer-red'
+              : remaining < 7200000 ? 'portal-4am-timer timer-amber'
+              : 'portal-4am-timer';
           }
+        }
+        // Metrics-only re-render every second (no table rebuild)
+        renderMnPortalBoard(true);
+        mnUpdateStatusText();
+        // Tick countdown cells
+        var cells = document.querySelectorAll('[data-mn-countdown-deadline]');
+        cells.forEach(function(td) {
+          var deadlineMs = +td.dataset.mnCountdownDeadline;
+          var rem = deadlineMs - nowMs;
+          var minsRem = rem / 60000;
+          if (rem < 0) {
+            td.textContent = 'DETENTION ' + portalFmtCountdown(rem);
+            td.className = 'portal-countdown-detention';
+          } else if (minsRem < 30) {
+            td.textContent = portalFmtCountdown(rem) + ' to finish';
+            td.className = 'portal-countdown-urgent';
+          } else if (minsRem < 60) {
+            td.textContent = portalFmtCountdown(rem) + ' to finish';
+            td.className = 'portal-countdown-warning';
+          } else {
+            td.textContent = portalFmtCountdown(rem) + ' to finish';
+            td.className = 'portal-countdown-active';
+          }
+        });
+        // Tick est-finish note
+        if (mnS.estMs) {
+          var estNote = g('portalMnEstNote');
+          if (estNote) {
+            var remEst = mnS.estMs - nowMs;
+            var d4ms = (function(){ var d=new Date(); d.setHours(20,0,0,0); if(d.getTime()>nowMs) d.setDate(d.getDate()-1); return d.getTime()+8*3600000; })();
+            var beh = Math.max(0, mnS.estMs - d4ms);
+            var cStr;
+            if (remEst <= 0) { cStr = 'finishing now'; }
+            else {
+              var eh=Math.floor(remEst/3600000), em=Math.floor((remEst%3600000)/60000), es=Math.floor((remEst%60000)/1000);
+              cStr = remEst>=3600000 ? eh+'h '+em+'m remaining' : remEst>=300000 ? em+'m remaining' : em+'m '+String(es).padStart(2,'0')+'s remaining';
+            }
+            if (beh > 0) cStr += ' · ' + Math.round(beh/60000) + ' min past 4AM';
+            estNote.textContent = cStr;
+          }
+        }
+      }
+
+      // ── polling start/stop ─────────────────────────────────────────────────
+      function mnStartPolling() {
+        if (!mnS.refreshInterval) {
+          mnS.refreshInterval = setInterval(function() {
+            if (mnPanelActive()) mnPullLiveDms(false, true);
+          }, 120000);
+        }
+        if (!mnS.uiTickInterval) {
+          mnS.uiTickInterval = setInterval(function() {
+            if (mnPanelActive()) renderMnPortalBoard();
+          }, 60000);
+        }
+        if (!mnS.clockInterval) {
+          mnS.clockInterval = setInterval(mnLiveClock, 1000);
+        }
+      }
+
+      // ── scorecard helper ───────────────────────────────────────────────────
+      function mnFillScorecard(container, cards) {
+        if (!container) return;
+        container.innerHTML = cards.map(function(c) {
+          return '<div class="dms-score ' + escapeHtml(c.color||'blue') + '">'
+            + '<div class="num">' + escapeHtml(c.value) + '</div>'
+            + '<div class="lbl">' + escapeHtml(c.label) + '</div>'
+            + '<div class="sub">' + escapeHtml(c.sub||'') + '</div></div>';
+        }).join('');
+      }
+
+      // ── door range parser ──────────────────────────────────────────────────
+      function mnParseDoorRange(str) {
+        var out = [];
+        String(str||'').split(',').forEach(function(part) {
+          part = part.trim();
+          if (!part) return;
+          var m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+          if (m) {
+            var a = parseInt(m[1],10), b = parseInt(m[2],10);
+            if (a>b){var tmp=a;a=b;b=tmp;}
+            for (var i=a;i<=b&&out.length<2000;i++) out.push(i);
+          } else if (/^\d+$/.test(part)) { out.push(parseInt(part,10)); }
+        });
+        return out;
+      }
+
+      // ── door map render ────────────────────────────────────────────────────
+      function renderMnDoorMap(enriched) {
+        var rows = enriched || mnEnriched();
+        var rank = { detention:0, startsoon:1, urgent:2, warning:3, active:4, waiting:5 };
+        var byDoor = {};
+        rows.forEach(function(r) {
+          var dn = parseInt(r.door,10);
+          if (!isFinite(dn) || !r.checkInMs || r.status==='complete') return;
+          var cur = byDoor[dn];
+          var rr = rank[r.status]==null ? 9 : rank[r.status];
+          var cr = cur ? (rank[cur.status]==null ? 9 : rank[cur.status]) : 99;
+          if (!cur || rr<cr) byDoor[dn] = r;
+        });
+        var universe = {};
+        mnParseDoorRange((g('portalMnDoorRange')||{}).value||'').forEach(function(d){universe[d]=1;});
+        (mnS.doors||[]).forEach(function(d){universe[d]=1;});
+        Object.keys(byDoor).forEach(function(d){universe[d]=1;});
+        var allDoors = Object.keys(universe).map(Number).filter(isFinite).sort(function(a,b){return a-b;});
+        var occ = Object.keys(byDoor).map(function(d){return byDoor[d];});
+        var det = occ.filter(function(r){return r.status==='detention';}).length;
+        var eyes = occ.filter(function(r){return r.status==='urgent'||r.status==='startsoon'||r.status==='warning';}).length;
+        var openCount = Math.max(0, allDoors.length - occ.length);
+        mnFillScorecard(g('portalMnScorecardDoors'), [
+          {value:openCount, label:'Open doors', sub:'Available now', color:'green'},
+          {value:occ.length, label:'Occupied', sub:'Truck in progress', color:'blue'},
+          {value:eyes, label:'Needs eyes', sub:'Start soon / warning', color:'yellow'},
+          {value:det, label:'Detention', sub:'Past receiving clock', color:'red'}
+        ]);
+        mnS.byDoor = byDoor;
+        var mapEl = g('portalMnDoorMap');
+        if (!mapEl) return;
+        if (!allDoors.length) {
+          mapEl.innerHTML = '<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load.</div>';
+          return;
+        }
+        var cls4st = { detention:'red', urgent:'yellow', startsoon:'yellow', warning:'yellow', active:'green', waiting:'yellow' };
+        mapEl.innerHTML = allDoors.map(function(dn) {
+          var r = byDoor[dn];
+          if (!r) {
+            return '<div class="door-tile open"><div class="door-no">'+dn+'</div><div class="door-open-label">Open</div><div class="door-dwell">&nbsp;</div></div>';
+          }
+          var cl = cls4st[r.status] || 'blue';
+          var detail = r.countdownLabel || portalStatusLabel(r.status);
+          return '<div class="door-tile '+cl+' occupied" data-mn-door="'+dn+'" title="Tap for details">'
+            +'<div class="door-no">'+dn+'</div>'
+            +'<div class="door-sup">'+escapeHtml(r.supplier||r.ref||'Truck')+'</div>'
+            +'<div class="door-dwell">'+escapeHtml(detail)+'</div>'
+            +'</div>';
+        }).join('');
+      }
+
+      // ── area view render ───────────────────────────────────────────────────
+      function renderMnAreaView(enriched) {
+        var rows = enriched || mnEnriched();
+        var summary = Array.isArray(mnS.areaSummary) ? mnS.areaSummary : [];
+        var areaRows;
+        if (summary.length) {
+          areaRows = summary.map(function(a) {
+            return { area: String(a.area||'').trim()||'No area listed', scheduled:Number(a.scheduled||0), checked_in:Number(a.checked_in||0), completed:Number(a.completed||0) };
+          });
+        } else {
+          var map = new Map();
+          rows.forEach(function(r) {
+            var area = (r.area||'').trim() || 'No area listed';
+            if (!map.has(area)) map.set(area, {area:area, scheduled:0, checked_in:0, completed:0});
+            var item = map.get(area);
+            item.scheduled += 1;
+            if (r.checkInMs) item.checked_in += 1;
+            if (r.status==='complete') item.completed += 1;
+          });
+          areaRows = Array.from(map.values()).sort(function(a,b){return b.scheduled-a.scheduled;});
+        }
+        var scheduled = areaRows.reduce(function(s,r){return s+r.scheduled;},0);
+        var checkedIn = areaRows.reduce(function(s,r){return s+r.checked_in;},0);
+        var completed = areaRows.reduce(function(s,r){return s+r.completed;},0);
+        var open = Math.max(0, scheduled-completed);
+        mnFillScorecard(g('portalMnScorecardAreas'), [
+          {value:scheduled, label:'Scheduled', sub:'Total shift load', color:'blue'},
+          {value:checkedIn, label:'Checked In', sub:'Arrived trucks', color:'yellow'},
+          {value:completed, label:'Complete', sub:'Finished receiving', color:'green'},
+          {value:open, label:'Still Open', sub:'Not finished yet', color:open?'red':'green'}
+        ]);
+        var grid = g('portalMnAreaGrid');
+        if (!grid) return;
+        if (!areaRows.length) { grid.innerHTML = '<div class="door-empty">No area totals available yet.</div>'; return; }
+        grid.innerHTML = areaRows.map(function(row) {
+          var pct = row.scheduled ? Math.round((row.completed/row.scheduled)*100) : 0;
+          var width = row.scheduled ? Math.max(3,pct) : 0;
+          return '<article class="area-card">'
+            +'<div class="area-name">'+escapeHtml(row.area)+'</div>'
+            +'<div class="area-nums">'+escapeHtml(row.completed+' complete / '+row.checked_in+' arrived / '+row.scheduled+' scheduled')+'</div>'
+            +'<div class="area-bar"><i style="width:'+width+'%;"></i></div>'
+            +'<div class="area-pct">'+pct+'% finished</div>'
+            +'</article>';
+        }).join('');
+      }
+
+      // ── view switcher ──────────────────────────────────────────────────────
+      function mnSetView(view) {
+        view = (view==='doors'||view==='areas') ? view : 'board';
+        mnS.view = view;
+        document.querySelectorAll('[data-mn-view]').forEach(function(b) {
+          b.classList.toggle('active', b.dataset.mnView===view);
+        });
+        var bv = g('portalMnBoardView'), dv = g('portalMnDoorView'), av = g('portalMnAreaView');
+        if (bv) bv.style.display = view==='board' ? '' : 'none';
+        if (dv) dv.style.display = view==='doors' ? '' : 'none';
+        if (av) av.style.display = view==='areas' ? '' : 'none';
+        var enriched = mnEnriched();
+        if (view==='board') renderMnPortalBoard();
+        else if (view==='doors') renderMnDoorMap(enriched);
+        else renderMnAreaView(enriched);
+      }
+
+      // ── board render ───────────────────────────────────────────────────────
+      function renderMnPortalBoard(metricsOnly) {
+        var ftMs = (mnS.freeTimeMinutes || 120) * 60000;
+        var now = Date.now();
+        mnS.freeTimeMinutes = Math.max(30, parseInt((g('portalMnFreeTime')||{}).value||120, 10)||120);
+        var liveRows = mnS.liveRows || [];
+        var manRows = mnLoadTrucks().map(function(t){return Object.assign({source:'Manual'},t);});
+        var trucks = liveRows.concat(manRows.filter(function(t){
+          return !liveRows.find(function(x){return x.id===t.id;});
+        }));
+        var statusFilter = (g('portalMnStatusFilter')||{}).value||'all';
+        var sortBy = (g('portalMnSortBy')||{}).value||'smart';
+        var enriched = trucks.map(function(t){return Object.assign({},t,portalCalcStatus(t,ftMs,now));});
+        var statusOrder = {detention:0,startsoon:1,urgent:2,warning:3,active:4,waiting:5,complete:6};
+        enriched.sort(function(a,b){
+          if (sortBy==='door') return (parseInt(a.door,10)||99999)-(parseInt(b.door,10)||99999);
+          if (sortBy==='timeleft') {
+            var am=a.msRemaining,bm=b.msRemaining;
+            if (am===null&&bm===null) return 0; if (am===null) return 1; if (bm===null) return -1; return am-bm;
+          }
+          if (sortBy==='supplier') return String(a.supplier||'').localeCompare(String(b.supplier||''));
+          if (sortBy==='checkin') return (a.checkInMs||0)-(b.checkInMs||0);
+          var ao=statusOrder[a.status]!==undefined?statusOrder[a.status]:5;
+          var bo=statusOrder[b.status]!==undefined?statusOrder[b.status]:5;
+          if (ao!==bo) return ao-bo;
+          if (a.msRemaining!==null&&b.msRemaining!==null) return a.msRemaining-b.msRemaining;
+          return (a.checkInMs||0)-(b.checkInMs||0);
+        });
+        var active    = enriched.filter(function(r){return r.status==='active';});
+        var warning   = enriched.filter(function(r){return r.status==='warning';});
+        var urgent    = enriched.filter(function(r){return r.status==='urgent';});
+        var startSoon = enriched.filter(function(r){return r.status==='startsoon';});
+        var detention = enriched.filter(function(r){return r.status==='detention';});
+        var complete  = enriched.filter(function(r){return r.status==='complete';});
+        var manCount  = enriched.filter(function(r){return r.source!=='DMS';}).length;
+        var shiftTotal= Math.max(enriched.length, (parseInt(mnS.totalExpected,10)||0) + manCount);
+        var remaining = Math.max(0, shiftTotal-complete.length);
+
+        // Metric cards
+        var el;
+        el=g('portalMnActiveCount');    if(el) el.textContent=active.length+urgent.length+warning.length+detention.length;
+        el=g('portalMnUrgentCount');    if(el) el.textContent=startSoon.length+urgent.length+warning.length;
+        el=g('portalMnDetentionCount'); if(el) el.textContent=detention.length;
+        el=g('portalMnDoneCount');      if(el) el.textContent=complete.length;
+        el=g('portalMnProgressNote');   if(el) el.textContent='of '+shiftTotal+' scheduled today.';
+
+        // 4AM card
+        var card4am=g('portalMn4amCard'),cnt4am=g('portalMn4amCount'),note4am=g('portalMn4amNote');
+        if (card4am&&cnt4am&&note4am) {
+          var d4=new Date(); d4.setHours(20,0,0,0); if(d4.getTime()>now) d4.setDate(d4.getDate()-1);
+          var cutoff4am=d4.getTime()+8*3600000;
+          var msTo4am=cutoff4am-now;
+          var notStarted=enriched.filter(function(t){return t.status!=='complete'&&!t.checkInMs;});
+          var n=notStarted.length;
+          if (n===0&&enriched.length>0) {
+            cnt4am.textContent='✓'; cnt4am.style.color='#38a169'; note4am.textContent='All trucks started.'; card4am.style.borderColor='#38a169';
+          } else if (msTo4am<=0) {
+            cnt4am.textContent=n>0?n:'—'; cnt4am.style.color=n>0?'#c53030':''; note4am.textContent=n>0?n+' truck(s) missed 4AM cutoff':'Cutoff passed.'; card4am.style.borderColor=n>0?'#c53030':'';
+          } else {
+            var minsTo=Math.round(msTo4am/60000);
+            var toStr=minsTo<60?minsTo+' min':Math.floor(minsTo/60)+'h '+(minsTo%60)+'m';
+            if (n===0) { cnt4am.textContent='✓'; cnt4am.style.color='#38a169'; note4am.textContent=toStr+' to 4AM — all started.'; card4am.style.borderColor='#38a169'; }
+            else {
+              cnt4am.textContent=n;
+              cnt4am.style.color=minsTo<=60?'#e53e3e':minsTo<=120?'#d69e2e':'';
+              card4am.style.borderColor=minsTo<=60?'#e53e3e':minsTo<=120?'#d69e2e':'';
+              note4am.textContent=n+' not started · '+toStr+' to 4AM';
+            }
+          }
+        }
+
+        // Avg turn + estimated finish
+        var completedWithTime=complete.filter(function(r){return r.turnMin&&r.turnMin>0;});
+        var avgTurn=completedWithTime.length
+          ? Math.round(completedWithTime.reduce(function(s,r){return s+r.turnMin;},0)/completedWithTime.length)
+          : 180;
+        el=g('portalMnAvgTurn'); if(el) el.textContent=Math.floor(avgTurn/60)+'h '+(avgTurn%60)+'m';
+        var shiftStartMs=(function(){var d=new Date();d.setHours(20,0,0,0);if(d.getTime()>now)d.setDate(d.getDate()-1);return d.getTime();})();
+        var goal4amMs=shiftStartMs+8*3600000;
+        var running=[].concat(active,startSoon,urgent,warning,detention);
+        var estMs=null; mnS.estMs=null;
+        if (running.length) {
+          var perEst=running.map(function(t){
+            var vk=(t.supplier||'').trim().toUpperCase();
+            var va=(vk&&mnS.vendorAvgs[vk])?mnS.vendorAvgs[vk]:avgTurn;
+            if(t.unloadFinishMs) return t.unloadFinishMs+ftMs;
+            if(t.checkInMs) return t.checkInMs+va*60000;
+            return now+va*60000;
+          });
+          estMs=Math.max.apply(null,perEst); mnS.estMs=estMs;
+          var ef=new Date(estMs),eh=ef.getHours(),em2=String(ef.getMinutes()).padStart(2,'0');
+          var eam=eh>=12?'PM':'AM',eh12=eh%12||12;
+          var minsOut=Math.round((estMs-now)/60000);
+          el=g('portalMnEstComplete'); if(el) el.textContent=eh12+':'+em2+' '+eam;
+          el=g('portalMnEstNote'); if(el) {
+            if(minsOut<=0) el.textContent=running.length+' truck(s) past deadline';
+            else if(minsOut<60) el.textContent=running.length+' remaining · '+minsOut+' min away';
+            else el.textContent=running.length+' remaining · '+Math.floor(minsOut/60)+'h '+(minsOut%60)+'m away';
+          }
+        } else if (enriched.length>0) {
+          el=g('portalMnEstComplete'); if(el) el.textContent='Done ✓';
+          el=g('portalMnEstNote');    if(el) el.textContent='All trucks completed!';
+        } else {
+          el=g('portalMnEstComplete'); if(el) el.textContent='—';
+          el=g('portalMnEstNote');    if(el) el.textContent='Clock in trucks above.';
+        }
+        // Color est card
+        var behindMs=estMs!==null&&running.length>0?Math.max(0,estMs-goal4amMs):0;
+        var estCard=g('portalMnEstCard'),estVal=g('portalMnEstComplete');
+        if (estCard&&estVal) {
+          if (!enriched.length) { estCard.style.borderColor=''; estVal.style.color=''; }
+          else if (!running.length) { estCard.style.borderColor='#38a169'; estVal.style.color='#38a169'; }
+          else if (behindMs>1800000) { estCard.style.borderColor='#e53e3e'; estVal.style.color='#e53e3e'; }
+          else if (behindMs>0) { estCard.style.borderColor='#d69e2e'; estVal.style.color='#d69e2e'; }
+          else { estCard.style.borderColor='#38a169'; estVal.style.color='#38a169'; }
+        }
+        // Pace alert
+        var paceAlert=g('portalMnPaceAlert');
+        if (paceAlert) {
+          var elapsedH=(now-shiftStartMs)/3600000;
+          var timeRemH=Math.max(0,goal4amMs-now)/3600000;
+          var actualRate=elapsedH>0.25?(complete.length/elapsedH).toFixed(1):null;
+          var needRate=timeRemH>0?((running.length+((enriched.filter(function(r){return r.status==='waiting';}).length)))/(timeRemH)).toFixed(1):null;
+          if (!shiftTotal) { paceAlert.style.display='none'; }
+          else if (!running.length) {
+            paceAlert.className='portal-pace-alert pace-good'; paceAlert.style.display='';
+            paceAlert.innerHTML='<strong>Complete.</strong> Shift finished before the 4:00 AM goal.';
+          } else if (behindMs>0) {
+            var behindMin=Math.round(behindMs/60000);
+            var ef2=new Date(estMs),eh2=ef2.getHours(),em3=String(ef2.getMinutes()).padStart(2,'0');
+            var eam2=eh2>=12?'PM':'AM',eh12b=eh2%12||12;
+            var pStr=(actualRate&&needRate)?' Pace: '+actualRate+' trucks/hr; need '+needRate+' trucks/hr to finish by 4 AM.':'';
+            paceAlert.className='portal-pace-alert '+(behindMin>30?'pace-behind':'pace-warning'); paceAlert.style.display='';
+            paceAlert.innerHTML='<strong>Behind pace: '+behindMin+' min past the 4:00 AM goal.</strong> Est. finish: '+eh12b+':'+em3+' '+eam2+'.'+pStr;
+          } else {
+            var bufMin=Math.round((goal4amMs-estMs)/60000);
+            var bufStr=bufMin<60?bufMin+' min':Math.floor(bufMin/60)+'h '+(bufMin%60)+'m';
+            var pStr2=actualRate?' Pace: '+actualRate+' trucks/hr.':'';
+            paceAlert.className='portal-pace-alert pace-good'; paceAlert.style.display='';
+            paceAlert.innerHTML='<strong>On track.</strong> Projected finish is '+bufStr+' before 4:00 AM.'+pStr2;
+          }
+        }
+        // Charts row
+        var chartsRow=g('portalMnChartsRow');
+        if (shiftTotal>0&&chartsRow) {
+          chartsRow.style.display='';
+          var total=enriched.length, boardTotal=Math.max(1,total);
+          var donePct=shiftTotal?Math.round((complete.length/shiftTotal)*100):0;
+          var rf=g('portalMnRingFill');
+          if(rf){var CIRC=213.6;rf.style.strokeDashoffset=CIRC*(1-donePct/100);rf.style.stroke=donePct>=100?'#38a169':donePct>=60?'#3182ce':donePct>=30?'#d69e2e':'#e53e3e';}
+          el=g('portalMnRingPct');    if(el) el.textContent=donePct+'%';
+          el=g('portalMnRingSubPct'); if(el) el.textContent=complete.length+' / '+shiftTotal;
+          el=g('portalMnProgressLabel'); if(el) el.textContent=complete.length+' done · '+remaining+' remaining of '+shiftTotal+' this shift';
+          var aLen=active.length+warning.length,uLen=urgent.length+startSoon.length,dLen=detention.length,cLen=complete.length;
+          var seg=function(id,cnt){var e=g(id);if(e)e.style.width=(cnt>0?Math.max(4,Math.round(cnt/boardTotal*100)):0)+'%';};
+          seg('portalMnSegComplete',cLen);seg('portalMnSegActive',aLen);seg('portalMnSegUrgent',uLen);seg('portalMnSegDetention',dLen);
+          var leg=g('portalMnBreakdownLegend');
+          if(leg){var items=[{color:'#38a169',label:'Complete',count:cLen},{color:'#3182ce',label:'Active',count:aLen},{color:'#d69e2e',label:'Urgent',count:uLen},{color:'#e53e3e',label:'Detention',count:dLen}].filter(function(i){return i.count>0;});leg.innerHTML=items.map(function(i){return '<span class="portal-legend-item"><span class="portal-legend-dot" style="background:'+i.color+';"></span>'+i.label+' ('+i.count+')</span>';}).join('');}
+          var paceEl=g('portalMnProgressPace');
+          if(paceEl){var firstMs=enriched.reduce(function(mn,r){return r.checkInMs&&r.checkInMs<mn?r.checkInMs:mn;},Infinity);var elH=firstMs<Infinity?(now-firstMs)/3600000:0;var rt=elH>0.1?(complete.length/elH).toFixed(1):0;paceEl.textContent=rt>0?('Pace: ~'+rt+' trucks / hr'):'';}
+          var shiftTotalMs=8*3600000,elapsedMs2=Math.min(Math.max(now-shiftStartMs,0),shiftTotalMs),shiftPct=Math.round(elapsedMs2/shiftTotalMs*100);
+          el=g('portalMnTimelineElapsed'); if(el) el.style.width=shiftPct+'%';
+          el=g('portalMnTimelineNeedle');  if(el) el.style.left=shiftPct+'%';
+          el=g('portalMnTimelineNowLabel');if(el){var nowH=new Date(now);el.textContent=nowH.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});}
+          var estEl=g('portalMnTimelineEst');
+          if(estEl&&mnS.estMs){var ep=Math.round(Math.min(Math.max((mnS.estMs-shiftStartMs)/shiftTotalMs*100,0),100));estEl.style.left=ep+'%';estEl.style.display='';estEl.title='Est. finish: '+new Date(mnS.estMs).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true});}
+          else if(estEl){estEl.style.display='none';}
+          var tlPace=g('portalMnTimelinePace');
+          if(tlPace){var bh=mnS.estMs?mnS.estMs-goal4amMs:0;if(mnS.estMs&&bh>60000){tlPace.style.color='#e53e3e';tlPace.textContent='⚠ Est. finish '+Math.round(bh/60000)+' min past 4 AM — pace up';}else if(mnS.estMs&&mnS.estMs<=goal4amMs){tlPace.style.color='#38a169';tlPace.textContent='On track to finish before 4 AM';}else{tlPace.textContent='';}}
+        } else if (chartsRow) { chartsRow.style.display='none'; }
+
+        // Active view re-render (non-board)
+        if (mnS.view==='doors') renderMnDoorMap(enriched);
+        else if (mnS.view==='areas') renderMnAreaView(enriched);
+
+        if (metricsOnly) return;
+
+        // Build board table
+        var searchTerm=((g('portalMnSearch')||{}).value||'').trim().toLowerCase();
+        var filtered=enriched.filter(function(r){
+          if(statusFilter==='active'   &&r.status!=='active') return false;
+          if(statusFilter==='urgent'   &&!(r.status==='startsoon'||r.status==='urgent'||r.status==='warning')) return false;
+          if(statusFilter==='detention'&&r.status!=='detention') return false;
+          if(statusFilter==='complete' &&r.status!=='complete') return false;
+          if(searchTerm){var hay=[r.ref,r.door,r.po,r.supplier,r.carrier].map(function(v){return String(v||'').toLowerCase();}).join(' ');if(hay.indexOf(searchTerm)===-1)return false;}
+          return true;
+        });
+        var board=g('portalMnBoard');
+        if (!board) return;
+        var thead=board.querySelector('thead'),tbody=board.querySelector('tbody');
+        thead.innerHTML=''; tbody.innerHTML='';
+        var colHdrs=['Source','Status','Ref #','Door','Supplier','PO','Check-In','Receiving Clock','Turn Time','Load Progress','Actions'];
+        var hr=document.createElement('tr');
+        colHdrs.forEach(function(h){var th=document.createElement('th');th.textContent=h;hr.appendChild(th);});
+        thead.appendChild(hr);
+        var frag=document.createDocumentFragment();
+        filtered.forEach(function(r){
+          var tr=document.createElement('tr');
+          var rcm={detention:'portal-row-detention',startsoon:'portal-row-urgent',urgent:'portal-row-urgent',warning:'portal-row-warning',complete:'portal-row-complete'};
+          if(rcm[r.status]) tr.classList.add(rcm[r.status]);
+          // Source
+          var td=document.createElement('td'); td.textContent=r.source||'Manual'; tr.appendChild(td);
+          // Status badge
+          td=document.createElement('td');
+          var badge=document.createElement('span');
+          badge.className='portal-status portal-status-'+r.status;
+          var slbls={detention:'DETENTION',startsoon:'START SOON',urgent:'URGENT',warning:'WARNING',active:'Active',waiting:'Waiting',complete:'Done'};
+          badge.textContent=slbls[r.status]||r.status; td.appendChild(badge); tr.appendChild(td);
+          // Check-in time
+          var checkInStr='—';
+          if(r.checkInMs){var ci=new Date(r.checkInMs),ch=ci.getHours(),cm2=String(ci.getMinutes()).padStart(2,'0'),camp=ch>=12?'PM':'AM',ch12=ch%12||12;checkInStr=ch12+':'+cm2+' '+camp;}
+          [r.ref,r.door||'—',r.supplier||'—',r.po||'—',checkInStr].forEach(function(v){td=document.createElement('td');td.textContent=v;tr.appendChild(td);});
+          // Countdown
+          td=document.createElement('td'); td.textContent=r.countdownLabel||''; if(r.countdownClass) td.className=r.countdownClass;
+          if(r.status!=='complete'&&r.status!=='waiting'&&r.status!=='startsoon'){
+            var cb=r.source==='DMS'?(r.appointmentMs||r.checkInMs):(r.checkInMs||r.appointmentMs);
+            var dl=cb?cb+ftMs:0; if(dl) td.dataset.mnCountdownDeadline=dl;
+          }
+          tr.appendChild(td);
+          // Turn time
+          td=document.createElement('td');
+          if(r.turnMin!=null){td.textContent=Math.floor(r.turnMin/60)+'h '+(r.turnMin%60)+'m';}
+          else if(!r.checkInMs){td.textContent='Not checked in';td.style.color='var(--muted,#a0aec0)';td.style.fontSize='0.85em';}
+          else{var em=Math.round((now-r.checkInMs)/60000);td.textContent=Math.floor(em/60)+'h '+(em%60)+'m on dock';td.style.color='var(--muted,#888)';}
+          tr.appendChild(td);
+          // Load progress
+          td=document.createElement('td');
+          var steps=[{label:'Checked In',ms:r.checkInMs},{label:'Driver at Door',ms:r.driverAtDoorMs},{label:'Unload Start',ms:r.unloadStartMs},{label:'Unload Done',ms:r.unloadFinishMs},{label:'Receiving Done',ms:r.receivingFinishMs}];
+          var lastDone=steps.reduce(function(s,st,i){return st.ms?i:s;},-1);
+          td.innerHTML=steps.map(function(st,i){
+            var done=Boolean(st.ms);
+            var timeStr=done?new Date(st.ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}):'—';
+            return '<span title="'+st.label+'" style="font-size:0.78em;color:'+(done?'#38a169':'var(--muted,#a0aec0)')+';">'+(done?'✓':'○')+' '+timeStr+'</span>';
+          }).join('<span style="color:var(--muted,#cbd5e0);margin:0 1px;">›</span>');
+          tr.appendChild(td);
+          // Actions
+          td=document.createElement('td');
+          var acts='';
+          if(r.source==='Manual'&&!r.finishMs){acts+='<button class="mn-action-btn" data-mn-done="'+escapeHtml(r.id||'')+'">Done</button> ';}
+          if(r.source==='Manual'){acts+='<button class="mn-action-btn mn-remove-btn" data-mn-remove="'+escapeHtml(r.id||'')+'">Remove</button>';}
+          td.innerHTML=acts; tr.appendChild(td);
+          frag.appendChild(tr);
+        });
+        if (!filtered.length) {
+          var empty=document.createElement('tr');
+          var etd=document.createElement('td'); etd.colSpan=colHdrs.length; etd.style.textAlign='center'; etd.style.padding='18px'; etd.style.color='var(--muted,#888)';
+          etd.textContent=enriched.length?'No trucks match the current filter.':'No trucks clocked in yet. Use the form above or wait for DMS.'; empty.appendChild(etd); frag.appendChild(empty);
+        }
+        var bmd=g('portalMnBoardMeta');
+        if(bmd) bmd.textContent=filtered.length+' truck'+(filtered.length!==1?'s':'')+' shown'+(enriched.length!==filtered.length?' of '+enriched.length:'')+(mnS.businessDate?' — date '+mnS.businessDate:'');
+        tbody.appendChild(frag);
+      }
+
+      // ── shift report ───────────────────────────────────────────────────────
+      function mnBuildShiftReport() {
+        var rows=mnEnriched();
+        var complete=rows.filter(function(r){return r.status==='complete';}).length;
+        var detention=rows.filter(function(r){return r.status==='detention';}).length;
+        var urgent=rows.filter(function(r){return r.status==='urgent'||r.status==='startsoon'||r.status==='warning';}).length;
+        var scheduled=Math.max(rows.length,Number(mnS.totalExpected||0));
+        var open=Math.max(0,scheduled-complete);
+        var lines=['MN Live Shift Report','Generated: '+new Date().toLocaleString('en-US',{hour12:true}),'Business date: '+(mnS.businessDate||'not listed'),'','Shift Summary','Scheduled trucks: '+scheduled,'Arrived trucks: '+rows.length,'Completed trucks: '+complete,'Still open: '+open,'Needs attention: '+urgent,'In detention: '+detention];
+        return lines.join('\n');
+      }
+
+      // ── shift export ───────────────────────────────────────────────────────
+      function mnExportShift() {
+        var all=mnEnriched();
+        if (!all.length){alert('No trucks on the MN board to export.');return;}
+        var ftMs=(mnS.freeTimeMinutes||120)*60000, nowMs=Date.now();
+        var d=new Date(); if(d.getHours()<12) d.setDate(d.getDate()-1);
+        var shiftDate=d.toLocaleDateString('en-US',{month:'2-digit',day:'2-digit',year:'numeric'});
+        function fmtT(ms){return ms?new Date(ms).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}):'';}
+        function esc(v){var s=String(v==null?'':v);return(s.includes(',')||s.includes('"')||s.includes('\n'))?'"'+s.replace(/"/g,'""')+'"':s;}
+        var hdrs=['Shift Date','Source','Truck/Ref','Door','Supplier','PO','Check-In','Finish','Min on Dock','Status','Detention (min)'];
+        var csvRows=all.map(function(t){
+          var calc=portalCalcStatus(t,ftMs,nowMs);
+          var finMs=t.finishMs||t.receivingFinishMs||t.unloadFinishMs;
+          var dockMin=(t.checkInMs&&finMs)?Math.max(0,Math.round((finMs-t.checkInMs)/60000)):'';
+          var detMin=calc.minutesInDetention!=null?Math.round(calc.minutesInDetention):'';
+          return [shiftDate,t.source||'Manual',t.ref||'',t.door||'',t.supplier||'',t.po||'',fmtT(t.checkInMs),fmtT(finMs),dockMin,calc.status,detMin].map(esc).join(',');
+        });
+        var csv=[hdrs.join(',')].concat(csvRows).join('\r\n');
+        var filename='mn_shift_'+shiftDate.replace(/\//g,'-')+'.csv';
+        var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');
+        a.href=url; a.download=filename; a.click();
+        URL.revokeObjectURL(url);
+        var exportsMeta=g('portalMnExportsMeta');
+        if(exportsMeta) exportsMeta.textContent='Last export: '+filename+' ('+all.length+' trucks)';
+      }
+
+      // ── door detail modal ──────────────────────────────────────────────────
+      (function() {
+        var modal=g('portalMnDoorDetailModal');
+        if (!modal) return;
+        function fmt(ms){if(!ms)return '—';return new Date(ms).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/Chicago'});}
+        function statusColor(s){return s==='detention'?'#c53030':s==='urgent'||s==='warning'||s==='startsoon'?'#d69e2e':s==='active'?'#38a169':s==='complete'?'#3182ce':'#718096';}
+        function showMnDoorDetail(doorNum) {
+          var r=(mnS.byDoor||{})[doorNum]; if(!r) return;
+          var titleEl=g('mnDoorDetailTitle'); if(titleEl) titleEl.textContent='Door '+doorNum+(r.supplier?' — '+r.supplier:'');
+          var statEl=g('mnDoorDetailStatus');
+          if(statEl){var sc=statusColor(r.status);var sl={detention:'DETENTION',startsoon:'START SOON',urgent:'URGENT',warning:'WARNING',active:'Active',waiting:'Waiting',complete:'Done'};statEl.innerHTML='<span style="display:inline-block;padding:4px 12px;border-radius:20px;background:'+sc+';color:#fff;font-weight:800;font-size:0.85em;letter-spacing:.04em;">'+(sl[r.status]||r.status)+'</span>'+(r.countdownLabel?' <span style="margin-left:8px;font-size:0.88em;color:var(--muted,#64748b);">'+escapeHtml(r.countdownLabel)+'</span>':'');}
+          var gridEl=g('mnDoorDetailGrid');
+          if(gridEl){var kvs=[['Supplier',r.supplier||'—'],['Ref #',r.ref||'—'],['PO',r.po||'—'],['Carrier',r.carrier||'—'],['Area',r.area||'—'],['Appointment',fmt(r.appointmentMs)]];gridEl.innerHTML=kvs.map(function(kv){return '<div class="door-detail-kv"><div class="dk">'+kv[0]+'</div><div class="dv">'+escapeHtml(kv[1])+'</div></div>';}).join('');}
+          var tlEl=g('mnDoorDetailTimeline');
+          if(tlEl){var steps=[['Check-In',r.checkInMs],['Driver at Door',r.driverAtDoorMs],['Unload Start',r.unloadStartMs],['Unload Done',r.unloadFinishMs],['Rec Start',r.receivingStartMs],['Rec Done',r.receivingFinishMs],['Driver Left',r.driverLeftMs||null]];tlEl.innerHTML=steps.map(function(s){var done=Boolean(s[1]);return '<div class="door-tl-row"><div class="door-tl-dot '+(done?'done':'pending')+'"></div><span class="door-tl-label">'+s[0]+'</span><span class="door-tl-time">'+(done?fmt(s[1]):'—')+'</span></div>';}).join('');}
+          var comEl=g('mnDoorDetailComments');
+          if(comEl){if(r.comments){comEl.textContent=r.comments;comEl.style.display='';}else{comEl.style.display='none';}}
+          modal.style.display='flex';
+        }
+        var mapEl=g('portalMnDoorMap');
+        if(mapEl){mapEl.addEventListener('click',function(e){var tile=e.target.closest('.door-tile.occupied[data-mn-door]');if(!tile)return;showMnDoorDetail(parseInt(tile.getAttribute('data-mn-door'),10));});}
+        var closeBtn=g('mnDoorDetailCloseBtn');
+        if(closeBtn) closeBtn.addEventListener('click',function(){modal.style.display='none';});
+        modal.addEventListener('click',function(e){if(e.target===modal)modal.style.display='none';});
+        document.addEventListener('keydown',function(e){if(e.key==='Escape'&&modal.style.display!=='none')modal.style.display='none';});
+      })();
+
+      // ── wire up event listeners ────────────────────────────────────────────
+      var dmsSyncBtn=g('portalMnDmsSyncBtn');
+      if(dmsSyncBtn) dmsSyncBtn.addEventListener('click',function(){mnPullLiveDms(true,false);});
+
+      var diagBtn=g('portalMnDmsDiagBtn'), diagBox=g('portalMnDmsDiag');
+      if(diagBtn&&diagBox){
+        diagBtn.addEventListener('click',function(){
+          if(diagBox.style.display==='none'){
+            diagBox.style.display=''; diagBox.textContent='Checking MN DMS session...';
+            fetch('/api/dms/mn/session',{headers:{'Accept':'application/json'}})
+              .then(function(r){return r.json();})
+              .then(function(d){var loc=d.location||{};diagBox.textContent=d.ok?'MN DMS connected. Location: '+(loc.name||loc.cCode||JSON.stringify(loc))+'. Cached at: '+(d.cached_at||'unknown'):'MN DMS session error: '+JSON.stringify(d);})
+              .catch(function(e){diagBox.textContent='Could not reach MN DMS: '+e.message;});
+          } else { diagBox.style.display='none'; }
         });
       }
 
-      // Auto-refresh every 2 minutes
-      setInterval(function() { portalMnRefresh(false); }, 120000);
+      var clockInBtn=g('portalMnClockInBtn');
+      if(clockInBtn){
+        clockInBtn.addEventListener('click',function(){
+          var ref=(g('portalMnInputRef')||{}).value||'';
+          var door=(g('portalMnInputDoor')||{}).value||'';
+          var sup=(g('portalMnInputSupplier')||{}).value||'';
+          var po=(g('portalMnInputPo')||{}).value||'';
+          var tv=(g('portalMnInputTime')||{}).value||'';
+          var errEl=g('portalMnAddError');
+          if(!ref.trim()){if(errEl){errEl.textContent='Truck / Ref # is required.';errEl.style.display='';}return;}
+          if(errEl) errEl.style.display='none';
+          var checkInMs=Date.now();
+          if(tv){var n2=new Date();var parts=tv.split(':').map(Number);n2.setHours(parts[0],parts[1],0,0);checkInMs=n2.getTime();}
+          mnClockIn(ref.trim(),door.trim(),sup.trim(),po.trim(),checkInMs);
+          var fields=['portalMnInputRef','portalMnInputDoor','portalMnInputSupplier','portalMnInputPo','portalMnInputTime'];
+          fields.forEach(function(id){var el2=g(id);if(el2)el2.value='';});
+          renderMnPortalBoard();
+        });
+        ['portalMnInputRef','portalMnInputDoor','portalMnInputSupplier','portalMnInputPo','portalMnInputTime'].forEach(function(id){
+          var el2=g(id);
+          if(el2) el2.addEventListener('keydown',function(e){if(e.key==='Enter')clockInBtn.click();});
+        });
+      }
+
+      // Board action delegation (Done / Remove for manual trucks)
+      var mnBoardEl=g('portalMnBoard');
+      if(mnBoardEl){
+        mnBoardEl.addEventListener('click',function(e){
+          var btn=e.target.closest('[data-mn-done],[data-mn-remove]');
+          if(!btn) return;
+          if(btn.dataset.mnDone){mnMarkDone(btn.dataset.mnDone);renderMnPortalBoard();}
+          if(btn.dataset.mnRemove){mnRemoveTruck(btn.dataset.mnRemove);renderMnPortalBoard();}
+        });
+      }
+
+      var clearDoneBtn=g('portalMnClearDoneBtn');
+      if(clearDoneBtn) clearDoneBtn.addEventListener('click',function(){if(confirm('Clear all Done trucks from MN board?')){mnClearDone();renderMnPortalBoard();}});
+
+      var clearAllBtn=g('portalMnClearAllBtn');
+      if(clearAllBtn) clearAllBtn.addEventListener('click',function(){if(confirm('Clear ALL manual trucks from MN board? DMS trucks will reload on next refresh.')){mnClearAll();mnS.liveRows=[];renderMnPortalBoard();}});
+
+      var shiftReportBtn=g('portalMnShiftReportBtn');
+      if(shiftReportBtn){
+        shiftReportBtn.addEventListener('click',function(){
+          var body=g('portalMnReportBody');if(body) body.textContent=mnBuildShiftReport();
+          var modal=g('portalMnReportModal');if(modal) modal.style.display='flex';
+        });
+      }
+      var reportCloseBtn=g('portalMnReportCloseBtn');
+      if(reportCloseBtn){reportCloseBtn.addEventListener('click',function(){var m=g('portalMnReportModal');if(m)m.style.display='none';});}
+      var reportCopyBtn=g('portalMnReportCopyBtn');
+      if(reportCopyBtn){reportCopyBtn.addEventListener('click',function(){var body=g('portalMnReportBody');if(body&&navigator.clipboard)navigator.clipboard.writeText(body.textContent).catch(function(){});});}
+
+      var exportBtn=g('portalMnExportBtn');
+      if(exportBtn) exportBtn.addEventListener('click',mnExportShift);
+
+      var freeTimeInput=g('portalMnFreeTime');
+      if(freeTimeInput) freeTimeInput.addEventListener('change',function(){mnS.freeTimeMinutes=Math.max(30,parseInt(this.value,10)||120);renderMnPortalBoard();});
+
+      var searchInput=g('portalMnSearch');
+      if(searchInput) searchInput.addEventListener('input',function(){renderMnPortalBoard();});
+
+      var sortSel=g('portalMnSortBy');
+      if(sortSel) sortSel.addEventListener('change',function(){renderMnPortalBoard();});
+
+      var filterSel=g('portalMnStatusFilter');
+      if(filterSel) filterSel.addEventListener('change',function(){renderMnPortalBoard();});
+
+      var viewSwitch=g('portalMnViewSwitch');
+      if(viewSwitch){
+        viewSwitch.addEventListener('click',function(e){
+          var btn=e.target.closest('[data-mn-view]');
+          if(btn) mnSetView(btn.dataset.mnView);
+        });
+      }
+
+      var doorRangeInput=g('portalMnDoorRange');
+      if(doorRangeInput) doorRangeInput.addEventListener('change',function(){if(mnS.view==='doors') renderMnDoorMap();});
+
+      // Start polling immediately
+      mnStartPolling();
+      // Pull on first tab activation
+      document.addEventListener('click',function(e){
+        var btn=e.target.closest('[data-tab="myPortalMn"]');
+        if(btn&&!mnS.liveAttempted) mnPullLiveDms(false,false);
+      });
     })();
 
     els.portalClockInBtn.addEventListener("click", function() {
@@ -11128,7 +11981,10 @@
     function repairMyPortalPanel() {
       const currentLabel = els.sectionMenuCurrent ? els.sectionMenuCurrent.textContent || "" : "";
       const panel = document.getElementById("myPortalPanel");
-      const shouldBePortal = currentLabel.toLowerCase().includes("my portal") ||
+      // Match only OKS portal labels — exclude "MN" variant so the MN tab does not incorrectly trigger this repair.
+      const lbl = currentLabel.toLowerCase();
+      const isOksPortalLabel = (lbl.includes("my portal") || lbl.includes("oks")) && !lbl.includes(" mn");
+      const shouldBePortal = isOksPortalLabel ||
         Boolean(document.querySelector('.tab-button[data-tab="myPortal"][aria-selected="true"]'));
       if (!panel) return;
       if (!shouldBePortal) {
