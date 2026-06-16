@@ -2322,6 +2322,71 @@
       margin: 0 auto;
     }
 
+    /* ── Guard Shack Cheat Sheet tab ── */
+    #guardShackPanel { padding:0 0 40px; }
+    .gs-header { background:linear-gradient(135deg,#1e3a5f 0%,#0f2540 100%); color:#fff; padding:22px 24px 18px; border-radius:10px; margin-bottom:18px; }
+    .gs-header h1 { margin:0 0 4px; font-size:1.4em; font-weight:900; letter-spacing:.01em; }
+    .gs-header p  { margin:0; font-size:0.87em; color:#93c5fd; }
+    .gs-print-btn { float:right; margin-top:-4px; background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.3); border-radius:6px; padding:6px 14px; font-size:0.82em; font-weight:700; cursor:pointer; }
+    .gs-print-btn:hover { background:rgba(255,255,255,.25); }
+    /* Zone strip */
+    .gs-zone-strip { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+    .gs-zone { flex:1; min-width:110px; border-radius:8px; padding:10px 12px; color:#fff; }
+    .gs-zone-label { font-size:0.68em; font-weight:800; text-transform:uppercase; letter-spacing:.06em; opacity:.85; margin-bottom:3px; }
+    .gs-zone-doors { font-size:1.15em; font-weight:900; line-height:1.1; }
+    .gs-zone-name  { font-size:0.76em; margin-top:3px; opacity:.9; }
+    .gs-zone.front    { background:#1d4ed8; }
+    .gs-zone.water    { background:#0891b2; }
+    .gs-zone.dry      { background:#92400e; }
+    .gs-zone.produce  { background:#15803d; }
+    .gs-zone.cooler   { background:#1e40af; }
+    .gs-zone.freezer  { background:#6d28d9; }
+    /* Supplier table */
+    .gs-section-title { font-size:0.78em; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--muted,#718096); margin:18px 0 8px; }
+    .gs-table { width:100%; border-collapse:collapse; font-size:0.87em; }
+    .gs-table th { background:var(--card-bg,#f7fafc); padding:8px 10px; text-align:left; font-weight:800; font-size:0.8em; text-transform:uppercase; letter-spacing:.05em; color:var(--muted,#718096); border-bottom:2px solid var(--border,#e2e8f0); }
+    .gs-table td { padding:9px 10px; border-bottom:1px solid var(--border,#e2e8f0); vertical-align:top; line-height:1.4; }
+    .gs-table tr:hover td { background:var(--hover,#f0f4f8); }
+    .gs-zone-dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:middle; }
+    .gs-zone-dot.front   { background:#1d4ed8; }
+    .gs-zone-dot.water   { background:#0891b2; }
+    .gs-zone-dot.dry     { background:#92400e; }
+    .gs-zone-dot.produce { background:#15803d; }
+    .gs-zone-dot.cooler  { background:#1e40af; }
+    .gs-zone-dot.freezer { background:#6d28d9; }
+    .gs-doors-badge { font-weight:800; color:var(--text,#1a202c); }
+    .gs-tall-badge { display:inline-block; background:#7c3aed; color:#fff; font-size:0.7em; font-weight:700; border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
+    .gs-spill-badge { display:inline-block; background:#dc2626; color:#fff; font-size:0.7em; font-weight:700; border-radius:4px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
+    /* Rule callout boxes */
+    .gs-rules { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-top:6px; }
+    .gs-rule  { border-radius:8px; padding:13px 14px; border-left:4px solid; }
+    .gs-rule.info   { background:#eff6ff; border-color:#3b82f6; }
+    .gs-rule.warn   { background:#fef3c7; border-color:#f59e0b; }
+    .gs-rule.danger { background:#fef2f2; border-color:#ef4444; }
+    .gs-rule.purple { background:#f5f3ff; border-color:#7c3aed; }
+    .gs-rule strong { display:block; font-size:0.88em; font-weight:800; margin-bottom:4px; }
+    .gs-rule p { margin:0; font-size:0.83em; line-height:1.55; color:#374151; }
+    :root.dark .gs-rule.info   { background:#0f2540; }
+    :root.dark .gs-rule.warn   { background:#2d2000; }
+    :root.dark .gs-rule.danger { background:#2d0000; }
+    :root.dark .gs-rule.purple { background:#1e0d40; }
+    :root.dark .gs-rule p { color:#cbd5e0; }
+    :root.dark .gs-table th { background:#17263f; }
+    :root.dark .gs-table tr:hover td { background:#1a2e4a; }
+    :root.dark .gs-header { background:linear-gradient(135deg,#0c2240 0%,#061628 100%); }
+    @media print {
+      .gs-print-btn, .section-menu, #sectionMenu, .tab-panel:not(#guardShackPanel) { display:none !important; }
+      #guardShackPanel { display:block !important; }
+      body { background:#fff; }
+      .gs-zone { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+    @media (max-width:680px) {
+      .gs-zone-strip { gap:4px; }
+      .gs-zone { min-width:80px; padding:8px 8px; }
+      .gs-zone-doors { font-size:0.95em; }
+      .gs-rules { grid-template-columns:1fr; }
+    }
+
     /* Cheat sheet */
     .help-cheatsheet {
       background: linear-gradient(135deg, #DC582A 0%, #C04820 100%);
@@ -2537,6 +2602,7 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="clerkDoor" data-menu-label="Clerk Support: Clerk Door">Clerk Door</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="doorSuggestor" data-menu-label="Clerk Support: Door Suggestor">Door Suggestor</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="spillTracker" data-menu-label="Clerk Support: Spill Tracker">Spill Tracker</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="guardShack" data-menu-label="Clerk Support: Guard Shack Cheat Sheet">Guard Shack Cheat Sheet</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Audit</div>
@@ -3460,6 +3526,278 @@
       <!-- /truckChargeAuditPanel — this close was missing, which nested every
            panel below (History, My Portal, Alerts, DMS Stamp, …) inside it and
            hid them whenever Truck Charge Audit wasn't the active tab. -->
+
+      <!-- ═══ GUARD SHACK CHEAT SHEET ═══════════════════════════════════════ -->
+      <section id="guardShackPanel" class="tab-panel" aria-label="Guard Shack Cheat Sheet">
+        <div class="motivation-bar" id="motivBar_guardShack"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+
+        <!-- Header -->
+        <div class="gs-header">
+          <button class="gs-print-btn" onclick="window.print()">Print / Save PDF</button>
+          <h1>Guard Shack &amp; New Clerk Cheat Sheet</h1>
+          <p>ALDI OKS Joliet/Shorewood &mdash; Where every truck goes on this dock</p>
+        </div>
+
+        <!-- Dock Zone Visual Strip -->
+        <div class="gs-section-title">Dock Zones &mdash; Door Ranges at a Glance</div>
+        <div class="gs-zone-strip">
+          <div class="gs-zone front">
+            <div class="gs-zone-label">Zone 1</div>
+            <div class="gs-zone-doors">1&ndash;21</div>
+            <div class="gs-zone-name">Front Dry</div>
+          </div>
+          <div class="gs-zone water">
+            <div class="gs-zone-label">Zone 2</div>
+            <div class="gs-zone-doors">27&ndash;33</div>
+            <div class="gs-zone-name">Water / Bev</div>
+          </div>
+          <div class="gs-zone dry">
+            <div class="gs-zone-label">Zone 3</div>
+            <div class="gs-zone-doors">54&ndash;65</div>
+            <div class="gs-zone-name">Dry Slip-Load</div>
+          </div>
+          <div class="gs-zone produce" style="border-left:3px dashed rgba(255,255,255,.35);">
+            <div class="gs-zone-label">Overflow</div>
+            <div class="gs-zone-doors">69&ndash;74</div>
+            <div class="gs-zone-name">Produce Overflow</div>
+          </div>
+          <div class="gs-zone produce">
+            <div class="gs-zone-label">Zone 4</div>
+            <div class="gs-zone-doors">79&ndash;86</div>
+            <div class="gs-zone-name">Produce</div>
+          </div>
+          <div class="gs-zone cooler">
+            <div class="gs-zone-label">Zone 5</div>
+            <div class="gs-zone-doors">88&ndash;94</div>
+            <div class="gs-zone-name">Cooler</div>
+          </div>
+          <div class="gs-zone freezer">
+            <div class="gs-zone-label">Zone 6</div>
+            <div class="gs-zone-doors">95&ndash;103</div>
+            <div class="gs-zone-name">Freezer</div>
+          </div>
+        </div>
+
+        <!-- Key Rules -->
+        <div class="gs-section-title">Rules Every Clerk Must Know</div>
+        <div class="gs-rules">
+          <div class="gs-rule purple">
+            <strong>TALL DOOR = Special Clearance Required</strong>
+            <p>Some trucks are too tall for standard doors. Tall doors on this dock: <strong>1, 15, 17, 18, 21, 27, 28, 54, 56, 61, 65, 72, 73, 74, 80, 84, 86, 88, 89, 91, 94, 95, 98, 100, 103.</strong> Always assign a tall door when the rule says TALL.</p>
+          </div>
+          <div class="gs-rule danger">
+            <strong>SPILL ALERT &mdash; Absopure Water</strong>
+            <p>Absopure trucks have a high spill rate. Before the truck pulls in, place a spill kit at the door. Doors 27 or 33 only. Notify your lead as soon as it checks in.</p>
+          </div>
+          <div class="gs-rule warn">
+            <strong>Slip-Load Trucks (Zone 3) &mdash; ALWAYS Tall Door</strong>
+            <p>AJM Packaging, Snack King, Snak King, Post Consumer Brands, Aspen, Schulze, Birch, and Cactus are all slip-load vendors. They must use a tall door in the 54&ndash;65 range. Never put them on a short door.</p>
+          </div>
+          <div class="gs-rule info">
+            <strong>Produce Overflow (69&ndash;74) &mdash; Last Resort Only</strong>
+            <p>Doors 69&ndash;74 are only for produce trucks when all 79&ndash;86 doors are full. Del Monte can use these as overflow. Do not use them for non-produce trucks.</p>
+          </div>
+          <div class="gs-rule info">
+            <strong>NS Brands &mdash; Anywhere 77&ndash;90</strong>
+            <p>NS Brands trucks need a tall door in the 77&ndash;90 range. Best choices: 80, 84, 86 (produce) or 88, 89 (cooler). Confirm with lead if unsure.</p>
+          </div>
+          <div class="gs-rule info">
+            <strong>Sonstegard / Sunrise Farm (Eggs)</strong>
+            <p>Always try door 102 first (freezer zone). If 102 is taken, door 78 is the backup. These are tall trucks &mdash; confirm the door has clearance.</p>
+          </div>
+        </div>
+
+        <!-- Supplier Quick-Reference Table -->
+        <div class="gs-section-title">Supplier Quick Reference &mdash; Where Does My Truck Go?</div>
+        <div style="overflow-x:auto;">
+          <table class="gs-table">
+            <thead>
+              <tr>
+                <th>Supplier / Vendor</th>
+                <th>Zone</th>
+                <th>Doors to Use</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Front Dry -->
+              <tr>
+                <td><strong>Frito Lay</strong></td>
+                <td><span class="gs-zone-dot front"></span>Front Dry</td>
+                <td class="gs-doors-badge">1 or 15</td>
+                <td>No tall door needed. Chips only go to doors 1 or 15.</td>
+              </tr>
+              <!-- Water / Bev -->
+              <tr>
+                <td><strong>Niagara Bottling</strong></td>
+                <td><span class="gs-zone-dot water"></span>Water / Bev</td>
+                <td class="gs-doors-badge">28&ndash;33</td>
+                <td>Any door in range is fine.</td>
+              </tr>
+              <tr>
+                <td><strong>Absopure Water</strong></td>
+                <td><span class="gs-zone-dot water"></span>Water / Bev</td>
+                <td class="gs-doors-badge">27 or 33</td>
+                <td><span class="gs-spill-badge">SPILL RISK</span> Set up spill kit before truck pulls in. Alert lead.</td>
+              </tr>
+              <!-- Dry Slip-Load -->
+              <tr>
+                <td><strong>AJM Packaging</strong></td>
+                <td><span class="gs-zone-dot dry"></span>Dry Slip-Load</td>
+                <td class="gs-doors-badge">54, 56, 61, 65</td>
+                <td><span class="gs-tall-badge">TALL</span> Slip-load &mdash; must use a tall door.</td>
+              </tr>
+              <tr>
+                <td><strong>Snack King / Snak King</strong></td>
+                <td><span class="gs-zone-dot dry"></span>Dry Slip-Load</td>
+                <td class="gs-doors-badge">54, 56, 61, 65</td>
+                <td><span class="gs-tall-badge">TALL</span> Slip-load &mdash; tall door required.</td>
+              </tr>
+              <tr>
+                <td><strong>Post Consumer Brands</strong></td>
+                <td><span class="gs-zone-dot dry"></span>Dry Slip-Load</td>
+                <td class="gs-doors-badge">54&ndash;65 (tall)</td>
+                <td><span class="gs-tall-badge">TALL</span> Slip-load vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>Aspen / Schulze / Birch</strong></td>
+                <td><span class="gs-zone-dot dry"></span>Dry Slip-Load</td>
+                <td class="gs-doors-badge">54&ndash;65 (tall)</td>
+                <td><span class="gs-tall-badge">TALL</span> Slip-load vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>Cactus</strong></td>
+                <td><span class="gs-zone-dot dry"></span>Dry Slip-Load</td>
+                <td class="gs-doors-badge">56 (preferred)</td>
+                <td><span class="gs-tall-badge">TALL</span> Preferred at door 56.</td>
+              </tr>
+              <!-- Produce -->
+              <tr>
+                <td><strong>Del Monte</strong></td>
+                <td><span class="gs-zone-dot produce"></span>Produce</td>
+                <td class="gs-doors-badge">79&ndash;86 first</td>
+                <td>Use 79&ndash;86 first. If produce is full, overflow to 69&ndash;74. No tall required.</td>
+              </tr>
+              <tr>
+                <td><strong>Taylor Farms Retail</strong></td>
+                <td><span class="gs-zone-dot produce"></span>Produce</td>
+                <td class="gs-doors-badge">80, 84, 86</td>
+                <td><span class="gs-tall-badge">TALL</span> Salad kits &mdash; always a tall produce door.</td>
+              </tr>
+              <tr>
+                <td><strong>Taylor Farms Texas</strong></td>
+                <td><span class="gs-zone-dot produce"></span>Produce</td>
+                <td class="gs-doors-badge">79&ndash;86</td>
+                <td>Salad bowls &mdash; any produce door, no tall required.</td>
+              </tr>
+              <tr>
+                <td><strong>Bonipak</strong></td>
+                <td><span class="gs-zone-dot produce"></span>Produce</td>
+                <td class="gs-doors-badge">80, 84, 86</td>
+                <td><span class="gs-tall-badge">TALL</span> Must use a tall produce door.</td>
+              </tr>
+              <tr>
+                <td><strong>Simply Fresh</strong></td>
+                <td><span class="gs-zone-dot produce"></span>Produce</td>
+                <td class="gs-doors-badge">80, 84, 86</td>
+                <td><span class="gs-tall-badge">TALL</span> Tall produce door required.</td>
+              </tr>
+              <tr>
+                <td><strong>NS Brands / NS Brand</strong></td>
+                <td><span class="gs-zone-dot produce"></span>Produce / Cooler</td>
+                <td class="gs-doors-badge">80, 84, 86, 88, 89</td>
+                <td><span class="gs-tall-badge">TALL</span> Use 77&ndash;90 range, tall doors preferred.</td>
+              </tr>
+              <!-- Cooler -->
+              <tr>
+                <td><strong>MOWI</strong></td>
+                <td><span class="gs-zone-dot cooler"></span>Cooler</td>
+                <td class="gs-doors-badge">88, 89, 91, 94</td>
+                <td><span class="gs-tall-badge">TALL</span> Refrigerated fish &mdash; cooler zone tall door.</td>
+              </tr>
+              <tr>
+                <td><strong>Great Lakes Cheese</strong></td>
+                <td><span class="gs-zone-dot cooler"></span>Cooler</td>
+                <td class="gs-doors-badge">88, 89, 91, 94</td>
+                <td><span class="gs-tall-badge">TALL</span> Cooler zone tall door required.</td>
+              </tr>
+              <!-- Freezer -->
+              <tr>
+                <td><strong>Cafe Valley</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">95, 98, 100, 103</td>
+                <td><span class="gs-tall-badge">TALL</span> Freezer zone, tall door required.</td>
+              </tr>
+              <tr>
+                <td><strong>Columbia Fruit</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">95, 98, 100, 103</td>
+                <td><span class="gs-tall-badge">TALL</span> Freezer vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>Richelieu Foods</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">95, 98, 100, 103</td>
+                <td><span class="gs-tall-badge">TALL</span> Freezer vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>La Fournee</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">95, 98, 100, 103</td>
+                <td><span class="gs-tall-badge">TALL</span> Freezer vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>PDM Vegetables</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">95, 98, 100, 103</td>
+                <td><span class="gs-tall-badge">TALL</span> Freezer vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>Bimbo Bakehouse</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">95, 98, 100, 103</td>
+                <td><span class="gs-tall-badge">TALL</span> Freezer vendor.</td>
+              </tr>
+              <tr>
+                <td><strong>Sonstegard / Sunrise Farm</strong></td>
+                <td><span class="gs-zone-dot freezer"></span>Freezer</td>
+                <td class="gs-doors-badge">102 first, 78 backup</td>
+                <td><span class="gs-tall-badge">TALL</span> Eggs. Try door 102 first. Use 78 only if 102 is taken.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- What to do section -->
+        <div class="gs-section-title">Common Scenarios</div>
+        <div class="gs-rules">
+          <div class="gs-rule info">
+            <strong>Truck arrives but you don&apos;t know where it goes</strong>
+            <p>1. Look up the supplier name in the table above.<br>
+               2. Find an open door in that zone.<br>
+               3. If you need a TALL door, check the tall door list.<br>
+               4. If you still aren&apos;t sure, call the lead &mdash; never guess on a tight door.</p>
+          </div>
+          <div class="gs-rule warn">
+            <strong>All doors in the zone are full</strong>
+            <p>Call the lead before sending the truck to a wrong zone. Produce can overflow to 69&ndash;74. Cooler and Freezer trucks cannot share zones. Dry trucks cannot go on produce doors.</p>
+          </div>
+          <div class="gs-rule danger">
+            <strong>Truck shows up and it&apos;s not on the schedule</strong>
+            <p>Hold the truck at the guard shack. Call the lead or clerk to check DMS. Do not assign a door until DMS shows the load is on today&apos;s schedule.</p>
+          </div>
+          <div class="gs-rule purple">
+            <strong>Driver says they need a specific door</strong>
+            <p>Drivers do not get to pick their door. Assign the door based on the zone rules above and what is open. The only exception is if DMS already has a door pre-assigned to that load.</p>
+          </div>
+        </div>
+
+        <div style="margin-top:24px; font-size:0.78em; color:var(--muted,#a0aec0); text-align:center;">
+          ALDI OKS Joliet/Shorewood &mdash; For questions, contact your shift lead. This sheet is generated from live dock rules in the system.
+        </div>
+
+      </section>
+      <!-- /guardShackPanel -->
 
       <section id="historyPanel" class="tab-panel" aria-label="History">
         <div class="motivation-bar" id="motivBar_history"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
