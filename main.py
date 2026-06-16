@@ -152,6 +152,7 @@ class LoginIn(BaseModel):
 
 
 _dms_session_cache: Dict[str, Any] = {}
+_dms_mn_session_cache: Dict[str, Any] = {}
 
 
 def _load_dms_config() -> Dict[str, Any]:
@@ -339,6 +340,92 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     }
     _dms_session_cache.clear()
     _dms_session_cache.update(session)
+    return session
+
+
+def _load_dms_mn_config() -> Dict[str, Any]:
+    username = os.environ.get("DMS_MN_USERNAME") or ""
+    password = os.environ.get("DMS_MN_PASSWORD") or ""
+    base = (os.environ.get("DMS_BASE_URL") or "https://dms.eclipseia.com").rstrip("/")
+    base = base.replace(":5055", "")
+    return {
+        "username": username,
+        "password": password,
+        "base_url": base,
+        "location_code": os.environ.get("DMS_MN_LOCATION_CODE") or "FMN",
+        "location_name": os.environ.get("DMS_MN_LOCATION_NAME") or "ALDIFMN",
+        "timeout": int(os.environ.get("DMS_TIMEOUT_SECONDS") or 25),
+        "_parse_error": "",
+        "_cfg_path": "Railway env vars (DMS_MN_USERNAME / DMS_MN_PASSWORD)",
+    }
+
+
+def _ensure_dms_mn_session(force: bool = False) -> Dict[str, Any]:
+    config = _load_dms_mn_config()
+    if (
+        not force
+        and _dms_mn_session_cache.get("userinfo")
+        and _dms_mn_session_cache.get("loc")
+        and _dms_mn_session_cache.get("base_url") == config["base_url"]
+    ):
+        return _dms_mn_session_cache
+
+    username = str(config["username"]).strip()
+    password = str(config["password"]).strip()
+    if not username or not password:
+        raise HTTPException(
+            status_code=400,
+            detail="Minnesota DMS credentials not configured. Set DMS_MN_USERNAME and DMS_MN_PASSWORD in Railway environment variables.",
+        )
+
+    dms_session = ReqSession()
+    dms_session.headers.update(_EDGE_HEADERS)
+    config["_session"] = dms_session
+    try:
+        dms_session.get(f"{config['base_url']}/login", timeout=config["timeout"])
+    except Exception:
+        pass
+
+    last_error = None
+    login_data: Dict[str, Any] = {}
+    for payload in _dms_login_payloads(username, password):
+        try:
+            response = _dms_post("api/login/trylogin", payload, config)
+            ui = response.get("userinfo") or {}
+            if isinstance(response, dict) and ui.get("login"):
+                login_data = response
+                break
+        except HTTPException as exc:
+            last_error = exc
+    if not login_data:
+        if last_error:
+            raise last_error
+        raise HTTPException(status_code=502, detail="Minnesota DMS login failed. Check DMS_MN_USERNAME and DMS_MN_PASSWORD.")
+
+    sel_loc = login_data.get("selLoc")
+    if isinstance(sel_loc, dict) and sel_loc:
+        loc = sel_loc
+    else:
+        locations = _find_dms_locations(login_data)
+        if not locations:
+            try:
+                loc_response = _dms_json_request("api/location/getLocations", {"userinfo": login_data.get("userinfo") or login_data}, config)
+                locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
+            except HTTPException:
+                locations = []
+        loc = _select_dms_location(locations, config) if locations else sel_loc or {}
+
+    session = {
+        "base_url": config["base_url"],
+        "userinfo": login_data.get("userinfo") or login_data.get("user") or login_data,
+        "buck": login_data.get("buck") or login_data.get("bucket") or {},
+        "loc": loc,
+        "sel_loc": sel_loc or loc,
+        "config": config,
+        "cached_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _dms_mn_session_cache.clear()
+    _dms_mn_session_cache.update(session)
     return session
 
 
@@ -852,6 +939,49 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "no_show_count": no_show_count,
         "area_summary": area_list,
         "doors": doors,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/api/dms/mn/session")
+def dms_mn_session_status():
+    session = _ensure_dms_mn_session()
+    loc = session.get("loc") or {}
+    return {
+        "ok": True,
+        "location": {
+            "locid": loc.get("locid"),
+            "name": loc.get("name") or loc.get("locName") or loc.get("location"),
+            "cCode": loc.get("cCode") or loc.get("code"),
+        },
+        "cached_at": session.get("cached_at"),
+    }
+
+
+@app.get("/api/dms/mn/portal")
+def dms_mn_portal(date: Optional[str] = None, force: bool = False):
+    """Read DMS load/stamp rows for the Minnesota location."""
+    session = _ensure_dms_mn_session(force=force)
+    info = _dms_business_date(date)
+    base_payload = {
+        "info": info,
+        "loc": session["loc"],
+        "userinfo": session["userinfo"],
+        "buck": session.get("buck") or {},
+    }
+    loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
+    stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
+    loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
+    stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
+    all_trucks = _merge_dms_portal_rows(loads, stamps)
+    board = [t for t in all_trucks if t.get("checkInIso")]
+    return {
+        "ok": True,
+        "business_date": info,
+        "location": session["loc"],
+        "trucks": board,
+        "total_expected": len(all_trucks),
+        "checked_in_count": len(board),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 

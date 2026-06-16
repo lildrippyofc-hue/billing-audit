@@ -2582,7 +2582,8 @@
       <div class="menu-panel" id="sectionMenuPanel">
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal (OKS)</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Live: My Portal MN">My Portal (MN)</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
@@ -4394,6 +4395,78 @@
         </section>
 
       </section>
+
+      <!-- ═══ MY PORTAL — MINNESOTA ═══════════════════════════════════════════ -->
+      <section id="myPortalMnPanel" class="tab-panel" aria-label="My Portal MN">
+        <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+
+        <div class="brand-mark" style="background:linear-gradient(135deg,#1d4ed8 0%,#6d28d9 100%);padding:18px 20px 14px;">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="color:#fff;font-size:1.15em;font-weight:800;letter-spacing:.02em;">Minnesota Live Portal</div>
+              <div style="color:rgba(255,255,255,.75);font-size:0.82em;margin-top:2px;">Live dock board from MN DMS &mdash; read from their system every 2 minutes</div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button id="portalMnRefreshBtn" type="button" class="secondary-btn portal-refresh-btn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3);color:#fff;">Refresh DMS</button>
+              <button id="portalMnStatusBtn" type="button" class="secondary-btn" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);color:#fff;font-size:0.8em;">DMS Status</button>
+            </div>
+          </div>
+          <div id="portalMnDmsStatus" style="margin-top:10px;font-size:0.82em;color:rgba(255,255,255,.7);">MN DMS has not refreshed yet. Click Refresh DMS to connect.</div>
+        </div>
+
+        <!-- Summary stats -->
+        <div class="summary-grid" style="margin:16px 0 12px;">
+          <article class="metric-card">
+            <div class="metric-label">TRUCKS ACTIVE</div>
+            <div class="metric-value" id="portalMnActiveCount">0</div>
+            <div class="metric-note">On dock, not yet finished.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">DONE TODAY</div>
+            <div class="metric-value" id="portalMnDoneCount">0</div>
+            <div class="metric-note">Receiving finished.</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">TOTAL SCHEDULED</div>
+            <div class="metric-value" id="portalMnTotalCount">0</div>
+            <div class="metric-note">All trucks on today&apos;s MN schedule.</div>
+          </article>
+        </div>
+
+        <!-- Live board -->
+        <div class="table-card" style="margin-top:8px;">
+          <div class="table-header">
+            <div>
+              <div class="table-title">MN Live Dock Board</div>
+              <div class="table-meta" id="portalMnBoardMeta">Pulled from Minnesota DMS. Refreshes every 2 minutes.</div>
+            </div>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="portal-board-table" style="width:100%;border-collapse:collapse;font-size:0.86em;">
+              <thead>
+                <tr style="background:var(--card-bg,#f7fafc);text-align:left;">
+                  <th style="padding:8px 10px;font-weight:700;">REF #</th>
+                  <th style="padding:8px 10px;font-weight:700;">DOOR</th>
+                  <th style="padding:8px 10px;font-weight:700;">SUPPLIER</th>
+                  <th style="padding:8px 10px;font-weight:700;">PO</th>
+                  <th style="padding:8px 10px;font-weight:700;">CHECK-IN</th>
+                  <th style="padding:8px 10px;font-weight:700;">UNLOAD DONE</th>
+                  <th style="padding:8px 10px;font-weight:700;">REC DONE</th>
+                  <th style="padding:8px 10px;font-weight:700;">STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="portalMnBoardBody">
+                <tr><td colspan="8" style="padding:18px;text-align:center;color:var(--muted,#888);">Click Refresh DMS to load the MN board.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- DMS diag area -->
+        <div id="portalMnDiag" style="display:none;margin:12px 0;padding:12px 14px;border-radius:8px;background:var(--card-bg,#f7fafc);border:1px solid var(--border,#e2e8f0);font-size:0.83em;white-space:pre-wrap;word-break:break-all;"></div>
+
+      </section>
+      <!-- /myPortalMnPanel -->
 
       <!-- ═══ ALERTS ═══════════════════════════════════════════════════════════ -->
       <section id="alertsPanel" class="tab-panel" aria-label="Alerts">
@@ -6417,6 +6490,122 @@
           diagBtn.textContent = oldLabel;
         }
       });
+    })();
+
+    // ── Minnesota Portal ────────────────────────────────────────────────────────
+    (function() {
+      var mnState = { trucks: [], totalExpected: 0, loading: false, error: null };
+
+      function fmtTime(iso) {
+        if (!iso) return '--';
+        try {
+          return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' });
+        } catch(e) { return '--'; }
+      }
+
+      function renderMnBoard() {
+        var trucks = mnState.trucks;
+        var activeCount = 0, doneCount = 0;
+        for (var i = 0; i < trucks.length; i++) {
+          if (trucks[i].receivingFinishIso) doneCount++;
+          else activeCount++;
+        }
+        var el = document.getElementById('portalMnActiveCount');
+        if (el) el.textContent = activeCount;
+        el = document.getElementById('portalMnDoneCount');
+        if (el) el.textContent = doneCount;
+        el = document.getElementById('portalMnTotalCount');
+        if (el) el.textContent = mnState.totalExpected;
+
+        var tbody = document.getElementById('portalMnBoardBody');
+        if (!tbody) return;
+        if (!trucks.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="padding:18px;text-align:center;color:var(--muted,#888);">No trucks checked in yet at MN.</td></tr>';
+          return;
+        }
+        var esc = function(s) { return String(s || '').replace(/[&<>"]/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+        var html = '';
+        for (var j = 0; j < trucks.length; j++) {
+          var t = trucks[j];
+          var status = t.receivingFinishIso ? '<span style="color:#276749;font-weight:700;">Done</span>'
+            : t.unloadFinishIso ? '<span style="color:#1d4ed8;font-weight:700;">Receiving</span>'
+            : t.unloadStartIso ? '<span style="color:#92400e;font-weight:700;">Unloading</span>'
+            : '<span style="color:#374151;">Checked In</span>';
+          var rowStyle = t.receivingFinishIso ? 'opacity:0.55;' : '';
+          html += '<tr style="border-bottom:1px solid var(--border,#e2e8f0);' + rowStyle + '">'
+            + '<td style="padding:8px 10px;">' + esc(t.ref) + '</td>'
+            + '<td style="padding:8px 10px;font-weight:700;">' + esc(t.door) + '</td>'
+            + '<td style="padding:8px 10px;">' + esc(t.supplier) + '</td>'
+            + '<td style="padding:8px 10px;font-size:0.88em;color:var(--muted,#666);">' + esc(t.po) + '</td>'
+            + '<td style="padding:8px 10px;">' + fmtTime(t.checkInIso) + '</td>'
+            + '<td style="padding:8px 10px;">' + fmtTime(t.unloadFinishIso) + '</td>'
+            + '<td style="padding:8px 10px;">' + fmtTime(t.receivingFinishIso) + '</td>'
+            + '<td style="padding:8px 10px;">' + status + '</td>'
+            + '</tr>';
+        }
+        tbody.innerHTML = html;
+      }
+
+      function portalMnRefresh(force) {
+        if (mnState.loading) return;
+        mnState.loading = true;
+        var statusEl = document.getElementById('portalMnDmsStatus');
+        var refreshBtn = document.getElementById('portalMnRefreshBtn');
+        if (statusEl) statusEl.textContent = 'Refreshing MN DMS...';
+        if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = 'Refreshing...'; }
+        var url = '/api/dms/mn/portal' + (force ? '?force=true' : '');
+        fetch(url, { credentials: 'include' })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            mnState.loading = false;
+            if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = 'Refresh DMS'; }
+            if (!data.ok) throw new Error(data.detail || 'MN DMS returned an error');
+            mnState.trucks = data.trucks || [];
+            mnState.totalExpected = data.total_expected || 0;
+            mnState.error = null;
+            var now = new Date();
+            var meta = document.getElementById('portalMnBoardMeta');
+            if (meta) meta.textContent = 'Last updated ' + now.toLocaleTimeString() + '. Refreshes every 2 minutes.';
+            if (statusEl) statusEl.textContent = 'MN DMS connected. Updated ' + now.toLocaleTimeString() + '.';
+            renderMnBoard();
+          })
+          .catch(function(err) {
+            mnState.loading = false;
+            if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = 'Refresh DMS'; }
+            var msg = err && err.message ? err.message : String(err);
+            if (statusEl) statusEl.textContent = 'MN DMS pull failed: ' + msg;
+          });
+      }
+
+      var refreshBtn = document.getElementById('portalMnRefreshBtn');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() { portalMnRefresh(true); });
+      }
+
+      var statusBtn = document.getElementById('portalMnStatusBtn');
+      var diagBox = document.getElementById('portalMnDiag');
+      if (statusBtn && diagBox) {
+        statusBtn.addEventListener('click', function() {
+          if (diagBox.style.display === 'none') {
+            diagBox.style.display = '';
+            diagBox.textContent = 'Checking MN DMS session...';
+            fetch('/api/dms/mn/session', { credentials: 'include' })
+              .then(function(r) { return r.json(); })
+              .then(function(d) {
+                var loc = d.location || {};
+                diagBox.textContent = d.ok
+                  ? 'MN DMS connected. Location: ' + (loc.name || loc.cCode || JSON.stringify(loc)) + '. Cached at: ' + (d.cached_at || 'unknown')
+                  : 'MN DMS session error: ' + JSON.stringify(d);
+              })
+              .catch(function(e) { diagBox.textContent = 'Could not reach MN DMS session endpoint: ' + e.message; });
+          } else {
+            diagBox.style.display = 'none';
+          }
+        });
+      }
+
+      // Auto-refresh every 2 minutes
+      setInterval(function() { portalMnRefresh(false); }, 120000);
     })();
 
     els.portalClockInBtn.addEventListener("click", function() {
