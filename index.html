@@ -499,6 +499,17 @@
     .door-tile { border-radius:9px; padding:9px 10px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff);
       border-top:5px solid #cbd5e0; min-height:74px; display:flex; flex-direction:column; gap:2px; cursor:default; transition:transform .08s; }
     .door-tile:hover { transform:translateY(-2px); box-shadow:0 3px 10px rgba(0,0,0,0.1); }
+    .door-tile.occupied { cursor:pointer; }
+    .door-tile.occupied:active { transform:scale(0.96); }
+    .door-detail-kv { display:flex; flex-direction:column; gap:1px; }
+    .door-detail-kv .dk { font-size:0.75em; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--muted,#94a3b8); }
+    .door-detail-kv .dv { font-weight:600; color:var(--text,#1a202c); }
+    .door-tl-row { display:flex; align-items:flex-start; gap:10px; }
+    .door-tl-dot { width:10px; height:10px; border-radius:50%; background:var(--border,#e2e8f0); flex-shrink:0; margin-top:3px; }
+    .door-tl-dot.done { background:#38a169; }
+    .door-tl-dot.pending { background:#cbd5e0; }
+    .door-tl-label { color:var(--muted,#64748b); min-width:110px; }
+    .door-tl-time { font-weight:700; color:var(--text,#1a202c); }
     .door-tile.green  { border-top-color:#38a169; } .door-tile.yellow { border-top-color:#d69e2e; }
     .door-tile.red    { border-top-color:#e53e3e; } .door-tile.done { border-top-color:#3182ce; opacity:0.7; }
     .door-tile .door-no { font-size:1.05em; font-weight:800; color:var(--text,#1a202c); }
@@ -4404,6 +4415,27 @@
         </section>
 
         <!-- End-of-shift report modal -->
+        <!-- Door Detail Modal -->
+        <div class="report-modal-overlay" id="portalDoorDetailModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Door detail">
+          <div class="report-modal" style="max-width:480px;width:95%;">
+            <div class="report-modal-head" style="display:flex;align-items:center;justify-content:space-between;">
+              <div class="report-modal-title" id="doorDetailTitle">Door —</div>
+              <button type="button" id="doorDetailCloseBtn" class="secondary-btn" style="font-size:0.82em;padding:4px 12px;" aria-label="Close">&times; Close</button>
+            </div>
+            <div style="padding:16px 20px 20px;">
+              <!-- Status badge row -->
+              <div id="doorDetailStatus" style="margin-bottom:14px;"></div>
+              <!-- Key info grid -->
+              <div id="doorDetailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:0.88em;margin-bottom:16px;"></div>
+              <!-- Timeline -->
+              <div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:8px;">Timeline</div>
+              <div id="doorDetailTimeline" style="display:flex;flex-direction:column;gap:6px;font-size:0.85em;"></div>
+              <!-- Comments -->
+              <div id="doorDetailComments" style="margin-top:14px;font-size:0.84em;color:var(--muted,#64748b);display:none;"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="report-modal-overlay" id="portalReportModal" style="display:none;">
           <div class="report-modal">
             <div class="report-modal-head">
@@ -5754,6 +5786,7 @@
       portalScorecardDoors: document.getElementById("portalScorecardDoors"),
       portalScorecardAreas: document.getElementById("portalScorecardAreas"),
       portalDoorMap: document.getElementById("portalDoorMap"),
+      portalDoorDetailModal: document.getElementById("portalDoorDetailModal"),
       portalDoorRange: document.getElementById("portalDoorRange"),
       portalAreaGrid: document.getElementById("portalAreaGrid"),
       portalShiftReportBtn: document.getElementById("portalShiftReportBtn"),
@@ -6523,6 +6556,105 @@
           diagBtn.disabled = false;
           diagBtn.textContent = oldLabel;
         }
+      });
+    })();
+
+    // ── Door detail modal ────────────────────────────────────────────────────────
+    (function() {
+      var modal = els.portalDoorDetailModal;
+      if (!modal) return;
+
+      function fmt(iso) {
+        if (!iso) return null;
+        try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' }); }
+        catch(e) { return null; }
+      }
+
+      function statusColor(s) {
+        return s === 'detention' ? '#c53030'
+          : (s === 'urgent' || s === 'warning' || s === 'startsoon') ? '#b7791f'
+          : s === 'active' ? '#276749'
+          : s === 'complete' ? '#2b6cb0'
+          : '#4a5568';
+      }
+
+      function showDoorDetail(doorNum) {
+        var r = (state.portal.byDoor || {})[doorNum];
+        if (!r) return;
+
+        document.getElementById('doorDetailTitle').textContent = 'Door ' + doorNum;
+
+        // Status badge
+        var statusLabel = r.countdownLabel || portalStatusLabel(r.status) || r.statusText || r.status || 'Active';
+        document.getElementById('doorDetailStatus').innerHTML =
+          '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:800;font-size:0.9em;background:' + statusColor(r.status) + ';color:#fff;">'
+          + escapeHtml(statusLabel.toUpperCase()) + '</span>';
+
+        // Key info grid
+        var fields = [
+          { k: 'Supplier', v: r.supplier },
+          { k: 'Ref #', v: r.ref },
+          { k: 'PO', v: r.po },
+          { k: 'Carrier', v: r.carrier },
+          { k: 'Area', v: r.area },
+          { k: 'Appt', v: fmt(r.appointmentIso) }
+        ];
+        document.getElementById('doorDetailGrid').innerHTML = fields
+          .filter(function(f) { return f.v && String(f.v).trim(); })
+          .map(function(f) {
+            return '<div class="door-detail-kv"><span class="dk">' + escapeHtml(f.k) + '</span><span class="dv">' + escapeHtml(f.v) + '</span></div>';
+          }).join('');
+
+        // Timeline
+        var steps = [
+          { label: 'Check-In',        iso: r.checkInIso },
+          { label: 'Driver at Door',  iso: r.driverAtDoorIso },
+          { label: 'Unload Start',    iso: r.unloadStartIso },
+          { label: 'Unload Done',     iso: r.unloadFinishIso },
+          { label: 'Receiving Start', iso: r.receivingStartIso },
+          { label: 'Receiving Done',  iso: r.receivingFinishIso },
+          { label: 'Driver Left',     iso: r.driverLeftIso }
+        ];
+        document.getElementById('doorDetailTimeline').innerHTML = steps.map(function(s) {
+          var t = fmt(s.iso);
+          var done = !!t;
+          return '<div class="door-tl-row">'
+            + '<div class="door-tl-dot ' + (done ? 'done' : 'pending') + '"></div>'
+            + '<span class="door-tl-label">' + escapeHtml(s.label) + '</span>'
+            + '<span class="door-tl-time">' + (t ? t : '<span style="color:var(--muted,#a0aec0);font-weight:400;">Pending</span>') + '</span>'
+            + '</div>';
+        }).join('');
+
+        // Comments
+        var commEl = document.getElementById('doorDetailComments');
+        if (r.comments && r.comments.trim()) {
+          commEl.style.display = '';
+          commEl.innerHTML = '<strong>Notes:</strong> ' + escapeHtml(r.comments);
+        } else {
+          commEl.style.display = 'none';
+        }
+
+        modal.style.display = 'flex';
+      }
+
+      // Click on door map — delegate to occupied tiles
+      if (els.portalDoorMap) {
+        els.portalDoorMap.addEventListener('click', function(e) {
+          var tile = e.target.closest('.door-tile.occupied');
+          if (!tile) return;
+          showDoorDetail(parseInt(tile.getAttribute('data-door'), 10));
+        });
+      }
+
+      // Close on button or backdrop click
+      document.getElementById('doorDetailCloseBtn').addEventListener('click', function() {
+        modal.style.display = 'none';
+      });
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) modal.style.display = 'none';
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display !== 'none') modal.style.display = 'none';
       });
     })();
 
@@ -10833,6 +10965,9 @@
         { value: det, label: "Detention", sub: "Past receiving clock", color: "red" }
       ]);
 
+      // Store for click handler lookups
+      state.portal.byDoor = byDoor;
+
       // Push to Google Sheets (debounced) so clerks see the live dock
       portalPushToSheets(allDoors, byDoor);
 
@@ -10854,7 +10989,7 @@
         }
         const cls = classByStatus[r.status] || "blue";
         const detail = r.countdownLabel || portalStatusLabel(r.status);
-        return '<div class="door-tile ' + cls + '">'
+        return '<div class="door-tile ' + cls + ' occupied" data-door="' + dn + '" title="Tap for details">'
           + '<div class="door-no">' + dn + '</div>'
           + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
           + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
