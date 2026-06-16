@@ -10458,7 +10458,7 @@
 
       if (!els.portalDoorMap) return;
       if (!allDoors.length) {
-        els.portalDoorMap.innerHTML = ‘<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load today\’s scheduled doors.</div>’;
+        els.portalDoorMap.innerHTML = '<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load today\'s scheduled doors.</div>';
         return;
       }
       const classByStatus = { detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" };
@@ -10467,19 +10467,19 @@
         // Clerk assignment from Google Sheet (door number keyed as string)
         const clerkReq = state.portal.sheetAssignments[String(dn)] || "";
         if (!r) {
-          return ‘<div class="door-tile open"><div class="door-no">’ + dn + ‘</div>’
-            + ‘<div class="door-open-label">Open</div>’
-            + (clerkReq ? ‘<div class="clerk-badge">Clerk: ‘ + escapeHtml(clerkReq) + ‘</div>’ : ‘<div class="door-dwell">&nbsp;</div>’)
-            + ‘</div>’;
+          return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
+            + '<div class="door-open-label">Open</div>'
+            + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '<div class="door-dwell">&nbsp;</div>')
+            + '</div>';
         }
         const cls = classByStatus[r.status] || "blue";
         const detail = r.countdownLabel || portalStatusLabel(r.status);
-        return ‘<div class="door-tile ‘ + cls + ‘">’
-          + ‘<div class="door-no">’ + dn + ‘</div>’
-          + ‘<div class="door-sup">’ + escapeHtml(r.supplier || r.ref || "Truck") + ‘</div>’
-          + ‘<div class="door-dwell">’ + escapeHtml(detail) + ‘</div>’
-          + (clerkReq ? ‘<div class="clerk-badge">Clerk: ‘ + escapeHtml(clerkReq) + ‘</div>’ : ‘’)
-          + ‘</div>’;
+        return '<div class="door-tile ' + cls + '">'
+          + '<div class="door-no">' + dn + '</div>'
+          + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
+          + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
+          + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '')
+          + '</div>';
       }).join("");
     }
 
