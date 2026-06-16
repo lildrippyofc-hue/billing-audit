@@ -11857,7 +11857,16 @@
             + '</div>';
         }
         const cls = classByStatus[r.status] || "blue";
-        const detail = r.countdownLabel || portalStatusLabel(r.status);
+        const stage = r.receivingFinishMs ? "Done"
+          : r.receivingStartMs  ? "Receiving"
+          : r.unloadFinishMs    ? "Rec Pending"
+          : r.unloadStartMs     ? "Unloading"
+          : r.driverAtDoorMs    ? "At Door"
+          : r.checkInMs         ? "Checked In"
+          : "";
+        const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning")
+          ? (r.countdownLabel || "") : "";
+        const detail = stage ? (timeInfo ? stage + " · " + timeInfo : stage) : (r.countdownLabel || portalStatusLabel(r.status));
         return '<div class="door-tile ' + cls + ' occupied" data-door="' + dn + '" title="Tap for details">'
           + '<div class="door-no">' + dn + '</div>'
           + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
