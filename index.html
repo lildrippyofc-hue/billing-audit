@@ -2347,6 +2347,10 @@
     .gs-table th { background:var(--card-bg,#f7fafc); padding:8px 10px; text-align:left; font-weight:800; font-size:0.8em; text-transform:uppercase; letter-spacing:.05em; color:var(--muted,#718096); border-bottom:2px solid var(--border,#e2e8f0); }
     .gs-table td { padding:9px 10px; border-bottom:1px solid var(--border,#e2e8f0); vertical-align:top; line-height:1.4; }
     .gs-table tr:hover td { background:var(--hover,#f0f4f8); }
+    .gs-sortable:hover { background:var(--hover,#f0f4f8); }
+    .gs-sort-arrow { font-size:0.75em; color:var(--muted,#a0aec0); margin-left:4px; }
+    .gs-sortable.asc .gs-sort-arrow::after { content:'▲'; color:#1d4ed8; }
+    .gs-sortable.desc .gs-sort-arrow::after { content:'▼'; color:#1d4ed8; }
     .gs-hist-zone-header { color:#fff; font-weight:800; font-size:0.82em; letter-spacing:.04em; text-transform:uppercase; padding:6px 12px; border-radius:6px 6px 0 0; margin-bottom:0; }
     .gs-hist-table { border-radius:0 0 6px 6px; overflow:hidden; margin-bottom:4px; }
     .gs-hist-table th { font-size:0.8em; padding:6px 8px; }
@@ -3616,16 +3620,16 @@
         <!-- Supplier Quick-Reference Table -->
         <div class="gs-section-title">Where Does Each Truck Go?</div>
         <div style="overflow-x:auto;">
-          <table class="gs-table">
+          <table class="gs-table" id="gsSupplierTable">
             <thead>
               <tr>
-                <th>Company Name</th>
-                <th>What Kind</th>
-                <th>Use These Doors</th>
+                <th class="gs-sortable" data-col="0" style="cursor:pointer;user-select:none;">Company Name <span class="gs-sort-arrow"></span></th>
+                <th class="gs-sortable" data-col="1" style="cursor:pointer;user-select:none;">What Kind <span class="gs-sort-arrow"></span></th>
+                <th class="gs-sortable" data-col="2" style="cursor:pointer;user-select:none;">Use These Doors <span class="gs-sort-arrow"></span></th>
                 <th>Remember</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="gsSupplierBody">
               <!-- Front Dry -->
               <tr>
                 <td><strong>Frito Lay</strong></td>
@@ -6489,6 +6493,42 @@
           diagBtn.disabled = false;
           diagBtn.textContent = oldLabel;
         }
+      });
+    })();
+
+    // ── Guard Shack supplier table sort ─────────────────────────────────────────
+    (function() {
+      var table = document.getElementById('gsSupplierTable');
+      if (!table) return;
+      var tbody = document.getElementById('gsSupplierBody');
+      var headers = table.querySelectorAll('th.gs-sortable');
+      var sortCol = -1, sortAsc = true;
+
+      headers.forEach(function(th) {
+        th.addEventListener('click', function() {
+          var col = parseInt(th.getAttribute('data-col'));
+          if (sortCol === col) {
+            sortAsc = !sortAsc;
+          } else {
+            sortCol = col;
+            sortAsc = true;
+          }
+          headers.forEach(function(h) { h.classList.remove('asc', 'desc'); });
+          th.classList.add(sortAsc ? 'asc' : 'desc');
+
+          var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+          rows.sort(function(a, b) {
+            var aCells = a.querySelectorAll('td');
+            var bCells = b.querySelectorAll('td');
+            if (!aCells[col] || !bCells[col]) return 0;
+            var aText = aCells[col].textContent.trim().toLowerCase();
+            var bText = bCells[col].textContent.trim().toLowerCase();
+            if (aText < bText) return sortAsc ? -1 : 1;
+            if (aText > bText) return sortAsc ? 1 : -1;
+            return 0;
+          });
+          rows.forEach(function(r) { tbody.appendChild(r); });
+        });
       });
     })();
 
