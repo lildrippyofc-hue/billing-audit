@@ -648,6 +648,76 @@
     :root.dark .portal-pace-alert.pace-behind  { background:#2d1515; border-color:#fc8181; color:#fca5a5; }
     @keyframes portal-pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
     .portal-pace-alert.pace-behind { animation: portal-pulse 2.5s ease-in-out infinite; }
+
+    /* ── Stress-level animations ─────────────────────────────────────── */
+    @keyframes stress-shake {
+      0%,100% { transform: translateX(0); }
+      20%     { transform: translateX(-4px) rotate(-0.5deg); }
+      40%     { transform: translateX(4px) rotate(0.5deg); }
+      60%     { transform: translateX(-3px); }
+      80%     { transform: translateX(3px); }
+    }
+    @keyframes stress-flash-warn {
+      0%,100% { background: linear-gradient(135deg,#92400e 0%,#b45309 100%); }
+      50%     { background: linear-gradient(135deg,#b45309 0%,#d97706 100%); }
+    }
+    @keyframes stress-flash-crit {
+      0%,100% { background: linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%); }
+      50%     { background: linear-gradient(135deg,#991b1b 0%,#ef4444 100%); }
+    }
+    @keyframes stress-row-pulse {
+      0%,100% { background: #fca5a5 !important; }
+      50%     { background: #fecaca !important; }
+    }
+    @keyframes stress-banner-flash {
+      0%,100% { background:#fff0f0; border-color:#e53e3e; box-shadow: none; }
+      50%     { background:#fecaca; border-color:#dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.25); }
+    }
+    @keyframes stress-card-throb {
+      0%,100% { box-shadow: 0 2px 8px rgba(239,68,68,0.15); }
+      50%     { box-shadow: 0 0 0 4px rgba(239,68,68,0.35), 0 4px 16px rgba(239,68,68,0.3); }
+    }
+    /* Warning (level 1): behind < 30min or 1 detention truck */
+    .portal-stress-1 .portal-info-strip {
+      animation: stress-flash-warn 3s ease-in-out infinite !important;
+    }
+    .portal-stress-1 .metric-card[data-accent="red"] {
+      animation: stress-card-throb 2s ease-in-out infinite;
+    }
+    .portal-stress-1 .portal-pace-alert.pace-warning,
+    .portal-stress-1 .portal-pace-alert.pace-behind {
+      animation: portal-pulse 1.5s ease-in-out infinite;
+      border-width: 3px;
+      font-size: 0.95em;
+    }
+    /* Critical (level 2): behind > 30min or 2+ detention trucks */
+    .portal-stress-2 .portal-info-strip {
+      animation: stress-flash-crit 1.2s ease-in-out infinite !important;
+    }
+    .portal-stress-2 .metric-card[data-accent="red"] {
+      animation: stress-shake 0.45s ease-in-out infinite;
+    }
+    .portal-stress-2 .metric-card[data-accent="orange"] {
+      animation: stress-card-throb 1.5s ease-in-out infinite;
+    }
+    .portal-stress-2 .portal-pace-alert.pace-behind {
+      animation: stress-banner-flash 0.9s ease-in-out infinite;
+      border-width: 3px;
+      font-size: 1em;
+      padding: 14px 18px;
+    }
+    .portal-stress-2 tr.portal-row-detention td {
+      animation: stress-row-pulse 1s ease-in-out infinite;
+    }
+    .portal-stress-2 .portal-4am-timer.timer-red {
+      animation: stress-shake 0.5s ease-in-out infinite, portal-pulse 1s ease-in-out infinite;
+    }
+    .portal-stress-2 .portal-4am-wrap {
+      border-color: rgba(248,113,113,0.8) !important;
+      box-shadow: 0 0 12px rgba(239,68,68,0.4);
+    }
+    :root.dark .portal-stress-2 tr.portal-row-detention td { animation: none; }
+    :root.dark .portal-stress-1 .portal-info-strip, :root.dark .portal-stress-2 .portal-info-strip { animation: none !important; background: #4a0000 !important; }
     /* Progress bar */
     .portal-progress-wrap { margin: 6px 0 10px; }
     .portal-progress-label { font-size: 0.8em; font-weight: 600; color: var(--label,#718096); margin-bottom: 4px; }
@@ -12494,12 +12564,13 @@
           const ef2 = new Date(estMs);
           const hh2 = ef2.getHours(), mm2 = String(ef2.getMinutes()).padStart(2,"0");
           const ampm2 = hh2 >= 12 ? "PM" : "AM"; const h12b = hh2 % 12 || 12;
-          const paceStr = (actualRate && needRate) ? " Pace: " + actualRate + " trucks/hr; need " + needRate + " trucks/hr to finish by 4:00 AM." : "";
-          els.portalPaceAlert.className = "portal-pace-alert " + (behindMin > 30 ? "pace-behind" : "pace-warning");
+          const paceStr = (actualRate && needRate) ? " Running at " + actualRate + " trucks/hr — need " + needRate + " trucks/hr to hit 4:00 AM." : "";
+          const isCrit = behindMin > 30;
+          els.portalPaceAlert.className = "portal-pace-alert " + (isCrit ? "pace-behind" : "pace-warning");
           els.portalPaceAlert.style.display = "";
-          els.portalPaceAlert.innerHTML =
-            "<strong>Behind pace: " + behindMin + " min past the 4:00 AM goal.</strong>" +
-            " Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr;
+          els.portalPaceAlert.innerHTML = isCrit
+            ? "🚨 <strong>BEHIND BY " + behindMin + " MINUTES.</strong> Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + ". Pick up the pace NOW." + paceStr
+            : "⚠️ <strong>Slipping behind — " + behindMin + " min past goal.</strong> Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr;
           if (!state.portal.notifiedBehind) {
             state.portal.notifiedBehind = true;
             portalMaybeNotify("OKS Portal — Behind Schedule", "Running " + behindMin + " min behind. Est. finish " + h12b + ":" + mm2 + " " + ampm2 + ". Need " + (needRate || "?") + " trucks/hr.");
@@ -12514,6 +12585,20 @@
           state.portal.notifiedBehind = false;
         }
       }
+
+      // ── Stress level ───────────────────────────────────────────────────────
+      // Escalates portal visuals when falling behind or in detention.
+      (function() {
+        const panel = document.getElementById("myPortalPanel");
+        if (!panel) return;
+        const det = detention.length;
+        const behindMin = behindMs > 0 ? Math.round(behindMs / 60000) : 0;
+        const level = (behindMin > 30 || det >= 2) ? 2
+                    : (behindMin > 0  || det >= 1) ? 1
+                    : 0;
+        panel.classList.remove("portal-stress-1", "portal-stress-2");
+        if (level > 0) panel.classList.add("portal-stress-" + level);
+      })();
 
       // ── Charts row ─────────────────────────────────────────────────────────
       const chartsRow = document.getElementById("portalChartsRow");
