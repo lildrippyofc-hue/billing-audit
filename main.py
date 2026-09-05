@@ -6,6 +6,7 @@ import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Any, Dict
+from zoneinfo import ZoneInfo
 
 import requests as req_lib
 from requests import Session as ReqSession
@@ -26,6 +27,12 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "audit.db"
 EXPORTS_DIR = DATA_DIR / "shift_exports"
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+try:
+    DMS_BUSINESS_TZ = ZoneInfo("America/Chicago")
+except Exception:
+    DMS_BUSINESS_TZ = timezone(timedelta(hours=int(os.environ.get("DMS_BUSINESS_UTC_OFFSET_HOURS", "-5"))))
+DMS_NEXT_BUSINESS_DATE_HOUR = int(os.environ.get("DMS_NEXT_BUSINESS_DATE_HOUR", "19"))
 
 # ── Auth config ───────────────────────────────────────────────────────────────
 
@@ -152,7 +159,6 @@ class LoginIn(BaseModel):
 
 
 _dms_session_cache: Dict[str, Any] = {}
-_dms_mn_session_cache: Dict[str, Any] = {}
 
 
 def _load_dms_config() -> Dict[str, Any]:
@@ -248,8 +254,13 @@ def _find_dms_locations(login_data: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def _select_dms_location(locations: List[Dict[str, Any]], config: Dict[str, Any]) -> Dict[str, Any]:
+    loc_id = str(config.get("location_id") or "").strip()
     code = str(config["location_code"]).upper()
     name = str(config["location_name"]).upper()
+    if loc_id:
+        for loc in locations:
+            if str(loc.get("locid") or loc.get("id") or "").strip() == loc_id:
+                return loc
     for loc in locations:
         text = " ".join(str(loc.get(k, "")) for k in ("cCode", "code", "name", "locName", "location", "locid")).upper()
         if code and code in text:
@@ -343,112 +354,17 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     return session
 
 
-def _load_dms_mn_config() -> Dict[str, Any]:
-    username = os.environ.get("DMS_MN_USERNAME") or ""
-    password = os.environ.get("DMS_MN_PASSWORD") or ""
-    base = (os.environ.get("DMS_BASE_URL") or "https://dms.eclipseia.com").rstrip("/")
-    base = base.replace(":5055", "")
-    return {
-        "username": username,
-        "password": password,
-        "base_url": base,
-        "location_code": os.environ.get("DMS_MN_LOCATION_CODE") or "FMN",
-        "location_name": os.environ.get("DMS_MN_LOCATION_NAME") or "ALDIFMN",
-        "timeout": int(os.environ.get("DMS_TIMEOUT_SECONDS") or 25),
-        "_parse_error": "",
-        "_cfg_path": "Railway env vars (DMS_MN_USERNAME / DMS_MN_PASSWORD)",
-    }
-
-
-def _ensure_dms_mn_session(force: bool = False) -> Dict[str, Any]:
-    config = _load_dms_mn_config()
-    if (
-        not force
-        and _dms_mn_session_cache.get("userinfo")
-        and _dms_mn_session_cache.get("loc")
-        and _dms_mn_session_cache.get("base_url") == config["base_url"]
-    ):
-        return _dms_mn_session_cache
-
-    username = str(config["username"]).strip()
-    password = str(config["password"]).strip()
-    if not username or not password:
-        raise HTTPException(
-            status_code=400,
-            detail="Minnesota DMS credentials not configured. Set DMS_MN_USERNAME and DMS_MN_PASSWORD in Railway environment variables.",
-        )
-
-    dms_session = ReqSession()
-    dms_session.headers.update(_EDGE_HEADERS)
-    config["_session"] = dms_session
-    try:
-        dms_session.get(f"{config['base_url']}/login", timeout=config["timeout"])
-    except Exception:
-        pass
-
-    last_error = None
-    login_data: Dict[str, Any] = {}
-    for payload in _dms_login_payloads(username, password):
-        try:
-            response = _dms_post("api/login/trylogin", payload, config)
-            ui = response.get("userinfo") or {}
-            if isinstance(response, dict) and ui.get("login"):
-                login_data = response
-                break
-        except HTTPException as exc:
-            last_error = exc
-    if not login_data:
-        if last_error:
-            raise last_error
-        raise HTTPException(status_code=502, detail="Minnesota DMS login failed. Check DMS_MN_USERNAME and DMS_MN_PASSWORD.")
-
-    sel_loc = login_data.get("selLoc")
-    # Always select the correct MN location by configured code/name — never trust
-    # selLoc from the login response, because the DMS user's last active location
-    # may be the OKS location, which would make the MN portal return OKS data.
-    locations = _find_dms_locations(login_data)
-    if not locations:
-        try:
-            loc_response = _dms_json_request(
-                "api/location/getLocations",
-                {"userinfo": login_data.get("userinfo") or login_data},
-                config,
-            )
-            locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
-        except HTTPException:
-            locations = []
-    if locations:
-        loc = _select_dms_location(locations, config)
-    elif isinstance(sel_loc, dict) and sel_loc:
-        loc = sel_loc
-    else:
-        loc = {}
-
-    session = {
-        "base_url": config["base_url"],
-        "userinfo": login_data.get("userinfo") or login_data.get("user") or login_data,
-        "buck": login_data.get("buck") or login_data.get("bucket") or {},
-        "loc": loc,
-        "sel_loc": sel_loc or loc,
-        "config": config,
-        "cached_at": datetime.now(timezone.utc).isoformat(),
-    }
-    _dms_mn_session_cache.clear()
-    _dms_mn_session_cache.update(session)
-    return session
-
-
 def _dms_business_date(date_text: Optional[str]) -> str:
     if date_text:
-        try:
-            dt = datetime.strptime(date_text, "%Y-%m-%d")
-        except ValueError:
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y"):
             try:
-                dt = datetime.strptime(date_text, "%m/%d/%Y")
+                dt = datetime.strptime(date_text, fmt)
+                return f"{dt.month}/{dt.day}/{dt.year}"
             except ValueError:
-                dt = datetime.now()
-    else:
-        dt = datetime.now()
+                pass
+    dt = datetime.now(DMS_BUSINESS_TZ)
+    if dt.hour >= DMS_NEXT_BUSINESS_DATE_HOUR:
+        dt = dt + timedelta(days=1)
     return f"{dt.month}/{dt.day}/{dt.year}"
 
 
@@ -549,7 +465,7 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
         "receivingStartIso": receiving_start,
         "receivingFinishIso": receiving_finish,
         "driverLeftIso": driver_left,
-        "finishIso": receiving_finish,
+        "finishIso": unload_finish or receiving_finish,
         "statusText": str(merged.get("drstat") or "").strip(),
     }
 
@@ -589,8 +505,8 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
 
 
 def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str) -> int:
-    """Record each completed truck's real turn time (check-in -> receiving
-    finish) per vendor so the completion estimate gets more accurate over time.
+    """Record each completed truck's real turn time (check-in -> unload finish)
+    per vendor so the completion estimate gets more accurate over time.
     Idempotent per (vendor, truck_ref, shift_date) so repeated pulls of the same
     shift don't double-count. Best-effort; never raises into the request."""
     inserted = 0
@@ -599,12 +515,13 @@ def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str) -> int:
         now_str = datetime.now(timezone.utc).isoformat()
         for t in trucks:
             vendor = (t.get("supplier") or "").strip().upper()
-            ci, rf = t.get("checkInIso"), t.get("receivingFinishIso")
+            ci = t.get("checkInIso")
+            done = t.get("unloadFinishIso") or t.get("receivingFinishIso")
             ref = str(t.get("rowid") or t.get("ref") or "").strip()
-            if not vendor or not ci or not rf or not ref:
+            if not vendor or not ci or not done or not ref:
                 continue
             try:
-                dock_min = round((datetime.fromisoformat(rf) - datetime.fromisoformat(ci)).total_seconds() / 60)
+                dock_min = round((datetime.fromisoformat(done) - datetime.fromisoformat(ci)).total_seconds() / 60)
             except Exception:
                 continue
             if dock_min <= 0 or dock_min > 720:
@@ -915,6 +832,29 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         1 for st in stamps
         if _stat(st) == "late" and not (st.get("drchk") or st.get("clrkchk"))
     )
+    # Trucks with a past appointment but still not checked in — shown in the
+    # no-show tracker on the frontend.
+    now_utc = datetime.now(timezone.utc)
+    no_show_trucks = []
+    for t in all_trucks:
+        if t.get("checkInIso"):
+            continue
+        appt_iso = t.get("appointmentIso")
+        if not appt_iso:
+            continue
+        try:
+            appt_dt = datetime.fromisoformat(appt_iso)
+            if appt_dt.tzinfo is None:
+                appt_dt = appt_dt.replace(tzinfo=timezone.utc)
+            if appt_dt < now_utc:
+                no_show_trucks.append({
+                    "ref":            t.get("ref", ""),
+                    "supplier":       t.get("supplier", ""),
+                    "door":           t.get("door", ""),
+                    "appointmentIso": appt_iso,
+                })
+        except Exception:
+            pass
     # Per-area summary across ALL scheduled (non-rejected) trucks — feeds both the
     # shift report and the Area Breakdown view.
     area_summary: Dict[str, Dict[str, Any]] = {}
@@ -924,7 +864,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         s["scheduled"] += 1
         if t.get("checkInIso"):
             s["checked_in"] += 1
-        if t.get("receivingFinishIso"):
+        if t.get("unloadFinishIso") or t.get("receivingFinishIso"):
             s["completed"] += 1
     area_list = sorted(area_summary.values(), key=lambda x: -x["scheduled"])
     # Every door used anywhere in today's schedule (so the door map can show the
@@ -946,56 +886,9 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "checked_in_count": len(board),
         "rejected_count": rejected_count,
         "no_show_count": no_show_count,
+        "no_show_trucks": no_show_trucks,
         "area_summary": area_list,
         "doors": doors,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-
-@app.get("/api/dms/mn/session")
-def dms_mn_session_status():
-    session = _ensure_dms_mn_session()
-    loc = session.get("loc") or {}
-    cfg = session.get("config") or {}
-    userinfo = session.get("userinfo") or {}
-    return {
-        "ok": True,
-        "location": {
-            "locid": loc.get("locid"),
-            "name": loc.get("name") or loc.get("locName") or loc.get("location"),
-            "cCode": loc.get("cCode") or loc.get("code"),
-        },
-        "login_user": userinfo.get("login") or userinfo.get("username") or userinfo.get("un"),
-        "configured_location_code": cfg.get("location_code"),
-        "configured_location_name": cfg.get("location_name"),
-        "cached_at": session.get("cached_at"),
-    }
-
-
-@app.get("/api/dms/mn/portal")
-def dms_mn_portal(date: Optional[str] = None, force: bool = False):
-    """Read DMS load/stamp rows for the Minnesota location."""
-    session = _ensure_dms_mn_session(force=force)
-    info = _dms_business_date(date)
-    base_payload = {
-        "info": info,
-        "loc": session["loc"],
-        "userinfo": session["userinfo"],
-        "buck": session.get("buck") or {},
-    }
-    loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
-    stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
-    loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
-    stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
-    all_trucks = _merge_dms_portal_rows(loads, stamps)
-    board = [t for t in all_trucks if t.get("checkInIso")]
-    return {
-        "ok": True,
-        "business_date": info,
-        "location": session["loc"],
-        "trucks": board,
-        "total_expected": len(all_trucks),
-        "checked_in_count": len(board),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -1033,6 +926,30 @@ class DmsStampIn(BaseModel):
     stamp_type: str
     stamp_time: Optional[str] = None
 
+
+class DmsScheduleRowIn(BaseModel):
+    row_number: Optional[int] = None
+    reference: str = ""
+    po: str = ""
+    scheduled_text: str = ""
+    scheduled_iso: str = ""
+    pallets: Optional[int] = None
+    quantity: str = ""
+    supplier: str = ""
+    dock: str = ""
+    protection: str = ""
+    product_category: str = ""
+    incoterm: str = ""
+    current_state: str = ""
+    area: str = ""
+
+
+class DmsScheduleUploadIn(BaseModel):
+    business_date: Optional[str] = None
+    rows: List[DmsScheduleRowIn]
+    skip_existing: bool = True
+    dry_run: bool = False
+
 STAMP_TYPE_MAP = {
     "checkin":          "checkIn",
     "check_in":         "checkIn",
@@ -1045,6 +962,269 @@ STAMP_TYPE_MAP = {
     "receivingfinish":  "receivingFinish",
     "receiving_finish": "receivingFinish",
 }
+
+
+def _schedule_digits(value: Any) -> str:
+    return "".join(ch for ch in str(value or "") if ch.isdigit())
+
+
+def _schedule_po_keys(value: Any) -> List[str]:
+    text = str(value or "")
+    keys = []
+    for part in text.replace(";", ",").split(","):
+        digits = _schedule_digits(part)
+        if digits:
+            keys.append(digits)
+    if not keys:
+        digits = _schedule_digits(text)
+        if digits:
+            keys.append(digits)
+    return list(dict.fromkeys(keys))
+
+
+def _schedule_int(value: Any, default: int = 0) -> int:
+    try:
+        if value in (None, ""):
+            return default
+        return max(0, int(float(str(value).strip())))
+    except Exception:
+        return default
+
+
+def _schedule_appt_to_utc_string(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError("scheduled time is missing")
+    try:
+        dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except Exception:
+        parsed = None
+        for fmt in ("%m/%d/%Y %I:%M %p", "%m/%d/%Y %H:%M", "%Y-%m-%d %H:%M:%S"):
+            try:
+                parsed = datetime.strptime(text, fmt)
+                break
+            except ValueError:
+                pass
+        if parsed is None:
+            raise ValueError(f"scheduled time is unreadable: {text}")
+        dt = parsed.replace(tzinfo=DMS_BUSINESS_TZ)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=DMS_BUSINESS_TZ)
+    return dt.astimezone(timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+
+def _area_matches_hint(area: Any, hint: str) -> bool:
+    area_text = " ".join(str(v) for v in area.values()) if isinstance(area, dict) else str(area or "")
+    area_text = area_text.lower()
+    hint = hint.lower()
+    pairs = [
+        ("freezer", ("freezer", "frozen", "freeze")),
+        ("produce", ("produce", "fruit", "vegetable", "salad")),
+        ("cooler", ("cooler", "chill", "chiller", "meat", "dairy", "refrigerated")),
+        ("dry", ("dry", "ambient", "grocery", "pantry", "beverage", "household")),
+    ]
+    for area_key, words in pairs:
+        if any(w in hint for w in words) and area_key in area_text:
+            return True
+    return False
+
+
+def _dms_area_for_schedule(row: DmsScheduleRowIn, session: Dict[str, Any], business_date: str) -> Any:
+    buck = session.get("buck") or {}
+    areas = buck.get("areas") if isinstance(buck, dict) else None
+    if not areas:
+        try:
+            buck = _dms_json_request(
+                "api/dash/getbucketdata",
+                {"info": business_date, "loc": session["loc"]},
+                session["config"],
+            )
+            if isinstance(buck, dict):
+                session["buck"] = buck
+                areas = buck.get("areas")
+        except Exception:
+            areas = None
+    if isinstance(areas, list) and areas:
+        hint = " ".join([row.area, row.protection, row.dock, row.product_category])
+        for area in areas:
+            if _area_matches_hint(area, hint):
+                return area
+        return areas[0]
+    return row.area or row.dock or ""
+
+
+def _dms_schedule_upload_model(session: Dict[str, Any]) -> Dict[str, Any]:
+    candidates = [
+        {"user": {"user": session["userinfo"]}},
+        {"user": session["userinfo"]},
+    ]
+    last_error = None
+    for payload in candidates:
+        try:
+            result = _dms_json_request("api/load/getuploadmodel", payload, session["config"])
+            if isinstance(result, dict):
+                return result
+        except Exception as exc:
+            last_error = str(exc)
+    return {"_error": last_error or "DMS upload model was not returned."}
+
+
+def _dms_schedule_insert_payload(
+    row: DmsScheduleRowIn,
+    session: Dict[str, Any],
+    business_date: str,
+    upload_model: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    notes = "Imported from ALDI schedule"
+    extras = []
+    if row.incoterm:
+        extras.append(f"Incoterm: {row.incoterm}")
+    if row.quantity:
+        extras.append(f"Quantity: {row.quantity}")
+    if row.current_state:
+        extras.append(f"State: {row.current_state}")
+    if row.dock:
+        extras.append(f"Dock: {row.dock}")
+    if extras:
+        notes += " | " + "; ".join(extras)
+
+    base_insert: Dict[str, Any] = {}
+    if isinstance(upload_model, dict) and isinstance(upload_model.get("insert"), dict):
+        base_insert.update(upload_model["insert"])
+
+    base_insert.update({
+        "area": _dms_area_for_schedule(row, session, business_date),
+        "poNum": row.po.strip(),
+        "appt": _schedule_appt_to_utc_string(row.scheduled_iso or row.scheduled_text),
+        "trkNum": _schedule_int(row.reference, 0),
+        "doorNum": 0,
+        "load": row.protection.strip() or row.dock.strip() or "ALDI Schedule",
+        "sup": row.supplier.strip(),
+        "qty": _schedule_int(row.pallets, 0),
+        "carr": str(base_insert.get("carr") or ""),
+        "notes": notes,
+        "desc": row.product_category.strip() or row.dock.strip(),
+        "cabNum": str(base_insert.get("cabNum") or ""),
+    })
+
+    return {
+        "ins": base_insert,
+        "loc": session["loc"],
+        "tzOffset": int(datetime.now().astimezone().utcoffset().total_seconds() / -60),
+        "busDate": business_date,
+    }
+
+
+def _dms_success(result: Any) -> bool:
+    if isinstance(result, dict):
+        if result.get("operationSuccess") is False or result.get("ok") is False or result.get("success") is False:
+            return False
+        if result.get("error"):
+            return False
+    return True
+
+
+@app.get("/api/dms/schedule-upload-model")
+def dms_schedule_upload_model():
+    session = _ensure_dms_session()
+    model = _dms_schedule_upload_model(session)
+    insert_model = model.get("insert") if isinstance(model, dict) else None
+    buck = session.get("buck") if isinstance(session.get("buck"), dict) else {}
+    return {
+        "ok": not bool(isinstance(model, dict) and model.get("_error")),
+        "model_error": model.get("_error") if isinstance(model, dict) else "DMS upload model was not returned.",
+        "insert_fields": sorted(insert_model.keys()) if isinstance(insert_model, dict) else [],
+        "areas": buck.get("areas") if isinstance(buck, dict) else [],
+    }
+
+
+@app.post("/api/dms/schedule-upload")
+def dms_schedule_upload(body: DmsScheduleUploadIn):
+    if not body.rows:
+        raise HTTPException(status_code=400, detail="No schedule rows were provided.")
+    if len(body.rows) > 300:
+        raise HTTPException(status_code=400, detail="Schedule upload is limited to 300 rows at a time.")
+
+    session = _ensure_dms_session()
+    business_date = _dms_business_date(body.business_date)
+    upload_model = _dms_schedule_upload_model(session)
+    model_error = upload_model.get("_error") if isinstance(upload_model, dict) else "DMS upload model was not returned."
+    existing_keys = set()
+    if body.skip_existing:
+        try:
+            existing_payload = {
+                "info": business_date,
+                "loc": session["loc"],
+                "userinfo": session["userinfo"],
+                "buck": session.get("buck") or {},
+            }
+            existing_loads = [
+                x for x in _first_list(_dms_json_request("api/load/getloaddetails", existing_payload, session["config"]))
+                if isinstance(x, dict)
+            ]
+            for item in existing_loads:
+                for key in _schedule_po_keys(item.get("poNum") or item.get("po")):
+                    existing_keys.add(f"po:{key}")
+                ref_key = _schedule_digits(item.get("trkNum") or item.get("trk") or item.get("truck") or item.get("ref"))
+                if ref_key:
+                    existing_keys.add(f"ref:{ref_key}")
+        except Exception:
+            existing_keys = set()
+
+    results = []
+    inserted = skipped = failed = 0
+    for index, row in enumerate(body.rows, start=1):
+        po_keys = _schedule_po_keys(row.po)
+        ref_key = _schedule_digits(row.reference)
+        row_id = row.row_number or index
+        try:
+            if not po_keys:
+                raise ValueError("PO number is missing")
+            if not row.scheduled_iso and not row.scheduled_text:
+                raise ValueError("scheduled time is missing")
+            if body.skip_existing and (
+                any(f"po:{key}" in existing_keys for key in po_keys) or (ref_key and f"ref:{ref_key}" in existing_keys)
+            ):
+                skipped += 1
+                results.append({"row": row_id, "status": "Skipped", "message": "Already appears to exist in DMS.", "reference": row.reference, "po": row.po})
+                continue
+
+            payload = _dms_schedule_insert_payload(row, session, business_date, upload_model)
+            if body.dry_run:
+                skipped += 1
+                results.append({"row": row_id, "status": "Ready", "message": "Ready to upload.", "reference": row.reference, "po": row.po})
+                continue
+
+            result = _dms_json_request("api/load/insertLoadDetails", payload, session["config"])
+            if not _dms_success(result):
+                failed += 1
+                results.append({
+                    "row": row_id,
+                    "status": "Failed",
+                    "message": str((result or {}).get("userMessage") or (result or {}).get("error") or "DMS rejected the row."),
+                    "reference": row.reference,
+                    "po": row.po,
+                })
+                continue
+            inserted += 1
+            for key in po_keys:
+                existing_keys.add(f"po:{key}")
+            if ref_key:
+                existing_keys.add(f"ref:{ref_key}")
+            results.append({"row": row_id, "status": "Inserted", "message": "Created in DMS.", "reference": row.reference, "po": row.po})
+        except Exception as exc:
+            failed += 1
+            results.append({"row": row_id, "status": "Failed", "message": str(exc), "reference": row.reference, "po": row.po})
+
+    return {
+        "ok": failed == 0,
+        "business_date": business_date,
+        "inserted": inserted,
+        "skipped": skipped,
+        "failed": failed,
+        "model_error": model_error,
+        "results": results,
+    }
 
 @app.post("/api/dms/stamp")
 def dms_stamp(body: DmsStampIn):
@@ -1208,3 +1388,17 @@ def serve_app():
             "Expires": "0",
         },
     )
+
+
+@app.get("/historical-data.js")
+def serve_historical_data():
+    return FileResponse(
+        str(BASE_DIR / "historical-data.js"),
+        media_type="application/javascript",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
