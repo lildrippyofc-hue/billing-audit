@@ -1554,20 +1554,6 @@ def _dms_schedule_upload_model(session: Dict[str, Any]) -> Dict[str, Any]:
     return {"_error": last_error or "DMS upload model was not returned."}
 
 
-def _powerview_po_number(raw_po: str) -> str:
-    """PowerView's PO rule (orbit/app.py::_parse_aldi_schedule): from a
-    comma-separated list, take the first 10-digit candidate. A multi-PO cell
-    sent to DMS's poNum field as-is (e.g. "7521444135,7522401186") is not a
-    valid single PO, so this picks the one DMS actually expects."""
-    text = str(raw_po or "").strip()
-    for candidate in text.split(","):
-        c = candidate.strip()
-        if c.isdigit() and len(c) == 10:
-            return c
-    digits = _schedule_digits(text)
-    return digits or text
-
-
 def _powerview_strip_commodity_code(value: str) -> str:
     """PowerView's cleanup (orbit/app.py::_strip_commodity_code): the ALDI
     schedule codes commodities as "0008 Fruits & Vegetables"; DMS wants just
@@ -1601,7 +1587,10 @@ def _dms_schedule_insert_payload(
         base_insert.update(upload_model["insert"])
 
     dock_type = _schedule_dock_type(row, use_oks_rules)
-    po_number = row.po.strip() if use_oks_rules else _powerview_po_number(row.po)
+    # Keep the full PO string intact (even a multi-PO cell like
+    # "7521444135,7522401186") -- that's what lets My Portal's search box find
+    # the truck by typing any one of its PO numbers, same as OKS today.
+    po_number = row.po.strip()
     category_desc = row.product_category.strip() if use_oks_rules else _powerview_strip_commodity_code(row.product_category)
     supplier_fallback = "MULTI PO SUPPLIER NOT KNOWN" if use_oks_rules else "MULTI PO - VENDOR NOT SPECIFIED"
     supplier_value = row.supplier.strip() or supplier_fallback
