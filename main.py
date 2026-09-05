@@ -333,13 +333,27 @@ def _dms_location_matches_config(loc: Dict[str, Any], config: Dict[str, Any]) ->
     return bool((code and code in text) or (name and name in all_text))
 
 
+def _dms_session_is_valid(session: Dict[str, Any]) -> bool:
+    """A cached session is only useful if DMS actually returned a real
+    location/user, not an empty/all-null body with a 2xx status (seen
+    intermittently from the DMS login endpoint). Without this check, one bad
+    login response gets cached forever and every later request silently fails
+    until the process is restarted."""
+    loc = session.get("loc")
+    userinfo = session.get("userinfo")
+    if not isinstance(loc, dict) or not loc.get("locid"):
+        return False
+    if not isinstance(userinfo, dict) or not (userinfo.get("locid") or userinfo.get("login")):
+        return False
+    return True
+
+
 def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     config = _load_dms_config()
     if (
         not force
-        and _dms_session_cache.get("userinfo")
-        and _dms_session_cache.get("loc")
         and _dms_session_cache.get("base_url") == config["base_url"]
+        and _dms_session_is_valid(_dms_session_cache)
     ):
         return _dms_session_cache
 
@@ -423,9 +437,8 @@ def _ensure_dms_mn_session(force: bool = False) -> Dict[str, Any]:
     ])
     if (
         not force
-        and _dms_mn_session_cache.get("userinfo")
-        and _dms_mn_session_cache.get("loc")
         and _dms_mn_session_cache.get("cache_key") == cache_key
+        and _dms_session_is_valid(_dms_mn_session_cache)
     ):
         return _dms_mn_session_cache
 
@@ -1967,24 +1980,30 @@ def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: st
     dms_rows_ba: List[Dict[str, Any]] = []
     dms_err: Optional[str] = None
     dms_loc_label = ""
-    try:
-        if site == "oks":
-            session = _ensure_dms_session()
-        else:
-            session = _ensure_dms_mn_session()
-        config = session["config"]
-        loc = session.get("loc") or {}
-        dms_loc_label = loc.get("location") or loc.get("locName") or loc.get("name") or ""
-        dms_resp = _dms_post("api/ranged/getRanged", {
-            "start": f"{ws_date.month}/{ws_date.day}/{ws_date.year}",
-            "end":   f"{we_date.month}/{we_date.day}/{we_date.year}",
-            "loc":   loc,
-        }, config)
-        dms_rows_ba = dms_resp.get("rows", []) or []
-    except HTTPException as exc:
-        dms_err = str(exc.detail)
-    except Exception as exc:
-        dms_err = str(exc)
+    for attempt, force_session in enumerate((False, True)):
+        try:
+            if site == "oks":
+                session = _ensure_dms_session(force=force_session)
+            else:
+                session = _ensure_dms_mn_session(force=force_session)
+            config = session["config"]
+            loc = session.get("loc") or {}
+            dms_loc_label = loc.get("location") or loc.get("locName") or loc.get("name") or ""
+            dms_resp = _dms_post("api/ranged/getRanged", {
+                "start": f"{ws_date.month}/{ws_date.day}/{ws_date.year}",
+                "end":   f"{we_date.month}/{we_date.day}/{we_date.year}",
+                "loc":   loc,
+            }, config)
+            dms_rows_ba = dms_resp.get("rows", []) or []
+            dms_err = None
+            break
+        except HTTPException as exc:
+            dms_err = str(exc.detail)
+        except Exception as exc:
+            dms_err = str(exc)
+        # DMS occasionally answers a login with an empty/null 200 that only
+        # shows up as garbage further downstream; retry once with a forced
+        # fresh login before giving up.
 
     # ── Breakdown reconciliation ────────────────────────────────────────────
     dms_bd = [r for r in dms_rows_ba if has_bd(r.get("comments", ""))]
