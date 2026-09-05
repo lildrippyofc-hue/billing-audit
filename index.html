@@ -1441,8 +1441,8 @@
     #reportFile,
     #opsAuditFile,
     #dmsAuditFile,
-    #truckChargeOpsFile,
-    #truckChargeRangeFile {
+    #pvOksOpsFile,
+    #pvMnOpsFile {
       position: absolute;
       inline-size: 1px;
       block-size: 1px;
@@ -1807,6 +1807,38 @@
       grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 8px;
     }
+
+    .pv-audit-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+      margin-top: 10px;
+    }
+    .pv-audit-controls .file-button { flex: 0 0 auto; }
+    .pv-audit-controls label[for] {
+      font-size: 0.85em;
+      font-weight: 600;
+      color: var(--muted, #7faec8);
+      white-space: nowrap;
+    }
+    .pv-audit-week-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pv-audit-controls .primary-btn {
+      margin-left: auto;
+    }
+    @media (max-width: 640px) {
+      .pv-audit-controls .primary-btn { margin-left: 0; width: 100%; }
+      .pv-audit-week-group { width: 100%; }
+    }
+    .pv-audit-results {
+      margin-top: 14px;
+    }
+    .pv-audit-results[hidden] { display: none; }
 
     .lookup-input {
       min-height: 40px;
@@ -3904,6 +3936,18 @@
       font-size: 0.82em;
       font-weight: 700;
     }
+    .mn-schedule-only .mn-live-only {
+      display: none !important;
+    }
+    .mn-schedule-only .portal-schedule-panel {
+      display: block !important;
+    }
+    .mn-billing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
     :root.dark .mn-portal-panel .mn-status {
       background: #132030;
       border-color: #1e3a55;
@@ -3966,7 +4010,7 @@
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
           <button class="tab-button" type="button" aria-selected="true" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal (OKS)</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Live: Minnesota Portal">My Portal (MN)</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Minnesota: Schedule Uploader">MN Schedule Uploader</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
@@ -3999,6 +4043,10 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="detention" data-menu-label="ALDIOKS Billing Audit: Detention">Detention</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="bizDateAudit" data-menu-label="ALDIOKS Billing Audit: Business Date">Business Date</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="clerkBoard" data-menu-label="ALDIOKS Billing Audit: Clerk Entry">Clerk Entry</button>
+        </div>
+        <div class="menu-group">
+          <div class="menu-group-title">Minnesota</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="mnBillingAudit" data-menu-label="Minnesota: PowerView Billing Audit">MN Billing Audit</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Database</div>
@@ -4042,7 +4090,7 @@
             </svg>
             Sample
           </button>
-          <button id="clearButton" type="button">
+          <button id="clearButton" type="button" class="work-only-btn">
             <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
               <path d="M3 6h18"></path>
               <path d="M8 6V4h8v2"></path>
@@ -4748,236 +4796,259 @@
           <section class="panel lookup-box" aria-labelledby="truckChargeAuditTitle">
             <div class="panel-header">
               <h2 id="truckChargeAuditTitle">OKS PowerView Billing Audit</h2>
-              <span class="panel-kicker">DMS Load Details + Ranged Report vs OPS Invoice</span>
+              <span class="panel-kicker" id="pvOksKicker">Waiting on report</span>
             </div>
-            <div class="friendly-note">Attach the OPS invoice report and the DMS Ranged Report. This replaces the old custom billing audit with an OKS PowerView-style audit: Load Details, load type billing, internal breakdowns, clerk PO entry, C&amp;C, and daily ALDIOKS charges.</div>
-            <input id="truckChargeOpsFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
-            <input id="truckChargeRangeFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
-            <div class="lookup-row">
-              <label class="file-button primary" for="truckChargeOpsFile" data-file-trigger="truckChargeOpsFile" style="position:relative;">
+            <div class="friendly-note">Attach the OPS invoice XLSX for the billing week and pick the week-start date (Saturday). The DMS Ranged Report is pulled live from DMS  -  no second file needed.</div>
+            <input id="pvOksOpsFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+            <div class="pv-audit-controls">
+              <label class="file-button primary" for="pvOksOpsFile" data-file-trigger="pvOksOpsFile">
                 <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
                   <path d="M12 3v12"></path>
                   <path d="m7 8 5-5 5 5"></path>
                   <path d="M5 15v4h14v-4"></path>
                 </svg>
-                Attach OPS invoice
-                <span class="attach-hint" id="hintTcOps" style="bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);">
-                  <span class="attach-hint-label">Start here</span>
-                  <span class="attach-hint-arrow">v</span>
-                </span>
+                Attach OPS invoice (XLSX)
               </label>
-              <label class="file-button" for="truckChargeRangeFile" data-file-trigger="truckChargeRangeFile" style="position:relative;">
-                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
-                  <path d="M12 3v12"></path>
-                  <path d="m7 8 5-5 5 5"></path>
-                  <path d="M5 15v4h14v-4"></path>
-                </svg>
-                Attach DMS Ranged Report
-                <span class="attach-hint" id="hintTcRange" style="bottom:calc(100% + 8px); left:50%; transform:translateX(-50%);">
-                  <span class="attach-hint-label">Then this one</span>
-                  <span class="attach-hint-arrow">v</span>
-                </span>
-              </label>
+              <div class="pv-audit-week-group">
+                <label for="pvOksWeekStart">Week start (Sat)</label>
+                <input id="pvOksWeekStart" type="date" class="lookup-input" style="max-width:160px;">
+              </div>
+              <button id="pvOksRunBtn" type="button" class="primary-btn" disabled>Run Audit</button>
             </div>
+            <div class="table-meta" id="pvOksStatus">Attach an OPS invoice XLSX and pick the week-start date to begin.</div>
           </section>
 
           <section class="panel" aria-labelledby="truckChargeRulesTitle">
             <div class="panel-header">
-              <h2 id="truckChargeRulesTitle">PowerView Billing Sections</h2>
-              <span class="panel-kicker" id="truckChargeAuditKicker">Waiting on reports</span>
+              <h2 id="truckChargeRulesTitle">OKS Audit Rates</h2>
             </div>
-            <div class="overview-list" id="truckChargeAuditRules"></div>
+            <div class="overview-list" id="pvOksRules"></div>
           </section>
         </div>
 
-        <div class="summary-grid" style="margin-top: 14px;">
-          <article class="metric-card">
-            <div class="metric-label">Ranged Loads Checked</div>
-            <div class="metric-value" id="truckChargeCheckedCount">0</div>
-            <div class="metric-note">DMS Ranged Report trucks reviewed.</div>
-          </article>
-          <article class="metric-card">
-            <div class="metric-label">Load Type Issues</div>
-            <div class="metric-value" id="truckChargeIssueCount">0</div>
-            <div class="metric-note">OPS amount or load type needs review.</div>
-          </article>
-          <article class="metric-card">
-            <div class="metric-label">Missed C&amp;C Billing</div>
-            <div class="metric-value" id="missedCncBillingCount">0</div>
-            <div class="metric-note">C&amp;C trucks missing ALDICCP invoice.</div>
-          </article>
-          <article class="metric-card">
-            <div class="metric-label">Internal Breakdown Issues</div>
-            <div class="metric-value" id="pvBreakdownIssueCount">0</div>
-            <div class="metric-note">Missing comment, billed marker, or ALDIOKS invoice.</div>
-          </article>
-          <article class="metric-card">
-            <div class="metric-label">Lead Miss Rate</div>
-            <div class="metric-value" id="pvLeadMissRate">0%</div>
-            <div class="metric-note" id="pvLeadMissNote">Goal: under 10%.</div>
-          </article>
-          <article class="metric-card">
-            <div class="metric-label">Clerk PO Entry Rate</div>
-            <div class="metric-value" id="pvClerkPoErrorRate">0%</div>
-            <div class="metric-note" id="pvClerkPoErrorNote">Possible OPS PO typos.</div>
-          </article>
+        <div class="pv-audit-results" id="pvOksResults" hidden>
+          <div class="summary-grid">
+            <article class="metric-card">
+              <div class="metric-label">Total Revenue</div>
+              <div class="metric-value" id="pvOksTotalRevenue">$0</div>
+              <div class="metric-note">All OPS revenue in the billing week.</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">FSPAY Revenue</div>
+              <div class="metric-value" id="pvOksFspayRevenue">$0</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">ALDI Revenue</div>
+              <div class="metric-value" id="pvOksAldiRevenue">$0</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Loads</div>
+              <div class="metric-value" id="pvOksTotalLoads">0</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Billing Flags</div>
+              <div class="metric-value" id="pvOksFlagCount">0</div>
+              <div class="metric-note">Wrong tier, rate mismatch, or credit rows.</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">DMS Pull</div>
+              <div class="metric-value" id="pvOksDmsStatus">-</div>
+            </article>
+          </div>
+
+          <section class="table-wrap" aria-labelledby="truckChargeAuditTableTitle" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title" id="truckChargeAuditTableTitle">Activity Breakdown</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvOksActivityTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Breakdown Reconciliation</div>
+                <div class="table-meta" id="pvOksReconMeta">Run the audit to see matched, missing, wrong-date, and count-mismatch breakdowns.</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvOksReconTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Billing Flags</div>
+                <div class="table-meta">Straight Pull tier mismatches, breakdown/restack rate mismatches, and credits.</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvOksFlagsTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Error Leaderboard</div>
+                <div class="table-meta">Billing flags and mismatches rolled up by Eclipse MGR (OPS PO submitter).</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvOksLeaderboardTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
         </div>
-
-        <section class="table-wrap" aria-labelledby="truckChargeAuditTableTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="truckChargeAuditTableTitle">Load Type / Lumper Fee Checks</div>
-              <div class="table-meta" id="truckChargeAuditMeta">Attach OPS invoice and DMS Ranged reports to validate</div>
-            </div>
-          </div>
-          <div class="lumper-issue-tabs">
-            <button class="lumper-issue-tab active" type="button" data-issue-tab="noMatch">
-              Missing FSPAY Invoice
-              <span class="issue-tab-badge" id="noMatchBadge">0</span>
-            </button>
-            <button class="lumper-issue-tab" type="button" data-issue-tab="wrongCharge">
-              Wrong Load Type / Amount
-              <span class="issue-tab-badge" id="wrongChargeBadge">0</span>
-            </button>
-          </div>
-          <div class="table-scroller">
-            <table id="truckChargeAuditTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="pvInternalBreakdownTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="pvInternalBreakdownTitle">PowerView Internal Breakdown Exceptions</div>
-              <div class="table-kicker">DMS Load Details comments must show the created-pallet code, and OPS must show the ALDIOKS breakdown invoice.</div>
-            </div>
-          </div>
-          <div class="table-meta" id="pvInternalBreakdownMeta">Attach OPS invoice and DMS Ranged reports to validate breakdown entries</div>
-          <div class="table-scroller">
-            <table id="pvInternalBreakdownTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="pvLeadMissTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="pvLeadMissTitle">PowerView Lead Misses</div>
-              <div class="table-kicker">Known breakdown suppliers that arrived without a DMS breakdown comment.</div>
-            </div>
-          </div>
-          <div class="table-meta" id="pvLeadMissMeta">Attach the DMS Ranged Report to check lead misses</div>
-          <div class="table-scroller">
-            <table id="pvLeadMissTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="pvClerkPoTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="pvClerkPoTitle">PowerView Clerk PO Entry Exceptions</div>
-              <div class="table-kicker">DMS PO and OPS PO are close enough to suspect an entry mistake, but not an exact match.</div>
-            </div>
-          </div>
-          <div class="table-meta" id="pvClerkPoMeta">Attach OPS invoice and DMS Ranged reports to validate PO entry</div>
-          <div class="table-scroller">
-            <table id="pvClerkPoTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="missedCncBillingTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="missedCncBillingTitle">PowerView C&amp;C Billing Exceptions</div>
-              <div class="table-meta" id="missedCncBillingMeta">Attach OPS invoice and DMS Ranged reports to validate</div>
-            </div>
-          </div>
-          <div class="table-scroller">
-            <table id="missedCncBillingTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="uncleRaysTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="uncleRaysTitle">Uncle Ray's Charge Check</div>
-              <div class="table-kicker">OPS must have floor load to DAVIS plus 72 intrn brk to OKS.</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span class="stat-chip">
-                <span class="stat-chip-label">Trucks Found</span>
-                <span class="stat-chip-value" id="uncleRaysBadge">0</span>
-              </span>
-            </div>
-          </div>
-          <div class="table-meta" id="uncleRaysMeta">Attach OPS invoice and DMS Ranged reports to check Uncle Ray's charges</div>
-          <div class="table-scroller">
-            <table id="uncleRaysTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="bananaTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="bananaTitle">Daily ALDIOKS Banana Charge</div>
-              <div class="table-kicker">OPS must show a banana charge to ALDIOKS every day - not on DMS</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span class="stat-chip">
-                <span class="stat-chip-label">Found in OPS</span>
-                <span class="stat-chip-value" id="bananaBadge">0</span>
-              </span>
-            </div>
-          </div>
-          <div class="table-meta" id="bananaMeta">Attach OPS report to check for banana charges</div>
-          <div class="table-scroller">
-            <table id="bananaTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="table-wrap" aria-labelledby="recycleTitle" style="margin-top: 14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="recycleTitle">Daily ALDIOKS Recycle Charge</div>
-              <div class="table-kicker">OPS must show a recycle charge to ALDIOKS every day - not on DMS</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span class="stat-chip">
-                <span class="stat-chip-label">Found in OPS</span>
-                <span class="stat-chip-value" id="recycleBadge">0</span>
-              </span>
-            </div>
-          </div>
-          <div class="table-meta" id="recycleMeta">Attach OPS report to check for recycle charges</div>
-          <div class="table-scroller">
-            <table id="recycleTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
       </section>
       <!-- /truckChargeAuditPanel -->
+
+      <section id="mnBillingAuditPanel" class="tab-panel" aria-label="Minnesota PowerView Billing Audit">
+        <div class="motivation-bar" id="motivBar_mnBillingAudit"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <img class="brand-eclipse-logo" alt="Eclipse Advantage logo">
+        </div>
+
+        <div class="lookup-grid">
+          <section class="panel lookup-box" aria-labelledby="mnBillingAuditTitle">
+            <div class="panel-header">
+              <h2 id="mnBillingAuditTitle">Minnesota PowerView Billing Audit</h2>
+              <span class="panel-kicker" id="pvMnKicker">Waiting on report</span>
+            </div>
+            <div class="friendly-note">Attach the Minnesota OPS invoice XLSX for the billing week and pick the week-start date (Saturday). The DMS Ranged Report is pulled live from DMS  -  no second file needed.</div>
+            <input id="pvMnOpsFile" type="file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+            <div class="pv-audit-controls">
+              <label class="file-button primary" for="pvMnOpsFile" data-file-trigger="pvMnOpsFile">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 8 5-5 5 5"></path>
+                  <path d="M5 15v4h14v-4"></path>
+                </svg>
+                Attach MN OPS invoice (XLSX)
+              </label>
+              <div class="pv-audit-week-group">
+                <label for="pvMnWeekStart">Week start (Sat)</label>
+                <input id="pvMnWeekStart" type="date" class="lookup-input" style="max-width:160px;">
+              </div>
+              <button id="pvMnRunBtn" type="button" class="primary-btn" disabled>Run Audit</button>
+            </div>
+            <div class="table-meta" id="pvMnStatus">Attach an OPS invoice XLSX and pick the week-start date to begin.</div>
+          </section>
+
+          <section class="panel" aria-labelledby="mnBillingRulesTitle">
+            <div class="panel-header">
+              <h2 id="mnBillingRulesTitle">Minnesota Audit Rates</h2>
+            </div>
+            <div class="overview-list" id="pvMnRules"></div>
+          </section>
+        </div>
+
+        <div class="pv-audit-results" id="pvMnResults" hidden>
+          <div class="mn-billing-grid">
+            <article class="metric-card">
+              <div class="metric-label">Total Revenue</div>
+              <div class="metric-value" id="pvMnTotalRevenue">$0</div>
+              <div class="metric-note">All OPS revenue in the billing week.</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">FSPAY Revenue</div>
+              <div class="metric-value" id="pvMnFspayRevenue">$0</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">ALDI Revenue</div>
+              <div class="metric-value" id="pvMnAldiRevenue">$0</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Loads</div>
+              <div class="metric-value" id="pvMnTotalLoads">0</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">Billing Flags</div>
+              <div class="metric-value" id="pvMnFlagCount">0</div>
+              <div class="metric-note">Wrong tier, rate mismatch, or credit rows.</div>
+            </article>
+            <article class="metric-card">
+              <div class="metric-label">DMS Pull</div>
+              <div class="metric-value" id="pvMnDmsStatus">-</div>
+            </article>
+          </div>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Activity Breakdown</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvMnActivityTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Breakdown Reconciliation</div>
+                <div class="table-meta" id="pvMnReconMeta">Run the audit to see matched, missing, wrong-date, and count-mismatch breakdowns.</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvMnReconTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Billing Flags</div>
+                <div class="table-meta">Straight Pull tier mismatches, breakdown/restack rate mismatches, and credits.</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvMnFlagsTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Error Leaderboard</div>
+                <div class="table-meta">Billing flags and mismatches rolled up by Eclipse MGR (OPS PO submitter).</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvMnLeaderboardTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <!-- === GUARD SHACK CHEAT SHEET ======================================= -->
       <section id="guardShackPanel" class="tab-panel" aria-label="Guard Shack Cheat Sheet">
@@ -6099,27 +6170,27 @@
 
       </section>
 
-      <section id="myPortalMnPanel" class="tab-panel mn-portal-panel" aria-label="Minnesota My Portal">
+      <section id="myPortalMnPanel" class="tab-panel mn-portal-panel mn-schedule-only" aria-label="Minnesota Schedule Uploader">
         <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="portal-command-bar">
           <div class="portal-dms-titlebar">
             <div class="portal-dms-title-main">
-              <div class="portal-dms-system">Minnesota Live Operations Dashboard</div>
-              <div class="portal-dms-subtitle">Separate DMS pull for the Minnesota building. Read-only until the login and location are confirmed.</div>
+              <div class="portal-dms-system">Minnesota Schedule Uploader</div>
+              <div class="portal-dms-subtitle">Attach the ALDI schedule, review the preview, then upload the trucks into Minnesota DMS.</div>
             </div>
-            <div class="portal-dms-pill">MN My Portal</div>
+            <div class="portal-dms-pill">MN Schedule</div>
           </div>
           <div class="portal-controls-strip">
             <div class="mn-controls">
-              <button id="portalMnSyncBtn" type="button" class="portal-sync-btn">
+              <button id="portalMnSyncBtn" type="button" class="portal-sync-btn mn-live-only">
                 <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
                 <span id="portalMnSyncLabel">Sync MN DMS</span>
               </button>
-              <button id="portalMnScheduleToggleBtn" type="button" class="portal-ctrl-btn">Upload Schedule</button>
+              <button id="portalMnScheduleToggleBtn" type="button" class="portal-ctrl-btn mn-live-only">Upload Schedule</button>
               <label for="portalMnBusinessDate">DMS date</label>
               <input id="portalMnBusinessDate" type="date" class="lookup-input" title="Choose the Minnesota DMS business date to load" style="max-width:150px;">
             </div>
-            <div class="mn-controls">
+            <div class="mn-controls mn-live-only">
               <input id="portalMnSearch" type="search" class="lookup-input" placeholder="Search PO, supplier, door..." autocomplete="off" style="max-width:240px;">
               <select id="portalMnStatusFilter" class="lookup-input" style="max-width:160px;">
                 <option value="all">All arrived</option>
@@ -6129,8 +6200,8 @@
             </div>
           </div>
         </div>
-        <div class="mn-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
-        <section class="portal-schedule-panel" id="portalMnSchedulePanel" style="display:none;" aria-labelledby="portalMnScheduleTitle">
+        <div class="mn-status mn-live-only" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <section class="portal-schedule-panel" id="portalMnSchedulePanel" aria-labelledby="portalMnScheduleTitle">
           <div class="portal-schedule-head">
             <div>
               <div class="portal-schedule-title" id="portalMnScheduleTitle">Minnesota DMS PowerView Schedule Uploader</div>
@@ -6158,7 +6229,7 @@
             </table>
           </div>
         </section>
-        <div class="mn-portal-grid">
+        <div class="mn-portal-grid mn-live-only">
           <article class="metric-card" data-accent="blue">
             <div class="metric-label">Scheduled</div>
             <div class="metric-value" id="portalMnScheduled">0</div>
@@ -6180,7 +6251,7 @@
             <div class="metric-note">Unload finish or receiving finish is marked.</div>
           </article>
         </div>
-        <section class="table-wrap" aria-labelledby="portalMnBoardTitle" style="margin-top:12px;">
+        <section class="table-wrap mn-live-only" aria-labelledby="portalMnBoardTitle" style="margin-top:12px;">
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="portalMnBoardTitle">Minnesota Live Dock Board</div>
@@ -7203,6 +7274,19 @@
         chargeRows: [],
         missedCncBillingRows: []
       },
+      mnBillingAudit: {
+        ops: null,
+        ranged: null,
+        opsFileName: "",
+        rangedFileName: "",
+        chargeRows: [],
+        missedCncBillingRows: [],
+        validationRows: []
+      },
+      powerviewAudit: {
+        oks: null,
+        mn: null
+      },
       selectors: {
         reference: "",
         time: "",
@@ -7365,13 +7449,20 @@
     const ROLE_TABS = {
       admin: ["*"],
       oks: ["myPortal", "overview", "data", "help"],
-      minnesota: ["myPortalMn", "overview", "data", "help"],
+      minnesota: ["myPortalMn", "mnBillingAudit"],
       manager: ["myPortal", "alerts", "dmsStamp", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       teamlead: ["myPortal", "alerts", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "help"],
       clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
       client: ["overview", "data", "trends", "help"],
       work: ["overview", "data", "ddp", "truckFinder", "audit", "turnTracker", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       guest: ["overview", "data", "help"]
+    };
+    // PowerView-style billing audit site config — declared here (not down by
+    // its render code) so the file-input/run-button wiring that runs at page
+    // load can reference it immediately.
+    const POWERVIEW_SITES = {
+      oks: { prefix: "pvOks", endpoint: "/api/dms/billing-audit", label: "OKS" },
+      mn:  { prefix: "pvMn",  endpoint: "/api/dms/mn/billing-audit", label: "Minnesota" },
     };
 
     const els = {
@@ -7684,6 +7775,22 @@
       pvClerkPoErrorNote: document.getElementById("pvClerkPoErrorNote"),
       truckChargeAuditTable: document.getElementById("truckChargeAuditTable"),
       truckChargeAuditMeta: document.getElementById("truckChargeAuditMeta"),
+      mnBillingOpsFile: document.getElementById("mnBillingOpsFile"),
+      mnBillingRangeFile: document.getElementById("mnBillingRangeFile"),
+      mnBillingAuditKicker: document.getElementById("mnBillingAuditKicker"),
+      mnBillingAuditRules: document.getElementById("mnBillingAuditRules"),
+      mnBillingCheckedCount: document.getElementById("mnBillingCheckedCount"),
+      mnBillingMissingCount: document.getElementById("mnBillingMissingCount"),
+      mnBillingWrongCount: document.getElementById("mnBillingWrongCount"),
+      mnBillingCncCount: document.getElementById("mnBillingCncCount"),
+      mnBillingMissingTable: document.getElementById("mnBillingMissingTable"),
+      mnBillingMissingMeta: document.getElementById("mnBillingMissingMeta"),
+      mnBillingWrongTable: document.getElementById("mnBillingWrongTable"),
+      mnBillingWrongMeta: document.getElementById("mnBillingWrongMeta"),
+      mnBillingCncTable: document.getElementById("mnBillingCncTable"),
+      mnBillingCncMeta: document.getElementById("mnBillingCncMeta"),
+      mnBillingValidationTable: document.getElementById("mnBillingValidationTable"),
+      mnBillingValidationMeta: document.getElementById("mnBillingValidationMeta"),
       pvInternalBreakdownTable: document.getElementById("pvInternalBreakdownTable"),
       pvInternalBreakdownMeta: document.getElementById("pvInternalBreakdownMeta"),
       pvLeadMissTable: document.getElementById("pvLeadMissTable"),
@@ -7855,9 +7962,9 @@
           { sel: "#breakdownsAuditPanel .table-wrap", title: "Problems Show Up Here", msg: "After both files are loaded, any trucks with issues appear in the tables below. Each row needs your attention. If the tables are empty then everything looks good." }
         ],
         truckChargeAudit: [
-          { sel: 'label[for="truckChargeOpsFile"]', title: "Step 1 - Attach the OPS Report", msg: "Start here. Click this button and attach the OPS report file. This file has all the billing charges from the system. Your manager will tell you where to find it." },
-          { sel: 'label[for="truckChargeRangeFile"]', title: "Step 2 - Attach the Ranged Report", msg: "Then attach the ranged DMS report here. This tells the app how many pallets each truck had so it can check if the charge is correct. Results appear automatically once both files are loaded." },
-          { sel: ".lumper-issue-tabs", title: "Two Types of Problems", msg: "Issues are split into two tabs up here. Missing FSPAY Invoice means no charge was found for that truck. Wrong Load Type / Amount means a charge was found but the load type or dollar amount needs review. Click each tab to see the list." }
+          { sel: 'label[for="pvOksOpsFile"]', title: "Step 1 - Attach the OPS Invoice", msg: "Attach the OPS invoice XLSX for the billing week. Your manager will tell you where the OPS file is saved." },
+          { sel: "#pvOksWeekStart", title: "Step 2 - Pick the Week Start", msg: "Pick the Saturday the billing week starts on. The DMS Ranged Report is pulled live automatically  -  you do not need to attach a second file." },
+          { sel: "#pvOksRunBtn", title: "Step 3 - Run the Audit", msg: "Click Run Audit. Results appear below: revenue summary, breakdown reconciliation, billing flags, and an error leaderboard." }
         ],
         history: [
           { sel: "#refreshHistoryButton", title: "Always Click Refresh First", msg: "Every time you open History, click this Refresh button first. It loads the latest saved information from the database. Without clicking it the list may be outdated." },
@@ -8048,6 +8155,7 @@
         audit:            [["CALL","Roll Off or Breakdown  -  make the call."],["DECIDE","Your decision locks the record."],["AUDIT","Every catch saves money."],["SHARP","Good calls here save time later."]],
         breakdownsAudit:  [["AUDIT","Every catch saves money."],["BILL","Billing errors stop here."],["CHECK","Audit mode is active."],["PIN","Details matter here."]],
         truckChargeAudit: [["PAY","PowerView billing check active."],["FEE","Every FSPAY check matters."],["TEST","OKS audit in progress."],["WARN","Catch it here before it becomes a problem."]],
+        mnBillingAudit:   [["PAY","Minnesota billing audit active."],["FEE","FSPAY checks loaded."],["MN","Minnesota review in progress."],["WARN","Catch billing issues before they travel."]],
         history:          [["LOG","This is the saved work record."],["DONE","Every entry here is documented."],["SAVE","Saved, logged, and ready."]],
         help:             [["HELP","Use this page when you need a reset."],["READ","Step-by-step instructions are here."],["LEARN","The best users keep learning."]],
       };
@@ -8313,8 +8421,7 @@
       els.portalMnBusinessDate.addEventListener("change", function() {
         state.portalMn.selectedBusinessDate = portalMnSelectedBusinessDate();
         safeLocalStorageSet("portalMnBusinessDate", state.portalMn.selectedBusinessDate);
-        state.portalMn.credentialBlocked = false;
-        portalMnPullLive(true);
+        portalMnRenderSchedulePreview();
       });
     }
     if (els.portalMnSyncBtn) {
@@ -8613,7 +8720,7 @@
       }
       if (els.portalMnScheduleClearBtn) {
         els.portalMnScheduleClearBtn.addEventListener("click", function() {
-          state.portalMn.scheduleUpload = { fileName: "", rows: [], errors: [], uploaded: [] };
+          state.portalMn.scheduleUpload = { fileName: "", rows: [], errors: [], uploaded: [], uploadSummaryText: "", uploadSummaryBad: false };
           if (els.portalMnScheduleConfirm) els.portalMnScheduleConfirm.checked = false;
           portalMnRenderSchedulePreview();
         });
@@ -9181,8 +9288,14 @@
     });
     els.opsAuditFile.addEventListener("change", (event) => handleBreakdownAuditFile("ops", event));
     els.dmsAuditFile.addEventListener("change", (event) => handleBreakdownAuditFile("dms", event));
-    els.truckChargeOpsFile.addEventListener("change", (event) => handleTruckChargeAuditFile("ops", event));
-    els.truckChargeRangeFile.addEventListener("change", (event) => handleTruckChargeAuditFile("ranged", event));
+    ["oks", "mn"].forEach(function(site) {
+      const fileInput = pvGet(site, "OpsFile");
+      const weekInput = pvGet(site, "WeekStart");
+      const runBtn = pvGet(site, "RunBtn");
+      if (fileInput) fileInput.addEventListener("change", (event) => handlePowerviewOpsFileChange(site, event));
+      if (weekInput) weekInput.addEventListener("change", () => pvUpdateRunButtonState(site));
+      if (runBtn) runBtn.addEventListener("click", () => runPowerviewAudit(site));
+    });
     if (els.refreshHistoryButton) els.refreshHistoryButton.addEventListener("click", renderHistoryPanel);
     const refreshVendorStatsBtn = document.getElementById("refreshVendorStatsBtn");
     if (refreshVendorStatsBtn) refreshVendorStatsBtn.addEventListener("click", function() {
@@ -9376,44 +9489,15 @@
       }
     }
 
-    async function handleTruckChargeAuditFile(kind, event) {
+    function handlePowerviewOpsFileChange(site, event) {
       const file = event.target.files && event.target.files[0];
-      if (!file) return;
-
-      try {
-        const parsed = await parseUploadedReportFile(file);
-        if (!parsed.headers.length || !parsed.rows.length) {
-          showToast("That billing audit report did not include usable rows.");
-          return;
-        }
-
-        const report = {
-          fileName: file.name,
-          headers: parsed.headers,
-          rows: parsed.rows,
-          selectors: detectSelectors(parsed.headers, parsed.rows)
-        };
-        state.truckChargeAudit[kind] = report;
-        state.truckChargeAudit[`${kind}FileName`] = file.name;
-
-        // Cross-populate the other audit section with the same file.
-        if (kind === "ops") {
-          state.breakdownAudit.ops = report;
-          state.breakdownAudit.opsFileName = file.name;
-        } else if (kind === "ranged") {
-          // DMS Ranged Report = DMS source for the internal breakdown audit.
-          state.breakdownAudit.dms = report;
-          state.breakdownAudit.dmsFileName = file.name;
-        }
-
-        renderTruckChargeAudit();
-        renderBreakdownsAudit();
-        selectTab("truckChargeAudit");
-        showToast(`${kind === "ops" ? "OPS invoice" : "DMS Ranged Report"} loaded for ALDIOKS billing audit.`);
-      } catch (error) {
-        showToast(error.message || "Could not read that PowerView billing audit report.");
-      } finally {
-        event.target.value = "";
+      pvUpdateRunButtonState(site);
+      const statusEl = pvGet(site, "Status");
+      if (statusEl && file) {
+        const weekInput = pvGet(site, "WeekStart");
+        statusEl.textContent = weekInput && weekInput.value
+          ? `${file.name} attached. Click Run Audit.`
+          : `${file.name} attached. Pick the week-start date, then click Run Audit.`;
       }
     }
 
@@ -9723,10 +9807,18 @@
 
       if (uploadBtn) uploadBtn.disabled = !hasRows || hasBlockingErrors || !confirmBox || !confirmBox.checked;
       if (status) {
-        status.className = "portal-schedule-status" + (hasBlockingErrors ? " bad" : hasRows ? " good" : "");
-        if (!hasRows) status.textContent = "Attach a Minnesota schedule to begin.";
-        else if (hasBlockingErrors) status.textContent = schedule.fileName + " loaded with " + schedule.errors.length + " issue(s). Fix the file before uploading.";
-        else status.textContent = schedule.fileName + " ready: " + schedule.rows.length + " schedule row(s) will be checked against Minnesota DMS before upload.";
+        if (schedule.uploadSummaryText) {
+          // A result from an actual upload attempt takes priority over the
+          // generic "ready to upload" message — otherwise the finally-block
+          // re-render below always clobbers the result the user just got.
+          status.className = "portal-schedule-status " + (schedule.uploadSummaryBad ? "bad" : "good");
+          status.textContent = schedule.uploadSummaryText;
+        } else {
+          status.className = "portal-schedule-status" + (hasBlockingErrors ? " bad" : hasRows ? " good" : "");
+          if (!hasRows) status.textContent = "Attach a Minnesota schedule to begin.";
+          else if (hasBlockingErrors) status.textContent = schedule.fileName + " loaded with " + schedule.errors.length + " issue(s). Fix the file before uploading.";
+          else status.textContent = schedule.fileName + " ready: " + schedule.rows.length + " schedule row(s) will be checked against Minnesota DMS before upload.";
+        }
       }
       if (!table) return;
       const thead = table.querySelector("thead");
@@ -9788,7 +9880,7 @@
       try {
         const parsed = await parseUploadedReportFile(file);
         const schedule = portalNormalizeScheduleRows(parsed, file.name, { useOksRules: false });
-        state.portalMn.scheduleUpload = Object.assign(schedule, { uploaded: [] });
+        state.portalMn.scheduleUpload = Object.assign(schedule, { uploaded: [], uploadSummaryText: "", uploadSummaryBad: false });
         if (els.portalMnScheduleConfirm) els.portalMnScheduleConfirm.checked = false;
         portalMnRenderSchedulePreview();
         showToast(schedule.errors.length ? "Minnesota schedule needs review before upload." : "Minnesota schedule preview ready.");
@@ -9832,18 +9924,15 @@
         const data = await resp.json().catch(function() { return {}; });
         if (!resp.ok) throw new Error(data.detail || data.error || "Minnesota DMS schedule upload failed.");
         state.portalMn.scheduleUpload.uploaded = data.results || [];
-        if (els.portalMnScheduleStatus) {
-          els.portalMnScheduleStatus.className = "portal-schedule-status " + (data.failed ? "warn" : "good");
+        {
           const modelNote = data.model_error ? " DMS upload model was unavailable, so the known Load Details insert format was used." : "";
-          els.portalMnScheduleStatus.textContent = "Minnesota upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
+          state.portalMn.scheduleUpload.uploadSummaryText = "Minnesota upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
+          state.portalMn.scheduleUpload.uploadSummaryBad = false;
         }
         showToast("Minnesota schedule upload finished.");
-        portalMnPullLive(true);
       } catch (error) {
-        if (els.portalMnScheduleStatus) {
-          els.portalMnScheduleStatus.className = "portal-schedule-status bad";
-          els.portalMnScheduleStatus.textContent = error.message || "Minnesota DMS schedule upload failed.";
-        }
+        state.portalMn.scheduleUpload.uploadSummaryText = error.message || "Minnesota DMS schedule upload failed.";
+        state.portalMn.scheduleUpload.uploadSummaryBad = true;
         showToast(error.message || "Minnesota DMS schedule upload failed.");
       } finally {
         if (els.portalMnScheduleUploadBtn) {
@@ -17542,302 +17631,191 @@
       });
     }
 
-    function renderTruckChargeAudit() {
-      rebuildTruckChargeAudit();
-      rebuildBreakdownsAudit();
-      const audit = state.truckChargeAudit;
-      const breakdownAudit = state.breakdownAudit;
-      const hasOps = Boolean(audit.ops);
-      const hasRange = Boolean(audit.ranged);
-      const issueRows = audit.chargeRows.filter((row) => row.status !== "OK");
+    // ── PowerView-style billing audit (OKS + Minnesota) ─────────────────────
+    // Single OPS invoice upload per site; the DMS Ranged Report is pulled live
+    // by the backend (/api/dms/billing-audit, /api/dms/mn/billing-audit) — no
+    // second manual file. Replaces the old client-side two-file heuristics.
+    // (POWERVIEW_SITES itself is declared near ROLE_TABS, above, so the file
+    // input/run-button wiring that runs at page load can reference it safely.)
 
-      const noMatchRows = issueRows.filter((row) => /No matching FSPAY|No FSPAY OPS match|OPS report is not loaded/i.test(row.issueDetail || row.opsEvidence || ""));
-      const wrongChargeRows = issueRows.filter((row) => !/No matching FSPAY|No FSPAY OPS match|OPS report is not loaded/i.test(row.issueDetail || row.opsEvidence || ""));
+    function pvGet(site, name) {
+      return document.getElementById(POWERVIEW_SITES[site].prefix + name);
+    }
 
-      els.truckChargeAuditKicker.textContent = hasOps && hasRange ? "Audit ready" : hasOps || hasRange ? "One report loaded" : "Waiting on reports";
-      els.truckChargeCheckedCount.textContent = formatNumber(audit.chargeRows.length);
-      els.truckChargeIssueCount.textContent = formatNumber(issueRows.length);
-      els.missedCncBillingCount.textContent = formatNumber(audit.missedCncBillingRows.length);
-      const pvBreakdownIssues = [
-        ...(breakdownAudit.missingComments || []),
-        ...(breakdownAudit.missingBilling || [])
-      ];
-      const pvLeadExpectedTotal = (breakdownAudit.leadExpectedBreakdowns || []).length;
-      const pvLeadMissedTotal = (breakdownAudit.leadMissedBreakdowns || []).length;
-      const pvLeadMissPercent = pvLeadExpectedTotal ? Math.round((pvLeadMissedTotal / pvLeadExpectedTotal) * 100) : 0;
-      const pvClerkErrorTotal = (breakdownAudit.clerkPoEntryErrors || []).length;
-      const pvClerkAuditTotal = breakdownAudit.clerkPoAuditTotal || 0;
-      const pvClerkPercent = pvClerkAuditTotal ? Math.round((pvClerkErrorTotal / pvClerkAuditTotal) * 100) : 0;
-      if (els.pvBreakdownIssueCount) els.pvBreakdownIssueCount.textContent = formatNumber(pvBreakdownIssues.length);
-      if (els.pvLeadMissRate) els.pvLeadMissRate.textContent = `${pvLeadMissPercent}%`;
-      if (els.pvLeadMissNote) {
-        els.pvLeadMissNote.textContent = pvLeadExpectedTotal
-          ? `${pvLeadMissedTotal}/${pvLeadExpectedTotal} expected breakdown trucks missed. Goal: under 10%.`
-          : "Goal: under 10%.";
-      }
-      if (els.pvClerkPoErrorRate) els.pvClerkPoErrorRate.textContent = `${pvClerkPercent}%`;
-      if (els.pvClerkPoErrorNote) {
-        els.pvClerkPoErrorNote.textContent = pvClerkAuditTotal
-          ? `${pvClerkErrorTotal}/${pvClerkAuditTotal} arrived DMS POs need review.`
-          : "Possible OPS PO typos.";
-      }
+    function pvFmtMoney(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "$0";
+      return (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
-      const noMatchBadge = document.getElementById("noMatchBadge");
-      const wrongChargeBadge = document.getElementById("wrongChargeBadge");
-      if (noMatchBadge) noMatchBadge.textContent = noMatchRows.length;
-      if (wrongChargeBadge) wrongChargeBadge.textContent = wrongChargeRows.length;
-
-      const activeIssueTab = document.querySelector(".lumper-issue-tab.active");
-      const activeTabKey = activeIssueTab ? activeIssueTab.dataset.issueTab : "noMatch";
-      const activeRows = activeTabKey === "wrongCharge" ? wrongChargeRows : noMatchRows;
-      const emptyMsg = activeTabKey === "wrongCharge"
-        ? (hasRange ? (hasOps ? "No load type or amount issues found." : "Attach OPS invoice to compare billed charges.") : "Attach DMS Ranged Report to read pallet counts.")
-        : (hasRange ? (hasOps ? "No unmatched FSPAY entries found." : "Attach OPS report to check for matches.") : "Attach ranged report to read pallet counts.");
-
-      els.truckChargeAuditRules.innerHTML = "";
-      [
-        `OPS invoice report: ${hasOps ? audit.opsFileName : "not loaded"}`,
-        `DMS Ranged Report: ${hasRange ? audit.rangedFileName : "not loaded"}`,
-        "PowerView Load Details: reads PO, supplier, dock type, pallet count, comments, and arrival status.",
-        "OPS Invoice: reads Bill To, Load Type, Long Description, Amount, Invoice, and Manager Name / EclipseMgr.",
-        "FSPAY Lumper Fee: 1-12 pallets = $60, 13-24 = $95, 25-48 = $105, 49+ = $115.",
-        "Fresh Meat: fixed fresh meat charge should be $145.",
-        "Floor Load: should be $120.",
-        "Slip Sheet: should be $100.",
-        "Plants / Flowers: should be $135.",
-        "C&C Billing: should bill to ALDICCP. If no ALDICCP invoice is found, it goes in Missed C&C Billing.",
-        "Internal Breakdown: created pallets in DMS comments should match a proper OPS internal breakdown line when applicable.",
-        "Uncle Ray's: if found in DMS, OPS must have floor load to DAVIS plus 72 intrn brk to OKS.",
-        "Daily ALDIOKS Charges: bananas and recycle do not appear on DMS, but OPS should still show the daily ALDIOKS charge."
-      ].forEach((message) => els.truckChargeAuditRules.appendChild(emptySmall(message)));
-
-      renderBreakdownsAuditTable(
-        els.truckChargeAuditTable,
-        els.truckChargeAuditMeta,
-        ["Status", "Why It Needs Review", "Person Responsible", "DMS PO", "Supplier / Vendor", "DMS Pallets", "Expected Charge", "OPS Evidence", "DMS Notes"],
-        activeRows,
-        (row) => [
-          row.status,
-          row.issueDetail || "Charge matches.",
-          row.opsManager || "Not listed",
-          row.po || "Not listed",
-          row.supplier || "Not listed",
-          Number.isFinite(row.dmsPalletCount) ? row.dmsPalletCount : "Not listed",
-          row.expectedAmount ? `${row.expectedLabel} / $${row.expectedAmount}` : row.expectedLabel,
-          row.opsEvidence,
-          row.commentsText || row.rowText || "No notes"
-        ],
-        emptyMsg
-      );
-
-      renderBreakdownsAuditTable(
-        els.pvInternalBreakdownTable,
-        els.pvInternalBreakdownMeta,
-        ["Section", "Why It Needs Review", "DMS / OPS Reference", "PO", "Supplier / Vendor", "Breakdown Code", "OPS Evidence", "DMS Load Details Comment"],
-        pvBreakdownIssues,
-        (row) => [
-          row.billingIssue ? "Billing" : "Load Details Comment",
-          row.issueDetail || row.dmsMatchStatus || "Needs review",
-          row.reference || "Not listed",
-          row.po || "Not listed",
-          row.supplier || "Not listed",
-          Array.isArray(row.codes) ? (row.codes.join(", ") || "Not listed") : "Not listed",
-          row.opsEvidence || auditEvidenceText(row),
-          row.commentText || row.dmsComment || row.rowText || "No comment"
-        ],
-        hasOps && hasRange ? "No internal breakdown exceptions found." : "Attach OPS invoice and DMS Ranged reports to validate internal breakdowns."
-      );
-
-      renderBreakdownsAuditTable(
-        els.pvLeadMissTable,
-        els.pvLeadMissMeta,
-        ["Why It Needs Review", "DMS Reference", "PO", "Supplier / Vendor", "Truck Finder History", "DMS Load Details Comment"],
-        breakdownAudit.leadMissedBreakdowns || [],
-        (row) => [row.issueDetail || "Lead miss", row.reference || "Not listed", row.po || "Not listed", row.supplier || "Not listed", row.historyText || breakdownAuditHistoryText(row.supplier), row.commentText || row.rowText || "No comment"],
-        hasRange ? "No PowerView lead misses found." : "Attach DMS Ranged Report to check lead misses."
-      );
-
-      renderBreakdownsAuditTable(
-        els.pvClerkPoTable,
-        els.pvClerkPoMeta,
-        ["Why It Needs Review", "DMS Reference", "DMS PO", "Closest OPS PO", "Shared Digits", "Supplier / Vendor", "DMS Load Details Comment"],
-        breakdownAudit.clerkPoEntryErrors || [],
-        (row) => [row.issueDetail || "Possible clerk PO entry error", row.reference || "Not listed", row.po || "Not listed", row.opsPo || "Not listed", row.sharedDigits || "Not listed", row.supplier || "Not listed", row.commentText || row.rowText || "No comment"],
-        hasOps && hasRange ? "No likely PowerView clerk PO entry exceptions found." : "Attach OPS invoice and DMS Ranged reports to check clerk PO entry."
-      );
-
-      renderBreakdownsAuditTable(
-        els.missedCncBillingTable,
-        els.missedCncBillingMeta,
-        ["Why It Needs Review", "DMS PO", "Supplier / Vendor", "OPS Evidence", "DMS Notes"],
-        audit.missedCncBillingRows,
-        (row) => [
-          row.issueDetail || "Missed C&C billing",
-          row.po || "Not listed",
-          row.supplier || "Not listed",
-          row.opsEvidence || "No ALDICCP invoice found",
-          row.commentsText || row.rowText || "No notes"
-        ],
-        hasRange ? (hasOps ? "No missed C&C billing found." : "Attach OPS report to check ALDICCP invoices.") : "Attach ranged report to find C&C trucks."
-      );
-
-      const uncleRaysRows = audit.uncleRaysRows || [];
-      const uncleRaysBadge = document.getElementById("uncleRaysBadge");
-      const uncleRaysIssues = uncleRaysRows.filter((r) => r.status !== "OK");
-      if (uncleRaysBadge) uncleRaysBadge.textContent = uncleRaysIssues.length;
-      renderBreakdownsAuditTable(
-        els.uncleRaysTable,
-        els.uncleRaysMeta,
-        ["Status", "Issue", "DMS PO", "Business Date", "Floor Load / DAVIS", "72 Intrn Brk / OKS", "OPS Evidence"],
-        uncleRaysRows,
-        (row) => [
-          row.status,
-          row.issueDetail || "Both OPS charges present.",
-          row.po || "Not listed",
-          row.businessDate || "Not listed",
-          row.davisFloorOk ? "Found" : "MISSING",
-          row.oksIntrBrkOk ? "Found" : "MISSING",
-          row.opsEvidence || "No OPS evidence"
-        ],
-        hasRange ? (hasOps ? "No Uncle Ray's trucks found in DMS." : "Attach OPS report to check Uncle Ray's charges.") : "Attach ranged report to find Uncle Ray's trucks."
-      );
-
-      // -- Banana check render ---------------------------------------
-      var bananaOpsRows = audit.bananaOpsRows || [];
-      var bananaBadge   = document.getElementById("bananaBadge");
-      if (bananaBadge) bananaBadge.textContent = bananaOpsRows.length;
-
-      var bananaMissing = hasOps && bananaOpsRows.length === 0;
-      var bananaMeta    = document.getElementById("bananaMeta");
-      if (bananaMeta) {
-        bananaMeta.textContent = !hasOps
-          ? "Attach OPS report to check for banana charges."
-          : bananaMissing
-            ? "WARNING: No banana charge billed to ALDIOKS found in this OPS report."
-            : bananaOpsRows.length + " banana charge(s) found billed to ALDIOKS.";
-        bananaMeta.style.color = bananaMissing ? "#c0392b" : "";
-        bananaMeta.style.fontWeight = bananaMissing ? "700" : "";
-      }
-
-      // Banana: only flag rows that are missing an invoice.
-      // If no banana rows at all -> one red MISSING row.
-      // If banana rows exist but all have invoices -> empty/clean.
-      var bananaMissingInvoice = bananaOpsRows.filter(function(r) { return !r.invoice || !String(r.invoice).trim(); });
-      var bananaDisplayRows = bananaOpsRows.length === 0 && hasOps
-        ? [{ _missing: true, entryDate: "", po: "MISSING", billTo: "ALDIOKS", longDescription: "No banana charge found in OPS  -  needs investigation", amount: NaN, invoice: "" }]
-        : bananaMissingInvoice;
-
-      var bananaNeedsAttention = hasOps && (bananaOpsRows.length === 0 || bananaMissingInvoice.length > 0);
-      if (bananaMeta) {
-        bananaMeta.textContent = !hasOps
-          ? "Attach OPS report to check for banana charges."
-          : bananaOpsRows.length === 0
-            ? "WARNING: No banana charge billed to ALDIOKS found in this OPS report."
-            : bananaMissingInvoice.length > 0
-              ? bananaMissingInvoice.length + " banana charge(s) missing an invoice number."
-              : bananaOpsRows.length + " banana charge(s) found  -  all have invoices.";
-        bananaMeta.style.color      = bananaNeedsAttention ? "#c0392b" : "";
-        bananaMeta.style.fontWeight = bananaNeedsAttention ? "700" : "";
-      }
-
-      renderBreakdownsAuditTable(
-        els.bananaTable,
-        els.bananaMeta,
-        ["Date", "PO", "Bill To", "Description", "Amount", "Invoice"],
-        bananaDisplayRows,
-        function(row) {
-          return [
-            row.entryDate || row.businessDate || "No date",
-            row.po || "No PO",
-            row.billTo || "Not listed",
-            row.longDescription || row.loadType || "No description",
-            Number.isFinite(row.amount) ? ("$" + row.amount) : "No amount",
-            row.invoice || "NO INVOICE"
-          ];
-        },
-        !hasOps
-          ? "Attach OPS report to check for banana charges."
-          : "All banana charges have invoices."
-      );
-      if (bananaNeedsAttention) {
-        var bTbody = els.bananaTable.querySelector("tbody");
-        if (bTbody) {
-          bTbody.querySelectorAll("tr").forEach(function(tr) {
-            tr.style.background = "#fdecea"; tr.style.color = "#c0392b"; tr.style.fontWeight = "700";
+    function pvSetTableRows(table, metaEl, headers, rows, mapper, emptyMessage) {
+      if (!table) return;
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headerRow = document.createElement("tr");
+      headers.forEach((h) => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      if (!rows.length) {
+        appendEmptyRow(tbody, headers.length, emptyMessage);
+      } else {
+        rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          mapper(row).forEach((value) => {
+            const td = document.createElement("td");
+            td.textContent = (value === null || value === undefined || value === "") ? "—" : value;
+            tr.appendChild(td);
           });
+          tbody.appendChild(tr);
+        });
+      }
+      if (metaEl) metaEl.textContent = `${rows.length} row${rows.length === 1 ? "" : "s"}`;
+    }
+
+    function pvUpdateRunButtonState(site) {
+      const fileInput = pvGet(site, "OpsFile");
+      const weekInput = pvGet(site, "WeekStart");
+      const runBtn = pvGet(site, "RunBtn");
+      if (!runBtn) return;
+      const hasFile = Boolean(fileInput && fileInput.files && fileInput.files[0]);
+      const hasWeek = Boolean(weekInput && weekInput.value);
+      runBtn.disabled = !(hasFile && hasWeek);
+    }
+
+    async function runPowerviewAudit(site) {
+      const cfg = POWERVIEW_SITES[site];
+      const fileInput = pvGet(site, "OpsFile");
+      const weekInput = pvGet(site, "WeekStart");
+      const statusEl = pvGet(site, "Status");
+      const runBtn = pvGet(site, "RunBtn");
+      const file = fileInput && fileInput.files && fileInput.files[0];
+      if (!file) { showToast("Attach an OPS invoice XLSX first."); return; }
+      if (!weekInput || !weekInput.value) { showToast("Pick the week-start date (Saturday)."); return; }
+
+      if (statusEl) statusEl.textContent = "Running audit — pulling DMS ranged data live...";
+      if (runBtn) runBtn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append("ops_file", file);
+        formData.append("week_start", weekInput.value);
+        const resp = await fetch(apiUrl(cfg.endpoint), { method: "POST", body: formData });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.detail || `Audit failed (${resp.status}).`);
+        state.powerviewAudit[site] = data;
+        renderPowerviewAudit(site, data);
+        if (statusEl) {
+          statusEl.textContent = data.dms_status === "error"
+            ? `Audit ran for ${data.week.label}, but the live DMS pull failed: ${data.dms_error || "unknown error"}.`
+            : `Audit complete for ${data.week.label} (${data.dms_location || cfg.label}).`;
         }
-      }
-
-      // -- Recycle check render --------------------------------------
-      var recycleOpsRows = audit.recycleOpsRows || [];
-      var recycleBadge   = document.getElementById("recycleBadge");
-      if (recycleBadge) recycleBadge.textContent = recycleOpsRows.length;
-
-      var recycleMissing = hasOps && recycleOpsRows.length === 0;
-      var recycleMeta    = document.getElementById("recycleMeta");
-      if (recycleMeta) {
-        recycleMeta.textContent = !hasOps
-          ? "Attach OPS report to check for recycle charges."
-          : recycleMissing
-            ? "WARNING: No recycle charge billed to ALDIOKS found in this OPS report."
-            : recycleOpsRows.length + " recycle charge(s) found billed to ALDIOKS.";
-        recycleMeta.style.color      = recycleMissing ? "#c0392b" : "";
-        recycleMeta.style.fontWeight = recycleMissing ? "700" : "";
-      }
-
-      // Recycle: if found in OPS -> table is empty/clean (no issues).
-      // Only flag if recycle is completely missing from OPS.
-      var recycleDisplayRows = hasOps && recycleOpsRows.length === 0
-        ? [{ _missing: true, po: "MISSING", billTo: "ALDIOKS", longDescription: "No recycle charge found in OPS  -  needs investigation", amount: NaN, invoice: "" }]
-        : [];   // found = no issues, table stays empty
-
-      var recycleNeedsAttention = hasOps && recycleOpsRows.length === 0;
-      if (recycleMeta) {
-        recycleMeta.textContent = !hasOps
-          ? "Attach OPS report to check for recycle charges."
-          : recycleNeedsAttention
-            ? "WARNING: No recycle charge billed to ALDIOKS found in this OPS report."
-            : recycleOpsRows.length + " recycle charge(s) found  -  no issues.";
-        recycleMeta.style.color      = recycleNeedsAttention ? "#c0392b" : "";
-        recycleMeta.style.fontWeight = recycleNeedsAttention ? "700" : "";
-      }
-
-      renderBreakdownsAuditTable(
-        els.recycleTable,
-        els.recycleMeta,
-        ["PO", "Bill To", "Load Type / Description", "Amount", "Invoice"],
-        recycleDisplayRows,
-        function(row) {
-          return [
-            row.po || "No PO",
-            row.billTo || "Not listed",
-            row.longDescription || row.loadType || "No description",
-            Number.isFinite(row.amount) ? ("$" + row.amount) : "No amount",
-            row.invoice || "No invoice"
-          ];
-        },
-        !hasOps
-          ? "Attach OPS report to check for recycle charges."
-          : "Recycle charge found in OPS. No issues."
-      );
-      if (recycleNeedsAttention) {
-        var rTbody = els.recycleTable.querySelector("tbody");
-        if (rTbody) {
-          rTbody.querySelectorAll("tr").forEach(function(tr) {
-            tr.style.background = "#fdecea"; tr.style.color = "#c0392b"; tr.style.fontWeight = "700";
-          });
-        }
+        showToast(`${cfg.label} PowerView audit complete.`);
+      } catch (error) {
+        if (statusEl) statusEl.textContent = error.message || "Could not run the audit.";
+        showToast(error.message || `Could not run the ${cfg.label} PowerView audit.`);
+      } finally {
+        pvUpdateRunButtonState(site);
       }
     }
 
-    function rebuildTruckChargeAudit() {
-      const audit = state.truckChargeAudit;
-      const results = buildTruckChargeAuditRows(audit.ranged, audit.ops);
-      audit.chargeRows = results.chargeRows;
-      audit.missedCncBillingRows = results.missedCncRows;
-      audit.uncleRaysRows  = results.uncleRaysRows  || [];
-      audit.bananaOpsRows   = results.bananaOpsRows   || [];
-      audit.recycleOpsRows  = results.recycleOpsRows  || [];
+    function renderPowerviewAudit(site, data) {
+      if (!data) return;
+      const resultsEl = pvGet(site, "Results");
+      if (resultsEl) resultsEl.hidden = false;
+      const kicker = pvGet(site, "Kicker");
+      if (kicker) kicker.textContent = data.dms_status === "error" ? "DMS pull failed" : "Audit ready";
+
+      const rulesEl = pvGet(site, "Rules");
+      if (rulesEl) {
+        rulesEl.innerHTML = "";
+        const rates = data.audit_rates || {};
+        const tiers = rates.sp_tiers || {};
+        const tierText = Object.keys(tiers).sort().map((k) => {
+          const t = tiers[k];
+          const range = (t.max_pal === null || t.max_pal === undefined) ? `${t.min_pal}+` : `${t.min_pal}-${t.max_pal}`;
+          return `${range} pal = $${t.rate}`;
+        }).join(", ");
+        [
+          `Week: ${data.week ? data.week.label : "—"} | OPS rows in file: ${data.ops_rows_total ?? 0} (${data.ops_rows_in_week ?? 0} in week)`,
+          `DMS location: ${data.dms_location || "—"} | DMS rows pulled live: ${data.dms_rows_total ?? 0}`,
+          `Straight Pull tiers: ${tierText || "—"}`,
+          `Breakdown: $${rates.bd_rate_per_pallet ?? "—"}/pallet${rates.bd_max_charge ? `, capped at $${rates.bd_max_charge}` : " (no cap)"}`,
+          `Restack: $${rates.restack_rate_per_pallet ?? "—"}/pallet`,
+        ].forEach((message) => rulesEl.appendChild(emptySmall(message)));
+      }
+
+      const summary = data.summary || {};
+      const setText = (name, value) => { const el = pvGet(site, name); if (el) el.textContent = value; };
+      setText("TotalRevenue", pvFmtMoney(summary.total_revenue));
+      setText("FspayRevenue", pvFmtMoney(summary.fspay_revenue));
+      setText("AldiRevenue", pvFmtMoney(summary.aldi_revenue));
+      setText("TotalLoads", formatNumber(summary.total_loads || 0));
+      setText("FlagCount", formatNumber(summary.flag_count || 0));
+      setText("DmsStatus", data.dms_status === "error" ? "Error" : "OK");
+
+      pvSetTableRows(
+        pvGet(site, "ActivityTable"), null,
+        ["Load Type", "Description", "Total Revenue", "FSPAY", "ALDI", "POs", "Task Qty", "Avg $/PO", "% of Revenue"],
+        data.activity_breakdown || [],
+        (row) => [row.load_type, row.description, pvFmtMoney(row.total_revenue), pvFmtMoney(row.fspay_revenue), pvFmtMoney(row.aldi_revenue), row.po_count, row.task_qty, pvFmtMoney(row.avg_rev_po), `${row.rev_pct}%`],
+        "No activity rows for this week."
+      );
+
+      const recon = data.breakdown_recon || {};
+      const reconMetaEl = pvGet(site, "ReconMeta");
+      if (reconMetaEl) {
+        reconMetaEl.textContent = `Matched: ${recon.matched_correct || 0} | Wrong date: ${recon.matched_wrong_date || 0} | `
+          + `Truly missing: ${recon.truly_missing || 0} (~${pvFmtMoney(recon.est_missing_revenue)}) | `
+          + `No billing attempt: ${recon.no_billing_attempt || 0} | OPS-no-DMS: ${recon.ops_no_dms || 0} | `
+          + `Count mismatch: ${recon.count_mismatch || 0} (${pvFmtMoney(recon.count_mismatch_revenue_delta)}) | `
+          + `Integrity warnings: ${recon.integrity_warning || 0}`;
+      }
+      const reconRows = [
+        ...(recon.missing_detail || []).map((r) => ({ ...r, _bucket: "Truly Missing" })),
+        ...(recon.no_billing_detail || []).map((r) => ({ ...r, _bucket: "No Billing Attempt" })),
+        ...(recon.wrong_date_detail || []).map((r) => ({ ...r, _bucket: "Wrong Date" })),
+        ...(recon.count_mismatch_detail || []).map((r) => ({ ...r, _bucket: "Count Mismatch" })),
+        ...(recon.integrity_warning_detail || []).map((r) => ({ ...r, _bucket: "Integrity Warning" })),
+        ...(recon.ops_no_dms_detail || []).map((r) => ({ ...r, _bucket: "OPS, No DMS" })),
+      ];
+      pvSetTableRows(
+        pvGet(site, "ReconTable"), null,
+        ["Bucket", "DMS Date", "OPS Date", "PO", "Supplier / Vendor", "DMS BD Pallets", "OPS Task Qty", "Revenue", "Manager"],
+        reconRows,
+        (row) => [row._bucket, row.dms_date || "—", row.ops_date || "—", row.po, row.supplier || row.vendor, (row.dms_bd ?? "—"), (row.ops_task_qty ?? row.task_qty ?? "—"), pvFmtMoney(row.revenue), row.eclipse_mgr || "—"],
+        "No breakdown reconciliation issues found."
+      );
+
+      pvSetTableRows(
+        pvGet(site, "FlagsTable"), null,
+        ["Type", "Severity", "PO", "Date", "Bill To", "Manager", "Issue", "Billed", "Expected", "Delta", "Action"],
+        data.billing_flags || [],
+        (row) => [row.flag_type, row.severity, row.po, row.date, row.bill_to, row.eclipse_mgr, row.issue, pvFmtMoney(row.billed), (row.expected != null ? pvFmtMoney(row.expected) : "—"), (row.delta != null ? pvFmtMoney(row.delta) : "—"), row.action],
+        "No billing flags for this week."
+      );
+
+      pvSetTableRows(
+        pvGet(site, "LeaderboardTable"), null,
+        ["Eclipse MGR", "Errors", "Warnings", "Qty Mismatch", "Over-billed", "Total", "$ Exposure"],
+        data.error_leaderboard || [],
+        (row) => [row.manager, row.errors, row.warnings, row.qty_mismatch, row.over_billed, row.total, pvFmtMoney(row.exposure)],
+        "No attributed billing errors this week."
+      );
+    }
+
+    function renderTruckChargeAudit() {
+      pvUpdateRunButtonState("oks");
+      if (state.powerviewAudit.oks) renderPowerviewAudit("oks", state.powerviewAudit.oks);
+    }
+
+    function renderMnBillingAudit() {
+      pvUpdateRunButtonState("mn");
+      if (state.powerviewAudit.mn) renderPowerviewAudit("mn", state.powerviewAudit.mn);
     }
 
     function renderLumperValidationTable() {
@@ -18422,7 +18400,7 @@
         const visibleButton = Array.from(group.querySelectorAll(".tab-button")).some((button) => !button.classList.contains("role-hidden"));
         group.classList.toggle("role-hidden", !visibleButton);
       });
-      const canUseUploads = ["admin", "manager", "teamlead", "work", "oks", "minnesota"].includes(role);
+      const canUseUploads = ["admin", "manager", "teamlead", "work", "oks"].includes(role);
       document.querySelectorAll(".work-only-btn").forEach((button) => {
         button.classList.toggle("role-hidden", !canUseUploads);
       });
@@ -18553,8 +18531,14 @@
         setTimeout(repairMyPortalPanel, 0);
       } else portalStopLivePolling();
       if (name === "myPortalMn") {
-        try { renderPortalMn(); } catch (err) { console.error("Minnesota Portal render failed:", err); }
+        try {
+          portalMnInitializeDate();
+          portalMnRenderSchedulePreview();
+        } catch (err) {
+          console.error("Minnesota schedule uploader render failed:", err);
+        }
       } else portalMnStopPolling();
+      if (name === "mnBillingAudit") renderMnBillingAudit();
       if (name === "alerts") renderAlertsTab();
       if (name === "exceptions") renderExceptions();
       if (name === "turnTracker") renderTurnTracker();

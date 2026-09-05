@@ -8,11 +8,13 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Any, Dict
 from zoneinfo import ZoneInfo
+from io import BytesIO
+from collections import defaultdict
 
 import requests as req_lib
 from requests import Session as ReqSession
 
-from fastapi import FastAPI, HTTPException, Cookie, Response, Depends
+from fastapi import FastAPI, HTTPException, Cookie, Response, Depends, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -1436,7 +1438,51 @@ def _schedule_dock_type(row: DmsScheduleRowIn, use_oks_rules: bool = True) -> st
     return row.dock_type or row.area or row.dock or ""
 
 
+# Minnesota schedule uploader — deterministic area mapping ported from Orbit's
+# PowerView ALDI schedule parser (orbit/app.py::_parse_aldi_schedule /
+# _DMS_AREA_MAP). Confirmed 2026-09 against Minnesota's live DMS area list:
+# AMB, CHL, EGGS, FLOOR LOADED, FRESH MEAT, FRZ, INTERNATIONAL,
+# PLANTS/FLOWERS, PRODUCE, SLIP SHEET.
+_MN_DMS_AREA_MAP: Dict[Any, str] = {
+    ("ambient", "std. trailer dry"):     "AMB",
+    ("ambient", "floor loaded"):         "FLOOR LOADED",
+    ("ambient", "slip sheet"):           "SLIP SHEET",
+    ("chiller", "std. trailer cooler"):  "CHL",
+    ("chiller", "produce"):              "PRODUCE",
+    ("chiller", "fresh meat"):           "FRESH MEAT",
+    ("chiller", "eggs"):                 "EGGS",
+    ("freezer", "std. trailer freezer"): "FRZ",
+}
+_MN_DMS_PROT_FALLBACK: Dict[str, str] = {"ambient": "AMB", "chiller": "CHL", "freezer": "FRZ"}
+# Dock category alone can also signal these two areas, regardless of protection
+# level (confirmed with James: dock type "International" / "Plants/Flowers").
+_MN_DMS_DOCK_ONLY_MAP: Dict[str, str] = {
+    "international":   "INTERNATIONAL",
+    "plants/flowers":   "PLANTS/FLOWERS",
+    "plants":           "PLANTS/FLOWERS",
+    "flowers":          "PLANTS/FLOWERS",
+}
+
+
+def _mn_schedule_area(row: DmsScheduleRowIn) -> Optional[str]:
+    dock_key = (row.dock or row.product_category or "").strip().lower()
+    if dock_key in _MN_DMS_DOCK_ONLY_MAP:
+        return _MN_DMS_DOCK_ONLY_MAP[dock_key]
+    prot_key = (row.protection or "").strip().lower()
+    mapped = _MN_DMS_AREA_MAP.get((prot_key, dock_key))
+    if mapped:
+        return mapped
+    return _MN_DMS_PROT_FALLBACK.get(prot_key)
+
+
 def _dms_area_for_schedule(row: DmsScheduleRowIn, session: Dict[str, Any], business_date: str, use_oks_rules: bool = True) -> Any:
+    if not use_oks_rules:
+        # Minnesota: try the deterministic PowerView-style table first; only
+        # fall through to the fuzzy live-areas hint match below for a
+        # protection/dock combination the table doesn't cover.
+        mn_area = _mn_schedule_area(row)
+        if mn_area:
+            return mn_area
     buck = session.get("buck") or {}
     areas = buck.get("areas") if isinstance(buck, dict) else None
     if not areas:
@@ -1657,6 +1703,567 @@ def dms_mn_schedule_upload_model():
 def dms_mn_schedule_upload(body: DmsScheduleUploadIn):
     session = _ensure_dms_mn_session()
     return _run_dms_schedule_upload(session, body, use_oks_rules=False)
+
+
+# ── PowerView-style billing audit ──────────────────────────────────────────────
+# Ported from Orbit's /api/audit/billing (orbit/app.py). One OPS invoice XLSX is
+# uploaded; the DMS ranged report is pulled live (no second manual file), then
+# cross-referenced for missing/mis-dated/mis-counted pallet breakdowns and rate
+# mismatches (Straight Pull tiers, breakdown $/pallet, restack $/pallet).
+#
+# Rates below come from Orbit's own source (dms_settings.py DEFAULTS for
+# ALDIFMN/Minnesota; the ALDIOKS SEED_BILL_CODES table in orbit/app.py for OKS).
+# ALDIOKS's Internal Breakdown bill code has no cap in that table, so bd_max_charge
+# is left uncapped (0) for OKS -- confirm with the real OPS rate agreement if that's
+# wrong.
+POWERVIEW_RATES: Dict[str, Dict[str, Any]] = {
+    "oks": {
+        "bd_rate_per_pallet": 5.0,
+        "bd_max_charge": 0.0,
+        "restack_rate_per_pallet": 5.0,
+        "sp_tiers": {
+            "8":    {"min_pal": 1,  "max_pal": 12,   "rate": 60.0},
+            "8.01": {"min_pal": 13, "max_pal": 24,   "rate": 95.0},
+            "8.02": {"min_pal": 25, "max_pal": 48,   "rate": 105.0},
+            "8.03": {"min_pal": 49, "max_pal": None, "rate": 115.0},
+        },
+    },
+    "mn": {
+        "bd_rate_per_pallet": 6.0,
+        "bd_max_charge": 150.0,
+        "restack_rate_per_pallet": 25.0,
+        "sp_tiers": {
+            "8":    {"min_pal": 1,  "max_pal": 12,   "rate": 42.0},
+            "8.01": {"min_pal": 13, "max_pal": 24,   "rate": 85.0},
+            "8.02": {"min_pal": 25, "max_pal": 60,   "rate": 92.0},
+        },
+    },
+}
+
+_PV_COL_MAP: Dict[str, List[str]] = {
+    "date":       ["Entry Date", "Date", "EntryDate"],
+    "po":         ["PONumber", "PO Number", "PO #", "PO"],
+    "load_type":  ["Load Type", "LoadType"],
+    "desc":       ["Long Description", "Description", "LongDescription"],
+    "bill_to":    ["Bill To", "BillTo"],
+    "task_qty":   ["Task Qty", "TaskQty"],
+    "init_pal":   ["Init Pallets", "InitPallets"],
+    "pal_bd":     ["Pallet Brk Down", "Pallet Breakdown", "PalletBrkDown"],
+    "carrier":    ["Carrier"],
+    "vendor":     ["Vendor"],
+    "eclipse_mgr":["Eclipse MGR", "EclipseMgr", "Eclipse Mgr", "Manager", "Mgr"],
+    "revenue":    ["Revenue Totals", "Revenue", "Amount"],
+    "backhaul":   ["Backhaul"],
+    "csh":        ["Csh Chk Card", "CshChkCard", "Cash Check Card"],
+}
+
+_PV_BD_RE = re.compile(r'\b(\d+)\s*[Cc](\$)?')
+
+
+def _pv_fcol(headers: List[str], aliases: List[str]) -> Optional[str]:
+    hl = {h.lower().strip(): h for h in headers}
+    for a in aliases:
+        if a.lower() in hl:
+            return hl[a.lower()]
+    for a in aliases:
+        al = a.lower()
+        for kl, korig in hl.items():
+            if al in kl or kl in al:
+                return korig
+    return None
+
+
+def _pv_parse_date(v: Any) -> Optional[Any]:
+    if v is None:
+        return None
+    if hasattr(v, "date") and callable(getattr(v, "date")):
+        return v.date()
+    if hasattr(v, "year"):
+        return v
+    s = str(v).strip()
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except Exception:
+            pass
+    return None
+
+
+def _pv_parse_dms_date(s: Any) -> Optional[Any]:
+    if not s:
+        return None
+    s = str(s).strip()
+    for fmt in ("%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except Exception:
+            pass
+    return None
+
+
+def _pv_norm_po(po: Any) -> str:
+    return re.sub(r'[^0-9]', '', str(po or ''))[:10]
+
+
+def _pv_tier_for_pallets(tiers: Dict[str, Dict[str, Any]], pallets: float) -> Dict[str, Any]:
+    """Pick the tier card whose [min_pal, max_pal] contains `pallets`; falls back
+    to the highest tier if `pallets` is above every bounded tier's max."""
+    ordered = sorted(tiers.values(), key=lambda t: t["min_pal"])
+    for card in ordered:
+        if pallets >= card["min_pal"] and (card["max_pal"] is None or pallets <= card["max_pal"]):
+            return card
+    return ordered[-1] if ordered else {"min_pal": 0, "max_pal": None, "rate": 0.0}
+
+
+def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: str) -> Dict[str, Any]:
+    rates = POWERVIEW_RATES[site]
+    bd_rate = rates["bd_rate_per_pallet"]
+    bd_max = rates["bd_max_charge"]
+    rs_rate = rates["restack_rate_per_pallet"]
+    sp_tiers = rates["sp_tiers"]
+
+    try:
+        ws_date = datetime.strptime(week_start_str, "%Y-%m-%d").date()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid week_start (expected YYYY-MM-DD).")
+    we_date = ws_date + timedelta(days=6)
+
+    # ── Parse OPS XLSX ─────────────────────────────────────────────────────
+    try:
+        from openpyxl import load_workbook
+        wb = load_workbook(BytesIO(ops_bytes), data_only=True, read_only=True)
+        ws_xl = wb.active
+        all_xl = list(ws_xl.iter_rows(values_only=True))
+        wb.close()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not parse OPS file: {exc}")
+    if not all_xl:
+        raise HTTPException(status_code=400, detail="OPS file is empty.")
+    hdrs = [str(c or "").strip() for c in all_xl[0]]
+    ops_rows_raw = [
+        {hdrs[i]: (cell if cell is not None else "") for i, cell in enumerate(row) if i < len(hdrs)}
+        for row in all_xl[1:]
+        if any(cell is not None for cell in row)
+    ]
+
+    cols = {k: _pv_fcol(hdrs, v) for k, v in _PV_COL_MAP.items()}
+
+    def rv(row: Dict[str, Any], key: str, default: float = 0) -> float:
+        c = cols.get(key)
+        if not c:
+            return default
+        v = row.get(c, default)
+        if v is None or v == "":
+            return default
+        try:
+            return float(v)
+        except Exception:
+            return default
+
+    def sv(row: Dict[str, Any], key: str) -> str:
+        c = cols.get(key)
+        if not c:
+            return ""
+        return str(row.get(c, "") or "").strip()
+
+    def ops_rev(row: Dict[str, Any]) -> float:
+        r = rv(row, "revenue")
+        if r:
+            return r
+        return rv(row, "backhaul") + rv(row, "csh")
+
+    # ── Split OPS rows into week vs wider window ──────────────────────────
+    week_rows: List[Any] = []
+    all_dated: List[Any] = []
+    for r in ops_rows_raw:
+        d = _pv_parse_date(sv(r, "date") or r.get(cols.get("date") or "", ""))
+        if d is None:
+            continue
+        all_dated.append((d, r))
+        if ws_date <= d <= we_date:
+            week_rows.append((d, r))
+
+    # ── Activity breakdown (target week) ───────────────────────────────────
+    act_stats: Dict[Any, Dict[str, float]] = defaultdict(lambda: {"total": 0.0, "fspay": 0.0, "aldi": 0.0, "pos": 0, "tq": 0.0})
+    for d, r in week_rows:
+        lt = sv(r, "load_type")
+        desc = sv(r, "desc")
+        bt = sv(r, "bill_to").upper()
+        rev = ops_rev(r)
+        tq = rv(r, "task_qty")
+        key = (lt, desc)
+        act_stats[key]["total"] += rev
+        act_stats[key]["pos"] += 1
+        act_stats[key]["tq"] += tq
+        if "FSPAY" in bt:
+            act_stats[key]["fspay"] += rev
+        else:
+            act_stats[key]["aldi"] += rev
+
+    total_rev = sum(v["total"] for v in act_stats.values())
+    fspay_rev = sum(v["fspay"] for v in act_stats.values())
+    aldi_rev = sum(v["aldi"] for v in act_stats.values())
+    total_loads = sum(v["pos"] for v in act_stats.values())
+    total_tq = sum(v["tq"] for v in act_stats.values())
+
+    act_out = []
+    for (lt_raw, desc), v in sorted(act_stats.items(), key=lambda x: -x[1]["total"]):
+        pos = v["pos"]
+        tot = v["total"]
+        act_out.append({
+            "load_type": lt_raw,
+            "description": desc,
+            "total_revenue": round(tot, 2),
+            "fspay_revenue": round(v["fspay"], 2),
+            "aldi_revenue": round(v["aldi"], 2),
+            "po_count": pos,
+            "task_qty": round(v["tq"], 1),
+            "avg_rev_po": round(tot / pos, 2) if pos else 0,
+            "rev_pct": round(tot / total_rev * 100, 1) if total_rev else 0,
+        })
+
+    # ── Daily load count + revenue ─────────────────────────────────────────
+    day_keys = [(ws_date + timedelta(days=i)).strftime("%m/%d") for i in range(7)]
+    day_labels = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    daily_counts: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    daily_rev: Dict[str, Dict[str, Dict[str, float]]] = defaultdict(lambda: defaultdict(lambda: {"fspay": 0.0, "aldi": 0.0}))
+    for d, r in week_rows:
+        dkey = d.strftime("%m/%d")
+        desc = sv(r, "desc") or sv(r, "load_type")
+        bt = sv(r, "bill_to").upper()
+        rev = ops_rev(r)
+        daily_counts[dkey][desc] += 1
+        if "FSPAY" in bt:
+            daily_rev[dkey][desc]["fspay"] += rev
+        else:
+            daily_rev[dkey][desc]["aldi"] += rev
+
+    # ── Breakdown detection ─────────────────────────────────────────────────
+    def has_bd(comment: Any) -> bool:
+        return bool(_PV_BD_RE.search(str(comment or '')))
+
+    def bd_cnt(comment: Any) -> int:
+        m = _PV_BD_RE.search(str(comment or ''))
+        return int(m.group(1)) if m else 0
+
+    def bd_billed(comment: Any) -> bool:
+        m = _PV_BD_RE.search(str(comment or ''))
+        return bool(m and m.group(2))
+
+    def lt_key(r: Dict[str, Any]) -> str:
+        s = sv(r, "load_type")
+        try:
+            f = float(s)
+        except (ValueError, TypeError):
+            return s
+        return str(int(f)) if f == int(f) else ("%g" % f)
+
+    def is_bd_row(r: Dict[str, Any]) -> bool:
+        if "pallet breakdown" in sv(r, "desc").lower():
+            return True
+        return lt_key(r) == "70"
+
+    # ── Fetch DMS range data live ───────────────────────────────────────────
+    dms_rows_ba: List[Dict[str, Any]] = []
+    dms_err: Optional[str] = None
+    dms_loc_label = ""
+    try:
+        if site == "oks":
+            session = _ensure_dms_session()
+        else:
+            session = _ensure_dms_mn_session()
+        config = session["config"]
+        loc = session.get("loc") or {}
+        dms_loc_label = loc.get("location") or loc.get("locName") or loc.get("name") or ""
+        dms_resp = _dms_post("api/ranged/getRanged", {
+            "start": f"{ws_date.month}/{ws_date.day}/{ws_date.year}",
+            "end":   f"{we_date.month}/{we_date.day}/{we_date.year}",
+            "loc":   loc,
+        }, config)
+        dms_rows_ba = dms_resp.get("rows", []) or []
+    except HTTPException as exc:
+        dms_err = str(exc.detail)
+    except Exception as exc:
+        dms_err = str(exc)
+
+    # ── Breakdown reconciliation ────────────────────────────────────────────
+    dms_bd = [r for r in dms_rows_ba if has_bd(r.get("comments", ""))]
+    dms_by_po: Dict[str, Dict[str, Any]] = {}
+    for r in dms_bd:
+        po = _pv_norm_po(r.get("ponum", ""))
+        if po:
+            dms_by_po[po] = r
+
+    ops_bd_all = [(d, r) for d, r in all_dated if is_bd_row(r)]
+    ops_by_po: Dict[str, Any] = {}
+    for d, r in ops_bd_all:
+        po = _pv_norm_po(sv(r, "po"))
+        if po:
+            ops_by_po[po] = (d, r)
+    ops_bd_week_pos = {
+        _pv_norm_po(sv(r, "po"))
+        for d, r in ops_bd_all
+        if ws_date <= d <= we_date and _pv_norm_po(sv(r, "po"))
+    }
+
+    matched_ok: List[Dict[str, Any]] = []
+    matched_wd: List[Dict[str, Any]] = []
+    truly_miss: List[Dict[str, Any]] = []
+    no_billing: List[Dict[str, Any]] = []
+    ops_no_dms: List[Dict[str, Any]] = []
+
+    for dpo, dr in dms_by_po.items():
+        dd_date = _pv_parse_dms_date(dr.get("bizDate", ""))
+        bdc = bd_cnt(dr.get("comments", ""))
+        entry = {
+            "dms_date": dd_date.strftime("%m/%d/%Y") if dd_date else "",
+            "po": dr.get("ponum", ""),
+            "supplier": dr.get("sup", ""),
+            "carrier": dr.get("carr", ""),
+            "dms_bd": bdc,
+            "comment": dr.get("comments", ""),
+        }
+        if dpo in ops_by_po:
+            od, orow = ops_by_po[dpo]
+            ops_tq = int(rv(orow, "task_qty"))
+            ops_pbd = int(rv(orow, "pal_bd") or ops_tq)
+            entry["ops_date"] = od.strftime("%m/%d/%Y") if od else ""
+            entry["ops_task_qty"] = ops_tq
+            entry["ops_bd"] = ops_pbd
+            entry["eclipse_mgr"] = sv(orow, "eclipse_mgr")
+            entry["qty_match"] = (ops_tq == bdc) if (ops_tq and bdc) else None
+            entry["integrity_match"] = ((ops_pbd == ops_tq == bdc) if (ops_pbd and ops_tq and bdc) else None)
+            entry["revenue"] = round(ops_rev(orow), 2)
+            entry["day_delta"] = (od - dd_date).days if (od and dd_date) else None
+            if dd_date and od and dd_date == od:
+                matched_ok.append(entry)
+            else:
+                matched_wd.append(entry)
+        else:
+            est_rev = min(bdc * bd_rate, bd_max) if (bdc and bd_max) else (bdc * bd_rate if bdc else 0)
+            entry.update({
+                "plt_count": int(float(dr.get("qty") or 0)),
+                "est_rev": est_rev,
+                "billed_flag": bd_billed(dr.get("comments", "")),
+            })
+            if entry["billed_flag"]:
+                truly_miss.append(entry)
+            else:
+                no_billing.append(entry)
+
+    for opo, (od, orow) in ops_by_po.items():
+        if opo not in dms_by_po and opo in ops_bd_week_pos:
+            ops_no_dms.append({
+                "ops_date": od.strftime("%m/%d/%Y") if od else "",
+                "po": sv(orow, "po"),
+                "vendor": sv(orow, "vendor"),
+                "carrier": sv(orow, "carrier"),
+                "eclipse_mgr": sv(orow, "eclipse_mgr"),
+                "task_qty": int(rv(orow, "task_qty")),
+                "revenue": round(ops_rev(orow), 2),
+            })
+
+    def _bd_expected(pallets: float) -> float:
+        return min(pallets * bd_rate, bd_max) if bd_max else pallets * bd_rate
+
+    count_mismatch = [e for e in (matched_ok + matched_wd) if e.get("qty_match") is False]
+    for e in count_mismatch:
+        e["count_delta"] = (e.get("ops_task_qty", 0) or 0) - (e.get("dms_bd", 0) or 0)
+        exp_rev = _bd_expected(e.get("dms_bd", 0) or 0)
+        e["expected_rev"] = round(exp_rev, 2)
+        e["rev_delta"] = round(exp_rev - (e.get("revenue", 0) or 0), 2)
+
+    integrity_warn = [e for e in (matched_ok + matched_wd) if e.get("qty_match") is not False and e.get("integrity_match") is False]
+    for e in integrity_warn:
+        e["count_delta"] = (e.get("ops_bd", 0) or 0) - (e.get("dms_bd", 0) or 0)
+
+    count_mismatch_rev_delta = round(sum(e.get("rev_delta", 0) or 0 for e in count_mismatch), 2)
+
+    # ── Billing flags ────────────────────────────────────────────────────────
+    flags: List[Dict[str, Any]] = []
+    for d, r in week_rows:
+        lt = sv(r, "load_type")
+        ltn = lt_key(r)
+        rev = ops_rev(r)
+        po = sv(r, "po")
+        bt = sv(r, "bill_to")
+        dsc = sv(r, "desc")
+        emgr = sv(r, "eclipse_mgr")
+        ds = d.strftime("%m/%d/%Y") if d else ""
+        try:
+            ip = float(rv(r, "init_pal"))
+        except Exception:
+            ip = 0
+        try:
+            tq = float(rv(r, "task_qty"))
+        except Exception:
+            tq = 0
+        try:
+            bd = float(rv(r, "pal_bd"))
+        except Exception:
+            bd = 0
+
+        if rev < 0:
+            flags.append({
+                "flag_type": "Credit", "po": po, "date": ds, "bill_to": bt, "eclipse_mgr": emgr,
+                "activity": dsc or lt,
+                "issue": f"Negative revenue ${rev:.2f}. Verify credit matches agreement.",
+                "billed": rev, "expected": None, "delta": None,
+                "action": "Confirm credit amount matches current rate agreement.",
+                "severity": "info",
+            })
+            continue
+
+        if ltn in sp_tiers and ip > 0:
+            card = sp_tiers[ltn]
+            if ip < card["min_pal"] or (card["max_pal"] is not None and ip > card["max_pal"]):
+                exp_card = _pv_tier_for_pallets(sp_tiers, ip)
+                exp_rate = exp_card["rate"]
+                if abs(exp_rate - card["rate"]) > 0.01:
+                    flags.append({
+                        "flag_type": "Wrong Tier", "po": po, "date": ds, "bill_to": bt, "eclipse_mgr": emgr,
+                        "activity": dsc or lt,
+                        "issue": (f"{int(ip)} pallets coded {dsc} (rate ${card['rate']:.0f}); "
+                                  f"pallet count falls in ${exp_rate:.0f} tier."),
+                        "billed": rev, "expected": exp_rate, "delta": round(exp_rate - rev, 2),
+                        "action": f"Re-invoice at ${exp_rate}. Delta = ${exp_rate - rev:.0f}.",
+                        "severity": "error",
+                    })
+        elif ltn == "70" or "pallet breakdown" in dsc.lower():
+            bd_qty = tq if tq > 0 else bd
+            if bd_qty > 0:
+                exp_rev = _bd_expected(bd_qty)
+                if abs(rev - exp_rev) > 0.01:
+                    flags.append({
+                        "flag_type": "Rate Mismatch", "po": po, "date": ds, "bill_to": bt, "eclipse_mgr": emgr,
+                        "activity": dsc or "Pallet Breakdown",
+                        "issue": (f"{int(bd_qty)} BD pallets; expected ${exp_rev:.0f} (${bd_rate:g}/pal"
+                                  f"{f', cap ${bd_max:g}' if bd_max else ''}). Billed ${rev:.0f}."),
+                        "billed": rev, "expected": exp_rev, "delta": round(exp_rev - rev, 2),
+                        "action": f"Review billing. Delta = ${abs(exp_rev - rev):.0f}.",
+                        "severity": "error" if rev < exp_rev else "warn",
+                    })
+        elif ltn == "71.04":
+            if ip > 0:
+                exp_rev = ip * rs_rate
+                if abs(rev - exp_rev) > 0.01:
+                    flags.append({
+                        "flag_type": "Rate Mismatch", "po": po, "date": ds, "bill_to": bt, "eclipse_mgr": emgr,
+                        "activity": dsc or "Pallet Restack",
+                        "issue": (f"{int(ip)} pallets; expected ${exp_rev:.0f} (${rs_rate:g}/pal). Billed ${rev:.0f}."),
+                        "billed": rev, "expected": exp_rev, "delta": round(exp_rev - rev, 2),
+                        "action": f"Re-invoice at ${exp_rev:.0f}. Delta = ${abs(exp_rev - rev):.0f}.",
+                        "severity": "error",
+                    })
+
+    truly_miss.sort(key=lambda x: x.get("dms_date", ""))
+    no_billing.sort(key=lambda x: x.get("dms_date", ""))
+
+    ops_dates = [d for d, _ in all_dated if d]
+    ops_min = min(ops_dates).strftime("%m/%d/%Y") if ops_dates else "—"
+    ops_max = max(ops_dates).strftime("%m/%d/%Y") if ops_dates else "—"
+
+    est_miss_rev = sum(_bd_expected(r.get("dms_bd", 0)) for r in truly_miss)
+    est_no_billing_rev = sum(_bd_expected(r.get("dms_bd", 0)) for r in no_billing)
+
+    # ── Error attribution (Eclipse MGR = OPS PO submitter) ──────────────────
+    mgr_stats: Dict[str, Dict[str, Any]] = defaultdict(lambda: {"errors": 0, "warnings": 0, "qty_mismatch": 0, "over_billed": 0, "exposure": 0.0})
+    for f in flags:
+        m = (f.get("eclipse_mgr") or "").strip() or "(unattributed)"
+        if f.get("severity") == "error":
+            mgr_stats[m]["errors"] += 1
+        elif f.get("severity") in ("warn", "warning"):
+            mgr_stats[m]["warnings"] += 1
+        if f.get("delta") not in (None, ""):
+            try:
+                mgr_stats[m]["exposure"] += abs(float(f["delta"]))
+            except (TypeError, ValueError):
+                pass
+    for e in count_mismatch:
+        m = (e.get("eclipse_mgr") or "").strip() or "(unattributed)"
+        mgr_stats[m]["qty_mismatch"] += 1
+    for e in integrity_warn:
+        m = (e.get("eclipse_mgr") or "").strip() or "(unattributed)"
+        mgr_stats[m]["warnings"] += 1
+    for e in ops_no_dms:
+        m = (e.get("eclipse_mgr") or "").strip() or "(unattributed)"
+        mgr_stats[m]["over_billed"] += 1
+    error_leaderboard = sorted(
+        ({"manager": m, "errors": s["errors"], "warnings": s["warnings"],
+          "qty_mismatch": s["qty_mismatch"], "over_billed": s["over_billed"],
+          "total": s["errors"] + s["warnings"] + s["qty_mismatch"] + s["over_billed"],
+          "exposure": round(s["exposure"], 2)}
+         for m, s in mgr_stats.items()),
+        key=lambda x: (-x["total"], -x["exposure"]),
+    )
+    error_leaderboard = [x for x in error_leaderboard if x["total"] > 0]
+
+    return {
+        "week": {
+            "start": ws_date.isoformat(), "end": we_date.isoformat(),
+            "label": f"{ws_date.strftime('%m/%d/%Y')} – {we_date.strftime('%m/%d/%Y')}",
+            "days": day_keys, "day_labels": day_labels,
+        },
+        "ops_date_range": {"min": ops_min, "max": ops_max},
+        "summary": {
+            "total_revenue": round(total_rev, 2), "fspay_revenue": round(fspay_rev, 2),
+            "aldi_revenue": round(aldi_rev, 2), "total_loads": total_loads,
+            "total_task_qty": round(total_tq, 1), "flag_count": len(flags),
+        },
+        "activity_breakdown": act_out,
+        "daily_counts": {k: dict(v) for k, v in daily_counts.items()},
+        "daily_revenue": {k: {a: dict(rv2) for a, rv2 in v.items()} for k, v in daily_rev.items()},
+        "breakdown_recon": {
+            "dms_bd_total": len(dms_bd), "ops_bd_total": len(ops_bd_all),
+            "ops_bd_in_week": sum(1 for d, _ in ops_bd_all if ws_date <= d <= we_date),
+            "matched_correct": len(matched_ok), "matched_wrong_date": len(matched_wd),
+            "truly_missing": len(truly_miss), "no_billing_attempt": len(no_billing),
+            "ops_no_dms": len(ops_no_dms), "count_mismatch": len(count_mismatch),
+            "integrity_warning": len(integrity_warn),
+            "count_mismatch_revenue_delta": count_mismatch_rev_delta,
+            "est_missing_revenue": round(est_miss_rev, 2),
+            "est_no_billing_revenue": round(est_no_billing_rev, 2),
+            "wrong_date_detail": matched_wd, "missing_detail": truly_miss,
+            "no_billing_detail": no_billing, "ops_no_dms_detail": ops_no_dms,
+            "count_mismatch_detail": count_mismatch, "integrity_warning_detail": integrity_warn,
+        },
+        "billing_flags": flags,
+        "error_leaderboard": error_leaderboard,
+        "dms_status": "error" if dms_err else "ok",
+        "dms_error": dms_err,
+        "dms_location": dms_loc_label or site.upper(),
+        "client_label": dms_loc_label or ("ALDIOKS" if site == "oks" else "ALDIFMN"),
+        "audit_rates": {
+            "bd_rate_per_pallet": bd_rate, "bd_max_charge": bd_max,
+            "restack_rate_per_pallet": rs_rate,
+            "sp_tiers": sp_tiers,
+        },
+        "ops_col_detected": {k: v for k, v in cols.items() if v},
+        "ops_rows_total": len(ops_rows_raw),
+        "ops_rows_in_week": len(week_rows),
+        "dms_rows_total": len(dms_rows_ba),
+    }
+
+
+@app.post("/api/dms/billing-audit")
+async def dms_billing_audit(
+    ops_file: UploadFile = File(...),
+    week_start: str = Form(...),
+    _: str = Depends(require_auth),
+) -> Dict[str, Any]:
+    ops_bytes = await ops_file.read()
+    return _run_powerview_billing_audit("oks", ops_bytes, week_start)
+
+
+@app.post("/api/dms/mn/billing-audit")
+async def dms_mn_billing_audit(
+    ops_file: UploadFile = File(...),
+    week_start: str = Form(...),
+    _: str = Depends(require_auth),
+) -> Dict[str, Any]:
+    ops_bytes = await ops_file.read()
+    return _run_powerview_billing_audit("mn", ops_bytes, week_start)
+
 
 @app.post("/api/dms/stamp")
 def dms_stamp(body: DmsStampIn):
