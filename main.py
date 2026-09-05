@@ -147,6 +147,22 @@ def init_db():
             truck_ref   TEXT,
             recorded_at TEXT    NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS billing_audit_runs (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            site               TEXT    NOT NULL,
+            week_start         TEXT    NOT NULL,
+            run_at             TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            created_by_user    TEXT,
+            ops_filename       TEXT,
+            ops_sha256         TEXT,
+            result_sha256      TEXT,
+            result_json        TEXT    NOT NULL,
+            is_baseline        INTEGER NOT NULL DEFAULT 0,
+            deleted_at         TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_billing_audit_runs_key
+            ON billing_audit_runs(site, week_start, run_at);
     """)
     conn.commit()
     conn.close()
@@ -1538,6 +1554,28 @@ def _dms_schedule_upload_model(session: Dict[str, Any]) -> Dict[str, Any]:
     return {"_error": last_error or "DMS upload model was not returned."}
 
 
+def _powerview_po_number(raw_po: str) -> str:
+    """PowerView's PO rule (orbit/app.py::_parse_aldi_schedule): from a
+    comma-separated list, take the first 10-digit candidate. A multi-PO cell
+    sent to DMS's poNum field as-is (e.g. "7521444135,7522401186") is not a
+    valid single PO, so this picks the one DMS actually expects."""
+    text = str(raw_po or "").strip()
+    for candidate in text.split(","):
+        c = candidate.strip()
+        if c.isdigit() and len(c) == 10:
+            return c
+    digits = _schedule_digits(text)
+    return digits or text
+
+
+def _powerview_strip_commodity_code(value: str) -> str:
+    """PowerView's cleanup (orbit/app.py::_strip_commodity_code): the ALDI
+    schedule codes commodities as "0008 Fruits & Vegetables"; DMS wants just
+    "Fruits & Vegetables". Only strips a leading run of digits + whitespace."""
+    text = str(value or "").strip()
+    return re.sub(r"^\s*\d+\s+", "", text) if text else ""
+
+
 def _dms_schedule_insert_payload(
     row: DmsScheduleRowIn,
     session: Dict[str, Any],
@@ -1553,18 +1591,21 @@ def _dms_schedule_insert_payload(
         base_insert.update(upload_model["insert"])
 
     dock_type = _schedule_dock_type(row, use_oks_rules)
+    po_number = row.po.strip() if use_oks_rules else _powerview_po_number(row.po)
+    category_desc = row.product_category.strip() if use_oks_rules else _powerview_strip_commodity_code(row.product_category)
+    supplier_fallback = "MULTI PO SUPPLIER NOT KNOWN" if use_oks_rules else "MULTI PO - VENDOR NOT SPECIFIED"
     base_insert.update({
         "area": _dms_area_for_schedule(row, session, business_date, use_oks_rules),
-        "poNum": row.po.strip(),
+        "poNum": po_number,
         "appt": _schedule_appt_to_utc_string(row.scheduled_iso or row.scheduled_text),
         "trkNum": max(1, int(truck_number or 1)),
         "doorNum": 0,
         "load": dock_type or row.protection.strip() or row.dock.strip() or "ALDI Schedule",
-        "sup": row.supplier.strip() or "MULTI PO SUPPLIER NOT KNOWN",
+        "sup": row.supplier.strip() or supplier_fallback,
         "qty": _schedule_int(row.pallets, 0),
         "carr": str(base_insert.get("carr") or ""),
         "notes": notes,
-        "desc": row.product_category.strip() or dock_type or row.dock.strip(),
+        "desc": category_desc or dock_type or row.dock.strip(),
         "cabNum": str(base_insert.get("cabNum") or ""),
     })
 
@@ -1826,6 +1867,422 @@ def _pv_tier_for_pallets(tiers: Dict[str, Dict[str, Any]], pallets: float) -> Di
         if pallets >= card["min_pal"] and (card["max_pal"] is None or pallets <= card["max_pal"]):
             return card
     return ordered[-1] if ordered else {"min_pal": 0, "max_pal": None, "rate": 0.0}
+
+
+# ── Billing audit export + run history (ported from Orbit's PowerView) ────────
+# _billing_audit_tables/_xlsx_bytes/_csv_zip_bytes and the diff helpers below
+# are near-verbatim ports of orbit/app.py's billing-audit export and
+# "what changed since last audit" comparison, adapted to this app's site
+# labels (string "oks"/"mn" instead of a numeric DMS locid).
+
+def _billing_audit_tables(payload: Dict[str, Any]) -> List[Any]:
+    """Return [(title, headers, rows, money_col_indices)] from an audit payload."""
+    wk = payload.get("week", {}) or {}
+    smy = payload.get("summary", {}) or {}
+    rec = payload.get("breakdown_recon", {}) or {}
+    rng = payload.get("ops_date_range", {}) or {}
+    client = payload.get("client_label") or payload.get("dms_location") or "ALDI"
+    tables = []
+
+    dms_state = payload.get("dms_status", "")
+    if payload.get("dms_error"):
+        dms_state = f"{dms_state} ({payload['dms_error']})"
+    summary_rows = [
+        ["Revenue Week", wk.get("label", "")],
+        ["DMS Site", payload.get("dms_location", "")],
+        ["OPS Date Range", f"{rng.get('min', '')} - {rng.get('max', '')}"],
+        ["DMS Status", dms_state],
+        ["", ""],
+        ["Total Revenue", smy.get("total_revenue", 0)],
+        ["FSPAY Revenue", smy.get("fspay_revenue", 0)],
+        [f"{client} Revenue", smy.get("aldi_revenue", 0)],
+        ["Total Loads", smy.get("total_loads", 0)],
+        ["Total Task Qty", smy.get("total_task_qty", 0)],
+        ["Billing Flags", smy.get("flag_count", 0)],
+        ["", ""],
+        ["DMS c$ Trucks", rec.get("dms_bd_total", 0)],
+        ["OPS BD POs", rec.get("ops_bd_total", 0)],
+        ["Matched - Correct Date", rec.get("matched_correct", 0)],
+        ["Matched - Wrong Date", rec.get("matched_wrong_date", 0)],
+        ["Truly Missing", rec.get("truly_missing", 0)],
+        ["Est. Unbilled Revenue", rec.get("est_missing_revenue", 0)],
+        ["OPS - No DMS c$", rec.get("ops_no_dms", 0)],
+        ["Qty Mismatch (revenue)", rec.get("count_mismatch", 0)],
+        ["Qty Mismatch Rev Impact", rec.get("count_mismatch_revenue_delta", 0)],
+        ["Data Integrity Warnings", rec.get("integrity_warning", 0)],
+    ]
+    tables.append(("Summary", ["Metric", "Value"], summary_rows, []))
+
+    act_rows = [[
+        a.get("load_type", ""), a.get("description", ""), a.get("po_count", 0),
+        a.get("task_qty", 0), a.get("total_revenue", 0), a.get("fspay_revenue", 0),
+        a.get("aldi_revenue", 0), a.get("avg_rev_po", 0), a.get("rev_pct", 0),
+    ] for a in payload.get("activity_breakdown", [])]
+    tables.append(("Activity Breakdown",
+        ["Load Type", "Description", "PO Count", "Task Qty", "Total Revenue",
+         "FSPAY Revenue", f"{client} Revenue", "Avg Rev/PO", "Rev %"],
+        act_rows, [5, 6, 7, 8]))
+
+    days = wk.get("days", []) or []
+    labels = wk.get("day_labels", []) or []
+    dc = payload.get("daily_counts", {}) or {}
+    dr = payload.get("daily_revenue", {}) or {}
+    daily_rows = []
+    for i, dk in enumerate(days):
+        counts = dc.get(dk, {}) or {}
+        revs = dr.get(dk, {}) or {}
+        acts = sorted(set(list(counts.keys()) + list(revs.keys())))
+        lbl = labels[i] if i < len(labels) else ""
+        for act in acts:
+            rv = revs.get(act, {}) or {}
+            daily_rows.append([f"{lbl} {dk}".strip(), act, counts.get(act, 0),
+                               rv.get("fspay", 0), rv.get("aldi", 0)])
+    tables.append(("Daily Load & Revenue",
+        ["Day", "Activity", "Loads", "FSPAY Revenue", f"{client} Revenue"],
+        daily_rows, [4, 5]))
+
+    bd_rows = []
+    for e in rec.get("wrong_date_detail", []):
+        bd_rows.append(["Wrong Date", e.get("dms_date", ""), e.get("ops_date", ""),
+            e.get("po", ""), e.get("supplier", ""), e.get("carrier", ""),
+            e.get("dms_bd", ""), e.get("ops_bd", e.get("ops_task_qty", "")),
+            e.get("day_delta", ""), e.get("revenue", ""), e.get("eclipse_mgr", ""),
+            e.get("comment", "")])
+    for e in rec.get("missing_detail", []):
+        bd_rows.append(["Truly Missing", e.get("dms_date", ""), "", e.get("po", ""),
+            e.get("supplier", ""), e.get("carrier", ""), e.get("dms_bd", ""), "",
+            "", e.get("est_rev", ""), "", e.get("comment", "")])
+    for e in rec.get("no_billing_detail", []):
+        bd_rows.append(["No Billing Attempt", e.get("dms_date", ""), "", e.get("po", ""),
+            e.get("supplier", ""), e.get("carrier", ""), e.get("dms_bd", ""), "",
+            "", e.get("est_rev", ""), "", e.get("comment", "")])
+    for e in rec.get("count_mismatch_detail", []):
+        bd_rows.append(["Qty Mismatch (revenue)", e.get("dms_date", ""), e.get("ops_date", ""),
+            e.get("po", ""), e.get("supplier", ""), e.get("carrier", ""),
+            e.get("dms_bd", ""), e.get("ops_task_qty", ""), e.get("count_delta", ""),
+            e.get("revenue", ""), e.get("eclipse_mgr", ""),
+            f"exp ${e.get('expected_rev', 0):g}, delta ${e.get('rev_delta', 0):g} | {e.get('comment', '')}".strip()])
+    for e in rec.get("integrity_warning_detail", []):
+        bd_rows.append(["Data Integrity (no rev impact)", e.get("dms_date", ""), e.get("ops_date", ""),
+            e.get("po", ""), e.get("supplier", ""), e.get("carrier", ""),
+            e.get("dms_bd", ""), e.get("ops_bd", ""), e.get("count_delta", ""),
+            e.get("revenue", ""), e.get("eclipse_mgr", ""),
+            f"ops_bd {e.get('ops_bd','')} vs task_qty {e.get('ops_task_qty','')} | {e.get('comment', '')}".strip()])
+    for e in rec.get("ops_no_dms_detail", []):
+        bd_rows.append(["Over-billed (OPS no DMS)", "", e.get("ops_date", ""),
+            e.get("po", ""), e.get("vendor", ""), e.get("carrier", ""), "",
+            e.get("task_qty", ""), "", e.get("revenue", ""), e.get("eclipse_mgr", ""),
+            ""])
+    tables.append(("Breakdown Detail",
+        ["Category", "DMS Date", "OPS Date", "PO", "Supplier/Vendor", "Carrier",
+         "DMS c$", "OPS Qty", "Delta", "Revenue/Est", "Eclipse Mgr", "Comment"],
+        bd_rows, [10]))
+
+    flag_rows = [[
+        f.get("severity", ""), f.get("flag_type", ""), f.get("po", ""), f.get("date", ""),
+        f.get("bill_to", ""), f.get("eclipse_mgr", ""), f.get("activity", ""),
+        f.get("issue", ""), f.get("billed", ""), f.get("expected", ""),
+        f.get("delta", ""), f.get("action", ""),
+    ] for f in payload.get("billing_flags", [])]
+    tables.append(("Billing Flags",
+        ["Severity", "Flag", "PO", "Date", "Bill To", "Eclipse Mgr", "Activity",
+         "Issue", "Billed", "Expected", "Delta", "Action"],
+        flag_rows, [9, 10, 11]))
+
+    board_rows = [[
+        m.get("manager", ""), m.get("total", 0), m.get("errors", 0), m.get("warnings", 0),
+        m.get("qty_mismatch", 0), m.get("over_billed", 0), m.get("exposure", 0),
+    ] for m in payload.get("error_leaderboard", [])]
+    tables.append(("Error Attribution",
+        ["Eclipse Manager", "Total Issues", "Rate Errors", "Reviews",
+         "Qty Mismatch", "Over-billed", "$ Exposure"],
+        board_rows, [7]))
+
+    return tables
+
+
+def _billing_audit_xlsx_bytes(payload: Dict[str, Any]) -> bytes:
+    """Render the audit payload to a styled, multi-sheet, filter/sort-friendly
+    workbook: branded header band, zebra striping, borders, number/percent
+    formats, text wrapping, and per-sheet highlighting."""
+    from openpyxl import Workbook
+    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    HEADER_FILL = PatternFill("solid", fgColor="1F3A5F")
+    HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    BASE_FONT = Font(name="Calibri", size=10)
+    BOLD_FONT = Font(name="Calibri", size=10, bold=True)
+    ZEBRA_FILL = PatternFill("solid", fgColor="EEF2F7")
+    _edge = Side(style="thin", color="D9DEE4")
+    BORDER = Border(left=_edge, right=_edge, top=_edge, bottom=_edge)
+    MONEY_FMT = '$#,##0.00'
+    PCT_FMT = '0.0"%"'
+    WRAP_COLS = {"Issue", "Action", "Comment"}
+    WRAP_WIDTH = 42
+
+    SEV_STYLES = {
+        "error": (PatternFill("solid", fgColor="F8D7DA"), Font(name="Calibri", size=10, bold=True, color="842029")),
+        "warn": (PatternFill("solid", fgColor="FFF3CD"), Font(name="Calibri", size=10, bold=True, color="664D03")),
+        "info": (PatternFill("solid", fgColor="E2E3E5"), Font(name="Calibri", size=10, color="41464B")),
+    }
+    CAT_FILLS = {
+        "Wrong Date": PatternFill("solid", fgColor="FFF3CD"),
+        "Truly Missing": PatternFill("solid", fgColor="F8D7DA"),
+        "No Billing Attempt": PatternFill("solid", fgColor="F3D9EC"),
+        "Qty Mismatch": PatternFill("solid", fgColor="FFE5D0"),
+        "Over-billed (OPS no DMS)": PatternFill("solid", fgColor="D1E7DD"),
+    }
+    POS_FONT = Font(name="Calibri", size=10, bold=True, color="B02A37")
+    TOP_FILL = PatternFill("solid", fgColor="FDE2E4")
+
+    wb = Workbook()
+    first = True
+    for title, headers, rows, money_cols in _billing_audit_tables(payload):
+        ws = wb.active if first else wb.create_sheet()
+        first = False
+        ws.title = title[:31]
+        ws.sheet_view.showGridLines = False
+        ws.sheet_properties.tabColor = "1F3A5F"
+        ncols = len(headers)
+        wrap_idx = {i + 1 for i, h in enumerate(headers) if h in WRAP_COLS}
+        pct_idx = {i + 1 for i, h in enumerate(headers) if h.strip() == "Rev %"}
+
+        ws.append(headers)
+        ws.row_dimensions[1].height = 22
+        for c in range(1, ncols + 1):
+            cell = ws.cell(row=1, column=c)
+            cell.fill = HEADER_FILL
+            cell.font = HEADER_FONT
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.border = BORDER
+
+        for ri, r in enumerate(rows, start=2):
+            ws.append(r)
+            blank = all((v is None or v == "") for v in r)
+            if blank:
+                continue
+            zebra = ZEBRA_FILL if (ri % 2 == 0) else None
+            for c in range(1, ncols + 1):
+                cell = ws.cell(row=ri, column=c)
+                cell.font = BASE_FONT
+                cell.border = BORDER
+                if zebra:
+                    cell.fill = zebra
+                is_num = isinstance(cell.value, (int, float)) and not isinstance(cell.value, bool)
+                if c in wrap_idx:
+                    cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+                else:
+                    cell.alignment = Alignment(horizontal=("right" if is_num else "left"), vertical="center")
+                if c in money_cols:
+                    cell.number_format = MONEY_FMT
+                elif c in pct_idx:
+                    cell.number_format = PCT_FMT
+
+        ws.freeze_panes = "A2"
+        ws.auto_filter.ref = f"A1:{get_column_letter(ncols)}{max(len(rows) + 1, 1)}"
+
+        for c in range(1, ncols + 1):
+            if c in wrap_idx:
+                ws.column_dimensions[get_column_letter(c)].width = WRAP_WIDTH
+                continue
+            widths = [len(str(headers[c - 1]))]
+            widths += [len(str(r[c - 1])) for r in rows if c - 1 < len(r) and r[c - 1] not in (None, "")]
+            ws.column_dimensions[get_column_letter(c)].width = min(max(max(widths) + 2, 10), 48)
+
+        if title == "Summary":
+            for ri in range(2, len(rows) + 2):
+                ws.cell(row=ri, column=1).font = BOLD_FONT
+        elif title == "Billing Flags":
+            sev_c = 1
+            delta_c = headers.index("Delta") + 1 if "Delta" in headers else None
+            for ri, r in enumerate(rows, start=2):
+                sev = str(r[sev_c - 1]).lower()
+                if sev in SEV_STYLES:
+                    fill, font = SEV_STYLES[sev]
+                    cell = ws.cell(row=ri, column=sev_c)
+                    cell.fill = fill; cell.font = font
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                if delta_c:
+                    dcell = ws.cell(row=ri, column=delta_c)
+                    if isinstance(dcell.value, (int, float)) and dcell.value > 0:
+                        dcell.font = POS_FONT
+        elif title == "Breakdown Detail":
+            for ri, r in enumerate(rows, start=2):
+                fill = CAT_FILLS.get(str(r[0]))
+                if fill:
+                    cell = ws.cell(row=ri, column=1)
+                    cell.fill = fill; cell.font = BOLD_FONT
+        elif title == "Error Attribution" and rows:
+            for c in range(1, ncols + 1):
+                cell = ws.cell(row=2, column=c)
+                cell.fill = TOP_FILL
+                cell.font = BOLD_FONT
+
+    out = BytesIO()
+    wb.save(out)
+    return out.getvalue()
+
+
+def _billing_audit_csv_zip_bytes(payload: Dict[str, Any]) -> bytes:
+    """Render the audit payload to a zip of one CSV per table."""
+    import csv as _csv
+    import io as _io
+    import zipfile as _zip
+    buf = BytesIO()
+    with _zip.ZipFile(buf, "w", _zip.ZIP_DEFLATED) as zf:
+        for idx, (title, headers, rows, _money) in enumerate(_billing_audit_tables(payload), 1):
+            sio = _io.StringIO()
+            w = _csv.writer(sio)
+            w.writerow(headers)
+            w.writerows(rows)
+            slug = re.sub(r'[^A-Za-z0-9]+', '-', title).strip('-').lower()
+            zf.writestr(f"{idx:02d}-{slug}.csv", sio.getvalue())
+    return buf.getvalue()
+
+
+# ── Billing-audit run comparison — "what changed since the last audit" ───────
+def _ba_norm_po(po: Any) -> str:
+    return re.sub(r'[^0-9]', '', str(po or ''))[:10]
+
+
+_BA_PROBLEM_LISTS = (
+    ("truly_missing", "missing_detail"),
+    ("no_billing", "no_billing_detail"),
+    ("qty_mismatch", "count_mismatch_detail"),
+    ("integrity_warn", "integrity_warning_detail"),
+    ("wrong_date", "wrong_date_detail"),
+    ("ops_no_dms", "ops_no_dms_detail"),
+)
+
+
+def _ba_state_map(payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """normalized PO -> {state, entry} over the problem lists. POs that are
+    clean (matched) aren't enumerated in the payload, so absence == clean."""
+    rec = (payload or {}).get("breakdown_recon", {}) or {}
+    out: Dict[str, Any] = {}
+    for state, key in _BA_PROBLEM_LISTS:
+        for e in (rec.get(key) or []):
+            po = _ba_norm_po(e.get("po", ""))
+            if po and po not in out:
+                out[po] = {"state": state, "entry": e}
+    return out
+
+
+def _ba_entry_fields(e: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "supplier": e.get("supplier") or e.get("vendor") or "",
+        "carrier": e.get("carrier", ""),
+        "dms_bd": e.get("dms_bd"),
+        "ops_bd": e.get("ops_bd", e.get("ops_task_qty")),
+        "est_rev": e.get("est_rev"),
+        "revenue": e.get("revenue"),
+        "dms_date": e.get("dms_date", ""),
+        "ops_date": e.get("ops_date", ""),
+        "eclipse_mgr": e.get("eclipse_mgr", ""),
+        "comment": e.get("comment", ""),
+    }
+
+
+def _ba_sig(e: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "dms": (e.get("dms_bd"), e.get("dms_date", ""), e.get("comment", "")),
+        "ops": (e.get("ops_bd", e.get("ops_task_qty")), e.get("ops_date", ""), e.get("revenue")),
+    }
+
+
+def _billing_audit_diff(old_payload: Optional[Dict[str, Any]], new_payload: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    old_map, new_map = _ba_state_map(old_payload), _ba_state_map(new_payload)
+    resolved, new_issues, still_open, changed = [], [], [], []
+    for po in (set(old_map) | set(new_map)):
+        o, n = old_map.get(po), new_map.get(po)
+        if o and not n:
+            resolved.append({"po": po, "was": o["state"], **_ba_entry_fields(o["entry"])})
+        elif n and not o:
+            new_issues.append({"po": po, "now": n["state"], **_ba_entry_fields(n["entry"])})
+        else:
+            os_, ns_ = _ba_sig(o["entry"]), _ba_sig(n["entry"])
+            if o["state"] == n["state"] and os_ == ns_:
+                still_open.append({"po": po, "state": n["state"], **_ba_entry_fields(n["entry"])})
+            else:
+                changed.append({
+                    "po": po, "old_state": o["state"], "new_state": n["state"],
+                    "ops_changed": os_["ops"] != ns_["ops"],
+                    "dms_changed": os_["dms"] != ns_["dms"],
+                    "old": _ba_entry_fields(o["entry"]), "new": _ba_entry_fields(n["entry"]),
+                })
+
+    def _flagkey(f: Dict[str, Any]) -> Any:
+        return (_ba_norm_po(f.get("po", "")), f.get("flag_type", ""))
+    old_flags = {_flagkey(f): f for f in ((old_payload or {}).get("billing_flags") or [])}
+    new_flags = {_flagkey(f): f for f in ((new_payload or {}).get("billing_flags") or [])}
+    flags_resolved = [old_flags[k] for k in old_flags if k not in new_flags]
+    flags_new = [new_flags[k] for k in new_flags if k not in old_flags]
+
+    orec = (old_payload or {}).get("breakdown_recon", {}) or {}
+    nrec = (new_payload or {}).get("breakdown_recon", {}) or {}
+    osum = (old_payload or {}).get("summary", {}) or {}
+    nsum = (new_payload or {}).get("summary", {}) or {}
+
+    def _agg(o: Any, n: Any) -> Dict[str, float]:
+        o, n = (o or 0), (n or 0)
+        return {"old": round(o, 2), "new": round(n, 2), "delta": round(n - o, 2)}
+    aggregate = {
+        "est_unbilled": _agg((orec.get("est_missing_revenue", 0) or 0) + (orec.get("est_no_billing_revenue", 0) or 0),
+                             (nrec.get("est_missing_revenue", 0) or 0) + (nrec.get("est_no_billing_revenue", 0) or 0)),
+        "truly_missing": _agg(orec.get("truly_missing", 0), nrec.get("truly_missing", 0)),
+        "no_billing_attempt": _agg(orec.get("no_billing_attempt", 0), nrec.get("no_billing_attempt", 0)),
+        "qty_mismatch": _agg(orec.get("count_mismatch", 0), nrec.get("count_mismatch", 0)),
+        "qty_mismatch_rev": _agg(orec.get("count_mismatch_revenue_delta", 0), nrec.get("count_mismatch_revenue_delta", 0)),
+        "integrity_warn": _agg(orec.get("integrity_warning", 0), nrec.get("integrity_warning", 0)),
+        "ops_no_dms": _agg(orec.get("ops_no_dms", 0), nrec.get("ops_no_dms", 0)),
+        "matched_correct": _agg(orec.get("matched_correct", 0), nrec.get("matched_correct", 0)),
+        "flags": _agg(osum.get("flag_count", 0), nsum.get("flag_count", 0)),
+        "total_revenue": _agg(osum.get("total_revenue", 0), nsum.get("total_revenue", 0)),
+    }
+    return {
+        "aggregate": aggregate,
+        "resolved": sorted(resolved, key=lambda x: x["po"]),
+        "new_issues": sorted(new_issues, key=lambda x: x["po"]),
+        "changed": sorted(changed, key=lambda x: x["po"]),
+        "still_open": sorted(still_open, key=lambda x: x["po"]),
+        "flags_resolved": flags_resolved,
+        "flags_new": flags_new,
+        "counts": {"resolved": len(resolved), "new_issues": len(new_issues),
+                   "changed": len(changed), "still_open": len(still_open),
+                   "flags_resolved": len(flags_resolved), "flags_new": len(flags_new)},
+    }
+
+
+def _archive_billing_audit_run(site: str, week_start_str: str, payload: Dict[str, Any],
+                                ops_filename: str, ops_bytes: bytes, username: str) -> None:
+    """Auto-save this run (result JSON only — DMS is a live, non-reproducible
+    pull, so the computed result is the frozen snapshot to diff against later).
+    Skips exact-duplicate results (re-run with no change) to avoid clutter."""
+    try:
+        result_text = json.dumps(payload, sort_keys=True, default=str)
+        result_sha = hashlib.sha256(result_text.encode("utf-8")).hexdigest()
+        ops_sha = hashlib.sha256(ops_bytes).hexdigest() if ops_bytes else None
+        conn = get_db()
+        try:
+            prev = conn.execute(
+                "SELECT result_sha256 FROM billing_audit_runs "
+                "WHERE site=? AND week_start=? AND deleted_at IS NULL "
+                "ORDER BY run_at DESC, id DESC LIMIT 1",
+                (site, week_start_str),
+            ).fetchone()
+            if not prev or prev["result_sha256"] != result_sha:
+                conn.execute(
+                    "INSERT INTO billing_audit_runs "
+                    "(site, week_start, created_by_user, ops_filename, ops_sha256, result_sha256, result_json) "
+                    "VALUES (?,?,?,?,?,?,?)",
+                    (site, week_start_str, username, ops_filename, ops_sha, result_sha, result_text),
+                )
+                conn.commit()
+        finally:
+            conn.close()
+    except Exception as exc:
+        print(f"billing audit archive error: {exc}")
 
 
 def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: str) -> Dict[str, Any]:
@@ -2264,24 +2721,183 @@ def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: st
     }
 
 
+def _billing_audit_response(payload: Dict[str, Any], fmt: Optional[str]) -> Any:
+    """JSON payload, or a downloadable xlsx/csv-zip file if `fmt` asks for one."""
+    fmt = (fmt or "").lower()
+    if fmt not in ("xlsx", "csv"):
+        return payload
+    site_slug = re.sub(r'[^A-Za-z0-9]+', '', str(payload.get("dms_location") or "site")) or "site"
+    stamp = re.sub(r'[^0-9]', '', str((payload.get("week") or {}).get("start") or ""))[:8] or "latest"
+    if fmt == "xlsx":
+        body = _billing_audit_xlsx_bytes(payload)
+        ctype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        fname = f"BillingAudit_{site_slug}_{stamp}.xlsx"
+    else:
+        body = _billing_audit_csv_zip_bytes(payload)
+        ctype = "application/zip"
+        fname = f"BillingAudit_{site_slug}_{stamp}_csv.zip"
+    return Response(content=body, media_type=ctype, headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+def _billing_audit_run_summary(row: sqlite3.Row) -> Dict[str, Any]:
+    try:
+        p = json.loads(row["result_json"])
+    except (TypeError, ValueError):
+        p = {}
+    rec = p.get("breakdown_recon", {}) or {}
+    smy = p.get("summary", {}) or {}
+    return {
+        "id": row["id"], "run_at": row["run_at"],
+        "ops_filename": row["ops_filename"] or "",
+        "is_baseline": bool(row["is_baseline"]),
+        "dms_status": p.get("dms_status"),
+        "truly_missing": rec.get("truly_missing", 0),
+        "no_billing_attempt": rec.get("no_billing_attempt", 0),
+        "qty_mismatch": rec.get("count_mismatch", 0),
+        "matched_correct": rec.get("matched_correct", 0),
+        "flag_count": smy.get("flag_count", 0),
+        "est_unbilled": round((rec.get("est_missing_revenue", 0) or 0) + (rec.get("est_no_billing_revenue", 0) or 0), 2),
+    }
+
+
 @app.post("/api/dms/billing-audit")
 async def dms_billing_audit(
     ops_file: UploadFile = File(...),
     week_start: str = Form(...),
-    _: str = Depends(require_auth),
-) -> Dict[str, Any]:
+    format: Optional[str] = Form(None),
+    username: str = Depends(require_auth),
+) -> Any:
     ops_bytes = await ops_file.read()
-    return _run_powerview_billing_audit("oks", ops_bytes, week_start)
+    payload = _run_powerview_billing_audit("oks", ops_bytes, week_start)
+    _archive_billing_audit_run("oks", payload["week"]["start"], payload, ops_file.filename or "", ops_bytes, username)
+    return _billing_audit_response(payload, format)
 
 
 @app.post("/api/dms/mn/billing-audit")
 async def dms_mn_billing_audit(
     ops_file: UploadFile = File(...),
     week_start: str = Form(...),
+    format: Optional[str] = Form(None),
+    username: str = Depends(require_auth),
+) -> Any:
+    ops_bytes = await ops_file.read()
+    payload = _run_powerview_billing_audit("mn", ops_bytes, week_start)
+    _archive_billing_audit_run("mn", payload["week"]["start"], payload, ops_file.filename or "", ops_bytes, username)
+    return _billing_audit_response(payload, format)
+
+
+class BillingAuditExportIn(BaseModel):
+    format: str
+    payload: Dict[str, Any]
+
+
+@app.post("/api/dms/billing-audit/export")
+def dms_billing_audit_export(body: BillingAuditExportIn, _: str = Depends(require_auth)) -> Any:
+    fmt = (body.format or "").lower()
+    if fmt not in ("xlsx", "csv"):
+        raise HTTPException(status_code=400, detail="format must be 'xlsx' or 'csv'.")
+    if "breakdown_recon" not in body.payload:
+        raise HTTPException(status_code=400, detail="Missing or invalid audit payload.")
+    return _billing_audit_response(body.payload, fmt)
+
+
+@app.get("/api/dms/billing-audit/runs")
+def dms_billing_audit_runs(site: str, week: str, _: str = Depends(require_auth)) -> Dict[str, Any]:
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT id, run_at, ops_filename, is_baseline, result_json FROM billing_audit_runs "
+            "WHERE site=? AND week_start=? AND deleted_at IS NULL ORDER BY run_at DESC, id DESC",
+            (site, week),
+        ).fetchall()
+    finally:
+        conn.close()
+    return {"runs": [_billing_audit_run_summary(r) for r in rows]}
+
+
+@app.get("/api/dms/billing-audit/diff")
+def dms_billing_audit_diff(
+    site: Optional[str] = None,
+    week: Optional[str] = None,
+    from_id: Optional[int] = None,
+    to_id: Optional[int] = None,
     _: str = Depends(require_auth),
 ) -> Dict[str, Any]:
-    ops_bytes = await ops_file.read()
-    return _run_powerview_billing_audit("mn", ops_bytes, week_start)
+    conn = get_db()
+    try:
+        if from_id and to_id:
+            a = conn.execute("SELECT * FROM billing_audit_runs WHERE id=? AND deleted_at IS NULL", (from_id,)).fetchone()
+            b = conn.execute("SELECT * FROM billing_audit_runs WHERE id=? AND deleted_at IS NULL", (to_id,)).fetchone()
+            if not a or not b:
+                raise HTTPException(status_code=404, detail="Run not found.")
+            old_run, new_run = a, b
+        else:
+            if not site or not week:
+                raise HTTPException(status_code=400, detail="site and week (or from_id and to_id) are required.")
+            runs = conn.execute(
+                "SELECT * FROM billing_audit_runs WHERE site=? AND week_start=? AND deleted_at IS NULL "
+                "ORDER BY run_at DESC, id DESC",
+                (site, week),
+            ).fetchall()
+            if not runs:
+                return {"comparison": None, "reason": "no runs"}
+            new_run = runs[0]
+            baseline = next((r for r in runs if r["is_baseline"] and r["id"] != new_run["id"]), None)
+            old_run = baseline or (runs[1] if len(runs) > 1 else None)
+            if old_run is None:
+                return {"comparison": None, "reason": "no prior run", "current": _billing_audit_run_summary(new_run)}
+        try:
+            diff = _billing_audit_diff(json.loads(old_run["result_json"]), json.loads(new_run["result_json"]))
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=500, detail=f"Could not parse stored runs: {exc}")
+        return {
+            "comparison": diff,
+            "from": _billing_audit_run_summary(old_run),
+            "to": _billing_audit_run_summary(new_run),
+            "baseline_used": bool(old_run["is_baseline"]),
+        }
+    finally:
+        conn.close()
+
+
+class BillingAuditBaselineIn(BaseModel):
+    baseline: bool = True
+
+
+@app.post("/api/dms/billing-audit/runs/{run_id}/baseline")
+def dms_billing_audit_set_baseline(run_id: int, body: BillingAuditBaselineIn, _: str = Depends(require_auth)) -> Dict[str, Any]:
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT site, week_start FROM billing_audit_runs WHERE id=? AND deleted_at IS NULL", (run_id,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Run not found.")
+        conn.execute(
+            "UPDATE billing_audit_runs SET is_baseline=0 WHERE site=? AND week_start=?",
+            (row["site"], row["week_start"]),
+        )
+        if body.baseline:
+            conn.execute("UPDATE billing_audit_runs SET is_baseline=1 WHERE id=?", (run_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True, "id": run_id, "is_baseline": bool(body.baseline)}
+
+
+@app.delete("/api/dms/billing-audit/runs/{run_id}")
+def dms_billing_audit_delete_run(run_id: int, _: str = Depends(require_auth)) -> Dict[str, Any]:
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT id FROM billing_audit_runs WHERE id=? AND deleted_at IS NULL", (run_id,)).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Run not found.")
+        now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        conn.execute("UPDATE billing_audit_runs SET deleted_at=?, is_baseline=0 WHERE id=?", (now, run_id))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"ok": True, "id": run_id, "deleted_at": now}
 
 
 @app.post("/api/dms/stamp")

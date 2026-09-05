@@ -4843,6 +4843,25 @@
               </table>
             </div>
           </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Export &amp; Run History</div>
+                <div class="table-meta" id="pvOksDiffMeta">Run the audit to enable export and history.</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button id="pvOksExportXlsxBtn" type="button" class="portal-ctrl-btn" disabled>Download XLSX</button>
+                <button id="pvOksExportCsvBtn" type="button" class="portal-ctrl-btn" disabled>Download CSV</button>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvOksHistoryTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
         </div>
       </section>
       <!-- /truckChargeAuditPanel -->
@@ -4971,6 +4990,25 @@
             </div>
             <div class="table-scroller">
               <table id="pvMnLeaderboardTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-wrap" style="margin-top: 14px;">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title">Export &amp; Run History</div>
+                <div class="table-meta" id="pvMnDiffMeta">Run the audit to enable export and history.</div>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <button id="pvMnExportXlsxBtn" type="button" class="portal-ctrl-btn" disabled>Download XLSX</button>
+                <button id="pvMnExportCsvBtn" type="button" class="portal-ctrl-btn" disabled>Download CSV</button>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="pvMnHistoryTable">
                 <thead></thead>
                 <tbody></tbody>
               </table>
@@ -9153,6 +9191,10 @@
       if (fileInput) fileInput.addEventListener("change", (event) => handlePowerviewOpsFileChange(site, event));
       if (weekInput) weekInput.addEventListener("change", () => pvUpdateRunButtonState(site));
       if (runBtn) runBtn.addEventListener("click", () => runPowerviewAudit(site));
+      const xlsxBtn = pvGet(site, "ExportXlsxBtn");
+      const csvBtn = pvGet(site, "ExportCsvBtn");
+      if (xlsxBtn) xlsxBtn.addEventListener("click", () => pvDownloadExport(site, "xlsx"));
+      if (csvBtn) csvBtn.addEventListener("click", () => pvDownloadExport(site, "csv"));
     });
     if (els.refreshHistoryButton) els.refreshHistoryButton.addEventListener("click", renderHistoryPanel);
     const refreshVendorStatsBtn = document.getElementById("refreshVendorStatsBtn");
@@ -17663,6 +17705,139 @@
         (row) => [row.manager, row.errors, row.warnings, row.qty_mismatch, row.over_billed, row.total, pvFmtMoney(row.exposure)],
         "No attributed billing errors this week."
       );
+
+      const xlsxBtn = pvGet(site, "ExportXlsxBtn");
+      const csvBtn = pvGet(site, "ExportCsvBtn");
+      if (xlsxBtn) xlsxBtn.disabled = false;
+      if (csvBtn) csvBtn.disabled = false;
+      pvLoadRunHistory(site);
+      pvLoadDiff(site);
+    }
+
+    function pvDownloadExport(site, fmt) {
+      const payload = state.powerviewAudit[site];
+      if (!payload) { showToast("Run the audit first."); return; }
+      fetch(apiUrl("/api/dms/billing-audit/export"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ format: fmt, payload })
+      }).then(async (resp) => {
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          throw new Error(data.detail || "Export failed.");
+        }
+        const blob = await resp.blob();
+        const disposition = resp.headers.get("Content-Disposition") || "";
+        const match = disposition.match(/filename="([^"]+)"/);
+        const filename = match ? match[1] : `BillingAudit.${fmt === "xlsx" ? "xlsx" : "zip"}`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }).catch((error) => {
+        showToast(error.message || "Could not download the audit export.");
+      });
+    }
+
+    function pvHistoryWeek(site) {
+      const payload = state.powerviewAudit[site];
+      return payload && payload.week ? payload.week.start : null;
+    }
+
+    async function pvLoadRunHistory(site) {
+      const week = pvHistoryWeek(site);
+      const table = pvGet(site, "HistoryTable");
+      if (!week || !table) return;
+      try {
+        const resp = await fetch(apiUrl(`/api/dms/billing-audit/runs?site=${encodeURIComponent(site)}&week=${encodeURIComponent(week)}`));
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.detail || "Could not load run history.");
+        const runs = data.runs || [];
+        pvSetTableRows(
+          table, null,
+          ["Run At", "OPS File", "Truly Missing", "Qty Mismatch", "Flags", "Est. Unbilled", "Baseline", ""],
+          runs,
+          (row) => [row.run_at, row.ops_filename || "—", row.truly_missing, row.qty_mismatch, row.flag_count, pvFmtMoney(row.est_unbilled), row.is_baseline ? "Baseline ✓" : "Set baseline", "Delete"],
+          "No prior runs saved for this week yet."
+        );
+        const tbody = table.querySelector("tbody");
+        if (tbody) {
+          Array.from(tbody.querySelectorAll("tr")).forEach((tr, i) => {
+            const run = runs[i];
+            if (!run) return;
+            const cells = tr.querySelectorAll("td");
+            const baselineCell = cells[6];
+            const deleteCell = cells[7];
+            if (baselineCell) {
+              baselineCell.style.cursor = "pointer";
+              baselineCell.style.textDecoration = "underline";
+              baselineCell.addEventListener("click", () => pvSetBaseline(site, run.id, !run.is_baseline));
+            }
+            if (deleteCell) {
+              deleteCell.style.cursor = "pointer";
+              deleteCell.style.textDecoration = "underline";
+              deleteCell.style.color = "#c0392b";
+              deleteCell.addEventListener("click", () => pvDeleteRun(site, run.id));
+            }
+          });
+        }
+      } catch (error) {
+        showToast(error.message || "Could not load run history.");
+      }
+    }
+
+    async function pvSetBaseline(site, runId, makeBaseline) {
+      try {
+        const resp = await fetch(apiUrl(`/api/dms/billing-audit/runs/${runId}/baseline`), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ baseline: makeBaseline })
+        });
+        if (!resp.ok) { const d = await resp.json().catch(() => ({})); throw new Error(d.detail || "Could not update baseline."); }
+        await pvLoadRunHistory(site);
+        await pvLoadDiff(site);
+      } catch (error) {
+        showToast(error.message || "Could not update baseline.");
+      }
+    }
+
+    async function pvDeleteRun(site, runId) {
+      try {
+        const resp = await fetch(apiUrl(`/api/dms/billing-audit/runs/${runId}`), { method: "DELETE" });
+        if (!resp.ok) { const d = await resp.json().catch(() => ({})); throw new Error(d.detail || "Could not delete run."); }
+        await pvLoadRunHistory(site);
+        await pvLoadDiff(site);
+      } catch (error) {
+        showToast(error.message || "Could not delete run.");
+      }
+    }
+
+    async function pvLoadDiff(site) {
+      const week = pvHistoryWeek(site);
+      const metaEl = pvGet(site, "DiffMeta");
+      if (!week || !metaEl) return;
+      try {
+        const resp = await fetch(apiUrl(`/api/dms/billing-audit/diff?site=${encodeURIComponent(site)}&week=${encodeURIComponent(week)}`));
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(data.detail || "Could not load the audit diff.");
+        if (!data.comparison) {
+          metaEl.textContent = data.reason === "no prior run"
+            ? "This is the first saved run for this week — nothing to compare yet."
+            : "No saved runs for this week yet.";
+          return;
+        }
+        const c = data.comparison.counts || {};
+        const rev = (data.comparison.aggregate || {}).total_revenue || {};
+        metaEl.textContent = `Since the ${data.baseline_used ? "pinned baseline" : "last run"}: `
+          + `${c.resolved || 0} resolved, ${c.new_issues || 0} new, ${c.changed || 0} changed, `
+          + `${c.flags_new || 0} new flags. Revenue change: ${pvFmtMoney(rev.delta || 0)}.`;
+      } catch (error) {
+        metaEl.textContent = error.message || "Could not load the audit diff.";
+      }
     }
 
     function renderTruckChargeAudit() {
