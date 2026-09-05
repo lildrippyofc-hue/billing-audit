@@ -3,6 +3,7 @@ import secrets
 import hashlib
 import sqlite3
 import json
+import re
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Any, Dict
@@ -27,6 +28,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "audit.db"
 EXPORTS_DIR = DATA_DIR / "shift_exports"
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
+HISTORICAL_DATA_PATH = BASE_DIR / "historical-data.js"
 
 try:
     DMS_BUSINESS_TZ = ZoneInfo("America/Chicago")
@@ -1158,6 +1160,7 @@ class DmsStampIn(BaseModel):
 
 class DmsScheduleRowIn(BaseModel):
     row_number: Optional[int] = None
+    dms_truck_number: Optional[int] = None
     reference: str = ""
     po: str = ""
     scheduled_text: str = ""
@@ -1171,6 +1174,7 @@ class DmsScheduleRowIn(BaseModel):
     incoterm: str = ""
     current_state: str = ""
     area: str = ""
+    dock_type: str = ""
 
 
 class DmsScheduleUploadIn(BaseModel):
@@ -1246,9 +1250,18 @@ def _area_matches_hint(area: Any, hint: str) -> bool:
     area_text = " ".join(str(v) for v in area.values()) if isinstance(area, dict) else str(area or "")
     area_text = area_text.lower()
     hint = hint.lower()
+    target = hint.split("|", 1)[0].strip()
+    if target == "cold plants" and any(word in area_text for word in ("cold", "cooler", "chill", "plant", "produce")):
+        return True
+    if target == "plants" and any(word in area_text for word in ("plant", "produce", "floral")):
+        return True
+    if target == "produce" and any(word in area_text for word in ("produce", "fruit", "vegetable", "veggie", "veg")):
+        return True
+    if target and target not in ("cold plants", "plants"):
+        return target in area_text
     pairs = [
         ("freezer", ("freezer", "frozen", "freeze")),
-        ("produce", ("produce", "fruit", "vegetable", "salad")),
+        ("produce", ("produce", "fruit", "fruits", "veg", "vegetable", "vegetables", "veggie", "veggies", "salad")),
         ("cooler", ("cooler", "chill", "chiller", "meat", "dairy", "refrigerated")),
         ("dry", ("dry", "ambient", "grocery", "pantry", "beverage", "household")),
     ]
@@ -1258,7 +1271,157 @@ def _area_matches_hint(area: Any, hint: str) -> bool:
     return False
 
 
-def _dms_area_for_schedule(row: DmsScheduleRowIn, session: Dict[str, Any], business_date: str) -> Any:
+def _schedule_match_text(value: Any) -> str:
+    return " ".join("".join(ch.lower() if ch.isalnum() else " " for ch in str(value or "")).split())
+
+
+_SCHEDULE_TALL_DOOR_THRESHOLD = 0.68
+_SCHEDULE_MANUAL_DOOR_RULES = (
+    (("sonstegard", "sunrisefarm", "sunrise farm"), True),
+    (("frito lay",), False),
+    (("niagara", "niagara bottling"), False),
+    (("cactus",), True),
+    (("taylor farms retail",), True),
+    (("taylor farms texas",), False),
+    (("bonipak", "boni pak"), True),
+    (("simply fresh",), True),
+    (("ajm packaging", "snack king", "snak king", "post consumer brands", "aspen", "schulze", "birch"), True),
+    (("mowi",), False),
+    (("great lakes cheese",), True),
+    (("cafe valley",), True),
+    (("columbia fruit", "richelieu foods", "la fournee", "pdm vegetables", "bimbo bakehouse"), True),
+    (("del monte",), False),
+    (("ns brands", "ns brand"), True),
+    (("absopure", "absopure water"), False),
+    (("saputo cheese", "saputo"), False),
+    (("southern corporate packing", "southern corp packing", "southern corp packers", "southern corp packers inc"), False),
+    (("ganfer", "ganfer fresh"), False),
+    (("aurora organic", "aurora organic dairy"), False),
+    (("schrieber", "schreiber"), False),
+    (("tanimura and antle", "tanimura antle fresh foods"), True),
+)
+_SCHEDULE_TALL_HISTORY_CACHE: Optional[List[Dict[str, Any]]] = None
+
+
+def _schedule_supplier_key(value: Any) -> str:
+    text = str(value or "").lower().replace("&", " and ")
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    text = re.sub(r"\b(inc|incorporated|llc|ltd|limited|co|corp|corporation|company|lp|plc|usa|us)\b", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _schedule_manual_tall_status(supplier: Any) -> Optional[bool]:
+    key = _schedule_supplier_key(supplier)
+    if not key:
+        return None
+    if key == "ns" or key.startswith("ns ") or "ns brand" in key:
+        return True
+    for patterns, needs_tall in _SCHEDULE_MANUAL_DOOR_RULES:
+        for pattern in patterns:
+            rule_key = _schedule_supplier_key(pattern)
+            if rule_key and (rule_key in key or key in rule_key):
+                return needs_tall
+    return None
+
+
+def _schedule_tall_history_rows() -> List[Dict[str, Any]]:
+    global _SCHEDULE_TALL_HISTORY_CACHE
+    if _SCHEDULE_TALL_HISTORY_CACHE is not None:
+        return _SCHEDULE_TALL_HISTORY_CACHE
+    rows: List[Dict[str, Any]] = []
+    try:
+        text = HISTORICAL_DATA_PATH.read_text(encoding="utf-8")
+        match = re.search(r'"tallDoorSuppliers"\s*:\s*(\[.*?\])\s*,\s*"doorRanges"', text, re.S)
+        if match:
+            parsed = json.loads(match.group(1))
+            if isinstance(parsed, list):
+                for item in parsed:
+                    if isinstance(item, dict):
+                        key = _schedule_supplier_key(item.get("key"))
+                        if key:
+                            rows.append({**item, "normalized_key": key})
+    except Exception:
+        rows = []
+    _SCHEDULE_TALL_HISTORY_CACHE = rows
+    return rows
+
+
+def _schedule_tall_history_for(supplier: Any) -> Optional[Dict[str, Any]]:
+    key = _schedule_supplier_key(supplier)
+    if not key:
+        return None
+    compact_key = key.replace(" ", "")
+    for item in _schedule_tall_history_rows():
+        history_key = str(item.get("normalized_key") or "")
+        compact_history = history_key.replace(" ", "")
+        if key == history_key:
+            return item
+        if len(key) >= 8 and (history_key in key or key in history_key):
+            return item
+        if len(compact_key) >= 8 and (compact_history in compact_key or compact_key in compact_history):
+            return item
+    return None
+
+
+def _schedule_needs_tall_door(row: DmsScheduleRowIn) -> bool:
+    manual = _schedule_manual_tall_status(row.supplier)
+    if manual is not None:
+        return manual
+    history = _schedule_tall_history_for(row.supplier)
+    if not history:
+        return False
+    total = _schedule_int(history.get("total"), 0)
+    tall = _schedule_int(history.get("tall"), 0)
+    return bool(total and tall / total >= _SCHEDULE_TALL_DOOR_THRESHOLD)
+
+
+def _schedule_tall_door_note(row: DmsScheduleRowIn) -> str:
+    return "Tall Door: YES" if _schedule_needs_tall_door(row) else "Tall Door: NO"
+
+
+def _schedule_dock_type(row: DmsScheduleRowIn, use_oks_rules: bool = True) -> str:
+    supplier_text = (row.supplier or "").lower()
+    supplier_key = _schedule_match_text(row.supplier)
+    dock_category_text = " ".join([
+        row.dock or "",
+        row.product_category or "",
+    ]).lower()
+    all_text = " ".join([
+        row.supplier or "",
+        row.area or "",
+        row.protection or "",
+        row.dock or "",
+        row.product_category or "",
+    ]).lower()
+    dry_supplier_names = (
+        "clasen quality chocolate",
+        "perfetti van melle usa",
+        "interbake foods",
+        "silvestri sweets",
+        "the hershey company",
+        "hershey",
+        "gilster mary lee",
+    )
+    if use_oks_rules and any(name in supplier_key for name in dry_supplier_names):
+        return "Dry"
+    if use_oks_rules and "falcon" in supplier_key and "farm" in supplier_key:
+        return "Cold Plants"
+    if use_oks_rules and (any(word in dock_category_text for word in ("plant", "plants", "floral", "flower")) or any(word in supplier_text for word in ("plant", "plants", "floral", "flower"))):
+        if any(word in all_text for word in ("cold", "cooler", "chill", "refrigerated")) and "falcon" in supplier_text:
+            return "Cold Plants"
+        return "Plants"
+    if any(word in dock_category_text for word in ("produce", "fruit", "fruits", "veg", "vegetable", "vegetables", "veggie", "veggies", "salad")):
+        return "Produce"
+    if any(word in all_text for word in ("freezer", "frozen", "freeze")):
+        return "Freezer"
+    if any(word in all_text for word in ("cooler", "chill", "chiller", "dairy", "meat", "refrigerated")):
+        return "Cooler"
+    if any(word in all_text for word in ("dry", "ambient", "grocery", "pantry", "beverage", "household")):
+        return "Dry"
+    return row.dock_type or row.area or row.dock or ""
+
+
+def _dms_area_for_schedule(row: DmsScheduleRowIn, session: Dict[str, Any], business_date: str, use_oks_rules: bool = True) -> Any:
     buck = session.get("buck") or {}
     areas = buck.get("areas") if isinstance(buck, dict) else None
     if not areas:
@@ -1274,12 +1437,15 @@ def _dms_area_for_schedule(row: DmsScheduleRowIn, session: Dict[str, Any], busin
         except Exception:
             areas = None
     if isinstance(areas, list) and areas:
-        hint = " ".join([row.area, row.protection, row.dock, row.product_category])
+        dock_type = _schedule_dock_type(row, use_oks_rules)
+        hint = " | " + " ".join([row.area, row.protection, row.dock, row.product_category, row.supplier])
         for area in areas:
-            if _area_matches_hint(area, hint):
+            if _area_matches_hint(area, dock_type.lower() + hint):
                 return area
+        if dock_type in ("Produce", "Plants", "Cold Plants"):
+            return dock_type
         return areas[0]
-    return row.area or row.dock or ""
+    return _schedule_dock_type(row, use_oks_rules)
 
 
 def _dms_schedule_upload_model(session: Dict[str, Any]) -> Dict[str, Any]:
@@ -1302,37 +1468,29 @@ def _dms_schedule_insert_payload(
     row: DmsScheduleRowIn,
     session: Dict[str, Any],
     business_date: str,
+    truck_number: int,
     upload_model: Optional[Dict[str, Any]] = None,
+    use_oks_rules: bool = True,
 ) -> Dict[str, Any]:
-    notes = "Imported from ALDI schedule"
-    extras = []
-    if row.incoterm:
-        extras.append(f"Incoterm: {row.incoterm}")
-    if row.quantity:
-        extras.append(f"Quantity: {row.quantity}")
-    if row.current_state:
-        extras.append(f"State: {row.current_state}")
-    if row.dock:
-        extras.append(f"Dock: {row.dock}")
-    if extras:
-        notes += " | " + "; ".join(extras)
+    notes = _schedule_tall_door_note(row) if use_oks_rules else "Imported from schedule"
 
     base_insert: Dict[str, Any] = {}
     if isinstance(upload_model, dict) and isinstance(upload_model.get("insert"), dict):
         base_insert.update(upload_model["insert"])
 
+    dock_type = _schedule_dock_type(row, use_oks_rules)
     base_insert.update({
-        "area": _dms_area_for_schedule(row, session, business_date),
+        "area": _dms_area_for_schedule(row, session, business_date, use_oks_rules),
         "poNum": row.po.strip(),
         "appt": _schedule_appt_to_utc_string(row.scheduled_iso or row.scheduled_text),
-        "trkNum": _schedule_int(row.reference, 0),
+        "trkNum": max(1, int(truck_number or 1)),
         "doorNum": 0,
-        "load": row.protection.strip() or row.dock.strip() or "ALDI Schedule",
+        "load": dock_type or row.protection.strip() or row.dock.strip() or "ALDI Schedule",
         "sup": row.supplier.strip() or "MULTI PO SUPPLIER NOT KNOWN",
         "qty": _schedule_int(row.pallets, 0),
         "carr": str(base_insert.get("carr") or ""),
         "notes": notes,
-        "desc": row.product_category.strip() or row.dock.strip(),
+        "desc": row.product_category.strip() or dock_type or row.dock.strip(),
         "cabNum": str(base_insert.get("cabNum") or ""),
     })
 
@@ -1353,7 +1511,7 @@ def _dms_success(result: Any) -> bool:
     return True
 
 
-def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn) -> Dict[str, Any]:
+def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn, use_oks_rules: bool = True) -> Dict[str, Any]:
     if not body.rows:
         raise HTTPException(status_code=400, detail="No schedule rows were provided.")
     if len(body.rows) > 300:
@@ -1378,34 +1536,41 @@ def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn)
             for item in existing_loads:
                 for key in _schedule_po_keys(item.get("poNum") or item.get("po")):
                     existing_keys.add(f"po:{key}")
-                ref_key = _schedule_digits(item.get("trkNum") or item.get("trk") or item.get("truck") or item.get("ref"))
-                if ref_key:
-                    existing_keys.add(f"ref:{ref_key}")
         except Exception:
             existing_keys = set()
 
     results = []
     inserted = skipped = failed = 0
+    next_truck_number = 1
+    truck_number_by_reference: Dict[str, int] = {}
     for index, row in enumerate(body.rows, start=1):
         po_keys = _schedule_po_keys(row.po)
-        ref_key = _schedule_digits(row.reference)
         row_id = row.row_number or index
+        reference_key = _schedule_digits(row.reference) or row.reference.strip().upper()
+        truck_number = 0
         try:
             if not po_keys:
                 raise ValueError("PO number is missing")
             if not row.scheduled_iso and not row.scheduled_text:
                 raise ValueError("scheduled time is missing")
-            if body.skip_existing and (
-                any(f"po:{key}" in existing_keys for key in po_keys) or (ref_key and f"ref:{ref_key}" in existing_keys)
-            ):
+            if body.skip_existing and any(f"po:{key}" in existing_keys for key in po_keys):
                 skipped += 1
                 results.append({"row": row_id, "status": "Skipped", "message": "Already appears to exist in DMS.", "reference": row.reference, "po": row.po})
                 continue
 
-            payload = _dms_schedule_insert_payload(row, session, business_date, upload_model)
+            if reference_key:
+                if reference_key not in truck_number_by_reference:
+                    truck_number_by_reference[reference_key] = next_truck_number
+                    next_truck_number += 1
+                truck_number = truck_number_by_reference[reference_key]
+            else:
+                truck_number = next_truck_number
+                next_truck_number += 1
+
+            payload = _dms_schedule_insert_payload(row, session, business_date, truck_number, upload_model, use_oks_rules)
             if body.dry_run:
                 skipped += 1
-                results.append({"row": row_id, "status": "Ready", "message": "Ready to upload.", "reference": row.reference, "po": row.po})
+                results.append({"row": row_id, "status": "Ready", "message": "Ready to upload.", "reference": row.reference, "po": row.po, "truck_number": truck_number})
                 continue
 
             result = _dms_json_request("api/load/insertLoadDetails", payload, session["config"])
@@ -1417,17 +1582,16 @@ def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn)
                     "message": str((result or {}).get("userMessage") or (result or {}).get("error") or "DMS rejected the row."),
                     "reference": row.reference,
                     "po": row.po,
+                    "truck_number": truck_number,
                 })
                 continue
             inserted += 1
             for key in po_keys:
                 existing_keys.add(f"po:{key}")
-            if ref_key:
-                existing_keys.add(f"ref:{ref_key}")
-            results.append({"row": row_id, "status": "Inserted", "message": "Created in DMS.", "reference": row.reference, "po": row.po})
+            results.append({"row": row_id, "status": "Inserted", "message": "Created in DMS.", "reference": row.reference, "po": row.po, "truck_number": truck_number})
         except Exception as exc:
             failed += 1
-            results.append({"row": row_id, "status": "Failed", "message": str(exc), "reference": row.reference, "po": row.po})
+            results.append({"row": row_id, "status": "Failed", "message": str(exc), "reference": row.reference, "po": row.po, "truck_number": truck_number})
 
     return {
         "ok": failed == 0,
@@ -1457,7 +1621,7 @@ def dms_schedule_upload_model():
 @app.post("/api/dms/schedule-upload")
 def dms_schedule_upload(body: DmsScheduleUploadIn):
     session = _ensure_dms_session()
-    return _run_dms_schedule_upload(session, body)
+    return _run_dms_schedule_upload(session, body, use_oks_rules=True)
 
 
 @app.get("/api/dms/mn/schedule-upload-model")
@@ -1477,7 +1641,7 @@ def dms_mn_schedule_upload_model():
 @app.post("/api/dms/mn/schedule-upload")
 def dms_mn_schedule_upload(body: DmsScheduleUploadIn):
     session = _ensure_dms_mn_session()
-    return _run_dms_schedule_upload(session, body)
+    return _run_dms_schedule_upload(session, body, use_oks_rules=False)
 
 @app.post("/api/dms/stamp")
 def dms_stamp(body: DmsStampIn):

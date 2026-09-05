@@ -7219,12 +7219,23 @@
       { patterns: ["Bonipak"], rangeStart: 80, rangeEnd: 86, topDoors: [80, 84, 86], tall: true, note: "Manual rule: Bonipak needs a tall door. Use 80, 84, or 86." },
       { patterns: ["Simply Fresh"], rangeStart: 80, rangeEnd: 86, topDoors: [80, 84, 86], tall: true, note: "Cheat sheet: Simply Fresh needs tall produce doors." },
       { patterns: ["AJM Packaging", "Snack King", "Snak King", "Post Consumer Brands", "Aspen", "Schulze", "Birch"], rangeStart: 54, rangeEnd: 65, topDoors: [54, 56, 61, 65], tall: true, note: "Cheat sheet: slip-load vendors always need a tall dry/front door." },
-      { patterns: ["MOWI", "Great Lakes Cheese"], rangeStart: 88, rangeEnd: 94, topDoors: [88, 89, 91, 94], tall: true, note: "Cheat sheet: MOWI and Great Lakes Cheese need tall cooler doors." },
+      { patterns: ["MOWI"], rangeStart: 88, rangeEnd: 94, topDoors: [88, 89, 91, 94], tall: false, note: "Manual rule: MOWI does not need a tall door." },
+      { patterns: ["Great Lakes Cheese"], rangeStart: 88, rangeEnd: 94, topDoors: [88, 89, 91, 94], tall: true, note: "Cheat sheet: Great Lakes Cheese needs a tall cooler door." },
       { patterns: ["Cafe Valley"], rangeStart: 95, rangeEnd: 103, topDoors: [95, 98, 100, 103], tall: true, note: "Manual rule: Cafe Valley needs a tall door." },
       { patterns: ["Columbia Fruit", "Richelieu Foods", "La Fournee", "PDM Vegetables", "Bimbo Bakehouse"], rangeStart: 95, rangeEnd: 103, topDoors: [95, 98, 100, 103], tall: true, note: "Cheat sheet: this freezer vendor needs a tall freezer door." },
       { patterns: ["Del Monte"], rangeStart: 79, rangeEnd: 86, topDoors: [79, 80, 81, 82, 83, 84, 85, 86, 69, 70, 71, 72, 73, 74], tall: false, note: "Cheat sheet: use produce doors first; doors 69-74 can work only if produce is full." },
       { patterns: ["NS Brands", "NS Brand"], rangeStart: 77, rangeEnd: 90, topDoors: [80, 84, 86, 88, 89], tall: true, note: "Manual rule: NS brands trucks must go on doors 77-90 and require a tall door. Preferred tall doors in range: 80, 84, 86, 88, 89." },
       { patterns: ["Absopure", "Absopure Water"], rangeStart: 27, rangeEnd: 33, topDoors: [27, 33], tall: false, spill: true, note: "Manual rule: Absopure goes on door 27 or 33. SPILL ALERT: This supplier frequently spills. Have a spill kit ready." }
+    ];
+
+    const MANUAL_TALL_DOOR_OVERRIDES = [
+      { patterns: ["MOWI"], tall: false, note: "Manual rule: MOWI never needs a tall door." },
+      { patterns: ["Saputo Cheese", "Saputo"], tall: false, note: "Manual rule: Saputo cheese never needs a tall door." },
+      { patterns: ["Southern Corporate Packing", "Southern Corp Packing", "Southern Corp Packers", "Southern Corp Packers Inc"], tall: false, note: "Manual rule: Southern corporate packing never needs a tall door." },
+      { patterns: ["Ganfer", "Ganfer Fresh"], tall: false, note: "Manual rule: Ganfer never needs a tall door." },
+      { patterns: ["Aurora Organic", "Aurora Organic Dairy"], tall: false, note: "Manual rule: Aurora Organic never needs a tall door." },
+      { patterns: ["Schrieber", "Schreiber"], tall: false, note: "Manual rule: Schreiber/Schrieber never needs a tall door." },
+      { patterns: ["Tanimura & Antle", "Tanimura and Antle", "Tanimura Antle Fresh Foods"], tall: true, note: "Manual rule: Tanimura & Antle always needs a tall door." }
     ];
 
     const MANUAL_SPILL_RULES = [
@@ -9319,22 +9330,46 @@
       return m ? Number(m[0]) : null;
     }
 
-    function portalScheduleArea(protection, dock, category) {
-      const text = normalizeText([protection, dock, category].filter(Boolean).join(" "));
-      if (/\bfreezer|frozen|freeze\b/.test(text)) return "Freezer";
-      if (/\bproduce|fruit|vegetable|salad\b/.test(text)) return "Produce";
-      if (/\bcooler|chill|chiller|dairy|meat|refrigerated\b/.test(text)) return "Cooler";
-      if (/\bdry|ambient|grocery|pantry|beverage|household\b/.test(text)) return "Dry";
+    function portalScheduleDockType(supplier, protection, dock, category, options = {}) {
+      const useOksRules = options.useOksRules !== false;
+      const supplierText = normalizeText(supplier);
+      const dockCategoryText = normalizeText([dock, category].filter(Boolean).join(" "));
+      const allText = normalizeText([supplier, protection, dock, category].filter(Boolean).join(" "));
+      const forceDrySupplier = useOksRules && [
+        "clasen quality chocolate",
+        "perfetti van melle usa",
+        "interbake foods",
+        "silvestri sweets",
+        "the hershey company",
+        "hershey",
+        "gilster mary lee"
+      ].some(function(name) { return supplierText.includes(name); });
+      const hasProduce = /\b(produce|fruit|fruits|veg|vegetable|vegetables|veggie|veggies|salad)\b/.test(dockCategoryText);
+      const hasPlants = useOksRules && (/\b(plant|plants|floral|flower|flowers)\b/.test(dockCategoryText) || /\b(plant|plants|floral|flower|flowers)\b/.test(supplierText));
+      if (forceDrySupplier) return "Dry";
+      if (useOksRules && /\bfalcon\s*farms?\b/.test(supplierText)) return "Cold Plants";
+      if (hasPlants) return "Plants";
+      if (hasProduce) return "Produce";
+      if (/\b(freezer|frozen|freeze)\b/.test(allText)) return "Freezer";
+      if (/\b(cooler|chill|chiller|dairy|meat|refrigerated)\b/.test(allText)) return "Cooler";
+      if (/\b(dry|ambient|grocery|pantry|beverage|household)\b/.test(allText)) return "Dry";
       return "";
     }
 
-    function portalNormalizeScheduleRows(parsed, fileName) {
+    function portalScheduleArea(protection, dock, category, supplier) {
+      return portalScheduleDockType(supplier, protection, dock, category);
+    }
+
+    function portalNormalizeScheduleRows(parsed, fileName, options = {}) {
+      const useOksRules = options.useOksRules !== false;
       const headers = parsed.headers || [];
       const h = {};
       Object.keys(PORTAL_SCHEDULE_HEADERS).forEach(function(key) { h[key] = portalScheduleHeader(headers, key); });
       const missing = ["reference", "po", "scheduled", "pallets"].filter(function(key) { return !h[key]; });
       const rows = [];
       const errors = [];
+      const truckNumberByReference = new Map();
+      let nextDmsTruckNumber = 1;
 
       (parsed.rows || []).forEach(function(row, index) {
         const currentState = getValue(row, h.currentState);
@@ -9353,6 +9388,11 @@
         const rowText = headers.map(function(header) { return getValue(row, header); }).filter(Boolean).join(" ");
         const hasTruckData = Boolean(reference || po || scheduledText || Number.isFinite(pallets));
         if (!hasTruckData && (!rowText || /\b(count|total|subtotal|summary)\b\s*:?\s*\d*/i.test(rowText))) return;
+        const referenceKey = String(reference || "").replace(/\D/g, "") || String(reference || "").trim().toUpperCase();
+        if (referenceKey && !truckNumberByReference.has(referenceKey)) {
+          truckNumberByReference.set(referenceKey, nextDmsTruckNumber++);
+        }
+        const dmsTruckNumber = referenceKey ? truckNumberByReference.get(referenceKey) : nextDmsTruckNumber++;
         const rowErrors = [];
 
         if (!reference) rowErrors.push("Missing reference number");
@@ -9360,8 +9400,10 @@
         if (!scheduledIso) rowErrors.push("Missing or unreadable scheduled time");
         if (!Number.isFinite(pallets) || pallets < 0) rowErrors.push("Missing pallet count");
 
+        const dockType = portalScheduleDockType(supplier, protection, dock, productCategory, { useOksRules });
         const normalized = {
           row_number: index + 2,
+          dms_truck_number: dmsTruckNumber,
           reference,
           po,
           scheduled_text: scheduledText,
@@ -9374,7 +9416,8 @@
           product_category: productCategory,
           incoterm,
           current_state: currentState,
-          area: portalScheduleArea(protection, dock, productCategory),
+          area: dockType,
+          dock_type: dockType,
           errors: rowErrors
         };
         rows.push(normalized);
@@ -9414,7 +9457,7 @@
       if (!thead || !tbody) return;
       thead.innerHTML = "";
       tbody.innerHTML = "";
-      const headers = ["Row", "Ref #", "PO", "Scheduled", "DMS Area", "DMS Load", "Supplier", "Pallets", "Status"];
+      const headers = ["Row", "DMS T #", "Ref #", "PO", "Scheduled", "DMS Area", "DMS Load", "Supplier", "Pallets", "Status"];
       const hr = document.createElement("tr");
       headers.forEach(function(label) { const th = document.createElement("th"); th.textContent = label; hr.appendChild(th); });
       thead.appendChild(hr);
@@ -9439,7 +9482,8 @@
         const statusText = uploadResult
           ? uploadResult.status + ": " + uploadResult.message
           : ((row.errors || []).join("; ") || "Ready");
-        [row.row_number, row.reference || "-", row.po || "-", scheduled, row.area || "-", row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
+        const shownTruckNumber = uploadResult ? (uploadResult.truck_number || "-") : (row.dms_truck_number || "-");
+        [row.row_number, shownTruckNumber, row.reference || "-", row.po || "-", scheduled, row.area || "-", row.dock_type || row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
@@ -9551,7 +9595,7 @@
       if (!thead || !tbody) return;
       thead.innerHTML = "";
       tbody.innerHTML = "";
-      const headers = ["Row", "Ref #", "PO", "Scheduled", "DMS Area", "DMS Load", "Supplier", "Pallets", "Status"];
+      const headers = ["Row", "DMS T #", "Ref #", "PO", "Scheduled", "DMS Area", "DMS Load", "Supplier", "Pallets", "Status"];
       const hr = document.createElement("tr");
       headers.forEach(function(label) {
         const th = document.createElement("th");
@@ -9580,7 +9624,8 @@
         const statusText = uploadResult
           ? uploadResult.status + ": " + uploadResult.message
           : ((row.errors || []).join("; ") || "Ready");
-        [row.row_number, row.reference || "-", row.po || "-", scheduled, row.area || "-", row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
+        const shownTruckNumber = uploadResult ? (uploadResult.truck_number || "-") : (row.dms_truck_number || "-");
+        [row.row_number, shownTruckNumber, row.reference || "-", row.po || "-", scheduled, row.area || "-", row.dock_type || row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
@@ -9603,7 +9648,7 @@
       if (!file) return;
       try {
         const parsed = await parseUploadedReportFile(file);
-        const schedule = portalNormalizeScheduleRows(parsed, file.name);
+        const schedule = portalNormalizeScheduleRows(parsed, file.name, { useOksRules: false });
         state.portalMn.scheduleUpload = Object.assign(schedule, { uploaded: [] });
         if (els.portalMnScheduleConfirm) els.portalMnScheduleConfirm.checked = false;
         portalMnRenderSchedulePreview();
@@ -10667,6 +10712,15 @@
       })) || null;
     }
 
+    function manualTallDoorOverrideForSupplier(value) {
+      const key = normalizeSupplierKey(value);
+      if (!key) return null;
+      return MANUAL_TALL_DOOR_OVERRIDES.find((rule) => rule.patterns.some((pattern) => {
+        const ruleKey = normalizeSupplierKey(pattern);
+        return ruleKey && (key.includes(ruleKey) || ruleKey.includes(key));
+      })) || null;
+    }
+
     function historyFromManualDoorRule(rule) {
       if (!rule) return null;
       return {
@@ -10822,6 +10876,8 @@
     }
 
     function clerkDoorStatusForSupplier(supplier) {
+      const tallOverride = manualTallDoorOverrideForSupplier(supplier);
+      if (tallOverride) return tallOverride.tall ? "Tall Door" : "Regular Door";
       if (isCafeValleySupplier(supplier)) return "Tall Door";
       if (isBonipakSupplier(supplier)) return "Tall Door";
       if (isNsBrandsSupplier(supplier)) return "Tall Door";
@@ -10833,6 +10889,8 @@
     }
 
     function clerkDoorHistoryText(supplier) {
+      const tallOverride = manualTallDoorOverrideForSupplier(supplier);
+      if (tallOverride) return tallOverride.note;
       if (isCafeValleySupplier(supplier)) return "Manual rule: Cafe Valley needs a tall door.";
       if (isBonipakSupplier(supplier)) return "Manual rule: Bonipak needs a tall door. Use 80, 84, or 86.";
       if (isNsBrandsSupplier(supplier)) return "Manual rule: NS brands trucks go on doors 77-90 and must use a tall door. Preferred: 80, 84, 86, 88, or 89.";
