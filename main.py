@@ -45,14 +45,24 @@ def _hash(pw: str) -> str:
 # Default password for local dev only — override it in production!
 _APP_PASSWORD = os.environ.get("APP_PASSWORD", "N3747P9R")
 
-# Three-tier access system:
-# james → full access
-# work  → truck/billing tabs only
-# guest → read-only access
+# Role access system:
+# admin   -> full access
+# oks     -> ALDIOKS live portal and truck report
+# minnesota -> Minnesota portal and truck report
+# manager -> operations, audits, reporting
+# lead    -> live board and lead tools
+# clerk   -> live board, DMS stamp, clerk support
+# client  -> clean read-only reporting
+# guest   -> basic read-only reporting
 _USERS: Dict[str, str] = {
     "james":   _hash(_APP_PASSWORD),
-    "aldioks": _hash(_APP_PASSWORD),
+    "aldioks": _hash(os.environ.get("ALDIOKS_PASSWORD", os.environ.get("APP_PASSWORD", "N3747P9R"))),
+    "minnesota": _hash(os.environ.get("MINNESOTA_PASSWORD", "mn1")),
     "dean":    _hash(_APP_PASSWORD),
+    "manager": _hash(os.environ.get("MANAGER_PASSWORD", "manager1")),
+    "teamlead": _hash(os.environ.get("TEAMLEAD_PASSWORD", "lead1")),
+    "clerk":   _hash(os.environ.get("CLERK_PASSWORD", "clerk1")),
+    "client":  _hash(os.environ.get("CLIENT_PASSWORD", "client1")),
     "work":    _hash(os.environ.get("WORK_PASSWORD", "work1")),
     "guest":   _hash(os.environ.get("GUEST_PASSWORD", "guest1")),
 }
@@ -60,8 +70,13 @@ _USERS: Dict[str, str] = {
 # Role lookup
 _ROLES: Dict[str, str] = {
     "james":   "admin",
-    "aldioks": "admin",
+    "aldioks": "oks",
+    "minnesota": "minnesota",
     "dean":    "admin",
+    "manager": "manager",
+    "teamlead": "teamlead",
+    "clerk":   "clerk",
+    "client":  "client",
     "work":    "work",
     "guest":   "guest",
 }
