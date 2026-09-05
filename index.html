@@ -700,111 +700,38 @@
     .portal-pace-alert.pace-good    { background:#f0fff4; border:2px solid #38a169; color:#276749; }
     .portal-pace-alert.pace-warning { background:#fffbeb; border:2px solid #d69e2e; color:#744210; }
     .portal-pace-alert.pace-behind  { background:#fff5f5; border:2px solid #e53e3e; color:#c53030; }
-    .portal-cynic-line { display:block; margin-top:6px; font-size:1.05em; font-weight:900; letter-spacing:0.01em; text-transform:uppercase; }
+    .portal-cynic-line { display:block; margin-top:6px; font-size:1.05em; font-weight:800; letter-spacing:0.01em; }
     .portal-cynic-sub { display:block; margin-top:3px; font-size:0.82em; font-weight:700; opacity:0.86; }
-    .portal-scare-popup {
-      position: fixed; right: 22px; bottom: 22px; z-index: 9998;
-      width: min(440px, calc(100vw - 32px));
-      border: 4px solid #dc2626; border-radius: 12px;
-      background: #7f1d1d; color: #fff; padding: 18px 18px 14px;
-      box-shadow: 0 18px 45px rgba(127,29,29,0.45);
-      display: none;
-    }
-    .portal-scare-popup.show { display: block; animation: scare-pop 0.25s ease-out; }
-    .portal-scare-popup.show.detention { animation: scare-pop 0.25s ease-out, scare-shake 0.7s ease-in-out infinite; }
-    .portal-scare-title { font-size: 1.15em; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
-    .portal-scare-body { font-size: 0.94em; line-height: 1.45; font-weight: 700; }
-    .portal-scare-jab { margin-top: 10px; padding: 9px 10px; border-radius: 8px; background: rgba(255,255,255,0.12); font-weight: 900; text-transform: uppercase; }
-    .portal-scare-actions { display:flex; justify-content:flex-end; margin-top:12px; }
-    .portal-scare-actions button { border: 1px solid rgba(255,255,255,0.55); border-radius: 8px; background: rgba(255,255,255,0.12); color:#fff; font-weight:800; padding:7px 10px; cursor:pointer; }
-    .portal-scare-actions button:hover { background: rgba(255,255,255,0.22); }
-    @keyframes scare-pop { from { transform: scale(0.92); opacity:0; } to { transform: scale(1); opacity:1; } }
-    @keyframes scare-shake {
-      0%,100% { transform: translate(0,0) rotate(0); }
-      20% { transform: translate(-2px,1px) rotate(-0.4deg); }
-      40% { transform: translate(2px,-1px) rotate(0.4deg); }
-      60% { transform: translate(-1px,-1px) rotate(-0.3deg); }
-      80% { transform: translate(1px,1px) rotate(0.3deg); }
-    }
     :root.dark .portal-pace-alert.pace-good    { background:#0d2218; border-color:#68d391; color:#9ae6b4; }
     :root.dark .portal-pace-alert.pace-warning { background:#1f1700; border-color:#f6c843; color:#fbd38d; }
     :root.dark .portal-pace-alert.pace-behind  { background:#2d1515; border-color:#fc8181; color:#fca5a5; }
-    @keyframes portal-pulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
-    .portal-pace-alert.pace-behind { animation: portal-pulse 2.5s ease-in-out infinite; }
 
-    /* -- Stress-level animations --------------------------------------- */
-    @keyframes stress-shake {
-      0%,100% { transform: translateX(0); }
-      20%     { transform: translateX(-4px) rotate(-0.5deg); }
-      40%     { transform: translateX(4px) rotate(0.5deg); }
-      60%     { transform: translateX(-3px); }
-      80%     { transform: translateX(3px); }
-    }
-    @keyframes stress-flash-warn {
-      0%,100% { background: linear-gradient(135deg,#92400e 0%,#b45309 100%); }
-      50%     { background: linear-gradient(135deg,#b45309 0%,#d97706 100%); }
-    }
-    @keyframes stress-flash-crit {
-      0%,100% { background: linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%); }
-      50%     { background: linear-gradient(135deg,#991b1b 0%,#ef4444 100%); }
-    }
-    @keyframes stress-row-pulse {
-      0%,100% { background: #fca5a5 !important; }
-      50%     { background: #fecaca !important; }
-    }
-    @keyframes stress-banner-flash {
-      0%,100% { background:#fff0f0; border-color:#e53e3e; box-shadow: none; }
-      50%     { background:#fecaca; border-color:#dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.25); }
-    }
-    @keyframes stress-card-throb {
-      0%,100% { box-shadow: 0 2px 8px rgba(239,68,68,0.15); }
-      50%     { box-shadow: 0 0 0 4px rgba(239,68,68,0.35), 0 4px 16px rgba(239,68,68,0.3); }
-    }
+    /* -- Stress-level indicators (static, no motion) -------------------- */
     /* Warning (level 1): behind pace or approaching risk */
-    .portal-stress-1 .portal-info-strip {
-      animation: stress-flash-warn 3s ease-in-out infinite !important;
-    }
     .portal-stress-1 .portal-pace-alert.pace-warning,
     .portal-stress-1 .portal-pace-alert.pace-behind {
-      animation: portal-pulse 1.5s ease-in-out infinite;
       border-width: 3px;
       font-size: 0.95em;
     }
     /* Critical (level 2): behind > 30min, detention, or multiple urgent trucks */
-    .portal-stress-2 .portal-info-strip {
-      animation: stress-flash-crit 1.2s ease-in-out infinite !important;
-    }
     .portal-has-detention .metric-card[data-accent="red"] {
-      animation: stress-shake 0.45s ease-in-out infinite;
-    }
-    .portal-stress-2 .metric-card[data-accent="orange"] {
-      animation: stress-card-throb 1.5s ease-in-out infinite;
+      box-shadow: 0 0 0 3px rgba(220,38,38,0.3);
     }
     .portal-stress-2 .portal-pace-alert.pace-behind {
-      animation: stress-banner-flash 0.9s ease-in-out infinite;
       border-width: 3px;
       font-size: 1em;
       padding: 14px 18px;
     }
     .portal-stress-2 tr.portal-row-detention td {
-      animation: stress-row-pulse 1s ease-in-out infinite;
-    }
-    .portal-stress-2 .portal-4am-timer.timer-red {
-      animation: stress-shake 0.5s ease-in-out infinite, portal-pulse 1s ease-in-out infinite;
+      background: #fecaca !important;
     }
     .portal-stress-2 .portal-4am-wrap {
       border-color: rgba(248,113,113,0.8) !important;
-      box-shadow: 0 0 12px rgba(239,68,68,0.4);
-    }
-    .portal-stress-2 tr.portal-row-urgent td,
-    .portal-stress-2 tr.portal-row-warning td {
-      animation: stress-shake 0.75s ease-in-out infinite;
     }
     .portal-stress-2 #portalBoardView {
-      box-shadow: 0 0 0 3px rgba(220,38,38,0.18), 0 0 24px rgba(220,38,38,0.22);
+      box-shadow: 0 0 0 3px rgba(220,38,38,0.18);
     }
-    :root.dark .portal-stress-2 tr.portal-row-detention td { animation: none; }
-    :root.dark .portal-stress-1 .portal-info-strip, :root.dark .portal-stress-2 .portal-info-strip { animation: none !important; background: #4a0000 !important; }
+    :root.dark .portal-stress-2 tr.portal-row-detention td { background: #4a0000 !important; }
     /* Column sort */
     #portalBoard thead th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
     #portalBoard thead th.sortable:hover { background: rgba(99,179,237,0.12); }
@@ -5864,14 +5791,6 @@
 
         <!-- Shift pace / 4AM goal banner -->
         <div id="portalPaceAlert" class="portal-pace-alert" style="display:none;"></div>
-        <div id="portalScarePopup" class="portal-scare-popup" role="alert" aria-live="assertive">
-          <div class="portal-scare-title" id="portalScareTitle">Detention Warning</div>
-          <div class="portal-scare-body" id="portalScareBody">A truck is getting close to detention.</div>
-          <div class="portal-scare-jab" id="portalScareJab">Immediate follow-up may be required.</div>
-          <div class="portal-scare-actions">
-            <button id="portalScareDismiss" type="button">I see it</button>
-          </div>
-        </div>
 
         <div class="portal-zone-label">Forward look</div>
         <div class="portal-ops-grid">
@@ -7237,8 +7156,6 @@
         notifiedBehind: false,
         cynicIndex: 0,
         cynicLastSwapMs: 0,
-        scareDismissUntil: 0,
-        scareLastKey: "",
         vendorAvgs: {},
         scheduleUpload: {
           fileName: "",
@@ -7626,11 +7543,6 @@
       portal4amNote: document.getElementById("portal4amNote"),
       portalEstCard: document.getElementById("portalEstCard"),
       portalPaceAlert: document.getElementById("portalPaceAlert"),
-      portalScarePopup: document.getElementById("portalScarePopup"),
-      portalScareTitle: document.getElementById("portalScareTitle"),
-      portalScareBody: document.getElementById("portalScareBody"),
-      portalScareJab: document.getElementById("portalScareJab"),
-      portalScareDismiss: document.getElementById("portalScareDismiss"),
       portalEstComplete: document.getElementById("portalEstComplete"),
       portalEstNote: document.getElementById("portalEstNote"),
       portalDoneCount: document.getElementById("portalDoneCount"),
@@ -7983,7 +7895,7 @@
           { sel: ".portal-command-bar", title: "Your Live Shift Board", msg: "This is My Portal  -  your real-time view of every truck on the dock tonight. The green dot means it is live and updating. The clock shows the current time ticking every second." },
           { sel: "#portalDmsSyncBtn", title: "Refresh DMS Data", msg: "Click this button to pull the latest truck data from DMS. It refreshes automatically, but you can force a refresh any time by clicking here." },
           { sel: "#myPortalPanel .summary-grid", title: "Your Shift Snapshot", msg: "These cards update live: trucks docked, trucks complete, how many trucks still need attention before 4AM, and the projected finish time. Watch the Projected Finish card: if it turns red, you are running behind the 4AM goal." },
-          { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and flashes red when the estimated finish time goes past 4AM." },
+          { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and red when the estimated finish time goes past 4AM." },
           { sel: "#portalBoard", title: "Live Dock Board", msg: "Every truck clocked in appears here with a live countdown. DETENTION means the truck is past its free time; act on those first. URGENT means under 30 minutes left. Rows update every second without any page reload." },
           { sel: "#portalExportBtn", title: "Export Shift at End of Night", msg: "When the shift is over, click Export Shift to download a CSV with every truck, check-in time, finish time, and detention minutes. A copy also saves to the server so you can pull it up later from the Shift Exports section below." }
         ],
@@ -8357,55 +8269,6 @@
         + '<span class="portal-cynic-sub">' + rateText + '</span>';
     }
 
-    function portalDetentionScareLine(level) {
-      const lines = level === "detention"
-        ? [
-            "Detention threshold has been reached. Review immediately.",
-            "Customer billing exposure is active. Confirm unload status.",
-            "Escalate this truck for immediate closure.",
-            "Verify unload finish and receiving status now."
-          ]
-        : [
-            "Truck is within 30 minutes of detention.",
-            "Prioritize follow-up before the free-time window expires.",
-            "Confirm unload progress and next required stamp.",
-            "Detention risk is active. Review this truck now.",
-            "Assign follow-up before this becomes billable detention."
-          ];
-      return lines[Math.floor(Date.now() / 12000) % lines.length];
-    }
-
-    function portalUpdateScarePopup(urgentRows, detentionRows) {
-      if (!els.portalScarePopup) return;
-      const urgentCount = urgentRows.length;
-      const detentionCount = detentionRows.length;
-      const level = detentionCount > 0 ? "detention" : urgentCount > 0 ? "urgent" : "";
-      if (!level) {
-        els.portalScarePopup.classList.remove("show", "urgent", "detention");
-        state.portal.scareLastKey = "";
-        return;
-      }
-      const top = detentionRows[0] || urgentRows[0] || {};
-      const key = level + ":" + (top.ref || top.po || top.door || urgentCount + "-" + detentionCount);
-      if (state.portal.scareDismissUntil > Date.now() && state.portal.scareLastKey === key) return;
-      state.portal.scareLastKey = key;
-      const who = [top.door ? "Door " + top.door : "", top.supplier || top.ref || top.po || "Unknown truck"].filter(Boolean).join(" - ");
-      if (els.portalScareTitle) {
-        els.portalScareTitle.textContent = level === "detention"
-          ? "DETENTION ALERT"
-          : "DETENTION RISK";
-      }
-      if (els.portalScareBody) {
-        els.portalScareBody.textContent = level === "detention"
-          ? detentionCount + " truck(s) have exceeded free time. Highest-risk truck: " + who + "."
-          : urgentCount + " truck(s) are within 30 minutes of detention. Prioritize: " + who + ".";
-      }
-      if (els.portalScareJab) els.portalScareJab.textContent = portalDetentionScareLine(level);
-      els.portalScarePopup.classList.remove("urgent", "detention");
-      els.portalScarePopup.classList.add(level);
-      els.portalScarePopup.classList.add("show");
-    }
-
     if (els.portalBusinessDate) {
       portalInitializeBusinessDateInput();
       els.portalBusinessDate.addEventListener("change", function() {
@@ -8727,13 +8590,6 @@
           portalMnRenderSchedulePreview();
         });
       }
-      const scareDismiss = document.getElementById("portalScareDismiss");
-      const scarePopup = document.getElementById("portalScarePopup");
-      if (scareDismiss) scareDismiss.addEventListener("click", function() {
-        state.portal.scareDismissUntil = Date.now() + 5 * 60000;
-        if (scarePopup) scarePopup.classList.remove("show");
-      });
-
       const testBtn = document.getElementById("alertsTestNotifBtn");
       if (testBtn) testBtn.addEventListener("click", function() {
         portalRequestDesktopNotifPermission(function(perm) {
@@ -14955,7 +14811,6 @@
       portalRenderActionQueue(enriched, now);
       const forecast = portalRenderRiskForecast(enriched, now, freeTimeMs);
       const scorecard = portalRenderScorecard(enriched, now);
-      portalUpdateScarePopup(startSoon.concat(urgent), detention);
 
       // Cache counts for kiosk overlay (Feature 6)
       state.portal.kioskActive    = active.length + urgent.length + warning.length + detention.length;
