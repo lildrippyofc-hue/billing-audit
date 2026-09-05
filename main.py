@@ -1576,6 +1576,16 @@ def _powerview_strip_commodity_code(value: str) -> str:
     return re.sub(r"^\s*\d+\s+", "", text) if text else ""
 
 
+def _powerview_incoterm_tag_supplier(supplier: str, incoterm: str) -> str:
+    """PowerView's incoterm 'vendor' tag mode (orbit/app.py::_apply_incoterm_tag):
+    prefix the supplier with its Incoterm code in parentheses, e.g.
+    "(DDP) Waterloo Sparkling Water Corp." or "(EXW) Some Vendor Inc."."""
+    code = str(incoterm or "").strip().upper()
+    if not code:
+        return supplier
+    return f"({code}) {supplier}".strip()
+
+
 def _dms_schedule_insert_payload(
     row: DmsScheduleRowIn,
     session: Dict[str, Any],
@@ -1594,6 +1604,9 @@ def _dms_schedule_insert_payload(
     po_number = row.po.strip() if use_oks_rules else _powerview_po_number(row.po)
     category_desc = row.product_category.strip() if use_oks_rules else _powerview_strip_commodity_code(row.product_category)
     supplier_fallback = "MULTI PO SUPPLIER NOT KNOWN" if use_oks_rules else "MULTI PO - VENDOR NOT SPECIFIED"
+    supplier_value = row.supplier.strip() or supplier_fallback
+    if not use_oks_rules:
+        supplier_value = _powerview_incoterm_tag_supplier(supplier_value, row.incoterm)
     base_insert.update({
         "area": _dms_area_for_schedule(row, session, business_date, use_oks_rules),
         "poNum": po_number,
@@ -1601,7 +1614,7 @@ def _dms_schedule_insert_payload(
         "trkNum": max(1, int(truck_number or 1)),
         "doorNum": 0,
         "load": dock_type or row.protection.strip() or row.dock.strip() or "ALDI Schedule",
-        "sup": row.supplier.strip() or supplier_fallback,
+        "sup": supplier_value,
         "qty": _schedule_int(row.pallets, 0),
         "carr": str(base_insert.get("carr") or ""),
         "notes": notes,
