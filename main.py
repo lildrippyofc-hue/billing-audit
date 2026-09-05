@@ -250,12 +250,12 @@ def _dms_post(path: str, payload: Dict[str, Any], config: Dict[str, Any]) -> Any
     try:
         resp = session.post(url, json=payload, headers=_EDGE_HEADERS, timeout=config["timeout"])
         if not resp.ok:
-            raise HTTPException(status_code=502, detail=f"DMS returned {resp.status_code}: {resp.text[:500]}")
+            raise HTTPException(status_code=502, detail=f"DMS returned {resp.status_code} for {path}: {resp.text[:500]}")
         return resp.json() if resp.text.strip() else {}
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Could not reach DMS: {exc}")
+        raise HTTPException(status_code=502, detail=f"Could not reach DMS ({path}): {exc}")
 
 
 def _dms_json_request(path: str, payload: Dict[str, Any], config: Dict[str, Any]) -> Any:
