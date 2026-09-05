@@ -3683,6 +3683,126 @@
         white-space: normal;
       }
     }
+    .mn-portal-panel .mn-portal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .mn-portal-panel .mn-status {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border: 1px solid var(--border,#e2e8f0);
+      border-radius: 8px;
+      background: var(--card-bg,#fff);
+      color: var(--muted,#718096);
+      font-size: 0.86em;
+      font-weight: 700;
+    }
+    .mn-portal-panel .mn-status.good { color: #276749; border-color: #9ae6b4; background: #f0fff4; }
+    .mn-portal-panel .mn-status.bad { color: #c53030; border-color: #fc8181; background: #fff5f5; }
+    .mn-portal-panel .mn-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .mn-portal-panel .mn-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mn-portal-panel .mn-controls label {
+      font-size: 0.78em;
+      font-weight: 800;
+      color: var(--label,#718096);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .mn-portal-panel .mn-empty {
+      padding: 18px;
+      text-align: center;
+      color: var(--muted,#718096);
+      font-weight: 700;
+    }
+    .mn-portal-panel .portal-schedule-panel {
+      border: 1.5px solid var(--border,#e2e8f0);
+      border-radius: 10px;
+      background: var(--card-bg,#fff);
+      padding: 14px 16px;
+      margin: 10px 0 14px;
+    }
+    .mn-portal-panel .portal-schedule-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .mn-portal-panel .portal-schedule-title {
+      font-size: 1em;
+      font-weight: 900;
+      color: var(--text,#1a202c);
+    }
+    .mn-portal-panel .portal-schedule-sub,
+    .mn-portal-panel .portal-schedule-status {
+      font-size: 0.82em;
+      color: var(--muted,#718096);
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    .mn-portal-panel .portal-schedule-status.good { color: #2f855a; }
+    .mn-portal-panel .portal-schedule-status.warn { color: #b7791f; }
+    .mn-portal-panel .portal-schedule-status.bad { color: #c53030; }
+    .mn-portal-panel .portal-schedule-options,
+    .mn-portal-panel .portal-schedule-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .mn-portal-panel .portal-schedule-options {
+      margin: 10px 0;
+      font-size: 0.82em;
+      font-weight: 700;
+      color: var(--text,#1a202c);
+    }
+    .mn-portal-panel .portal-schedule-warning {
+      padding: 9px 11px;
+      border-radius: 8px;
+      border: 1px solid #f6c843;
+      background: #fffbeb;
+      color: #744210;
+      font-size: 0.82em;
+      font-weight: 700;
+    }
+    :root.dark .mn-portal-panel .mn-status {
+      background: #132030;
+      border-color: #1e3a55;
+    }
+    :root.dark .mn-portal-panel .mn-status.good {
+      background: #0d2218;
+      color: #9ae6b4;
+      border-color: #68d391;
+    }
+    :root.dark .mn-portal-panel .mn-status.bad {
+      background: #2d1515;
+      color: #fca5a5;
+      border-color: #fc8181;
+    }
+    :root.dark .mn-portal-panel .portal-schedule-panel {
+      background: #132030;
+      border-color: #1e3a55;
+    }
+    :root.dark .mn-portal-panel .portal-schedule-warning {
+      background: #1f1700;
+      color: #fbd38d;
+      border-color: #744210;
+    }
     </style>
 </head>
 <body>
@@ -3718,6 +3838,7 @@
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
           <button class="tab-button" type="button" aria-selected="true" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal (OKS)</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Live: Minnesota Portal">My Portal (MN)</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
@@ -5880,7 +6001,105 @@
           <div id="portalExportsList" style="padding:4px 14px 10px;"></div>
         </section>
 
-      </section>`r`n
+      </section>
+
+      <section id="myPortalMnPanel" class="tab-panel mn-portal-panel" aria-label="Minnesota My Portal">
+        <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="portal-command-bar">
+          <div class="portal-dms-titlebar">
+            <div class="portal-dms-title-main">
+              <div class="portal-dms-system">Minnesota Live Operations Dashboard</div>
+              <div class="portal-dms-subtitle">Separate DMS pull for the Minnesota building. Read-only until the login and location are confirmed.</div>
+            </div>
+            <div class="portal-dms-pill">MN My Portal</div>
+          </div>
+          <div class="portal-controls-strip">
+            <div class="mn-controls">
+              <button id="portalMnSyncBtn" type="button" class="portal-sync-btn">
+                <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
+                <span id="portalMnSyncLabel">Sync MN DMS</span>
+              </button>
+              <button id="portalMnScheduleToggleBtn" type="button" class="portal-ctrl-btn">Upload Schedule</button>
+              <label for="portalMnBusinessDate">DMS date</label>
+              <input id="portalMnBusinessDate" type="date" class="lookup-input" title="Choose the Minnesota DMS business date to load" style="max-width:150px;">
+            </div>
+            <div class="mn-controls">
+              <input id="portalMnSearch" type="search" class="lookup-input" placeholder="Search PO, supplier, door..." autocomplete="off" style="max-width:240px;">
+              <select id="portalMnStatusFilter" class="lookup-input" style="max-width:160px;">
+                <option value="all">All arrived</option>
+                <option value="active">Active</option>
+                <option value="complete">Completed</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="mn-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <section class="portal-schedule-panel" id="portalMnSchedulePanel" style="display:none;" aria-labelledby="portalMnScheduleTitle">
+          <div class="portal-schedule-head">
+            <div>
+              <div class="portal-schedule-title" id="portalMnScheduleTitle">Minnesota DMS PowerView Schedule Uploader</div>
+              <div class="portal-schedule-sub">Attach the ALDI truck schedule, review the preview, then upload it into Minnesota DMS.</div>
+            </div>
+            <div class="portal-schedule-actions">
+              <input id="portalMnScheduleFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;">
+              <label class="portal-ctrl-btn portal-schedule-file-label" for="portalMnScheduleFile" data-file-trigger="portalMnScheduleFile">Attach schedule</label>
+              <button id="portalMnScheduleClearBtn" type="button" class="portal-ctrl-btn">Clear</button>
+            </div>
+          </div>
+          <div class="portal-schedule-warning">
+            Minnesota upload uses the same PowerView mapping: Reference #, PO, Scheduled Date Time, dock/category, supplier, and pallets are turned into DMS Load Details rows.
+          </div>
+          <div class="portal-schedule-options">
+            <label><input id="portalMnScheduleSkipExisting" type="checkbox" checked> Skip trucks already found in Minnesota DMS</label>
+            <label><input id="portalMnScheduleConfirm" type="checkbox"> I reviewed this preview and want to upload these rows to Minnesota DMS</label>
+            <button id="portalMnScheduleUploadBtn" type="button" class="portal-sync-btn" disabled>Upload to MN DMS</button>
+          </div>
+          <div class="portal-schedule-status" id="portalMnScheduleStatus">Attach a Minnesota schedule to begin.</div>
+          <div class="table-scroller portal-schedule-preview-wrap" style="margin-top:10px;">
+            <table id="portalMnSchedulePreviewTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+        <div class="mn-portal-grid">
+          <article class="metric-card" data-accent="blue">
+            <div class="metric-label">Scheduled</div>
+            <div class="metric-value" id="portalMnScheduled">0</div>
+            <div class="metric-note">Total DMS rows for the selected business date.</div>
+          </article>
+          <article class="metric-card" data-accent="green">
+            <div class="metric-label">Arrived</div>
+            <div class="metric-value" id="portalMnArrived">0</div>
+            <div class="metric-note">Driver check-in stamp exists.</div>
+          </article>
+          <article class="metric-card" data-accent="orange">
+            <div class="metric-label">Active</div>
+            <div class="metric-value" id="portalMnActive">0</div>
+            <div class="metric-note">Arrived and not unload finished.</div>
+          </article>
+          <article class="metric-card" data-accent="purple">
+            <div class="metric-label">Done</div>
+            <div class="metric-value" id="portalMnDone">0</div>
+            <div class="metric-note">Unload finish or receiving finish is marked.</div>
+          </article>
+        </div>
+        <section class="table-wrap" aria-labelledby="portalMnBoardTitle" style="margin-top:12px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="portalMnBoardTitle">Minnesota Live Dock Board</div>
+              <div class="table-meta" id="portalMnBoardMeta">Sync Minnesota DMS to load trucks.</div>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="portalMnBoard">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
       <!-- === ALERTS =========================================================== -->
       <section id="alertsPanel" class="tab-panel" aria-label="Alerts">
         <div class="motivation-bar" id="motivBar_alerts"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
@@ -6847,6 +7066,25 @@
         sheetAssignments: {},   // { doorNumber: truckRef }  -  from clerk Google Sheet
         sheetsLastPushMs: 0     // debounce: don't push more than once per 45s
       },
+      portalMn: {
+        refreshInterval: null,
+        liveRows: [],
+        scheduledRows: [],
+        liveUpdatedAt: "",
+        liveError: "",
+        liveBusy: false,
+        liveAttempted: false,
+        businessDate: "",
+        selectedBusinessDate: safeLocalStorageGet("portalMnBusinessDate") || "",
+        livePollMs: 60000,
+        credentialBlocked: false,
+        scheduleUpload: {
+          fileName: "",
+          rows: [],
+          errors: [],
+          uploaded: []
+        }
+      },
       truckChargeAudit: {
         ops: null,
         ranged: null,
@@ -7108,6 +7346,27 @@
       portalScheduleClearBtn: document.getElementById("portalScheduleClearBtn"),
       portalScheduleStatus: document.getElementById("portalScheduleStatus"),
       portalSchedulePreviewTable: document.getElementById("portalSchedulePreviewTable"),
+      portalMnSyncBtn: document.getElementById("portalMnSyncBtn"),
+      portalMnSyncLabel: document.getElementById("portalMnSyncLabel"),
+      portalMnBusinessDate: document.getElementById("portalMnBusinessDate"),
+      portalMnSearch: document.getElementById("portalMnSearch"),
+      portalMnStatusFilter: document.getElementById("portalMnStatusFilter"),
+      portalMnStatus: document.getElementById("portalMnStatus"),
+      portalMnScheduled: document.getElementById("portalMnScheduled"),
+      portalMnArrived: document.getElementById("portalMnArrived"),
+      portalMnActive: document.getElementById("portalMnActive"),
+      portalMnDone: document.getElementById("portalMnDone"),
+      portalMnBoard: document.getElementById("portalMnBoard"),
+      portalMnBoardMeta: document.getElementById("portalMnBoardMeta"),
+      portalMnScheduleToggleBtn: document.getElementById("portalMnScheduleToggleBtn"),
+      portalMnSchedulePanel: document.getElementById("portalMnSchedulePanel"),
+      portalMnScheduleFile: document.getElementById("portalMnScheduleFile"),
+      portalMnScheduleSkipExisting: document.getElementById("portalMnScheduleSkipExisting"),
+      portalMnScheduleConfirm: document.getElementById("portalMnScheduleConfirm"),
+      portalMnScheduleUploadBtn: document.getElementById("portalMnScheduleUploadBtn"),
+      portalMnScheduleClearBtn: document.getElementById("portalMnScheduleClearBtn"),
+      portalMnScheduleStatus: document.getElementById("portalMnScheduleStatus"),
+      portalMnSchedulePreviewTable: document.getElementById("portalMnSchedulePreviewTable"),
       dmsStampDot: document.getElementById("dmsStampDot"),
       dmsStampStatus: document.getElementById("dmsStampStatus"),
       dmsStampTestBtn: document.getElementById("dmsStampTestBtn"),
@@ -7899,6 +8158,23 @@
         portalPullLiveDms(true);
       });
     }
+    if (els.portalMnBusinessDate) {
+      portalMnInitializeDate();
+      els.portalMnBusinessDate.addEventListener("change", function() {
+        state.portalMn.selectedBusinessDate = portalMnSelectedBusinessDate();
+        safeLocalStorageSet("portalMnBusinessDate", state.portalMn.selectedBusinessDate);
+        state.portalMn.credentialBlocked = false;
+        portalMnPullLive(true);
+      });
+    }
+    if (els.portalMnSyncBtn) {
+      els.portalMnSyncBtn.addEventListener("click", function() {
+        state.portalMn.credentialBlocked = false;
+        portalMnPullLive(true);
+      });
+    }
+    if (els.portalMnSearch) els.portalMnSearch.addEventListener("input", renderPortalMn);
+    if (els.portalMnStatusFilter) els.portalMnStatusFilter.addEventListener("change", renderPortalMn);
     // Portal live clock  -  starts immediately, ticks every second
     (function startPortalClock() {
       function tick() {
@@ -8168,6 +8444,28 @@
           state.portal.scheduleUpload = { fileName: "", rows: [], errors: [], uploaded: [] };
           if (els.portalScheduleConfirm) els.portalScheduleConfirm.checked = false;
           portalRenderSchedulePreview();
+        });
+      }
+      if (els.portalMnScheduleToggleBtn && els.portalMnSchedulePanel) {
+        els.portalMnScheduleToggleBtn.addEventListener("click", function() {
+          const hidden = els.portalMnSchedulePanel.style.display === "none";
+          els.portalMnSchedulePanel.style.display = hidden ? "" : "none";
+        });
+      }
+      if (els.portalMnScheduleFile) {
+        els.portalMnScheduleFile.addEventListener("change", handlePortalMnScheduleFile);
+      }
+      if (els.portalMnScheduleConfirm) {
+        els.portalMnScheduleConfirm.addEventListener("change", portalMnRenderSchedulePreview);
+      }
+      if (els.portalMnScheduleUploadBtn) {
+        els.portalMnScheduleUploadBtn.addEventListener("click", portalMnUploadScheduleToDms);
+      }
+      if (els.portalMnScheduleClearBtn) {
+        els.portalMnScheduleClearBtn.addEventListener("click", function() {
+          state.portalMn.scheduleUpload = { fileName: "", rows: [], errors: [], uploaded: [] };
+          if (els.portalMnScheduleConfirm) els.portalMnScheduleConfirm.checked = false;
+          portalMnRenderSchedulePreview();
         });
       }
       const scareDismiss = document.getElementById("portalScareDismiss");
@@ -9049,9 +9347,12 @@
         const scheduledText = getValue(row, h.scheduled);
         const scheduledIso = portalScheduleDateToIso(scheduledText);
         const pallets = portalScheduleInt(getValue(row, h.pallets));
-        const supplier = getValue(row, h.supplier);
+        const supplier = getValue(row, h.supplier) || "MULTI PO SUPPLIER NOT KNOWN";
         const quantity = getValue(row, h.quantity);
         const incoterm = getValue(row, h.incoterm);
+        const rowText = headers.map(function(header) { return getValue(row, header); }).filter(Boolean).join(" ");
+        const hasTruckData = Boolean(reference || po || scheduledText || Number.isFinite(pallets));
+        if (!hasTruckData && (!rowText || /\b(count|total|subtotal|summary)\b\s*:?\s*\d*/i.test(rowText))) return;
         const rowErrors = [];
 
         if (!reference) rowErrors.push("Missing reference number");
@@ -9224,6 +9525,147 @@
           els.portalScheduleUploadBtn.textContent = "Upload to DMS";
         }
         portalRenderSchedulePreview();
+      }
+    }
+
+    function portalMnRenderSchedulePreview() {
+      const schedule = state.portalMn.scheduleUpload || { rows: [], errors: [], uploaded: [] };
+      const table = els.portalMnSchedulePreviewTable;
+      const status = els.portalMnScheduleStatus;
+      const uploadBtn = els.portalMnScheduleUploadBtn;
+      const confirmBox = els.portalMnScheduleConfirm;
+      const hasRows = schedule.rows && schedule.rows.length;
+      const hasBlockingErrors = schedule.errors && schedule.errors.length;
+      const resultByRow = new Map((schedule.uploaded || []).map(function(item) { return [String(item.row), item]; }));
+
+      if (uploadBtn) uploadBtn.disabled = !hasRows || hasBlockingErrors || !confirmBox || !confirmBox.checked;
+      if (status) {
+        status.className = "portal-schedule-status" + (hasBlockingErrors ? " bad" : hasRows ? " good" : "");
+        if (!hasRows) status.textContent = "Attach a Minnesota schedule to begin.";
+        else if (hasBlockingErrors) status.textContent = schedule.fileName + " loaded with " + schedule.errors.length + " issue(s). Fix the file before uploading.";
+        else status.textContent = schedule.fileName + " ready: " + schedule.rows.length + " schedule row(s) will be checked against Minnesota DMS before upload.";
+      }
+      if (!table) return;
+      const thead = table.querySelector("thead");
+      const tbody = table.querySelector("tbody");
+      if (!thead || !tbody) return;
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const headers = ["Row", "Ref #", "PO", "Scheduled", "DMS Area", "DMS Load", "Supplier", "Pallets", "Status"];
+      const hr = document.createElement("tr");
+      headers.forEach(function(label) {
+        const th = document.createElement("th");
+        th.textContent = label;
+        hr.appendChild(th);
+      });
+      thead.appendChild(hr);
+      if (!hasRows) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = headers.length;
+        td.textContent = "No Minnesota schedule preview yet.";
+        td.style.color = "var(--muted,#718096)";
+        td.style.fontWeight = "700";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+      schedule.rows.slice(0, 80).forEach(function(row) {
+        const tr = document.createElement("tr");
+        if (row.errors && row.errors.length) tr.className = "schedule-row-error";
+        const scheduled = row.scheduled_iso
+          ? new Date(row.scheduled_iso).toLocaleString("en-US", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })
+          : row.scheduled_text || "-";
+        const uploadResult = resultByRow.get(String(row.row_number));
+        const statusText = uploadResult
+          ? uploadResult.status + ": " + uploadResult.message
+          : ((row.errors || []).join("; ") || "Ready");
+        [row.row_number, row.reference || "-", row.po || "-", scheduled, row.area || "-", row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
+          const td = document.createElement("td");
+          td.textContent = value;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      if (schedule.rows.length > 80) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = headers.length;
+        td.textContent = "Showing first 80 rows of " + schedule.rows.length + ". All rows will upload if confirmed.";
+        td.style.fontWeight = "800";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+    }
+
+    async function handlePortalMnScheduleFile(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      try {
+        const parsed = await parseUploadedReportFile(file);
+        const schedule = portalNormalizeScheduleRows(parsed, file.name);
+        state.portalMn.scheduleUpload = Object.assign(schedule, { uploaded: [] });
+        if (els.portalMnScheduleConfirm) els.portalMnScheduleConfirm.checked = false;
+        portalMnRenderSchedulePreview();
+        showToast(schedule.errors.length ? "Minnesota schedule needs review before upload." : "Minnesota schedule preview ready.");
+      } catch (error) {
+        showToast(error.message || "Could not read that Minnesota schedule.");
+      } finally {
+        event.target.value = "";
+      }
+    }
+
+    async function portalMnUploadScheduleToDms() {
+      const schedule = state.portalMn.scheduleUpload || {};
+      const rows = (schedule.rows || []).filter(function(row) { return !(row.errors || []).length; });
+      if (!rows.length) {
+        showToast("Attach a valid Minnesota schedule first.");
+        return;
+      }
+      if (!els.portalMnScheduleConfirm || !els.portalMnScheduleConfirm.checked) {
+        showToast("Review the Minnesota preview and check the confirmation box first.");
+        return;
+      }
+      if (els.portalMnScheduleUploadBtn) {
+        els.portalMnScheduleUploadBtn.disabled = true;
+        els.portalMnScheduleUploadBtn.textContent = "Uploading...";
+      }
+      if (els.portalMnScheduleStatus) {
+        els.portalMnScheduleStatus.className = "portal-schedule-status warn";
+        els.portalMnScheduleStatus.textContent = "Uploading " + rows.length + " schedule row(s) to Minnesota DMS...";
+      }
+      try {
+        const resp = await fetch(apiUrl("/api/dms/mn/schedule-upload"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
+            business_date: els.portalMnBusinessDate ? els.portalMnBusinessDate.value : "",
+            skip_existing: !els.portalMnScheduleSkipExisting || els.portalMnScheduleSkipExisting.checked,
+            dry_run: false,
+            rows
+          })
+        });
+        const data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok) throw new Error(data.detail || data.error || "Minnesota DMS schedule upload failed.");
+        state.portalMn.scheduleUpload.uploaded = data.results || [];
+        if (els.portalMnScheduleStatus) {
+          els.portalMnScheduleStatus.className = "portal-schedule-status " + (data.failed ? "warn" : "good");
+          const modelNote = data.model_error ? " DMS upload model was unavailable, so the known Load Details insert format was used." : "";
+          els.portalMnScheduleStatus.textContent = "Minnesota upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
+        }
+        showToast("Minnesota schedule upload finished.");
+        portalMnPullLive(true);
+      } catch (error) {
+        if (els.portalMnScheduleStatus) {
+          els.portalMnScheduleStatus.className = "portal-schedule-status bad";
+          els.portalMnScheduleStatus.textContent = error.message || "Minnesota DMS schedule upload failed.";
+        }
+        showToast(error.message || "Minnesota DMS schedule upload failed.");
+      } finally {
+        if (els.portalMnScheduleUploadBtn) {
+          els.portalMnScheduleUploadBtn.textContent = "Upload to MN DMS";
+        }
+        portalMnRenderSchedulePreview();
       }
     }
 
@@ -12939,6 +13381,190 @@
       portalRequestNotifPermission();
       renderPortalBoard();
       portalLoadExportsList();
+    }
+
+    function portalMnPanelIsActive() {
+      const panel = document.getElementById("myPortalMnPanel");
+      return Boolean(panel && panel.classList.contains("active"));
+    }
+
+    function portalMnDefaultBusinessDate() {
+      const d = new Date();
+      if (d.getHours() >= 19) d.setDate(d.getDate() + 1);
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
+    function portalMnSelectedBusinessDate() {
+      return (els.portalMnBusinessDate && els.portalMnBusinessDate.value)
+        ? els.portalMnBusinessDate.value
+        : portalMnDefaultBusinessDate();
+    }
+
+    function portalMnInitializeDate() {
+      if (!els.portalMnBusinessDate) return;
+      const saved = safeLocalStorageGet("portalMnBusinessDate");
+      els.portalMnBusinessDate.value = saved || portalMnDefaultBusinessDate();
+      state.portalMn.selectedBusinessDate = els.portalMnBusinessDate.value;
+    }
+
+    function portalMnIsoToTime(value) {
+      if (!value) return "-";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return String(value);
+      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    }
+
+    function portalMnTruckStatus(row) {
+      if (row.unloadFinishIso || row.receivingFinishIso || row.finishIso) return "Completed";
+      if (row.unloadStartIso) return "Unloading";
+      if (row.driverAtDoorIso) return "At Door";
+      if (row.checkInIso) return "Checked In";
+      return "Scheduled";
+    }
+
+    function portalMnSetStatus(text, kind) {
+      if (!els.portalMnStatus) return;
+      els.portalMnStatus.className = "mn-status" + (kind ? " " + kind : "");
+      els.portalMnStatus.textContent = text;
+    }
+
+    async function portalMnPullLive(force, options) {
+      if (!els.portalMnSyncBtn || state.portalMn.liveBusy) return;
+      options = options || {};
+      const quiet = Boolean(options.quiet);
+      if (!force && state.portalMn.credentialBlocked) return;
+      state.portalMn.liveBusy = true;
+      els.portalMnSyncBtn.disabled = true;
+      if (els.portalMnSyncLabel) els.portalMnSyncLabel.textContent = quiet ? "Live..." : "Refreshing...";
+      if (!quiet) portalMnSetStatus("Refreshing Minnesota DMS rows...", "");
+      try {
+        state.portalMn.liveAttempted = true;
+        const params = new URLSearchParams();
+        if (force) params.set("force", "true");
+        const selectedDate = portalMnSelectedBusinessDate();
+        if (selectedDate) params.set("date", selectedDate);
+        const resp = await fetch(apiUrl("/api/dms/mn/portal?" + params.toString()), {
+          headers: { "Accept": "application/json" }
+        });
+        const data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok || !data.ok) throw new Error(data.detail || "Minnesota DMS pull failed.");
+
+        state.portalMn.liveRows = Array.isArray(data.trucks) ? data.trucks : [];
+        state.portalMn.scheduledRows = Array.isArray(data.scheduled_trucks) ? data.scheduled_trucks : state.portalMn.liveRows;
+        state.portalMn.businessDate = data.business_date || "";
+        state.portalMn.liveUpdatedAt = data.updated_at || new Date().toISOString();
+        state.portalMn.liveError = "";
+        state.portalMn.credentialBlocked = false;
+        const loc = data.location || {};
+        const locName = loc.name || loc.locName || loc.cCode || "Minnesota";
+        portalMnSetStatus("Live Minnesota DMS active: " + state.portalMn.liveRows.length + " arrived truck(s), " + state.portalMn.scheduledRows.length + " scheduled for business date " + (data.business_date || selectedDate) + " at " + locName + ".", "good");
+      } catch (err) {
+        const msg = (err && (err.message || String(err))) || "Minnesota DMS unavailable.";
+        state.portalMn.liveError = msg;
+        if (/credentials are not configured/i.test(msg)) state.portalMn.credentialBlocked = true;
+        portalMnSetStatus("Minnesota DMS unavailable: " + msg, "bad");
+      } finally {
+        state.portalMn.liveBusy = false;
+        els.portalMnSyncBtn.disabled = false;
+        if (els.portalMnSyncLabel) els.portalMnSyncLabel.textContent = "Sync MN DMS";
+        renderPortalMn();
+      }
+    }
+
+    function portalMnFilteredRows() {
+      const term = (els.portalMnSearch ? els.portalMnSearch.value : "").trim().toLowerCase();
+      const statusFilter = els.portalMnStatusFilter ? els.portalMnStatusFilter.value : "all";
+      return (state.portalMn.liveRows || []).filter(function(row) {
+        const status = portalMnTruckStatus(row);
+        if (statusFilter === "active" && status === "Completed") return false;
+        if (statusFilter === "complete" && status !== "Completed") return false;
+        if (!term) return true;
+        return [row.ref, row.po, row.supplier, row.carrier, row.door, row.area, row.statusText]
+          .join(" ").toLowerCase().includes(term);
+      });
+    }
+
+    function renderPortalMn() {
+      if (!els.portalMnBoard) return;
+      if (!state.portalMn.liveAttempted) {
+        portalMnInitializeDate();
+        portalMnStartPolling();
+      }
+      const scheduled = state.portalMn.scheduledRows || [];
+      const arrived = state.portalMn.liveRows || [];
+      const active = arrived.filter(function(row) { return portalMnTruckStatus(row) !== "Completed"; });
+      const done = scheduled.filter(function(row) { return portalMnTruckStatus(row) === "Completed"; });
+      if (els.portalMnScheduled) els.portalMnScheduled.textContent = scheduled.length;
+      if (els.portalMnArrived) els.portalMnArrived.textContent = arrived.length;
+      if (els.portalMnActive) els.portalMnActive.textContent = active.length;
+      if (els.portalMnDone) els.portalMnDone.textContent = done.length;
+
+      const headers = ["Ref", "PO", "Supplier", "Door", "Area", "Appt", "Check In", "At Door", "Unload Start", "Unload Finish", "Status"];
+      const thead = els.portalMnBoard.querySelector("thead");
+      const tbody = els.portalMnBoard.querySelector("tbody");
+      if (!thead || !tbody) return;
+      thead.innerHTML = "";
+      tbody.innerHTML = "";
+      const trh = document.createElement("tr");
+      headers.forEach(function(label) {
+        const th = document.createElement("th");
+        th.textContent = label;
+        trh.appendChild(th);
+      });
+      thead.appendChild(trh);
+
+      const rows = portalMnFilteredRows();
+      if (!rows.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = headers.length;
+        td.className = "mn-empty";
+        td.textContent = state.portalMn.liveAttempted ? "No Minnesota arrived trucks match this view." : "Sync Minnesota DMS to load the board.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      } else {
+        rows.forEach(function(row) {
+          const tr = document.createElement("tr");
+          const status = portalMnTruckStatus(row);
+          [
+            row.ref || "-",
+            row.po || "-",
+            row.supplier || "-",
+            row.door || "-",
+            row.area || "-",
+            portalMnIsoToTime(row.appointmentIso),
+            portalMnIsoToTime(row.checkInIso),
+            portalMnIsoToTime(row.driverAtDoorIso),
+            portalMnIsoToTime(row.unloadStartIso),
+            portalMnIsoToTime(row.unloadFinishIso || row.receivingFinishIso || row.finishIso),
+            status
+          ].forEach(function(value) {
+            const td = document.createElement("td");
+            td.textContent = value;
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+      if (els.portalMnBoardMeta) {
+        els.portalMnBoardMeta.textContent = rows.length + " arrived truck(s) shown out of " + arrived.length + " arrived / " + scheduled.length + " scheduled.";
+      }
+    }
+
+    function portalMnStartPolling() {
+      if (!state.portalMn.refreshInterval) {
+        state.portalMn.refreshInterval = setInterval(function() {
+          if (portalMnPanelIsActive()) portalMnPullLive(false, { quiet: true });
+        }, state.portalMn.livePollMs || 60000);
+      }
+      if (!state.portalMn.liveAttempted) portalMnPullLive(false);
+    }
+
+    function portalMnStopPolling() {
+      if (state.portalMn.refreshInterval) {
+        clearInterval(state.portalMn.refreshInterval);
+        state.portalMn.refreshInterval = null;
+      }
     }
 
     function portalCurrentTrucks() {
@@ -17590,6 +18216,9 @@
         try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
         setTimeout(repairMyPortalPanel, 0);
       } else portalStopLivePolling();
+      if (name === "myPortalMn") {
+        try { renderPortalMn(); } catch (err) { console.error("Minnesota Portal render failed:", err); }
+      } else portalMnStopPolling();
       if (name === "alerts") renderAlertsTab();
       if (name === "exceptions") renderExceptions();
       if (name === "turnTracker") renderTurnTracker();

@@ -25,6 +25,7 @@ __pycache__/
 .env
 *.env
 dms_config.json
+dms_mn_config.json
 
 # Local-only scratch / DMS probe scripts (read creds from dms_config.json)
 probe_*.py

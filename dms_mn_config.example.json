@@ -1,0 +1,9 @@
+{
+  "username": "MN_DMS_USERNAME",
+  "password": "MN_DMS_PASSWORD",
+  "base_url": "https://dms.eclipseia.com",
+  "location_id": "",
+  "location_code": "",
+  "location_name": "MINNESOTA",
+  "timeout_seconds": 25
+}

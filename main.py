@@ -159,6 +159,7 @@ class LoginIn(BaseModel):
 
 
 _dms_session_cache: Dict[str, Any] = {}
+_dms_mn_session_cache: Dict[str, Any] = {}
 
 
 def _load_dms_config() -> Dict[str, Any]:
@@ -184,6 +185,34 @@ def _load_dms_config() -> Dict[str, Any]:
         "location_code": os.environ.get("DMS_LOCATION_CODE") or cfg.get("location_code") or "OLA",
         "location_name": os.environ.get("DMS_LOCATION_NAME") or cfg.get("location_name") or "ALDIOKS",
         "timeout": int(os.environ.get("DMS_TIMEOUT_SECONDS") or cfg.get("timeout_seconds") or 25),
+        "_parse_error": parse_error,
+        "_cfg_path": str(cfg_path),
+    }
+
+
+def _load_dms_mn_config() -> Dict[str, Any]:
+    cfg_path = BASE_DIR / "dms_mn_config.json"
+    cfg: Dict[str, Any] = {}
+    parse_error: str = ""
+    if cfg_path.exists():
+        try:
+            raw = cfg_path.read_text(encoding="utf-8-sig")
+            cfg = json.loads(raw)
+        except Exception as e:
+            parse_error = str(e)
+            cfg = {}
+    username = os.environ.get("DMS_MN_USERNAME") or cfg.get("username") or ""
+    password = os.environ.get("DMS_MN_PASSWORD") or cfg.get("password") or ""
+    base = (os.environ.get("DMS_MN_BASE_URL") or cfg.get("base_url") or "https://dms.eclipseia.com").rstrip("/")
+    base = base.replace(":5055", "")
+    return {
+        "username": username,
+        "password": password,
+        "base_url": base,
+        "location_id": os.environ.get("DMS_MN_LOCATION_ID") or cfg.get("location_id") or "",
+        "location_code": os.environ.get("DMS_MN_LOCATION_CODE") or cfg.get("location_code") or "",
+        "location_name": os.environ.get("DMS_MN_LOCATION_NAME") or cfg.get("location_name") or "MINNESOTA",
+        "timeout": int(os.environ.get("DMS_MN_TIMEOUT_SECONDS") or cfg.get("timeout_seconds") or 25),
         "_parse_error": parse_error,
         "_cfg_path": str(cfg_path),
     }
@@ -274,6 +303,17 @@ def _select_dms_location(locations: List[Dict[str, Any]], config: Dict[str, Any]
     raise HTTPException(status_code=502, detail="DMS login worked, but no DMS location was returned.")
 
 
+def _dms_location_matches_config(loc: Dict[str, Any], config: Dict[str, Any]) -> bool:
+    loc_id = str(config.get("location_id") or "").strip()
+    code = str(config.get("location_code") or "").strip().upper()
+    name = str(config.get("location_name") or "").strip().upper()
+    if loc_id and str(loc.get("locid") or loc.get("id") or "").strip() == loc_id:
+        return True
+    text = " ".join(str(loc.get(k, "")) for k in ("cCode", "code", "name", "locName", "location", "locid")).upper()
+    all_text = " ".join(str(v) for v in loc.values()).upper()
+    return bool((code and code in text) or (name and name in all_text))
+
+
 def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     config = _load_dms_config()
     if (
@@ -351,6 +391,91 @@ def _ensure_dms_session(force: bool = False) -> Dict[str, Any]:
     }
     _dms_session_cache.clear()
     _dms_session_cache.update(session)
+    return session
+
+
+def _ensure_dms_mn_session(force: bool = False) -> Dict[str, Any]:
+    config = _load_dms_mn_config()
+    cache_key = "|".join([
+        config["base_url"],
+        str(config.get("location_id") or ""),
+        str(config.get("location_code") or ""),
+        str(config.get("location_name") or ""),
+    ])
+    if (
+        not force
+        and _dms_mn_session_cache.get("userinfo")
+        and _dms_mn_session_cache.get("loc")
+        and _dms_mn_session_cache.get("cache_key") == cache_key
+    ):
+        return _dms_mn_session_cache
+
+    username = str(config["username"]).strip()
+    password = str(config["password"]).strip()
+    if not username or not password or "YOUR_" in username or "YOUR_" in password:
+        parse_err = config.get("_parse_error", "")
+        cfg_path = config.get("_cfg_path", "dms_mn_config.json")
+        detail = (
+            f"Minnesota DMS credentials are not configured. "
+            f"Config file: {cfg_path}. "
+            + (f"JSON parse error: {parse_err}. " if parse_err else "File parsed OK but username/password missing. ")
+            + "Set DMS_MN_USERNAME/DMS_MN_PASSWORD or fill in dms_mn_config.json."
+        )
+        raise HTTPException(status_code=400, detail=detail)
+
+    dms_session = ReqSession()
+    dms_session.headers.update(_EDGE_HEADERS)
+    config["_session"] = dms_session
+
+    try:
+        dms_session.get(f"{config['base_url']}/login", timeout=config["timeout"])
+    except Exception:
+        pass
+
+    last_error = None
+    login_data: Dict[str, Any] = {}
+    for payload in _dms_login_payloads(username, password):
+        try:
+            response = _dms_post("api/login/trylogin", payload, config)
+            ui = response.get("userinfo") or {}
+            if isinstance(response, dict) and ui.get("login"):
+                login_data = response
+                break
+        except HTTPException as exc:
+            last_error = exc
+    if not login_data:
+        if last_error:
+            raise last_error
+        raise HTTPException(status_code=502, detail="Minnesota DMS login did not return session data. Credentials may be wrong.")
+
+    sel_loc = login_data.get("selLoc")
+    loc: Dict[str, Any] = {}
+    if isinstance(sel_loc, dict) and sel_loc and _dms_location_matches_config(sel_loc, config):
+        loc = sel_loc
+    else:
+        locations = _find_dms_locations(login_data)
+        if not locations:
+            try:
+                loc_response = _dms_json_request("api/location/getLocations", {"userinfo": login_data.get("userinfo") or login_data}, config)
+                locations = [x for x in _first_list(loc_response) if isinstance(x, dict)]
+            except HTTPException:
+                locations = []
+        loc = _select_dms_location(locations, config) if locations else (sel_loc if isinstance(sel_loc, dict) else {})
+
+    session = {
+        "base_url": config["base_url"],
+        "userinfo": login_data.get("userinfo") or login_data.get("user") or login_data,
+        "buck": login_data.get("buck") or login_data.get("bucket") or {},
+        "loc": loc,
+        "sel_loc": loc,
+        "appts": login_data.get("appts") or [],
+        "sel_appt": login_data.get("selAppt") or "",
+        "config": config,
+        "cache_key": cache_key,
+        "cached_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _dms_mn_session_cache.clear()
+    _dms_mn_session_cache.update(session)
     return session
 
 
@@ -749,6 +874,88 @@ def delete_decision(truck_key: str, _: str = Depends(require_auth)):
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 
+def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> Dict[str, Any]:
+    info = _dms_business_date(date)
+    base_payload = {
+        "info": info,
+        "loc": session["loc"],
+        "userinfo": session["userinfo"],
+        "buck": session.get("buck") or {},
+    }
+    loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
+    stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
+    loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
+    stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
+    all_trucks = _merge_dms_portal_rows(loads, stamps)
+    board = [t for t in all_trucks if t.get("checkInIso")]
+
+    def _stat(st):
+        return str(st.get("drstat") or "").strip().lower()
+
+    rejected_count = sum(1 for st in stamps if _stat(st) == "rejected")
+    no_show_count = sum(
+        1 for st in stamps
+        if _stat(st) == "late" and not (st.get("drchk") or st.get("clrkchk"))
+    )
+
+    now_utc = datetime.now(timezone.utc)
+    no_show_trucks = []
+    for t in all_trucks:
+        if t.get("checkInIso"):
+            continue
+        appt_iso = t.get("appointmentIso")
+        if not appt_iso:
+            continue
+        try:
+            appt_dt = datetime.fromisoformat(appt_iso)
+            if appt_dt.tzinfo is None:
+                appt_dt = appt_dt.replace(tzinfo=timezone.utc)
+            if appt_dt < now_utc:
+                no_show_trucks.append({
+                    "ref": t.get("ref", ""),
+                    "supplier": t.get("supplier", ""),
+                    "door": t.get("door", ""),
+                    "appointmentIso": appt_iso,
+                })
+        except Exception:
+            pass
+
+    area_summary: Dict[str, Dict[str, Any]] = {}
+    for t in all_trucks:
+        a = (t.get("area") or "").strip() or "-"
+        s = area_summary.setdefault(a, {"area": a, "scheduled": 0, "checked_in": 0, "completed": 0})
+        s["scheduled"] += 1
+        if t.get("checkInIso"):
+            s["checked_in"] += 1
+        if t.get("unloadFinishIso") or t.get("receivingFinishIso"):
+            s["completed"] += 1
+    area_list = sorted(area_summary.values(), key=lambda x: -x["scheduled"])
+
+    door_set = set()
+    for t in all_trucks:
+        dd = str(t.get("door") or "").strip()
+        if dd.isdigit():
+            door_set.add(int(dd))
+
+    return {
+        "ok": True,
+        "business_date": info,
+        "location": session["loc"],
+        "load_count": len(loads),
+        "stamp_count": len(stamps),
+        "trucks": board,
+        "scheduled_trucks": all_trucks,
+        "total_expected": len(all_trucks),
+        "checked_in_count": len(board),
+        "rejected_count": rejected_count,
+        "no_show_count": no_show_count,
+        "no_show_trucks": no_show_trucks,
+        "area_summary": area_list,
+        "doors": sorted(door_set),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.get("/api/dms/session")
 def dms_session_status():
     session = _ensure_dms_session()
@@ -762,6 +969,28 @@ def dms_session_status():
         },
         "cached_at": session.get("cached_at"),
     }
+
+
+@app.get("/api/dms/mn/session")
+def dms_mn_session_status(force: bool = False):
+    session = _ensure_dms_mn_session(force=force)
+    loc = session.get("loc") or {}
+    return {
+        "ok": True,
+        "location": {
+            "locid": loc.get("locid"),
+            "name": loc.get("name") or loc.get("locName") or loc.get("location"),
+            "cCode": loc.get("cCode") or loc.get("code"),
+        },
+        "cached_at": session.get("cached_at"),
+    }
+
+
+@app.get("/api/dms/mn/portal")
+def dms_mn_portal(date: Optional[str] = None, force: bool = False):
+    """Read Minnesota DMS load/stamp rows for the MN My Portal. This route never writes to DMS."""
+    session = _ensure_dms_mn_session(force=force)
+    return _build_dms_portal_payload(session, date)
 
 
 @app.get("/api/dms/portal")
@@ -1099,7 +1328,7 @@ def _dms_schedule_insert_payload(
         "trkNum": _schedule_int(row.reference, 0),
         "doorNum": 0,
         "load": row.protection.strip() or row.dock.strip() or "ALDI Schedule",
-        "sup": row.supplier.strip(),
+        "sup": row.supplier.strip() or "MULTI PO SUPPLIER NOT KNOWN",
         "qty": _schedule_int(row.pallets, 0),
         "carr": str(base_insert.get("carr") or ""),
         "notes": notes,
@@ -1124,28 +1353,12 @@ def _dms_success(result: Any) -> bool:
     return True
 
 
-@app.get("/api/dms/schedule-upload-model")
-def dms_schedule_upload_model():
-    session = _ensure_dms_session()
-    model = _dms_schedule_upload_model(session)
-    insert_model = model.get("insert") if isinstance(model, dict) else None
-    buck = session.get("buck") if isinstance(session.get("buck"), dict) else {}
-    return {
-        "ok": not bool(isinstance(model, dict) and model.get("_error")),
-        "model_error": model.get("_error") if isinstance(model, dict) else "DMS upload model was not returned.",
-        "insert_fields": sorted(insert_model.keys()) if isinstance(insert_model, dict) else [],
-        "areas": buck.get("areas") if isinstance(buck, dict) else [],
-    }
-
-
-@app.post("/api/dms/schedule-upload")
-def dms_schedule_upload(body: DmsScheduleUploadIn):
+def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn) -> Dict[str, Any]:
     if not body.rows:
         raise HTTPException(status_code=400, detail="No schedule rows were provided.")
     if len(body.rows) > 300:
         raise HTTPException(status_code=400, detail="Schedule upload is limited to 300 rows at a time.")
 
-    session = _ensure_dms_session()
     business_date = _dms_business_date(body.business_date)
     upload_model = _dms_schedule_upload_model(session)
     model_error = upload_model.get("_error") if isinstance(upload_model, dict) else "DMS upload model was not returned."
@@ -1225,6 +1438,46 @@ def dms_schedule_upload(body: DmsScheduleUploadIn):
         "model_error": model_error,
         "results": results,
     }
+
+
+@app.get("/api/dms/schedule-upload-model")
+def dms_schedule_upload_model():
+    session = _ensure_dms_session()
+    model = _dms_schedule_upload_model(session)
+    insert_model = model.get("insert") if isinstance(model, dict) else None
+    buck = session.get("buck") if isinstance(session.get("buck"), dict) else {}
+    return {
+        "ok": not bool(isinstance(model, dict) and model.get("_error")),
+        "model_error": model.get("_error") if isinstance(model, dict) else "DMS upload model was not returned.",
+        "insert_fields": sorted(insert_model.keys()) if isinstance(insert_model, dict) else [],
+        "areas": buck.get("areas") if isinstance(buck, dict) else [],
+    }
+
+
+@app.post("/api/dms/schedule-upload")
+def dms_schedule_upload(body: DmsScheduleUploadIn):
+    session = _ensure_dms_session()
+    return _run_dms_schedule_upload(session, body)
+
+
+@app.get("/api/dms/mn/schedule-upload-model")
+def dms_mn_schedule_upload_model():
+    session = _ensure_dms_mn_session()
+    model = _dms_schedule_upload_model(session)
+    insert_model = model.get("insert") if isinstance(model, dict) else None
+    buck = session.get("buck") if isinstance(session.get("buck"), dict) else {}
+    return {
+        "ok": not bool(isinstance(model, dict) and model.get("_error")),
+        "model_error": model.get("_error") if isinstance(model, dict) else "DMS upload model was not returned.",
+        "insert_fields": sorted(insert_model.keys()) if isinstance(insert_model, dict) else [],
+        "areas": buck.get("areas") if isinstance(buck, dict) else [],
+    }
+
+
+@app.post("/api/dms/mn/schedule-upload")
+def dms_mn_schedule_upload(body: DmsScheduleUploadIn):
+    session = _ensure_dms_mn_session()
+    return _run_dms_schedule_upload(session, body)
 
 @app.post("/api/dms/stamp")
 def dms_stamp(body: DmsStampIn):
