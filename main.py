@@ -1519,6 +1519,15 @@ def _schedule_dock_type(row: DmsScheduleRowIn, use_oks_rules: bool = True) -> st
         return "Plants"
     if any(word in dock_category_text for word in ("produce", "fruit", "fruits", "veg", "vegetable", "vegetables", "veggie", "veggies", "salad")):
         return "Produce"
+    # OKS DMS has a dedicated FRESH MEAT area distinct from COOLER. Only the
+    # Product Category column decides this -- not supplier/protection/dock,
+    # which just signal temperature zone -- per James: "if it says meat or
+    # fish in that column, upload it as dock type Fresh Meat." Minnesota does
+    # not use this bucket (its area comes from the deterministic
+    # protection/dock table instead), so this stays OKS-only.
+    category_text = (row.product_category or "").lower()
+    if use_oks_rules and any(word in category_text for word in ("meat", "fish")):
+        return "Fresh Meat"
     if any(word in all_text for word in ("freezer", "frozen", "freeze")):
         return "Freezer"
     if any(word in all_text for word in ("cooler", "chill", "chiller", "dairy", "meat", "refrigerated")):
