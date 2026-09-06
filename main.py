@@ -1539,20 +1539,18 @@ _MN_DMS_AREA_MAP: Dict[Any, str] = {
     ("ambient", "slip sheet"):           "SLIP SHEET",
     ("chiller", "std. trailer cooler"):  "CHL",
     ("chiller", "produce"):              "PRODUCE",
+    ("chiller", "fresh meat"):           "FRESH MEAT",
     ("chiller", "eggs"):                 "EGGS",
     ("freezer", "std. trailer freezer"): "FRZ",
 }
 _MN_DMS_PROT_FALLBACK: Dict[str, str] = {"ambient": "AMB", "chiller": "CHL", "freezer": "FRZ"}
-# Dock category alone can also signal these areas, regardless of protection
+# Dock category alone can also signal these two areas, regardless of protection
 # level (confirmed with James: dock type "International" / "Plants/Flowers").
-# Fresh Meat is dock-only too, so a row still lands on FRESH MEAT even if the
-# schedule file's protection column isn't "chiller" for that row.
 _MN_DMS_DOCK_ONLY_MAP: Dict[str, str] = {
     "international":   "INTERNATIONAL",
     "plants/flowers":   "PLANTS/FLOWERS",
     "plants":           "PLANTS/FLOWERS",
     "flowers":          "PLANTS/FLOWERS",
-    "fresh meat":       "FRESH MEAT",
 }
 
 
