@@ -6282,10 +6282,190 @@
             <div class="metric-note">Unload finish or receiving finish is marked.</div>
           </article>
         </div>
+
+        <div class="portal-zone-label">Operations cockpit</div>
+        <div class="portal-ops-grid">
+          <section class="portal-action-panel" aria-labelledby="portalMnActionTitle">
+            <div class="portal-action-head">
+              <div>
+                <div class="portal-action-title" id="portalMnActionTitle">Needs Attention Now</div>
+                <div class="portal-action-sub">Priority list for lead and clerk follow-up.</div>
+              </div>
+              <div class="portal-action-count" id="portalMnActionCount">0</div>
+            </div>
+            <div class="portal-action-list" id="portalMnActionList">
+              <div class="portal-action-empty">No active action items. Continue monitoring the board.</div>
+            </div>
+          </section>
+
+          <section class="portal-client-panel" aria-labelledby="portalMnClientTitle">
+            <div class="portal-client-head">
+              <div>
+                <div class="portal-client-title" id="portalMnClientTitle">Supervisor / Client View</div>
+                <div class="portal-client-sub">Read-only shift summary without manual controls.</div>
+              </div>
+            </div>
+            <div class="portal-client-grid">
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientScheduled">0</div><div class="lbl">Scheduled</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientArrived">0</div><div class="lbl">Arrived</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientDone">0</div><div class="lbl">Done</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientOpen">0</div><div class="lbl">Open</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientRisk">0</div><div class="lbl">At Risk</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientLate">0</div><div class="lbl">Late / No-show</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientProjected">--</div><div class="lbl">Projected Finish</div></div>
+            </div>
+            <div class="portal-client-message" id="portalMnClientMessage">Waiting for live data.</div>
+          </section>
+        </div>
+
+        <div class="portal-zone-label">Shift health</div>
+        <div class="summary-grid" style="margin:10px 0;">
+          <article class="metric-card" data-accent="blue">
+            <div class="metric-label">Trucks Active</div>
+            <div class="metric-value" id="portalMnActiveCount">0</div>
+            <div class="metric-note">On dock, not yet finished.</div>
+          </article>
+          <article class="metric-card" data-accent="orange">
+            <div class="metric-label">Urgent / Warning</div>
+            <div class="metric-value" id="portalMnUrgentCount">0</div>
+            <div class="metric-note">Under 60 min to finish receiving.</div>
+          </article>
+          <article class="metric-card" data-accent="red">
+            <div class="metric-label">In Detention</div>
+            <div class="metric-value" id="portalMnDetentionCount">0</div>
+            <div class="metric-note">Free time window exceeded.</div>
+          </article>
+          <article class="metric-card" id="portalMn5amCard" data-accent="purple" style="transition:border-color 0.3s;">
+            <div class="metric-label">5:00 AM Target</div>
+            <div class="metric-value" id="portalMn5amCount" style="font-size:1.3em;">--</div>
+            <div class="metric-note" id="portalMn5amNote">Must start receiving by 5 AM.</div>
+          </article>
+          <article class="metric-card" id="portalMnEstCard" data-accent="teal" style="transition:border-color 0.3s;">
+            <div class="metric-label">Projected Finish</div>
+            <div class="metric-value" id="portalMnEstComplete" style="font-size:1.3em; transition:color 0.3s;">--</div>
+            <div class="metric-note" id="portalMnEstNote">Based on avg turn time.</div>
+          </article>
+          <article class="metric-card" data-accent="green">
+            <div class="metric-label">Trucks Done Today</div>
+            <div class="metric-value" id="portalMnDoneCount">0</div>
+            <div class="metric-note" id="portalMnProgressNote">of 0 today.</div>
+          </article>
+          <article class="metric-card" data-accent="gray" id="portalMnPaceCard">
+            <div class="metric-label">Live Pace</div>
+            <div class="metric-value" id="portalMnAvgTurn" style="transition:color 0.3s;">--</div>
+            <div class="metric-note" id="portalMnPaceNote">Avg turn: --</div>
+          </article>
+        </div>
+
+        <div id="portalMnPaceAlert" class="portal-pace-alert" style="display:none;"></div>
+
+        <div class="portal-zone-label">Forward look</div>
+        <div class="portal-ops-grid">
+          <section class="portal-client-panel" aria-labelledby="portalMnForecastTitle">
+            <div class="portal-client-head">
+              <div>
+                <div class="portal-client-title" id="portalMnForecastTitle">Detention Risk Forecast</div>
+                <div class="portal-client-sub">Predicts which active trucks are most likely to hit detention before they actually do.</div>
+              </div>
+              <div class="portal-action-count" id="portalMnForecastCount">0</div>
+            </div>
+            <div class="portal-forecast-list" id="portalMnForecastList">
+              <div class="portal-forecast-empty">No forecast yet. Sync Minnesota DMS first.</div>
+            </div>
+          </section>
+
+          <section class="portal-client-panel" aria-labelledby="portalMnScorecardTitle">
+            <div class="portal-client-head">
+              <div>
+                <div class="portal-client-title" id="portalMnScorecardTitle">End-of-Shift Scorecard</div>
+                <div class="portal-client-sub">Quick manager readout for service level, delays, and area performance.</div>
+              </div>
+            </div>
+            <div class="portal-mini-grid">
+              <div class="portal-mini-card good"><div class="val" id="portalMnScoreDonePct">0%</div><div class="lbl">Finished</div></div>
+              <div class="portal-mini-card warn"><div class="val" id="portalMnScoreRiskCount">0</div><div class="lbl">Risk Count</div></div>
+              <div class="portal-mini-card warn"><div class="val" id="portalMnScoreLateCount">0</div><div class="lbl">Late / No-show</div></div>
+              <div class="portal-mini-card"><div class="val" id="portalMnScoreWorstArea">--</div><div class="lbl">Worst Area</div></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="portal-charts-row" id="portalMnChartsRow" style="display:none;">
+          <div class="portal-chart-card" style="text-align:center;">
+            <div class="portal-chart-title">Shift Progress</div>
+            <div class="portal-ring-wrap">
+              <svg class="portal-ring" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                <circle class="portal-ring-track" cx="40" cy="40" r="34"/>
+                <circle class="portal-ring-fill" id="portalMnRingFill" cx="40" cy="40" r="34"/>
+              </svg>
+              <div class="portal-ring-center">
+                <div class="portal-ring-pct" id="portalMnRingPct">0%</div>
+                <div class="portal-ring-sub" id="portalMnRingSubPct">done</div>
+              </div>
+            </div>
+            <div id="portalMnProgressLabel" style="font-size:0.75em;color:var(--muted,#888);margin-top:2px;"></div>
+          </div>
+
+          <div class="portal-chart-card">
+            <div class="portal-chart-title">Status Breakdown</div>
+            <div class="portal-breakdown-bar" id="portalMnBreakdownBar">
+              <div class="portal-breakdown-seg seg-complete"  id="portalMnSegComplete"  style="width:0%;" title="Complete"></div>
+              <div class="portal-breakdown-seg seg-active"    id="portalMnSegActive"    style="width:0%;" title="Active"></div>
+              <div class="portal-breakdown-seg seg-urgent"    id="portalMnSegUrgent"    style="width:0%;" title="Urgent/Warning"></div>
+              <div class="portal-breakdown-seg seg-detention" id="portalMnSegDetention" style="width:0%;" title="In Detention"></div>
+            </div>
+            <div class="portal-breakdown-legend" id="portalMnBreakdownLegend"></div>
+            <div id="portalMnProgressPace" style="font-size:0.75em;color:var(--muted,#888);margin-top:8px;"></div>
+          </div>
+
+          <div class="portal-chart-card">
+            <div class="portal-chart-title">Shift Timeline - 7 PM to 5 AM</div>
+            <div class="portal-timeline-track" id="portalMnTimelineTrack">
+              <div class="portal-timeline-elapsed" id="portalMnTimelineElapsed" style="width:0%;"></div>
+              <div class="portal-timeline-needle"  id="portalMnTimelineNeedle"  style="left:0%;"></div>
+              <div class="portal-timeline-est"     id="portalMnTimelineEst"     style="left:0%; display:none;"></div>
+            </div>
+            <div class="portal-timeline-labels">
+              <span>7 PM</span>
+              <span id="portalMnTimelineNowLabel">Now</span>
+              <span>5 AM</span>
+            </div>
+            <div class="portal-timeline-pace" id="portalMnTimelinePace"></div>
+            <div class="portal-timeline-stats">
+              <div class="portal-timeline-stat"><strong id="portalMnTimelineScheduled">0</strong><span>Scheduled</span></div>
+              <div class="portal-timeline-stat"><strong id="portalMnTimelineArrived">0</strong><span>Arrived</span></div>
+              <div class="portal-timeline-stat"><strong id="portalMnTimelineDone">0</strong><span>Done</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="portal-zone-label">Drill-down views</div>
         <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
           <button type="button" class="portal-view-btn active" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
         </div>
+
+        <section id="portalMnClientView" style="display:none; margin-top:10px;">
+          <div class="portal-client-panel">
+            <div class="portal-client-head">
+              <div>
+                <div class="portal-client-title">Supervisor View</div>
+                <div class="portal-client-sub">Clean manager view with totals, risks, late trucks, and projected finish.</div>
+              </div>
+            </div>
+            <div class="portal-client-grid">
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewScheduled">0</div><div class="lbl">Scheduled</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewArrived">0</div><div class="lbl">Arrived</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewDone">0</div><div class="lbl">Done</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewOpen">0</div><div class="lbl">Open</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewRisk">0</div><div class="lbl">Needs Attention</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewLate">0</div><div class="lbl">Late / No-show</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewProjected">--</div><div class="lbl">Projected Finish</div></div>
+            </div>
+            <div class="portal-client-message" id="portalMnClientViewMessage">Waiting for live data.</div>
+          </div>
+        </section>
 
         <section id="portalMnBoardView" style="margin-top:10px;">
           <section class="table-wrap" aria-labelledby="portalMnBoardTitle">
@@ -7347,6 +7527,15 @@
         selectedBusinessDate: safeLocalStorageGet("portalMnBusinessDate") || "",
         livePollMs: 60000,
         credentialBlocked: false,
+        freeTimeMinutes: 120,
+        totalExpected: 0,
+        rejectedCount: 0,
+        noShowCount: 0,
+        noShowTrucks: [],
+        areaSummary: [],
+        estMs: null,
+        notifiedBehind: false,
+        prevStatuses: {},
         scheduleUpload: {
           fileName: "",
           rows: [],
@@ -7674,6 +7863,66 @@
       portalMnDoorRange: document.getElementById("portalMnDoorRange"),
       portalMnScorecardDoors: document.getElementById("portalMnScorecardDoors"),
       portalMnBoardMeta: document.getElementById("portalMnBoardMeta"),
+      portalMnActionTitle: document.getElementById("portalMnActionTitle"),
+      portalMnActionCount: document.getElementById("portalMnActionCount"),
+      portalMnActionList: document.getElementById("portalMnActionList"),
+      portalMnClientScheduled: document.getElementById("portalMnClientScheduled"),
+      portalMnClientArrived: document.getElementById("portalMnClientArrived"),
+      portalMnClientDone: document.getElementById("portalMnClientDone"),
+      portalMnClientOpen: document.getElementById("portalMnClientOpen"),
+      portalMnClientRisk: document.getElementById("portalMnClientRisk"),
+      portalMnClientLate: document.getElementById("portalMnClientLate"),
+      portalMnClientProjected: document.getElementById("portalMnClientProjected"),
+      portalMnClientMessage: document.getElementById("portalMnClientMessage"),
+      portalMnClientViewScheduled: document.getElementById("portalMnClientViewScheduled"),
+      portalMnClientViewArrived: document.getElementById("portalMnClientViewArrived"),
+      portalMnClientViewDone: document.getElementById("portalMnClientViewDone"),
+      portalMnClientViewOpen: document.getElementById("portalMnClientViewOpen"),
+      portalMnClientViewRisk: document.getElementById("portalMnClientViewRisk"),
+      portalMnClientViewLate: document.getElementById("portalMnClientViewLate"),
+      portalMnClientViewProjected: document.getElementById("portalMnClientViewProjected"),
+      portalMnClientViewMessage: document.getElementById("portalMnClientViewMessage"),
+      portalMnClientView: document.getElementById("portalMnClientView"),
+      portalMnActiveCount: document.getElementById("portalMnActiveCount"),
+      portalMnUrgentCount: document.getElementById("portalMnUrgentCount"),
+      portalMnDetentionCount: document.getElementById("portalMnDetentionCount"),
+      portalMn5amCard: document.getElementById("portalMn5amCard"),
+      portalMn5amCount: document.getElementById("portalMn5amCount"),
+      portalMn5amNote: document.getElementById("portalMn5amNote"),
+      portalMnEstCard: document.getElementById("portalMnEstCard"),
+      portalMnEstComplete: document.getElementById("portalMnEstComplete"),
+      portalMnEstNote: document.getElementById("portalMnEstNote"),
+      portalMnDoneCount: document.getElementById("portalMnDoneCount"),
+      portalMnProgressNote: document.getElementById("portalMnProgressNote"),
+      portalMnPaceCard: document.getElementById("portalMnPaceCard"),
+      portalMnAvgTurn: document.getElementById("portalMnAvgTurn"),
+      portalMnPaceNote: document.getElementById("portalMnPaceNote"),
+      portalMnPaceAlert: document.getElementById("portalMnPaceAlert"),
+      portalMnForecastCount: document.getElementById("portalMnForecastCount"),
+      portalMnForecastList: document.getElementById("portalMnForecastList"),
+      portalMnScoreDonePct: document.getElementById("portalMnScoreDonePct"),
+      portalMnScoreRiskCount: document.getElementById("portalMnScoreRiskCount"),
+      portalMnScoreLateCount: document.getElementById("portalMnScoreLateCount"),
+      portalMnScoreWorstArea: document.getElementById("portalMnScoreWorstArea"),
+      portalMnChartsRow: document.getElementById("portalMnChartsRow"),
+      portalMnRingFill: document.getElementById("portalMnRingFill"),
+      portalMnRingPct: document.getElementById("portalMnRingPct"),
+      portalMnRingSubPct: document.getElementById("portalMnRingSubPct"),
+      portalMnProgressLabel: document.getElementById("portalMnProgressLabel"),
+      portalMnSegComplete: document.getElementById("portalMnSegComplete"),
+      portalMnSegActive: document.getElementById("portalMnSegActive"),
+      portalMnSegUrgent: document.getElementById("portalMnSegUrgent"),
+      portalMnSegDetention: document.getElementById("portalMnSegDetention"),
+      portalMnBreakdownLegend: document.getElementById("portalMnBreakdownLegend"),
+      portalMnProgressPace: document.getElementById("portalMnProgressPace"),
+      portalMnTimelineElapsed: document.getElementById("portalMnTimelineElapsed"),
+      portalMnTimelineNeedle: document.getElementById("portalMnTimelineNeedle"),
+      portalMnTimelineEst: document.getElementById("portalMnTimelineEst"),
+      portalMnTimelineNowLabel: document.getElementById("portalMnTimelineNowLabel"),
+      portalMnTimelinePace: document.getElementById("portalMnTimelinePace"),
+      portalMnTimelineScheduled: document.getElementById("portalMnTimelineScheduled"),
+      portalMnTimelineArrived: document.getElementById("portalMnTimelineArrived"),
+      portalMnTimelineDone: document.getElementById("portalMnTimelineDone"),
       portalMnSchedulePanel: document.getElementById("portalMnSchedulePanel"),
       portalMnScheduleFile: document.getElementById("portalMnScheduleFile"),
       portalMnScheduleSkipExisting: document.getElementById("portalMnScheduleSkipExisting"),
@@ -13841,6 +14090,12 @@
         state.portalMn.liveUpdatedAt = data.updated_at || new Date().toISOString();
         state.portalMn.liveError = "";
         state.portalMn.credentialBlocked = false;
+        state.portalMn.totalExpected = (typeof data.total_expected === "number")
+          ? data.total_expected : state.portalMn.scheduledRows.length;
+        state.portalMn.rejectedCount = data.rejected_count || 0;
+        state.portalMn.noShowTrucks = Array.isArray(data.no_show_trucks) ? data.no_show_trucks : [];
+        state.portalMn.noShowCount = Math.max(data.no_show_count || 0, state.portalMn.noShowTrucks.length);
+        state.portalMn.areaSummary = Array.isArray(data.area_summary) ? data.area_summary : [];
         const loc = data.location || {};
         const locName = loc.name || loc.locName || loc.cCode || "Minnesota";
         portalMnSetStatus("Live Minnesota DMS active: " + state.portalMn.liveRows.length + " arrived truck(s), " + state.portalMn.scheduledRows.length + " scheduled for business date " + (data.business_date || selectedDate) + " at " + locName + ".", "good");
@@ -13868,6 +14123,515 @@
         return [row.ref, row.po, row.supplier, row.carrier, row.door, row.area, row.statusText]
           .join(" ").toLowerCase().includes(term);
       });
+    }
+
+    // Minnesota shift window: 7 PM the night before -> 5 AM goal on the
+    // selected DMS business date. Mirrors portalShiftStartMs/portalShiftGoalMs
+    // for OKS, but MN's target is 5 AM instead of 4 AM.
+    function portalMnBusinessDateHourMs(hour) {
+      const value = portalMnSelectedBusinessDate() || portalMnDefaultBusinessDate();
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (!match) return null;
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, 0, 0, 0).getTime();
+    }
+
+    function portalMnShiftStartMs() {
+      const value = portalMnSelectedBusinessDate() || portalMnDefaultBusinessDate();
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+      if (!match) return null;
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - 1, 19, 0, 0, 0).getTime();
+    }
+
+    function portalMnShiftGoalMs() {
+      return portalMnBusinessDateHourMs(5);
+    }
+
+    function portalMnShiftClosedAfterMorning(nowMs) {
+      const cutoffMs = portalMnBusinessDateHourMs(9);
+      return Boolean(cutoffMs && nowMs >= cutoffMs);
+    }
+
+    // Mirrors portalCalcStatus for MN rows, which are always DMS-sourced and
+    // only carry Iso timestamps (no manual-entry path exists for MN yet).
+    function portalMnCalcStatus(row, freeTimeMs, now) {
+      const appointmentMs = portalIsoToMs(row.appointmentIso);
+      const checkInMs = portalIsoToMs(row.checkInIso);
+      const driverAtDoorMs = portalIsoToMs(row.driverAtDoorIso);
+      const unloadStartMs = portalIsoToMs(row.unloadStartIso);
+      const unloadFinishMs = portalIsoToMs(row.unloadFinishIso || row.receivingFinishIso || row.finishIso);
+      const base = { appointmentMs, checkInMs, driverAtDoorMs, unloadStartMs, unloadFinishMs, source: "DMS" };
+      if (unloadFinishMs) {
+        const startMs = checkInMs || appointmentMs || unloadFinishMs;
+        const turnMin = Math.round((unloadFinishMs - startMs) / 60000);
+        return Object.assign(base, { status: "complete", turnMin: Math.max(0, turnMin), msRemaining: null, countdownLabel: "Unload finished", countdownClass: "portal-countdown-active", minutesInDetention: null });
+      }
+      if (appointmentMs && driverAtDoorMs && !unloadStartMs) {
+        const startLateMin = Math.floor((now - appointmentMs) / 60000);
+        if (startLateMin >= 30) {
+          return Object.assign(base, { status: "startsoon", turnMin: null, msRemaining: null, countdownLabel: "Needs unload start now", countdownClass: "portal-countdown-urgent", minutesInDetention: null, startLateMin });
+        }
+      }
+      const clockBase = appointmentMs || checkInMs;
+      if (!clockBase) {
+        return Object.assign(base, { status: "waiting", turnMin: null, msRemaining: null, countdownLabel: "Waiting for appointment", countdownClass: "", minutesInDetention: null });
+      }
+      const msRemaining = clockBase + freeTimeMs - now;
+      const minsRem = Math.round(msRemaining / 60000);
+      const exemptReason = portalDetentionExempt(base);
+      if (exemptReason) {
+        return Object.assign(base, { status: "active", msRemaining, exempt: exemptReason, countdownLabel: "No detention (" + exemptReason + ")", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null });
+      }
+      if (msRemaining < 0) {
+        const det = Math.abs(minsRem);
+        return Object.assign(base, { status: "detention", msRemaining, countdownLabel: "DETENTION +" + Math.floor(det/60) + "h " + (det%60) + "m", countdownClass: "portal-countdown-detention", minutesInDetention: det, turnMin: null });
+      }
+      if (minsRem < 30) return Object.assign(base, { status: "urgent", msRemaining, countdownLabel: minsRem + " min before detention", countdownClass: "portal-countdown-urgent", minutesInDetention: null, turnMin: null });
+      if (minsRem < 60) return Object.assign(base, { status: "warning", msRemaining, countdownLabel: minsRem + " min before detention", countdownClass: "portal-countdown-warning", minutesInDetention: null, turnMin: null });
+      return Object.assign(base, { status: "active", msRemaining, countdownLabel: Math.floor(minsRem/60) + "h " + (minsRem%60) + "m before detention", countdownClass: "portal-countdown-active", minutesInDetention: null, turnMin: null });
+    }
+
+    function portalMnEnrichedRows() {
+      const freeTimeMs = (state.portalMn.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      return (state.portalMn.liveRows || []).map(function(row) {
+        const calc = portalMnCalcStatus(row, freeTimeMs, now);
+        return Object.assign({}, row, calc);
+      });
+    }
+
+    function portalMnBuildScorecard(rows) {
+      rows = rows || [];
+      const scheduled = Math.max(rows.length, Number(state.portalMn.totalExpected || 0));
+      const done = rows.filter(function(r) { return r.status === "complete"; }).length;
+      const risk = rows.filter(function(r) { return r.status === "detention" || r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
+      const areas = Array.isArray(state.portalMn.areaSummary) ? state.portalMn.areaSummary : [];
+      const areasWithVolume = areas.filter(function(a) { return Number(a.scheduled || 0) > 0; });
+      areasWithVolume.sort(function(a, b) {
+        const ap = a.scheduled ? (a.completed || 0) / a.scheduled : 1;
+        const bp = b.scheduled ? (b.completed || 0) / b.scheduled : 1;
+        if (ap !== bp) return ap - bp;
+        return (b.scheduled || 0) - (a.scheduled || 0);
+      });
+      const worst = areasWithVolume[0];
+      return {
+        scheduled,
+        done,
+        donePct: scheduled ? Math.round(done / scheduled * 100) : 0,
+        risk,
+        lateNoShow: Math.max(state.portalMn.noShowCount || 0, (state.portalMn.noShowTrucks || []).length),
+        worstArea: worst ? String(worst.area || "--") : "--"
+      };
+    }
+
+    function portalMnRenderScorecard(rows) {
+      const s = portalMnBuildScorecard(rows);
+      [
+        [els.portalMnScoreDonePct, s.donePct + "%"],
+        [els.portalMnScoreRiskCount, s.risk],
+        [els.portalMnScoreLateCount, s.lateNoShow],
+        [els.portalMnScoreWorstArea, s.worstArea]
+      ].forEach(function(pair) { if (pair[0]) pair[0].textContent = pair[1]; });
+      return s;
+    }
+
+    function portalMnRenderActionQueue(rows, now) {
+      if (!els.portalMnActionList || !els.portalMnActionCount) return;
+      const items = portalBuildActionItems(rows, now);
+      els.portalMnActionCount.textContent = items.length;
+      els.portalMnActionCount.className = "portal-action-count" + (items.some(function(i) { return i.sev === "high"; }) ? " hot" : items.length ? " warn" : "");
+      if (!items.length) {
+        els.portalMnActionList.innerHTML = '<div class="portal-action-empty">No active action items. Continue monitoring the board.</div>';
+        return;
+      }
+      els.portalMnActionList.innerHTML = items.map(function(item) {
+        return '<div class="portal-action-item ' + escapeHtml(item.sev) + '">'
+          + '<div class="portal-action-top"><span>' + escapeHtml(item.title) + '</span><span>' + (item.sev === "high" ? "High" : "Watch") + '</span></div>'
+          + '<div class="portal-action-meta">' + escapeHtml(item.meta) + '</div>'
+          + '</div>';
+      }).join("");
+    }
+
+    function portalMnRenderRiskForecast(rows, now, freeTimeMs) {
+      if (!els.portalMnForecastList || !els.portalMnForecastCount) return [];
+      const forecast = portalBuildRiskForecast(rows, now, freeTimeMs);
+      els.portalMnForecastCount.textContent = forecast.length;
+      els.portalMnForecastCount.className = "portal-action-count" + (forecast.some(function(f) { return f.level === "high"; }) ? " hot" : forecast.length ? " warn" : "");
+      if (!forecast.length) {
+        els.portalMnForecastList.innerHTML = '<div class="portal-forecast-empty">No likely detention misses based on current stamps and pace.</div>';
+        return forecast;
+      }
+      els.portalMnForecastList.innerHTML = forecast.map(function(f) {
+        const r = f.truck;
+        const title = portalTruckName(r);
+        const lvl = f.level === "high" ? "forecast-high" : f.level === "watch" ? "forecast-watch" : "";
+        const lateText = f.projectedLateBy > 0 ? "Projected " + f.projectedLateBy + " min late" : f.minsLeft + " min left";
+        const ageText = f.ageMin != null ? " | " + portalDoorAgeLabel(f.ageMin) : "";
+        return '<div class="portal-forecast-item ' + lvl + '">'
+          + '<div class="portal-forecast-top"><span>' + escapeHtml(title) + '</span><span>' + f.score + '% risk</span></div>'
+          + '<div class="portal-forecast-meta">' + escapeHtml(lateText + " | " + f.reason + ageText) + '</div>'
+          + '</div>';
+      }).join("");
+      return forecast;
+    }
+
+    function portalMnRenderClientSummary(stats) {
+      const scheduled = stats.shiftTotal || 0;
+      const arrived = stats.arrived || 0;
+      const done = stats.done || 0;
+      const risk = stats.risk || 0;
+      const late = stats.lateNoShow || 0;
+      const projected = stats.projectedFinish || "--";
+      const open = Math.max(0, scheduled - done);
+      [
+        [els.portalMnClientScheduled, scheduled],
+        [els.portalMnClientArrived, arrived],
+        [els.portalMnClientDone, done],
+        [els.portalMnClientOpen, open],
+        [els.portalMnClientRisk, risk],
+        [els.portalMnClientLate, late],
+        [els.portalMnClientProjected, projected],
+        [els.portalMnClientViewScheduled, scheduled],
+        [els.portalMnClientViewArrived, arrived],
+        [els.portalMnClientViewDone, done],
+        [els.portalMnClientViewOpen, open],
+        [els.portalMnClientViewRisk, risk],
+        [els.portalMnClientViewLate, late],
+        [els.portalMnClientViewProjected, projected]
+      ].forEach(function(pair) { if (pair[0]) pair[0].textContent = pair[1]; });
+      const pct = scheduled ? Math.round(done / scheduled * 100) : 0;
+      let msg = "No live DMS shift loaded yet.";
+      let cls = "portal-client-message";
+      if (scheduled > 0 && risk === 0 && !stats.behindMin) {
+        msg = "Shift is on track. " + pct + "% complete, " + arrived + " arrived, " + open + " still open.";
+      } else if (scheduled > 0 && stats.behindMin > 0) {
+        msg = "Shift is projected behind by " + stats.behindMin + " min. " + risk + " active truck(s) need attention. Late/no-show trucks are separated.";
+        cls += stats.behindMin > 30 ? " bad" : " warn";
+      } else if (scheduled > 0 && risk > 0) {
+        msg = risk + " active truck(s) need attention. " + pct + "% complete, " + open + " still open.";
+        cls += risk >= 3 ? " bad" : " warn";
+      }
+      [els.portalMnClientMessage, els.portalMnClientViewMessage].forEach(function(el) {
+        if (!el) return;
+        el.className = cls;
+        el.textContent = msg;
+      });
+    }
+
+    // Supervisor dashboard for Minnesota: summary cards, pace alert, action
+    // queue, detention forecast, scorecard, and charts row -- mirrors
+    // renderPortalBoard's metrics section for OKS, adapted to MN's simpler
+    // DMS-only row shape and 5 AM goal instead of 4 AM.
+    function renderPortalMnDashboard() {
+      const freeTimeMs = (state.portalMn.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      const enriched = portalMnEnrichedRows();
+
+      const active    = enriched.filter(function(r) { return r.status === "active"; });
+      const warning   = enriched.filter(function(r) { return r.status === "warning"; });
+      const urgent    = enriched.filter(function(r) { return r.status === "urgent"; });
+      const startSoon = enriched.filter(function(r) { return r.status === "startsoon"; });
+      const detention = enriched.filter(function(r) { return r.status === "detention"; });
+      const complete  = enriched.filter(function(r) { return r.status === "complete"; });
+
+      const scheduledDmsTotal = Math.max(0, parseInt(state.portalMn.totalExpected || 0, 10) || 0);
+      const shiftTotal = Math.max(enriched.length, scheduledDmsTotal);
+      const runningTrucks = [...active, ...startSoon, ...urgent, ...warning, ...detention];
+      const morningClosedNoOpenArrivals = portalMnShiftClosedAfterMorning(now) && runningTrucks.length === 0;
+
+      if (els.portalMnActiveCount)    els.portalMnActiveCount.textContent    = active.length + urgent.length + warning.length + detention.length;
+      if (els.portalMnUrgentCount)    els.portalMnUrgentCount.textContent    = startSoon.length + urgent.length + warning.length;
+      if (els.portalMnDetentionCount) els.portalMnDetentionCount.textContent = detention.length;
+      if (els.portalMnDoneCount)      els.portalMnDoneCount.textContent      = complete.length;
+      if (els.portalMnProgressNote)   els.portalMnProgressNote.textContent   = "of " + shiftTotal + " scheduled today.";
+
+      portalMnRenderActionQueue(enriched, now);
+      const forecast = portalMnRenderRiskForecast(enriched, now, freeTimeMs);
+      const scorecard = portalMnRenderScorecard(enriched);
+
+      // 5AM cutoff tracker
+      if (els.portalMn5amCard && els.portalMn5amCount && els.portalMn5amNote) {
+        const cutoff5am = portalMnShiftGoalMs() || (function() { const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime() + 10*3600000; })();
+        const msTo5am = cutoff5am - now;
+        const notStarted = enriched.filter(function(t) { return t.status !== "complete" && !t.checkInMs; });
+        const n = notStarted.length;
+        if (morningClosedNoOpenArrivals) {
+          els.portalMn5amCount.textContent = "Closed";
+          els.portalMn5amCount.style.color = "#38a169";
+          els.portalMn5amNote.textContent = "Morning cutoff passed  -  no arrived trucks still open.";
+          els.portalMn5amCard.style.borderColor = "#38a169";
+        } else if (n === 0 && enriched.length > 0) {
+          els.portalMn5amCount.textContent = "OK";
+          els.portalMn5amCount.style.color = "#38a169";
+          els.portalMn5amNote.textContent = "All trucks started receiving.";
+          els.portalMn5amCard.style.borderColor = "#38a169";
+        } else if (msTo5am <= 0) {
+          els.portalMn5amCount.textContent = n > 0 ? n : " - ";
+          els.portalMn5amCount.style.color = n > 0 ? "#c53030" : "";
+          els.portalMn5amNote.textContent = n > 0 ? n + " truck(s) missed the 5AM cutoff" : "Cutoff passed.";
+          els.portalMn5amCard.style.borderColor = n > 0 ? "#c53030" : "";
+        } else {
+          const minsTo = Math.round(msTo5am / 60000);
+          const toStr = minsTo < 60 ? minsTo + " min" : Math.floor(minsTo/60) + "h " + (minsTo%60) + "m";
+          if (n === 0) {
+            els.portalMn5amCount.textContent = "OK";
+            els.portalMn5amCount.style.color = "#38a169";
+            els.portalMn5amNote.textContent = toStr + " to 5AM  -  all started.";
+            els.portalMn5amCard.style.borderColor = "#38a169";
+          } else {
+            els.portalMn5amCount.textContent = n;
+            if (minsTo <= 60) {
+              els.portalMn5amCount.style.color = "#e53e3e";
+              els.portalMn5amCard.style.borderColor = "#e53e3e";
+            } else if (minsTo <= 120) {
+              els.portalMn5amCount.style.color = "#d69e2e";
+              els.portalMn5amCard.style.borderColor = "#d69e2e";
+            } else {
+              els.portalMn5amCount.style.color = "";
+              els.portalMn5amCard.style.borderColor = "";
+            }
+            els.portalMn5amNote.textContent = n + " not started  -  " + toStr + " to 5AM";
+          }
+        }
+      }
+
+      // Avg turn time + live pace card
+      const completedWithTime = complete.filter(function(r) { return r.turnMin && r.turnMin > 0; });
+      const avgTurn = completedWithTime.length
+        ? Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMin; }, 0) / completedWithTime.length)
+        : 120;
+
+      const shiftStartMs = portalMnShiftStartMs() || (function() { const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime(); })();
+      const goal5amMs = portalMnShiftGoalMs() || (shiftStartMs + 10 * 3600000);
+      const shiftWindowHours = Math.max((goal5amMs - shiftStartMs) / 3600000, 1);
+      const timeRemainingToGoalMs = Math.max(0, goal5amMs - now);
+      const shiftElapsedMs = Math.max(0, now - shiftStartMs);
+
+      const estimateTotal = morningClosedNoOpenArrivals ? complete.length : Math.max(enriched.length, scheduledDmsTotal);
+      const scheduledNotOnBoard = morningClosedNoOpenArrivals ? 0 : Math.max(0, estimateTotal - enriched.length);
+      const stillRunning = morningClosedNoOpenArrivals ? 0 : Math.max(0, estimateTotal - complete.length);
+      let estMs = null;
+      let projectedFinishText = "--";
+      state.portalMn.estMs = null;
+      if (stillRunning > 0) {
+        const elapsedHoursForEstimate = Math.max(shiftElapsedMs / 3600000, 0.25);
+        const actualRateForEstimate = complete.length > 0 ? complete.length / elapsedHoursForEstimate : 0;
+        const plannedRateForEstimate = estimateTotal > 0 ? estimateTotal / shiftWindowHours : 0;
+        const fallbackRateForEstimate = avgTurn > 0 ? 60 / avgTurn : 0.25;
+        const effectiveRate = Math.max(actualRateForEstimate || 0, plannedRateForEstimate || 0, fallbackRateForEstimate || 0.25);
+        estMs = now + (stillRunning / effectiveRate) * 3600000;
+        state.portalMn.estMs = estMs;
+        const ef = new Date(estMs);
+        const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
+        const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
+        projectedFinishText = h12 + ":" + mm + " " + ampm;
+        const minsOut = Math.round((estMs - now) / 60000);
+        if (els.portalMnEstComplete) els.portalMnEstComplete.textContent = projectedFinishText;
+        if (els.portalMnEstNote) {
+          if (minsOut <= 0) {
+            els.portalMnEstNote.textContent = stillRunning + " expected truck(s) past deadline";
+          } else if (minsOut < 60) {
+            els.portalMnEstNote.textContent = stillRunning + " expected remaining  -  " + minsOut + " min away";
+          } else {
+            els.portalMnEstNote.textContent = stillRunning + " expected remaining  -  " + Math.floor(minsOut/60) + "h " + (minsOut%60) + "m away";
+          }
+          if (scheduledNotOnBoard > 0) {
+            els.portalMnEstNote.textContent += " (" + scheduledNotOnBoard + " not arrived yet)";
+          }
+          if (state.portalMn.noShowCount > 0) {
+            els.portalMnEstNote.textContent += " - excludes " + state.portalMn.noShowCount + " late/no-show";
+          }
+        }
+      } else if (enriched.length > 0 || morningClosedNoOpenArrivals) {
+        projectedFinishText = morningClosedNoOpenArrivals ? "Closed" : "Done OK";
+        if (els.portalMnEstComplete) els.portalMnEstComplete.textContent = morningClosedNoOpenArrivals ? "Closed" : "Done OK";
+        if (els.portalMnEstNote) els.portalMnEstNote.textContent = morningClosedNoOpenArrivals ? "Morning cutoff passed. Ready for the next live shift." : "All trucks completed!";
+      } else {
+        if (els.portalMnEstComplete) els.portalMnEstComplete.textContent = " - ";
+        if (els.portalMnEstNote) els.portalMnEstNote.textContent = "Sync Minnesota DMS above.";
+      }
+
+      const behindMs = (estMs !== null && stillRunning > 0) ? Math.max(0, estMs - goal5amMs) : 0;
+      portalMnRenderClientSummary({
+        shiftTotal: shiftTotal,
+        arrived: enriched.length,
+        done: complete.length,
+        risk: Math.max(startSoon.length + urgent.length + warning.length + detention.length, forecast.length),
+        behindMin: behindMs > 0 ? Math.round(behindMs / 60000) : 0,
+        lateNoShow: scorecard.lateNoShow,
+        projectedFinish: projectedFinishText
+      });
+      if (els.portalMnEstCard) {
+        if (enriched.length === 0) {
+          els.portalMnEstCard.style.borderColor = "";
+          if (els.portalMnEstComplete) els.portalMnEstComplete.style.color = "";
+        } else if (stillRunning === 0) {
+          els.portalMnEstCard.style.borderColor = "#38a169";
+          if (els.portalMnEstComplete) els.portalMnEstComplete.style.color = "#38a169";
+        } else if (behindMs > 1800000) {
+          els.portalMnEstCard.style.borderColor = "#e53e3e";
+          if (els.portalMnEstComplete) els.portalMnEstComplete.style.color = "#e53e3e";
+        } else if (behindMs > 0) {
+          els.portalMnEstCard.style.borderColor = "#d69e2e";
+          if (els.portalMnEstComplete) els.portalMnEstComplete.style.color = "#d69e2e";
+        } else {
+          els.portalMnEstCard.style.borderColor = "#38a169";
+          if (els.portalMnEstComplete) els.portalMnEstComplete.style.color = "#38a169";
+        }
+      }
+
+      // Live pace card
+      {
+        const elapsedH   = shiftElapsedMs / 3600000;
+        const actualRate = elapsedH > 0.25 ? complete.length / elapsedH : null;
+        const needRate   = timeRemainingToGoalMs > 0 ? stillRunning / (timeRemainingToGoalMs / 3600000) : null;
+        const avgTurnStr = Math.floor(avgTurn/60) + "h " + (avgTurn%60) + "m";
+        if (els.portalMnAvgTurn) {
+          if (actualRate !== null) {
+            els.portalMnAvgTurn.textContent = actualRate.toFixed(1) + " /hr";
+            const isGood = needRate === null || actualRate >= needRate;
+            const isWarn = !isGood && actualRate >= needRate * 0.8;
+            els.portalMnAvgTurn.style.color = isGood ? "#38a169" : isWarn ? "#d69e2e" : "#e53e3e";
+            if (els.portalMnPaceCard) {
+              els.portalMnPaceCard.style.borderLeftColor = isGood ? "#38a169" : isWarn ? "#d69e2e" : "#e53e3e";
+            }
+          } else {
+            els.portalMnAvgTurn.textContent = " - ";
+            els.portalMnAvgTurn.style.color = "";
+          }
+        }
+        if (els.portalMnPaceNote) {
+          const needStr = needRate !== null ? "  -  need " + needRate.toFixed(1) + " /hr" : "";
+          els.portalMnPaceNote.textContent = "Avg turn: " + avgTurnStr + needStr;
+        }
+      }
+
+      if (els.portalMnPaceAlert) {
+        const elapsedH = shiftElapsedMs / 3600000;
+        const actualRate = elapsedH > 0.25 ? (complete.length / elapsedH).toFixed(1) : null;
+        const needRate   = timeRemainingToGoalMs > 0 ? (stillRunning / (timeRemainingToGoalMs / 3600000)).toFixed(1) : null;
+        if (shiftTotal === 0) {
+          els.portalMnPaceAlert.style.display = "none";
+        } else if (morningClosedNoOpenArrivals) {
+          els.portalMnPaceAlert.className = "portal-pace-alert pace-good";
+          els.portalMnPaceAlert.style.display = "";
+          els.portalMnPaceAlert.innerHTML = "<strong>New day ready.</strong> Previous shift is closed; no arrived trucks are still open.";
+          state.portalMn.notifiedBehind = false;
+        } else if (stillRunning === 0) {
+          els.portalMnPaceAlert.className = "portal-pace-alert pace-good";
+          els.portalMnPaceAlert.style.display = "";
+          els.portalMnPaceAlert.innerHTML = "<strong>Complete.</strong> Shift finished before the 5:00 AM goal.";
+          state.portalMn.notifiedBehind = false;
+        } else if (behindMs > 0) {
+          const behindMin = Math.round(behindMs / 60000);
+          const ef2 = new Date(estMs);
+          const hh2 = ef2.getHours(), mm2 = String(ef2.getMinutes()).padStart(2,"0");
+          const ampm2 = hh2 >= 12 ? "PM" : "AM"; const h12b = hh2 % 12 || 12;
+          const paceStr = (actualRate && needRate) ? " Current pace: " + actualRate + " trucks/hr. Required pace: " + needRate + " trucks/hr to hit 5:00 AM." : "";
+          const isCrit = behindMin > 30;
+          els.portalMnPaceAlert.className = "portal-pace-alert " + (isCrit ? "pace-behind" : "pace-warning");
+          els.portalMnPaceAlert.style.display = "";
+          els.portalMnPaceAlert.innerHTML = isCrit
+            ? "<strong>Critical pace variance:</strong> estimated finish is " + behindMin + " minutes past the 5:00 AM goal. Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr
+            : "<strong>Pace warning:</strong> estimated finish is " + behindMin + " minutes past the 5:00 AM goal. Est. finish: " + h12b + ":" + mm2 + " " + ampm2 + "." + paceStr;
+          if (!state.portalMn.notifiedBehind) {
+            state.portalMn.notifiedBehind = true;
+            portalMaybeNotify("MN Portal - Pace Alert", "Estimated finish is " + behindMin + " minutes past the 5:00 AM goal. Est. finish " + h12b + ":" + mm2 + " " + ampm2 + ". Required pace: " + (needRate || "?") + " trucks/hr.");
+          }
+        } else {
+          const bufMin = Math.round((goal5amMs - estMs) / 60000);
+          const bufStr = bufMin < 60 ? bufMin + " min" : Math.floor(bufMin/60) + "h " + (bufMin%60) + "m";
+          const paceStr = actualRate ? " Pace: " + actualRate + " trucks/hr." : "";
+          els.portalMnPaceAlert.className = "portal-pace-alert pace-good";
+          els.portalMnPaceAlert.style.display = "";
+          els.portalMnPaceAlert.innerHTML = "<strong>On track.</strong> Projected finish is " + bufStr + " before the 5:00 AM goal." + paceStr;
+          state.portalMn.notifiedBehind = false;
+        }
+      }
+
+      // Charts row
+      if (els.portalMnChartsRow) {
+        if (shiftTotal > 0) {
+          els.portalMnChartsRow.style.display = "";
+          const boardTotal = Math.max(1, enriched.length);
+          const donePct = shiftTotal ? Math.round((complete.length / shiftTotal) * 100) : 0;
+
+          const CIRC = 213.6;
+          if (els.portalMnRingFill) {
+            const offset = CIRC * (1 - donePct / 100);
+            els.portalMnRingFill.style.strokeDashoffset = offset;
+            els.portalMnRingFill.style.stroke = donePct >= 100 ? "#38a169" : donePct >= 60 ? "#3182ce" : donePct >= 30 ? "#d69e2e" : "#e53e3e";
+          }
+          if (els.portalMnRingPct) els.portalMnRingPct.textContent = donePct + "%";
+          if (els.portalMnRingSubPct) els.portalMnRingSubPct.textContent = complete.length + " / " + shiftTotal;
+          if (els.portalMnProgressLabel) els.portalMnProgressLabel.textContent = complete.length + " done  -  " + Math.max(0, shiftTotal - complete.length) + " remaining of " + shiftTotal + " this shift";
+
+          const activeLen    = active.length + warning.length;
+          const urgentLen    = urgent.length + startSoon.length;
+          const detentionLen = detention.length;
+          const completeLen  = complete.length;
+          const seg = function(el, count) {
+            if (el) el.style.width = (count > 0 ? Math.max(4, Math.round(count / boardTotal * 100)) : 0) + "%";
+          };
+          seg(els.portalMnSegComplete,  completeLen);
+          seg(els.portalMnSegActive,    activeLen);
+          seg(els.portalMnSegUrgent,    urgentLen);
+          seg(els.portalMnSegDetention, detentionLen);
+          if (els.portalMnBreakdownLegend) {
+            const items = [
+              { color: "#38a169", label: "Complete",  count: completeLen  },
+              { color: "#3182ce", label: "Active",    count: activeLen    },
+              { color: "#d69e2e", label: "Urgent",    count: urgentLen    },
+              { color: "#e53e3e", label: "Detention", count: detentionLen },
+            ].filter(function(i) { return i.count > 0; });
+            els.portalMnBreakdownLegend.innerHTML = items.map(function(i) {
+              return '<span class="portal-legend-item"><span class="portal-legend-dot" style="background:' + i.color + ';"></span>' + i.label + ' (' + i.count + ')</span>';
+            }).join("");
+          }
+          if (els.portalMnProgressPace) {
+            const firstMs = enriched.reduce(function(mn, r) { return r.checkInMs && r.checkInMs < mn ? r.checkInMs : mn; }, Infinity);
+            const elapsedH2 = firstMs < Infinity ? (now - firstMs) / 3600000 : 0;
+            const rate = elapsedH2 > 0.1 ? (complete.length / elapsedH2).toFixed(1) : 0;
+            els.portalMnProgressPace.textContent = rate > 0 ? ("Pace: ~" + rate + " trucks / hr") : "";
+          }
+
+          const shiftTotalMs = Math.max(goal5amMs - shiftStartMs, 1);
+          const elapsedMs = Math.min(Math.max(now - shiftStartMs, 0), shiftTotalMs);
+          const shiftPct  = Math.round(elapsedMs / shiftTotalMs * 100);
+          if (els.portalMnTimelineElapsed) els.portalMnTimelineElapsed.style.width = shiftPct + "%";
+          if (els.portalMnTimelineNeedle)  els.portalMnTimelineNeedle.style.left  = shiftPct + "%";
+          if (els.portalMnTimelineNowLabel) {
+            els.portalMnTimelineNowLabel.textContent = new Date(now).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+          }
+          [
+            [els.portalMnTimelineScheduled, shiftTotal],
+            [els.portalMnTimelineArrived, enriched.length],
+            [els.portalMnTimelineDone, complete.length]
+          ].forEach(function(pair) { if (pair[0]) pair[0].textContent = pair[1]; });
+          if (els.portalMnTimelineEst && state.portalMn.estMs) {
+            const estPct = Math.round(Math.min(Math.max((state.portalMn.estMs - shiftStartMs) / shiftTotalMs * 100, 0), 100));
+            els.portalMnTimelineEst.style.left = estPct + "%";
+            els.portalMnTimelineEst.style.display = "";
+            els.portalMnTimelineEst.title = "Est. finish: " + new Date(state.portalMn.estMs).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+          } else if (els.portalMnTimelineEst) {
+            els.portalMnTimelineEst.style.display = "none";
+          }
+          if (els.portalMnTimelinePace) {
+            const behindMs2 = state.portalMn.estMs ? state.portalMn.estMs - goal5amMs : 0;
+            if (state.portalMn.estMs && behindMs2 > 60000) {
+              const behindMin2 = Math.round(behindMs2 / 60000);
+              els.portalMnTimelinePace.style.color = "#e53e3e";
+              els.portalMnTimelinePace.textContent = "WARNING Est. finish " + behindMin2 + " min past 5 AM  -  pace up";
+            } else if (state.portalMn.estMs && state.portalMn.estMs <= goal5amMs) {
+              els.portalMnTimelinePace.style.color = "#38a169";
+              els.portalMnTimelinePace.textContent = "On track to finish before 5 AM";
+            } else {
+              els.portalMnTimelinePace.textContent = "";
+            }
+          }
+        } else {
+          els.portalMnChartsRow.style.display = "none";
+        }
+      }
     }
 
     function renderPortalMn() {
@@ -13935,6 +14699,7 @@
       if (els.portalMnBoardMeta) {
         els.portalMnBoardMeta.textContent = rows.length + " arrived truck(s) shown out of " + arrived.length + " arrived / " + scheduled.length + " scheduled.";
       }
+      renderPortalMnDashboard();
       renderPortalMnDoorMap();
     }
 
@@ -13943,6 +14708,7 @@
       document.querySelectorAll("#portalMnViewSwitch .portal-view-btn").forEach(function(button) {
         button.classList.toggle("active", button.dataset.view === view);
       });
+      if (els.portalMnClientView) els.portalMnClientView.style.display = view === "client" ? "" : "none";
       if (els.portalMnBoardView) els.portalMnBoardView.style.display = view === "board" ? "" : "none";
       if (els.portalMnDoorView) els.portalMnDoorView.style.display = view === "doors" ? "" : "none";
       if (view === "doors") renderPortalMnDoorMap();
