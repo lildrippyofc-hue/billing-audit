@@ -9905,6 +9905,7 @@
     function portalScheduleDockType(supplier, protection, dock, category, options = {}) {
       const useOksRules = options.useOksRules !== false;
       const supplierText = normalizeText(supplier);
+      const categoryText = normalizeText(category);
       const dockCategoryText = normalizeText([dock, category].filter(Boolean).join(" "));
       const allText = normalizeText([supplier, protection, dock, category].filter(Boolean).join(" "));
       const forceDrySupplier = useOksRules && [
@@ -9924,8 +9925,11 @@
       if (hasProduce) return "Produce";
       // OKS DMS has a dedicated FRESH MEAT area distinct from COOLER; Minnesota
       // does not use this bucket (its area comes from the deterministic
-      // protection/dock table instead), so this stays OKS-only.
-      if (useOksRules && /\bmeat\b/.test(allText)) return "Fresh Meat";
+      // protection/dock table instead), so this stays OKS-only. Only the
+      // Product Category column decides this -- not supplier/protection/dock,
+      // which just signal temperature zone -- per James: "if it says meat or
+      // fish in that column, upload it as dock type Fresh Meat."
+      if (useOksRules && /(meat|fish)/.test(categoryText)) return "Fresh Meat";
       if (/\b(freezer|frozen|freeze)\b/.test(allText)) return "Freezer";
       if (/\b(cooler|chill|chiller|dairy|meat|refrigerated)\b/.test(allText)) return "Cooler";
       if (/\b(dry|ambient|grocery|pantry|beverage|household)\b/.test(allText)) return "Dry";
