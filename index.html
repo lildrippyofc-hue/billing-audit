@@ -2838,6 +2838,29 @@
         -webkit-print-color-adjust:exact;
         print-color-adjust:exact;
       }
+      body.is-guard-printing-mn .section-menu,
+      body.is-guard-printing-mn #sectionMenu,
+      body.is-guard-printing-mn .toast,
+      body.is-guard-printing-mn .tab-panel:not(#guardShackMnPanel),
+      body.is-guard-printing-mn .gs-print-btn { display:none !important; }
+      body.is-guard-printing-mn #guardShackMnPanel {
+        display:block !important;
+        padding:0 !important;
+      }
+      body.is-guard-printing-mn main {
+        display:block !important;
+        max-width:none !important;
+        width:100% !important;
+        padding:0 !important;
+        margin:0 !important;
+      }
+      body.is-guard-printing-mn { background:#fff !important; }
+      body.is-guard-printing-mn .gs-zone,
+      body.is-guard-printing-mn .gs-header,
+      body.is-guard-printing-mn .gs-rule {
+        -webkit-print-color-adjust:exact;
+        print-color-adjust:exact;
+      }
     }
     @media (max-width:680px) {
       .gs-zone-strip { gap:4px; }
@@ -3863,12 +3886,6 @@
       font-size: 0.82em;
       font-weight: 700;
     }
-    .mn-schedule-only .mn-live-only {
-      display: none !important;
-    }
-    .mn-schedule-only .portal-schedule-panel {
-      display: block !important;
-    }
     .mn-billing-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -3939,7 +3956,8 @@
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
           <button class="tab-button" type="button" aria-selected="true" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal (OKS)</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Minnesota: Schedule Uploader">MN Schedule Uploader</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Live: My Portal (MN)">My Portal (MN)</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="mnScheduleUploader" data-menu-label="Minnesota: Schedule Uploader">MN Schedule Uploader</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
@@ -3976,6 +3994,7 @@
         <div class="menu-group">
           <div class="menu-group-title">Minnesota</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="mnBillingAudit" data-menu-label="Minnesota: PowerView Billing Audit">MN Billing Audit</button>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="guardShackMn" data-menu-label="Minnesota: Dock Cheat Sheet">MN Dock Cheat Sheet</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Database</div>
@@ -5435,6 +5454,88 @@
       </section>
       <!-- /guardShackPanel -->
 
+      <section id="guardShackMnPanel" class="tab-panel" aria-label="Minnesota Dock Cheat Sheet">
+        <div class="motivation-bar" id="motivBar_guardShackMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+
+        <div class="gs-header">
+          <button class="gs-print-btn" id="guardShackMnPrintBtn" type="button">Print / Save PDF</button>
+          <h1>Minnesota Dock Cheat Sheet</h1>
+          <p>This guide is built from about 6 weeks of real Minnesota DMS ranged-report data (2026-07-22 through 2026-09-05), not a manual writeup — so it shows what actually happened at each door, not a guess. Use it to get a new truck to the right section fast.</p>
+        </div>
+
+        <div class="gs-section-title">Step 1 &mdash; Learn the Sections of the Dock</div>
+        <p style="font-size:0.85em;color:var(--muted,#64748b);margin:0 0 10px;">Each zone below is the door range where that trailer type actually showed up most often in the data. Send a truck to an open door in its zone.</p>
+        <div class="gs-zone-strip">
+          <div class="gs-zone front">
+            <div class="gs-zone-label">Zone 1</div>
+            <div class="gs-zone-doors">1&ndash;4</div>
+            <div class="gs-zone-name">Floor Loaded</div>
+          </div>
+          <div class="gs-zone water">
+            <div class="gs-zone-label">Zone 2</div>
+            <div class="gs-zone-doors">5, 7</div>
+            <div class="gs-zone-name">Slip Sheet</div>
+          </div>
+          <div class="gs-zone dry">
+            <div class="gs-zone-label">Zone 3</div>
+            <div class="gs-zone-doors">10&ndash;83</div>
+            <div class="gs-zone-name">Dry Goods (Ambient)</div>
+          </div>
+          <div class="gs-zone cooler">
+            <div class="gs-zone-label">Zone 4</div>
+            <div class="gs-zone-doors">86&ndash;93</div>
+            <div class="gs-zone-name">Refrigerated &amp; Fresh Meat</div>
+          </div>
+          <div class="gs-zone cooler" style="border-left:3px dashed rgba(255,255,255,.35);">
+            <div class="gs-zone-label">Zone 5</div>
+            <div class="gs-zone-doors">95&ndash;96</div>
+            <div class="gs-zone-name">Refrigerated &amp; Eggs</div>
+          </div>
+          <div class="gs-zone produce">
+            <div class="gs-zone-label">Zone 6</div>
+            <div class="gs-zone-doors">98&ndash;107, 115</div>
+            <div class="gs-zone-name">Produce</div>
+          </div>
+          <div class="gs-zone freezer">
+            <div class="gs-zone-label">Zone 7</div>
+            <div class="gs-zone-doors">109&ndash;113</div>
+            <div class="gs-zone-name">Frozen</div>
+          </div>
+          <div class="gs-zone front">
+            <div class="gs-zone-label">Zone 8</div>
+            <div class="gs-zone-doors">116&ndash;120</div>
+            <div class="gs-zone-name">Dry Goods (Backup)</div>
+          </div>
+        </div>
+
+        <div class="gs-section-title">Step 2 &mdash; Patterns Worth Knowing</div>
+        <p style="font-size:0.85em;color:var(--muted,#64748b);margin:0 0 10px;">These are real patterns from the data, not official rules the way the OKS "special company" list is &mdash; treat them as a strong starting point and confirm with your lead if a truck doesn't fit.</p>
+        <div class="gs-rules">
+          <div class="gs-rule info">
+            <strong>Eggs go to doors 95 or 96</strong>
+            <p>Sonstegard Foods / Sunrise Farm (the egg supplier) landed at door 95 or 96 in about 4 out of 5 of its deliveries over this period. If both are full, any door in the 86&ndash;93 refrigerated zone is the next best fit.</p>
+          </div>
+          <div class="gs-rule warn">
+            <strong>Fresh meat and general refrigerated share doors 86&ndash;93</strong>
+            <p>This zone isn't purely one or the other &mdash; refrigerated trucks and fresh-meat suppliers like Cargill Meat Solutions both concentrate here, roughly split down the middle at some doors. Any open door in this range works for either type.</p>
+          </div>
+          <div class="gs-rule info">
+            <strong>Produce overflow spreads wide when the main produce doors are full</strong>
+            <p>When doors 98&ndash;107 are all taken, produce trucks in this data showed up scattered anywhere from the 60s through the 70s and 115&ndash;120. If the produce zone is full, don't be surprised to see a produce truck routed to one of those doors instead.</p>
+          </div>
+          <div class="gs-rule danger">
+            <strong>No tall-door list yet for Minnesota</strong>
+            <p>Unlike the OKS sheet, this data doesn't tell us which doors are physically tall vs. short &mdash; that's a building fact, not something DMS records. If Minnesota has tall-door restrictions, tell your lead so this section can be filled in.</p>
+          </div>
+        </div>
+
+        <div style="margin-top:24px; font-size:0.78em; color:var(--muted,#a0aec0); text-align:center;">
+          ALDI Minnesota &mdash; Built from DMS ranged-report history, not a manual writeup. Confirm with your lead if something doesn't match what you see.
+        </div>
+
+      </section>
+      <!-- /guardShackMnPanel -->
+
       <section id="historyPanel" class="tab-panel" aria-label="History">
         <div class="motivation-bar" id="motivBar_history"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="brand-mark">
@@ -6129,27 +6230,26 @@
 
       </section>
 
-      <section id="myPortalMnPanel" class="tab-panel mn-portal-panel mn-schedule-only" aria-label="Minnesota Schedule Uploader">
+      <section id="myPortalMnPanel" class="tab-panel mn-portal-panel" aria-label="Minnesota My Portal">
         <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="portal-command-bar">
           <div class="portal-dms-titlebar">
             <div class="portal-dms-title-main">
-              <div class="portal-dms-system">Minnesota Schedule Uploader</div>
-              <div class="portal-dms-subtitle">Attach the ALDI schedule, review the preview, then upload the trucks into Minnesota DMS.</div>
+              <div class="portal-dms-system">Minnesota Live Operations Dashboard</div>
+              <div class="portal-dms-subtitle">Live DMS pull for the Minnesota building — same live board as OKS My Portal.</div>
             </div>
-            <div class="portal-dms-pill">MN Schedule</div>
+            <div class="portal-dms-pill">MN My Portal</div>
           </div>
           <div class="portal-controls-strip">
             <div class="mn-controls">
-              <button id="portalMnSyncBtn" type="button" class="portal-sync-btn mn-live-only">
+              <button id="portalMnSyncBtn" type="button" class="portal-sync-btn">
                 <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
                 <span id="portalMnSyncLabel">Sync MN DMS</span>
               </button>
-              <button id="portalMnScheduleToggleBtn" type="button" class="portal-ctrl-btn mn-live-only">Upload Schedule</button>
               <label for="portalMnBusinessDate">DMS date</label>
               <input id="portalMnBusinessDate" type="date" class="lookup-input" title="Choose the Minnesota DMS business date to load" style="max-width:150px;">
             </div>
-            <div class="mn-controls mn-live-only">
+            <div class="mn-controls">
               <input id="portalMnSearch" type="search" class="lookup-input" placeholder="Search PO, supplier, door..." autocomplete="off" style="max-width:240px;">
               <select id="portalMnStatusFilter" class="lookup-input" style="max-width:160px;">
                 <option value="all">All arrived</option>
@@ -6159,36 +6259,8 @@
             </div>
           </div>
         </div>
-        <div class="mn-status mn-live-only" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
-        <section class="portal-schedule-panel" id="portalMnSchedulePanel" aria-labelledby="portalMnScheduleTitle">
-          <div class="portal-schedule-head">
-            <div>
-              <div class="portal-schedule-title" id="portalMnScheduleTitle">Minnesota DMS PowerView Schedule Uploader</div>
-              <div class="portal-schedule-sub">Attach the ALDI truck schedule, review the preview, then upload it into Minnesota DMS.</div>
-            </div>
-            <div class="portal-schedule-actions">
-              <input id="portalMnScheduleFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;">
-              <label class="portal-ctrl-btn portal-schedule-file-label" for="portalMnScheduleFile" data-file-trigger="portalMnScheduleFile">Attach schedule</label>
-              <button id="portalMnScheduleClearBtn" type="button" class="portal-ctrl-btn">Clear</button>
-            </div>
-          </div>
-          <div class="portal-schedule-warning">
-            Minnesota upload uses the same PowerView mapping: Reference #, PO, Scheduled Date Time, dock/category, supplier, and pallets are turned into DMS Load Details rows.
-          </div>
-          <div class="portal-schedule-options">
-            <label><input id="portalMnScheduleSkipExisting" type="checkbox" checked> Skip trucks already found in Minnesota DMS</label>
-            <label><input id="portalMnScheduleConfirm" type="checkbox"> I reviewed this preview and want to upload these rows to Minnesota DMS</label>
-            <button id="portalMnScheduleUploadBtn" type="button" class="portal-sync-btn" disabled>Upload to MN DMS</button>
-          </div>
-          <div class="portal-schedule-status" id="portalMnScheduleStatus">Attach a Minnesota schedule to begin.</div>
-          <div class="table-scroller portal-schedule-preview-wrap" style="margin-top:10px;">
-            <table id="portalMnSchedulePreviewTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-        <div class="mn-portal-grid mn-live-only">
+        <div class="mn-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <div class="mn-portal-grid">
           <article class="metric-card" data-accent="blue">
             <div class="metric-label">Scheduled</div>
             <div class="metric-value" id="portalMnScheduled">0</div>
@@ -6210,15 +6282,73 @@
             <div class="metric-note">Unload finish or receiving finish is marked.</div>
           </article>
         </div>
-        <section class="table-wrap mn-live-only" aria-labelledby="portalMnBoardTitle" style="margin-top:12px;">
-          <div class="table-toolbar">
+        <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
+          <button type="button" class="portal-view-btn active" data-view="board">Board</button>
+          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+        </div>
+
+        <section id="portalMnBoardView" style="margin-top:10px;">
+          <section class="table-wrap" aria-labelledby="portalMnBoardTitle">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title" id="portalMnBoardTitle">Minnesota Live Dock Board</div>
+                <div class="table-meta" id="portalMnBoardMeta">Sync Minnesota DMS to load trucks.</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="portalMnBoard">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="portalMnDoorView" style="display:none; margin-top:10px;">
+          <div class="door-range-row">
+            <label for="portalMnDoorRange">Doors on dock</label>
+            <input id="portalMnDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = default 1-120)" autocomplete="off" style="max-width:260px;">
+            <span class="door-range-hint">Based on the door zones seen in Minnesota's DMS ranged report.</span>
+          </div>
+          <div class="dms-scorecard" id="portalMnScorecardDoors"></div>
+          <div class="door-map" id="portalMnDoorMap"></div>
+        </section>
+      </section>
+
+      <section id="mnScheduleUploaderPanel" class="tab-panel" aria-label="Minnesota Schedule Uploader">
+        <div class="motivation-bar" id="motivBar_mnScheduleUploader"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="portal-command-bar">
+          <div class="portal-dms-titlebar">
+            <div class="portal-dms-title-main">
+              <div class="portal-dms-system">Minnesota Schedule Uploader</div>
+              <div class="portal-dms-subtitle">Attach the ALDI schedule, review the preview, then upload the trucks into Minnesota DMS.</div>
+            </div>
+            <div class="portal-dms-pill">MN Schedule</div>
+          </div>
+        </div>
+        <section class="portal-schedule-panel" id="portalMnSchedulePanel" aria-labelledby="portalMnScheduleTitle">
+          <div class="portal-schedule-head">
             <div>
-              <div class="table-title" id="portalMnBoardTitle">Minnesota Live Dock Board</div>
-              <div class="table-meta" id="portalMnBoardMeta">Sync Minnesota DMS to load trucks.</div>
+              <div class="portal-schedule-title" id="portalMnScheduleTitle">Minnesota DMS PowerView Schedule Uploader</div>
+              <div class="portal-schedule-sub">Attach the ALDI truck schedule, review the preview, then upload it into Minnesota DMS. Uploads use the business date set on the My Portal (MN) tab.</div>
+            </div>
+            <div class="portal-schedule-actions">
+              <input id="portalMnScheduleFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;">
+              <label class="portal-ctrl-btn portal-schedule-file-label" for="portalMnScheduleFile" data-file-trigger="portalMnScheduleFile">Attach schedule</label>
+              <button id="portalMnScheduleClearBtn" type="button" class="portal-ctrl-btn">Clear</button>
             </div>
           </div>
-          <div class="table-scroller">
-            <table id="portalMnBoard">
+          <div class="portal-schedule-warning">
+            Minnesota upload uses the same PowerView mapping: Reference #, PO, Scheduled Date Time, dock/category, supplier, and pallets are turned into DMS Load Details rows.
+          </div>
+          <div class="portal-schedule-options">
+            <label><input id="portalMnScheduleSkipExisting" type="checkbox" checked> Skip trucks already found in Minnesota DMS</label>
+            <label><input id="portalMnScheduleConfirm" type="checkbox"> I reviewed this preview and want to upload these rows to Minnesota DMS</label>
+            <button id="portalMnScheduleUploadBtn" type="button" class="portal-sync-btn" disabled>Upload to MN DMS</button>
+          </div>
+          <div class="portal-schedule-status" id="portalMnScheduleStatus">Attach a Minnesota schedule to begin.</div>
+          <div class="table-scroller portal-schedule-preview-wrap" style="margin-top:10px;">
+            <table id="portalMnSchedulePreviewTable">
               <thead></thead>
               <tbody></tbody>
             </table>
@@ -7206,6 +7336,7 @@
       },
       portalMn: {
         refreshInterval: null,
+        view: "board",
         liveRows: [],
         scheduledRows: [],
         liveUpdatedAt: "",
@@ -7406,7 +7537,7 @@
     const ROLE_TABS = {
       admin: ["*"],
       oks: ["myPortal", "overview", "data", "help"],
-      minnesota: ["myPortalMn", "mnBillingAudit"],
+      minnesota: ["myPortalMn", "mnScheduleUploader", "mnBillingAudit", "guardShackMn"],
       manager: ["myPortal", "alerts", "dmsStamp", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       teamlead: ["myPortal", "alerts", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "help"],
       clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
@@ -7537,8 +7668,12 @@
       portalMnActive: document.getElementById("portalMnActive"),
       portalMnDone: document.getElementById("portalMnDone"),
       portalMnBoard: document.getElementById("portalMnBoard"),
+      portalMnBoardView: document.getElementById("portalMnBoardView"),
+      portalMnDoorView: document.getElementById("portalMnDoorView"),
+      portalMnDoorMap: document.getElementById("portalMnDoorMap"),
+      portalMnDoorRange: document.getElementById("portalMnDoorRange"),
+      portalMnScorecardDoors: document.getElementById("portalMnScorecardDoors"),
       portalMnBoardMeta: document.getElementById("portalMnBoardMeta"),
-      portalMnScheduleToggleBtn: document.getElementById("portalMnScheduleToggleBtn"),
       portalMnSchedulePanel: document.getElementById("portalMnSchedulePanel"),
       portalMnScheduleFile: document.getElementById("portalMnScheduleFile"),
       portalMnScheduleSkipExisting: document.getElementById("portalMnScheduleSkipExisting"),
@@ -8606,12 +8741,6 @@
           portalRenderSchedulePreview();
         });
       }
-      if (els.portalMnScheduleToggleBtn && els.portalMnSchedulePanel) {
-        els.portalMnScheduleToggleBtn.addEventListener("click", function() {
-          const hidden = els.portalMnSchedulePanel.style.display === "none";
-          els.portalMnSchedulePanel.style.display = hidden ? "" : "none";
-        });
-      }
       if (els.portalMnScheduleFile) {
         els.portalMnScheduleFile.addEventListener("change", handlePortalMnScheduleFile);
       }
@@ -8716,9 +8845,14 @@
       });
     }
 
-    document.querySelectorAll(".portal-view-btn").forEach(function(button) {
+    document.querySelectorAll("#portalViewSwitch .portal-view-btn").forEach(function(button) {
       button.addEventListener("click", function() {
         portalSetView(button.dataset.view || "board");
+      });
+    });
+    document.querySelectorAll("#portalMnViewSwitch .portal-view-btn").forEach(function(button) {
+      button.addEventListener("click", function() {
+        portalMnSetView(button.dataset.view || "board");
       });
     });
     (function() {
@@ -9086,6 +9220,72 @@
         });
       });
     })();
+
+    (function() {
+      var printBtnMn = document.getElementById('guardShackMnPrintBtn');
+      var guardPanelMn = document.getElementById('guardShackMnPanel');
+      if (!printBtnMn || !guardPanelMn) return;
+
+      function printGuardShackMnFallback() {
+        document.body.classList.add('is-guard-printing-mn');
+        setTimeout(function() {
+          try { window.print(); } finally {
+            setTimeout(function() {
+              document.body.classList.remove('is-guard-printing-mn');
+            }, 700);
+          }
+        }, 50);
+      }
+
+      function printGuardShackMn() {
+        var clone = guardPanelMn.cloneNode(true);
+        clone.querySelectorAll('.motivation-bar, .gs-print-btn, script').forEach(function(node) {
+          node.remove();
+        });
+        var styles = Array.prototype.slice.call(document.querySelectorAll('style'))
+          .map(function(style) { return style.textContent || ''; })
+          .join('\n');
+        var printWin = null;
+        try {
+          printWin = window.open('', '_blank', 'width=1100,height=850');
+        } catch (err) {
+          printWin = null;
+        }
+        if (!printWin || !printWin.document) {
+          printGuardShackMnFallback();
+          return;
+        }
+        printWin.document.open();
+        printWin.document.write(
+          '<!DOCTYPE html><html><head><meta charset="utf-8">' +
+          '<title>Minnesota Dock Cheat Sheet</title>' +
+          '<style>' + styles + '\n' +
+          'body{background:#fff!important;margin:0;padding:18px;color:#1a202c;}' +
+          'main{max-width:none!important;width:100%!important;margin:0!important;padding:0!important;}' +
+          '#guardShackMnPanel{display:block!important;padding:0!important;}' +
+          '.tab-panel{display:block!important;}' +
+          '.gs-header,.gs-zone,.gs-rule{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+          '.motivation-bar,.gs-print-btn{display:none!important;}' +
+          '@page{size:auto;margin:0.35in;}' +
+          '</style></head><body><main>' + clone.outerHTML + '</main></body></html>'
+        );
+        printWin.document.close();
+        setTimeout(function() {
+          try {
+            printWin.focus();
+            printWin.print();
+          } catch (err) {
+            printGuardShackMnFallback();
+          }
+        }, 350);
+      }
+
+      printBtnMn.addEventListener('click', function(event) {
+        event.preventDefault();
+        printGuardShackMn();
+      });
+    })();
+
     els.portalClockInBtn.addEventListener("click", function() {
       const ref = els.portalInputRef.value.trim();
       const door = els.portalInputDoor.value.trim();
@@ -13735,6 +13935,83 @@
       if (els.portalMnBoardMeta) {
         els.portalMnBoardMeta.textContent = rows.length + " arrived truck(s) shown out of " + arrived.length + " arrived / " + scheduled.length + " scheduled.";
       }
+      renderPortalMnDoorMap();
+    }
+
+    function portalMnSetView(view) {
+      state.portalMn.view = view;
+      document.querySelectorAll("#portalMnViewSwitch .portal-view-btn").forEach(function(button) {
+        button.classList.toggle("active", button.dataset.view === view);
+      });
+      if (els.portalMnBoardView) els.portalMnBoardView.style.display = view === "board" ? "" : "none";
+      if (els.portalMnDoorView) els.portalMnDoorView.style.display = view === "doors" ? "" : "none";
+      if (view === "doors") renderPortalMnDoorMap();
+    }
+
+    // Door map for Minnesota -- built from the same door-zone shape found in
+    // the DMS ranged report (see the MN Dock Cheat Sheet tab): doors 1-120,
+    // with in-progress arrived trucks occupying, completed trucks freeing.
+    function renderPortalMnDoorMap() {
+      if (!els.portalMnDoorMap) return;
+      const rows = state.portalMn.liveRows || [];
+      const byDoor = {};
+      rows.forEach(function(r) {
+        const dn = parseInt(r.door, 10);
+        if (!isFinite(dn)) return;
+        const status = portalMnTruckStatus(r);
+        if (status === "Completed") return;
+        byDoor[dn] = r;
+      });
+
+      const universe = {};
+      const explicitDoorRange = portalParseDoorRange(els.portalMnDoorRange ? els.portalMnDoorRange.value : "");
+      if (explicitDoorRange.length) {
+        explicitDoorRange.forEach(function(d) { universe[d] = 1; });
+      } else {
+        for (let d = 1; d <= 120; d++) universe[d] = 1;
+      }
+      Object.keys(byDoor).forEach(function(d) { universe[d] = 1; });
+      const allDoors = Object.keys(universe).map(Number).filter(isFinite).sort(function(a, b) { return a - b; });
+
+      const occ = Object.keys(byDoor).map(function(d) { return byDoor[d]; });
+      const openCount = Math.max(0, allDoors.length - occ.length);
+      const now = Date.now();
+      const aged = occ.filter(function(r) {
+        const start = portalIsoToMs(r.driverAtDoorIso) || portalIsoToMs(r.checkInIso) || portalIsoToMs(r.appointmentIso);
+        return start ? Math.floor((now - start) / 60000) >= 61 : false;
+      }).length;
+      if (els.portalMnScorecardDoors) {
+        portalFillScorecard(els.portalMnScorecardDoors, [
+          { value: openCount, label: "Open doors", sub: "Available now", color: "green" },
+          { value: occ.length, label: "Occupied", sub: "Truck in progress", color: "blue" },
+          { value: aged, label: "61+ min doors", sub: "Aging on dock", color: aged ? "red" : "green" }
+        ]);
+      }
+
+      if (!allDoors.length) {
+        els.portalMnDoorMap.innerHTML = '<div class="door-empty">No doors yet. Sync Minnesota DMS, or set a door range above.</div>';
+        return;
+      }
+      const classByStatus = { "Checked In": "yellow", "At Door": "yellow", "Unloading": "green" };
+      els.portalMnDoorMap.innerHTML = allDoors.map(function(dn) {
+        const r = byDoor[dn];
+        if (!r) {
+          return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
+            + '<div class="door-open-label">Open</div><div class="door-dwell">&nbsp;</div></div>';
+        }
+        const status = portalMnTruckStatus(r);
+        const cls = classByStatus[status] || "blue";
+        const start = portalIsoToMs(r.driverAtDoorIso) || portalIsoToMs(r.checkInIso) || portalIsoToMs(r.appointmentIso);
+        const ageMin = start ? Math.max(0, Math.floor((now - start) / 60000)) : null;
+        const ageClass = portalDoorAgeClass(ageMin);
+        const ageLabel = portalDoorAgeLabel(ageMin);
+        return '<div class="door-tile ' + cls + ' ' + ageClass + ' occupied" data-door="' + dn + '" title="' + escapeHtml(status) + '">'
+          + '<div class="door-no">' + dn + '</div>'
+          + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
+          + '<div class="door-dwell">' + escapeHtml(status) + '</div>'
+          + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
+          + '</div>';
+      }).join("");
     }
 
     function portalMnStartPolling() {
@@ -14396,7 +14673,7 @@
     function portalSetView(view) {
       view = ["doors","areas","vendors","client"].includes(view) ? view : "board";
       state.portal.portalView = view;
-      document.querySelectorAll(".portal-view-btn").forEach(function(button) {
+      document.querySelectorAll("#portalViewSwitch .portal-view-btn").forEach(function(button) {
         button.classList.toggle("active", button.dataset.view === view);
       });
       if (els.portalBoardView)  els.portalBoardView.style.display  = view === "board"   ? "" : "none";
@@ -18568,11 +18845,19 @@
       if (name === "myPortalMn") {
         try {
           portalMnInitializeDate();
+          renderPortalMn();
+        } catch (err) {
+          console.error("Minnesota My Portal render failed:", err);
+        }
+      } else portalMnStopPolling();
+      if (name === "mnScheduleUploader") {
+        try {
+          portalMnInitializeDate();
           portalMnRenderSchedulePreview();
         } catch (err) {
           console.error("Minnesota schedule uploader render failed:", err);
         }
-      } else portalMnStopPolling();
+      }
       if (name === "mnBillingAudit") renderMnBillingAudit();
       if (name === "alerts") renderAlertsTab();
       if (name === "exceptions") renderExceptions();

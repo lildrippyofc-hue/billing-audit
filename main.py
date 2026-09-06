@@ -1873,7 +1873,7 @@ _PV_COL_MAP: Dict[str, List[str]] = {
     "csh":        ["Csh Chk Card", "CshChkCard", "Cash Check Card"],
 }
 
-_PV_BD_RE = re.compile(r'\b(\d+)\s*[Cc](\$)?')
+_PV_BD_RE = re.compile(r'\b(\d+)\s*[Cc](?:\s*([\$\*]))?')
 
 
 def _pv_fcol(headers: List[str], aliases: List[str]) -> Optional[str]:
@@ -1914,6 +1914,14 @@ def _pv_parse_dms_date(s: Any) -> Optional[Any]:
             return datetime.strptime(s, fmt).date()
         except Exception:
             pass
+    return None
+
+
+def _pv_dms_row_date(row: Dict[str, Any]) -> Optional[Any]:
+    for key in ("bizDate", "Bus. Date", "Business Date", "businessDate", "date", "Date"):
+        parsed = _pv_parse_dms_date(row.get(key, ""))
+        if parsed:
+            return parsed
     return None
 
 
@@ -2497,6 +2505,7 @@ def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: st
 
     # ── Fetch DMS range data live ───────────────────────────────────────────
     dms_rows_ba: List[Dict[str, Any]] = []
+    dms_rows_unfiltered = 0
     dms_err: Optional[str] = None
     dms_loc_label = ""
     for attempt, force_session in enumerate((False, True)):
@@ -2514,6 +2523,13 @@ def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: st
                 "loc":   loc,
             }, config)
             dms_rows_ba = dms_resp.get("rows", []) or []
+            dms_rows_unfiltered = len(dms_rows_ba)
+            dated_dms_rows = [r for r in dms_rows_ba if _pv_dms_row_date(r)]
+            if dated_dms_rows:
+                dms_rows_ba = [
+                    r for r in dated_dms_rows
+                    if ws_date <= _pv_dms_row_date(r) <= we_date
+                ]
             dms_err = None
             break
         except HTTPException as exc:
@@ -2780,6 +2796,7 @@ def _run_powerview_billing_audit(site: str, ops_bytes: bytes, week_start_str: st
         "ops_rows_total": len(ops_rows_raw),
         "ops_rows_in_week": len(week_rows),
         "dms_rows_total": len(dms_rows_ba),
+        "dms_rows_unfiltered": dms_rows_unfiltered,
     }
 
 
