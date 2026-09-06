@@ -10,6 +10,7 @@ from typing import Optional, List, Any, Dict
 from zoneinfo import ZoneInfo
 from io import BytesIO
 from collections import defaultdict
+import threading
 
 import requests as req_lib
 from requests import Session as ReqSession
@@ -31,6 +32,16 @@ DB_PATH = DATA_DIR / "audit.db"
 EXPORTS_DIR = DATA_DIR / "shift_exports"
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 HISTORICAL_DATA_PATH = BASE_DIR / "historical-data.js"
+
+# ALDIOKS Container Log — the live macro-enabled workbook that dock staff use directly
+# in Excel. This is a fixed local path on James's PC (not DATA_DIR-relative), so this
+# feature only works when main.py is run on that machine, not on a Railway deploy.
+# Override with the CONTAINER_LOG_XLSM_PATH env var if the file ever moves.
+CONTAINER_LOG_XLSM_PATH = Path(os.environ.get(
+    "CONTAINER_LOG_XLSM_PATH",
+    r"C:\Users\James.Hinna\Downloads\CONTAINER LOG 09.06.26 - LIVE.xlsm",
+))
+_container_log_lock = threading.Lock()
 
 try:
     DMS_BUSINESS_TZ = ZoneInfo("America/Chicago")
@@ -3136,6 +3147,80 @@ def portal_vendor_stats():
             "last_seen": latest_seen.get(vendor, ""),
         })
     return {"ok": True, "stats": stats}
+
+class ContainerLogIn(BaseModel):
+    container: str
+    location: str
+
+
+@app.post("/api/container-log/add", status_code=201)
+def add_container_log_entry(body: ContainerLogIn, username: str = Depends(require_auth)):
+    role = _ROLES.get(username, "guest")
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Not allowed for this login.")
+
+    container = body.container.strip().upper()
+    location = body.location.strip().upper()
+    if not container:
+        raise HTTPException(status_code=400, detail="Container / trailer # is required.")
+    if not location:
+        raise HTTPException(status_code=400, detail="Location (CURB or door #) is required.")
+
+    if not CONTAINER_LOG_XLSM_PATH.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"Container log file not found at {CONTAINER_LOG_XLSM_PATH}. "
+                   "This feature only works when the app is running on the PC that has the file.",
+        )
+
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, Alignment, Border, Side
+
+    timestamp = datetime.now(DMS_BUSINESS_TZ).replace(tzinfo=None, microsecond=0)
+
+    with _container_log_lock:
+        try:
+            wb = load_workbook(CONTAINER_LOG_XLSM_PATH, keep_vba=True)
+        except PermissionError:
+            raise HTTPException(
+                status_code=409,
+                detail="Container log Excel file is open elsewhere (likely in Excel). Close it and try again.",
+            )
+        try:
+            ws = wb["To Be Unloaded"]
+        except KeyError:
+            raise HTTPException(status_code=500, detail="'To Be Unloaded' tab not found in the container log file.")
+
+        row = 3
+        while ws.cell(row=row, column=2).value not in (None, ""):
+            row += 1
+        if row > 300:
+            raise HTTPException(status_code=500, detail="Container log tab is full (300 rows). Ask James to clear old rows.")
+
+        ws.cell(row=row, column=2).value = container            # Trailer
+        ws.cell(row=row, column=3).value = "FULL"                # Full-Empty
+        ws.cell(row=row, column=4).value = location              # Location
+        dropped_cell = ws.cell(row=row, column=5)                # Date/Time Dropped
+        dropped_cell.value = timestamp
+        dropped_cell.number_format = "mm-dd-yy hh:mm"
+
+        thin = Side(style="thin")
+        for col in range(2, 5):
+            c = ws.cell(row=row, column=col)
+            c.font = Font(name="Arial", size=11)
+            c.alignment = Alignment(horizontal="center")
+            c.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+        try:
+            wb.save(CONTAINER_LOG_XLSM_PATH)
+        except PermissionError:
+            raise HTTPException(
+                status_code=409,
+                detail="Container log Excel file is open elsewhere (likely in Excel). Close it and try again.",
+            )
+
+    return {"ok": True, "row": row, "container": container, "location": location, "timestamp": timestamp.isoformat()}
+
 
 @app.get("/")
 def serve_app():

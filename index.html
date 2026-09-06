@@ -3992,6 +3992,10 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="clerkBoard" data-menu-label="ALDIOKS Billing Audit: Clerk Entry">Clerk Entry</button>
         </div>
         <div class="menu-group">
+          <div class="menu-group-title">ALDIOKS Container Log</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="containerLog" data-menu-label="ALDIOKS Container Log">Container Log</button>
+        </div>
+        <div class="menu-group">
           <div class="menu-group-title">Minnesota</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="mnBillingAudit" data-menu-label="Minnesota: PowerView Billing Audit">MN Billing Audit</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="guardShackMn" data-menu-label="Minnesota: Dock Cheat Sheet">MN Dock Cheat Sheet</button>
@@ -5705,6 +5709,36 @@
             </table>
           </div>
         </section>
+      </section>
+
+      <section id="containerLogPanel" class="tab-panel" aria-label="ALDIOKS Container Log">
+        <div class="motivation-bar" id="motivBar_containerLog"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+        <div class="brand-mark">
+          <span class="brand-name">Made by James Hinna</span>
+          <img class="brand-eclipse-logo" alt="Eclipse Advantage logo">
+        </div>
+
+        <div class="lookup-grid">
+          <section class="panel lookup-box" aria-labelledby="containerLogTitle">
+            <div class="panel-header">
+              <h2 id="containerLogTitle">ALDIOKS Container Log</h2>
+              <span class="panel-kicker">Drop a trailer straight into the live Excel log</span>
+            </div>
+            <div class="friendly-note">
+              Type the container/trailer # and its location (CURB or a door #, e.g. A1), then click Add. It writes a new row to the
+              "To Be Unloaded" tab of the live Container Log Excel file with a timestamp, marked FULL.
+            </div>
+            <div class="lookup-row" style="flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;">
+              <input id="containerLogNumberInput" type="text" class="lookup-input" placeholder="Container / Trailer #" autocomplete="off" style="flex:1; min-width:200px;">
+              <input id="containerLogLocationInput" type="text" class="lookup-input" placeholder="Location (CURB or door #, e.g. A1)" autocomplete="off" style="flex:1; min-width:200px;">
+              <button id="containerLogSubmitBtn" type="button">
+                <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
+                Add to Container Log
+              </button>
+            </div>
+            <div id="containerLogResult" style="margin-top:12px; display:none;"></div>
+          </section>
+        </div>
       </section>
 
       <section id="myPortalPanel" class="tab-panel active" aria-label="My Portal">
@@ -7945,6 +7979,10 @@
       dmsStampLogBody: document.getElementById("dmsStampLogBody"),
       dmsStampLogMeta: document.getElementById("dmsStampLogMeta"),
       dmsStampClearLog: document.getElementById("dmsStampClearLog"),
+      containerLogNumberInput: document.getElementById("containerLogNumberInput"),
+      containerLogLocationInput: document.getElementById("containerLogLocationInput"),
+      containerLogSubmitBtn: document.getElementById("containerLogSubmitBtn"),
+      containerLogResult: document.getElementById("containerLogResult"),
       portalExportBtn: document.getElementById("portalExportBtn"),
       portalExportsList: document.getElementById("portalExportsList"),
       portalExportsMeta: document.getElementById("portalExportsMeta"),
@@ -8483,6 +8521,7 @@
         doorSuggestor:    [["MAP","Smarter routing saves time."],["IDEA","Use history to pick the best door."],["GO","Optimized and efficient."]],
         spillTracker:     [["ALERT","Know before the spill happens."],["WATCH","Track patterns, stop repeat issues."],["SAFE","Spill kit ready. You got this."]],
         bizDateAudit:     [["DATE","Dates matter. Wrong entry costs money."],["CHECK","Every PO has a correct day."],["FIX","Catch it early, fix it fast."]],
+        containerLog:     [["DROP","Log it the second it hits the curb."],["TIME","Every stamp is a timestamp."],["TRACK","One row, one trailer, zero guessing."]],
         myPortal:         [["LIVE","Your dock. Right now."],["WATCH","Every minute tracked. Every truck accountable."],["NOW","Real-time awareness wins the day."]],
         exceptions:       [["QUEUE","One list. Every issue. Nothing missed."],["CLEAR","Work it down, one at a time."],["SHARP","Catch it here before it costs money."]],
         turnTracker:      [["CLOCK","Every minute counts."],["FAST","Efficiency is a habit."],["TRACK","Know your numbers. Improve them."]],
@@ -19441,6 +19480,65 @@
     });
 
     // -- End DMS Stamp ----------------------------------------------------------
+
+    // -- ALDIOKS Container Log ---------------------------------------------------
+
+    async function containerLogSend() {
+      const container = els.containerLogNumberInput ? els.containerLogNumberInput.value.trim() : "";
+      const location   = els.containerLogLocationInput ? els.containerLogLocationInput.value.trim() : "";
+
+      if (!container) { showToast("Enter a container / trailer #."); return; }
+      if (!location) { showToast("Enter a location (CURB or door #)."); return; }
+
+      if (els.containerLogSubmitBtn) els.containerLogSubmitBtn.disabled = true;
+      if (els.containerLogResult) els.containerLogResult.style.display = "none";
+
+      try {
+        const resp = await fetch(apiUrl("/api/container-log/add"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ container, location })
+        });
+        const data = await resp.json().catch(function() { return {}; });
+        const ok = resp.ok && data.ok;
+        if (els.containerLogResult) {
+          if (ok) {
+            els.containerLogResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#f0fff4; border:1.5px solid #38a169; color:#276749;";
+            els.containerLogResult.textContent = data.container + " @ " + data.location + " added to the Container Log.";
+          } else {
+            els.containerLogResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
+            els.containerLogResult.textContent = data.detail || "Could not add to the Container Log.";
+          }
+        }
+        if (ok) {
+          showToast("Added " + data.container + " to the Container Log.");
+          if (els.containerLogNumberInput) { els.containerLogNumberInput.value = ""; els.containerLogNumberInput.focus(); }
+          if (els.containerLogLocationInput) els.containerLogLocationInput.value = "";
+        } else {
+          showToast(data.detail || "Could not add to the Container Log.");
+        }
+      } catch (err) {
+        if (els.containerLogResult) {
+          els.containerLogResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
+          els.containerLogResult.textContent = "Network error: " + (err.message || String(err));
+        }
+        showToast("Network error adding to Container Log.");
+      } finally {
+        if (els.containerLogSubmitBtn) els.containerLogSubmitBtn.disabled = false;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      if (els.containerLogSubmitBtn) els.containerLogSubmitBtn.addEventListener("click", containerLogSend);
+      [els.containerLogNumberInput, els.containerLogLocationInput].forEach(function(input) {
+        if (!input) return;
+        input.addEventListener("keydown", function(e) {
+          if (e.key === "Enter") containerLogSend();
+        });
+      });
+    });
+
+    // -- End ALDIOKS Container Log ------------------------------------------------
 
     function emptySmall(message) {
       const item = document.createElement("div");
