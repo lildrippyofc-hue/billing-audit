@@ -1409,10 +1409,18 @@ def _schedule_tall_history_for(supplier: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
+_SCHEDULE_MULTI_PO_TALL_PALLET_THRESHOLD = 26
+
+
 def _schedule_needs_tall_door(row: DmsScheduleRowIn) -> bool:
     manual = _schedule_manual_tall_status(row.supplier)
     if manual is not None:
         return manual
+    # Multi-PO loads with no supplier listed and a heavy pallet count need a
+    # tall door (confirmed with James, OKS-only).
+    if not row.supplier.strip() and len(_schedule_po_keys(row.po)) > 1:
+        if _schedule_int(row.pallets, 0) > _SCHEDULE_MULTI_PO_TALL_PALLET_THRESHOLD:
+            return True
     history = _schedule_tall_history_for(row.supplier)
     if not history:
         return False
@@ -1421,8 +1429,61 @@ def _schedule_needs_tall_door(row: DmsScheduleRowIn) -> bool:
     return bool(total and tall / total >= _SCHEDULE_TALL_DOOR_THRESHOLD)
 
 
+_SCHEDULE_BREAKDOWN_HISTORY_CACHE: Optional[List[Dict[str, Any]]] = None
+
+
+def _schedule_breakdown_history_rows() -> List[Dict[str, Any]]:
+    global _SCHEDULE_BREAKDOWN_HISTORY_CACHE
+    if _SCHEDULE_BREAKDOWN_HISTORY_CACHE is not None:
+        return _SCHEDULE_BREAKDOWN_HISTORY_CACHE
+    rows: List[Dict[str, Any]] = []
+    try:
+        text = HISTORICAL_DATA_PATH.read_text(encoding="utf-8")
+        match = re.search(r'"breakdownSuppliers"\s*:\s*(\[.*?\])\s*,\s*"tallDoorSuppliers"', text, re.S)
+        if match:
+            parsed = json.loads(match.group(1))
+            if isinstance(parsed, list):
+                for item in parsed:
+                    if isinstance(item, dict):
+                        key = _schedule_supplier_key(item.get("key"))
+                        if key:
+                            rows.append({**item, "normalized_key": key})
+    except Exception:
+        rows = []
+    _SCHEDULE_BREAKDOWN_HISTORY_CACHE = rows
+    return rows
+
+
+def _schedule_breakdown_history_for(supplier: Any) -> Optional[Dict[str, Any]]:
+    key = _schedule_supplier_key(supplier)
+    if not key:
+        return None
+    compact_key = key.replace(" ", "")
+    for item in _schedule_breakdown_history_rows():
+        history_key = str(item.get("normalized_key") or "")
+        compact_history = history_key.replace(" ", "")
+        if key == history_key:
+            return item
+        if len(key) >= 8 and (history_key in key or key in history_key):
+            return item
+        if len(compact_key) >= 8 and (compact_history in compact_key or compact_key in compact_history):
+            return item
+    return None
+
+
+def _schedule_needs_breakdown(row: DmsScheduleRowIn) -> bool:
+    history = _schedule_breakdown_history_for(row.supplier)
+    if not history:
+        return False
+    total = _schedule_int(history.get("total"), 0)
+    breakdowns = _schedule_int(history.get("breakdowns"), 0)
+    return bool(total and breakdowns / total >= _SCHEDULE_TALL_DOOR_THRESHOLD)
+
+
 def _schedule_tall_door_note(row: DmsScheduleRowIn) -> str:
-    return "Tall Door: YES" if _schedule_needs_tall_door(row) else "Tall Door: NO"
+    tall = "YES" if _schedule_needs_tall_door(row) else "NO"
+    breakdown = "YES" if _schedule_needs_breakdown(row) else "NO"
+    return f"Tall Door: {tall} / Breakdown: {breakdown}"
 
 
 def _schedule_dock_type(row: DmsScheduleRowIn, use_oks_rules: bool = True) -> str:
@@ -1594,8 +1655,7 @@ def _dms_schedule_insert_payload(
     category_desc = row.product_category.strip() if use_oks_rules else _powerview_strip_commodity_code(row.product_category)
     supplier_fallback = "MULTI PO SUPPLIER NOT KNOWN" if use_oks_rules else "MULTI PO - VENDOR NOT SPECIFIED"
     supplier_value = row.supplier.strip() or supplier_fallback
-    if not use_oks_rules:
-        supplier_value = _powerview_incoterm_tag_supplier(supplier_value, row.incoterm)
+    supplier_value = _powerview_incoterm_tag_supplier(supplier_value, row.incoterm)
     base_insert.update({
         "area": _dms_area_for_schedule(row, session, business_date, use_oks_rules),
         "poNum": po_number,
