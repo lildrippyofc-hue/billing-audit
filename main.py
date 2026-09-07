@@ -1423,6 +1423,83 @@ def _schedule_tall_history_for(supplier: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
+# OKS Dry Produce / Cold Produce split -- once a schedule row is classified as
+# "Produce" (see _schedule_dock_type), this decides which side of the dock that
+# supplier's produce has actually landed on historically, per the same DMS
+# Ranged Report door-history snapshot the Door Suggestor uses (JS side:
+# doorRangeHistoryFor / HISTORICAL_DOOR_RANGE_MAP in index.html -- keep both in
+# sync). Doors 1-74 = dry side, 75+ = cold side, per James.
+_PRODUCE_DRY_DOOR_MAX = 74
+_PRODUCE_MANUAL_DOOR_OVERRIDES = (
+    (("taylor farms retail",), (80, 84, 86)),
+    (("taylor farms texas",), (79, 80, 81, 82, 83, 84, 85, 86)),
+    (("bonipak", "boni pak"), (80, 84, 86)),
+    (("simply fresh",), (80, 84, 86)),
+    (("del monte",), (79, 80, 81, 82, 83, 84, 85, 86, 69, 70, 71, 72, 73, 74)),
+)
+# C&C genuinely runs both sides depending on the load -- per James, don't guess.
+# Always leave it as plain "Produce" rather than mislabeling it Dry or Cold.
+_PRODUCE_DOOR_SIDE_EXCLUDED = ("c and c",)
+_PRODUCE_DOOR_HISTORY_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def _produce_door_history_rows() -> Dict[str, Dict[str, Any]]:
+    global _PRODUCE_DOOR_HISTORY_CACHE
+    if _PRODUCE_DOOR_HISTORY_CACHE is not None:
+        return _PRODUCE_DOOR_HISTORY_CACHE
+    rows: Dict[str, Dict[str, Any]] = {}
+    try:
+        raw = json.loads((BASE_DIR / "historical_door_ranges.json").read_text(encoding="utf-8"))
+        for item in raw:
+            if isinstance(item, dict):
+                key = _schedule_supplier_key(item.get("key"))
+                if key:
+                    rows[key] = item
+    except Exception:
+        rows = {}
+    _PRODUCE_DOOR_HISTORY_CACHE = rows
+    return rows
+
+
+def _produce_door_top_doors(supplier: Any) -> Optional[List[Dict[str, Any]]]:
+    key = _schedule_supplier_key(supplier)
+    if not key:
+        return None
+    for patterns, doors in _PRODUCE_MANUAL_DOOR_OVERRIDES:
+        for pattern in patterns:
+            rule_key = _schedule_supplier_key(pattern)
+            if rule_key and (rule_key in key or key in rule_key):
+                return [{"door": d, "count": 1} for d in doors]
+    history = _produce_door_history_rows()
+    if key in history:
+        return history[key].get("topDoors") or []
+    compact_key = key.replace(" ", "")
+    for hist_key, item in history.items():
+        compact_hist = hist_key.replace(" ", "")
+        if len(key) >= 8 and (hist_key in key or key in hist_key):
+            return item.get("topDoors") or []
+        if len(compact_key) >= 8 and (compact_hist in compact_key or compact_key in compact_hist):
+            return item.get("topDoors") or []
+    return None
+
+
+def _produce_door_side(supplier: Any) -> Optional[str]:
+    """'Dry' or 'Cold' based on which side of the dock that supplier's produce
+    trucks have actually landed on historically. None if there's no history,
+    or if the supplier is explicitly excluded (see _PRODUCE_DOOR_SIDE_EXCLUDED)."""
+    key = _schedule_supplier_key(supplier)
+    if any(key == excluded or key.startswith(excluded + " ") for excluded in _PRODUCE_DOOR_SIDE_EXCLUDED):
+        return None
+    top_doors = _produce_door_top_doors(supplier)
+    if not top_doors:
+        return None
+    dry_hits = sum(int(d.get("count") or 0) for d in top_doors if int(d.get("door") or 0) <= _PRODUCE_DRY_DOOR_MAX)
+    cold_hits = sum(int(d.get("count") or 0) for d in top_doors if int(d.get("door") or 0) > _PRODUCE_DRY_DOOR_MAX)
+    if dry_hits == 0 and cold_hits == 0:
+        return None
+    return "Dry" if dry_hits >= cold_hits else "Cold"
+
+
 _SCHEDULE_MULTI_PO_TALL_PALLET_THRESHOLD = 26
 
 
@@ -1671,6 +1748,15 @@ def _dms_schedule_insert_payload(
         base_insert.update(upload_model["insert"])
 
     dock_type = _schedule_dock_type(row, use_oks_rules)
+    if use_oks_rules and dock_type == "Produce":
+        # Informational only -- appended to the free-text notes field so the
+        # dock team sees which side history favors. Deliberately NOT fed into
+        # dock_type/area/load: those drive live DMS area matching, and "Dry
+        # Produce"/"Cold Produce" wouldn't match a real DMS area name.
+        produce_side = _produce_door_side(row.supplier)
+        if produce_side:
+            side_range = "doors 1-74" if produce_side == "Dry" else "doors 75+"
+            notes = f"{notes} / Produce: {produce_side.upper()} SIDE ({side_range})"
     # Keep the full PO string intact (even a multi-PO cell like
     # "7521444135,7522401186") -- that's what lets My Portal's search box find
     # the truck by typing any one of its PO numbers, same as OKS today.

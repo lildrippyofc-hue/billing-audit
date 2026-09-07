@@ -9983,6 +9983,34 @@
       return m ? Number(m[0]) : null;
     }
 
+    // OKS Dry Produce / Cold Produce split -- once a schedule row is classified
+    // "Produce" below, this decides which side of the dock that supplier's
+    // produce has actually landed on historically, per doorRangeHistoryFor's
+    // same DMS Ranged Report door-history data the Door Suggestor already uses
+    // (defined further down; JS function declarations are hoisted). Doors
+    // 1-74 = dry side, 75+ = cold side. Mirrored in main.py's
+    // _produce_door_side -- keep both in sync.
+    const PORTAL_PRODUCE_DRY_DOOR_MAX = 74;
+    // C&C genuinely runs both sides depending on the load -- per James, don't
+    // guess. Always leave it as plain "Produce" rather than mislabeling it.
+    const PORTAL_PRODUCE_DOOR_SIDE_EXCLUDED = ["c and c"];
+    function portalProduceDoorSide(supplier) {
+      const key = normalizeSupplierKey(supplier);
+      if (PORTAL_PRODUCE_DOOR_SIDE_EXCLUDED.some(function(excluded) { return key === excluded || key.indexOf(excluded + " ") === 0; })) {
+        return null;
+      }
+      const history = doorRangeHistoryFor(supplier);
+      if (!history || !Array.isArray(history.topDoors) || !history.topDoors.length) return null;
+      let dryHits = 0, coldHits = 0;
+      history.topDoors.forEach(function(d) {
+        const doorNum = Number(d.door);
+        const count = Number(d.count) || 0;
+        if (doorNum <= PORTAL_PRODUCE_DRY_DOOR_MAX) dryHits += count; else coldHits += count;
+      });
+      if (dryHits === 0 && coldHits === 0) return null;
+      return dryHits >= coldHits ? "Dry" : "Cold";
+    }
+
     function portalScheduleDockType(supplier, protection, dock, category, options = {}) {
       const useOksRules = options.useOksRules !== false;
       const supplierText = normalizeText(supplier);
@@ -10003,7 +10031,13 @@
       if (forceDrySupplier) return "Dry";
       if (useOksRules && /\bfalcon\s*farms?\b/.test(supplierText)) return "Cold Plants";
       if (hasPlants) return "Plants";
-      if (hasProduce) return "Produce";
+      if (hasProduce) {
+        if (useOksRules) {
+          const side = portalProduceDoorSide(supplier);
+          if (side) return side + " Produce";
+        }
+        return "Produce";
+      }
       // OKS DMS has a dedicated FRESH MEAT area distinct from COOLER; Minnesota
       // does not use this bucket (its area comes from the deterministic
       // protection/dock table instead), so this stays OKS-only. Only the
