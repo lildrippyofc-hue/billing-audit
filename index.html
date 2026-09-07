@@ -10252,7 +10252,7 @@
           els.portalScheduleStatus.textContent = "Upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
         }
         showToast("Schedule upload finished.");
-        portalDmsRefresh(true);
+        portalPullLiveDms(true);
       } catch (error) {
         if (els.portalScheduleStatus) {
           els.portalScheduleStatus.className = "portal-schedule-status bad";
