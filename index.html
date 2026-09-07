@@ -5722,15 +5722,16 @@
           <section class="panel lookup-box" aria-labelledby="containerLogTitle">
             <div class="panel-header">
               <h2 id="containerLogTitle">ALDIOKS Container Log</h2>
-              <span class="panel-kicker">Drop a trailer straight into the live Excel log</span>
+              <span class="panel-kicker">Logged straight into the program - no separate Excel file to keep open</span>
             </div>
             <div class="friendly-note">
-              Type the container/trailer # and its location (CURB or a door #, e.g. A1), then click Add. It writes a new row to the
-              "To Be Unloaded" tab of the live Container Log Excel file with a timestamp, marked FULL.
+              Type the container/trailer # and its location (CURB or a door #, e.g. A1), then click Add. It logs a new
+              "To Be Unloaded" row with a timestamp, marked FULL. Use Export to Excel any time to send off a snapshot.
             </div>
             <div class="lookup-row" style="flex-wrap:wrap; gap:10px; align-items:center; margin-top:10px;">
               <input id="containerLogNumberInput" type="text" class="lookup-input" placeholder="Container / Trailer #" autocomplete="off" style="flex:1; min-width:200px;">
               <input id="containerLogLocationInput" type="text" class="lookup-input" placeholder="Location (CURB or door #, e.g. A1)" autocomplete="off" style="flex:1; min-width:200px;">
+              <input id="containerLogCommentsInput" type="text" class="lookup-input" placeholder="Comments (optional)" autocomplete="off" style="flex:1; min-width:160px;">
               <button id="containerLogSubmitBtn" type="button">
                 <svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg>
                 Add to Container Log
@@ -5739,6 +5740,40 @@
             <div id="containerLogResult" style="margin-top:12px; display:none;"></div>
           </section>
         </div>
+
+        <section class="table-wrap" aria-labelledby="containerLogUnloadedTitle" style="margin-top:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="containerLogUnloadedTitle">To Be Unloaded</div>
+              <div class="table-meta" id="containerLogUnloadedMeta">Loading...</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button id="containerLogRefreshBtn" type="button">Refresh</button>
+              <button id="containerLogExportBtn" type="button">Export to Excel</button>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="containerLogUnloadedTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="table-wrap" aria-labelledby="containerLogEmptyTitle" style="margin-top:14px;">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="containerLogEmptyTitle">Empty for Pick Up</div>
+              <div class="table-meta" id="containerLogEmptyMeta">Loading...</div>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="containerLogEmptyTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
       </section>
 
       <section id="myPortalPanel" class="tab-panel active" aria-label="My Portal">
@@ -7981,8 +8016,15 @@
       dmsStampClearLog: document.getElementById("dmsStampClearLog"),
       containerLogNumberInput: document.getElementById("containerLogNumberInput"),
       containerLogLocationInput: document.getElementById("containerLogLocationInput"),
+      containerLogCommentsInput: document.getElementById("containerLogCommentsInput"),
       containerLogSubmitBtn: document.getElementById("containerLogSubmitBtn"),
       containerLogResult: document.getElementById("containerLogResult"),
+      containerLogRefreshBtn: document.getElementById("containerLogRefreshBtn"),
+      containerLogExportBtn: document.getElementById("containerLogExportBtn"),
+      containerLogUnloadedTable: document.getElementById("containerLogUnloadedTable"),
+      containerLogUnloadedMeta: document.getElementById("containerLogUnloadedMeta"),
+      containerLogEmptyTable: document.getElementById("containerLogEmptyTable"),
+      containerLogEmptyMeta: document.getElementById("containerLogEmptyMeta"),
       portalExportBtn: document.getElementById("portalExportBtn"),
       portalExportsList: document.getElementById("portalExportsList"),
       portalExportsMeta: document.getElementById("portalExportsMeta"),
@@ -19486,6 +19528,7 @@
     async function containerLogSend() {
       const container = els.containerLogNumberInput ? els.containerLogNumberInput.value.trim() : "";
       const location   = els.containerLogLocationInput ? els.containerLogLocationInput.value.trim() : "";
+      const comments   = els.containerLogCommentsInput ? els.containerLogCommentsInput.value.trim() : "";
 
       if (!container) { showToast("Enter a container / trailer #."); return; }
       if (!location) { showToast("Enter a location (CURB or door #)."); return; }
@@ -19497,7 +19540,7 @@
         const resp = await fetch(apiUrl("/api/container-log/add"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ container, location })
+          body: JSON.stringify({ container, location, comments })
         });
         const data = await resp.json().catch(function() { return {}; });
         const ok = resp.ok && data.ok;
@@ -19514,6 +19557,8 @@
           showToast("Added " + data.container + " to the Container Log.");
           if (els.containerLogNumberInput) { els.containerLogNumberInput.value = ""; els.containerLogNumberInput.focus(); }
           if (els.containerLogLocationInput) els.containerLogLocationInput.value = "";
+          if (els.containerLogCommentsInput) els.containerLogCommentsInput.value = "";
+          renderContainerLogPanel();
         } else {
           showToast(data.detail || "Could not add to the Container Log.");
         }
@@ -19528,14 +19573,212 @@
       }
     }
 
+    function containerLogFormatTs(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit", hour: "numeric", minute: "2-digit" });
+    }
+
+    function containerLogElapsedHM(startIso, endIso) {
+      if (!startIso) return "";
+      const start = new Date(startIso);
+      const end = endIso ? new Date(endIso) : new Date();
+      const mins = Math.max(0, Math.round((end - start) / 60000));
+      return Math.floor(mins / 60) + ":" + String(mins % 60).padStart(2, "0");
+    }
+
+    function containerLogElapsedDays(startIso, endIso) {
+      if (!startIso) return "";
+      const start = new Date(startIso);
+      const end = endIso ? new Date(endIso) : new Date();
+      const days = Math.max(0, Math.floor((end - start) / 86400000));
+      return days + (days === 1 ? " day" : " days");
+    }
+
+    async function containerLogFetchList() {
+      try {
+        const resp = await fetch(apiUrl("/api/container-log/list"));
+        const data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok || !data.ok) {
+          showToast(data.detail || "Could not load Container Log.");
+          return { to_be_unloaded: [], empty_pickup: [] };
+        }
+        return data;
+      } catch (err) {
+        showToast("Network error loading Container Log.");
+        return { to_be_unloaded: [], empty_pickup: [] };
+      }
+    }
+
+    async function containerLogAction(url, id, okMessage) {
+      try {
+        const resp = await fetch(apiUrl(url), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id })
+        });
+        const data = await resp.json().catch(function() { return {}; });
+        if (!resp.ok || !data.ok) {
+          showToast(data.detail || "Action failed.");
+          return;
+        }
+        if (okMessage) showToast(okMessage);
+        renderContainerLogPanel();
+      } catch (err) {
+        showToast("Network error.");
+      }
+    }
+
+    async function containerLogSaveComment(id, value) {
+      try {
+        const resp = await fetch(apiUrl("/api/container-log/comment"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, comments: value })
+        });
+        if (!resp.ok) showToast("Could not save comment.");
+      } catch (err) {
+        showToast("Could not save comment.");
+      }
+    }
+
+    function containerLogCommentCell(row) {
+      const td = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = row.comments || "";
+      input.placeholder = "Comments";
+      input.style.cssText = "width:100%; min-width:120px; border:1px solid var(--border,#d0d7de); border-radius:5px; padding:4px 6px; font-size:0.85em;";
+      input.addEventListener("change", function() { containerLogSaveComment(row.id, input.value); });
+      td.appendChild(input);
+      return td;
+    }
+
+    async function renderContainerLogPanel() {
+      const data = await containerLogFetchList();
+      const unloaded = data.to_be_unloaded || [];
+      const empty = data.empty_pickup || [];
+
+      const table1 = els.containerLogUnloadedTable;
+      if (table1) {
+        const thead = table1.querySelector("thead");
+        const tbody = table1.querySelector("tbody");
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+        const headers = ["Trailer", "Location", "Dropped", "Verified", "Elapsed", "Comments", ""];
+        const headerRow = document.createElement("tr");
+        headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; headerRow.appendChild(th); });
+        thead.appendChild(headerRow);
+        const frag = document.createDocumentFragment();
+        unloaded.forEach(function(row) {
+          const tr = document.createElement("tr");
+          [row.trailer, row.location, containerLogFormatTs(row.dropped_at),
+           row.verified_at ? containerLogFormatTs(row.verified_at) : "-",
+           containerLogElapsedHM(row.dropped_at, row.verified_at)].forEach(function(val) {
+            const td = document.createElement("td"); td.textContent = val; tr.appendChild(td);
+          });
+          tr.appendChild(containerLogCommentCell(row));
+          const actionTd = document.createElement("td");
+          actionTd.style.cssText = "display:flex; gap:6px; flex-wrap:wrap;";
+          if (!row.verified_at) {
+            const vBtn = document.createElement("button");
+            vBtn.type = "button"; vBtn.textContent = "Verify";
+            vBtn.addEventListener("click", function() { containerLogAction("/api/container-log/verify-unloaded", row.id, "Marked verified."); });
+            actionTd.appendChild(vBtn);
+          }
+          const eBtn = document.createElement("button");
+          eBtn.type = "button"; eBtn.textContent = "Mark Empty"; eBtn.className = "primary-btn";
+          eBtn.addEventListener("click", function() { containerLogAction("/api/container-log/mark-empty", row.id, row.trailer + " moved to Empty for Pick Up."); });
+          actionTd.appendChild(eBtn);
+          tr.appendChild(actionTd);
+          frag.appendChild(tr);
+        });
+        tbody.appendChild(frag);
+        if (!unloaded.length) appendEmptyRow(tbody, headers.length, "Nothing waiting to be unloaded.");
+      }
+      if (els.containerLogUnloadedMeta) {
+        els.containerLogUnloadedMeta.textContent = unloaded.length + " trailer" + (unloaded.length !== 1 ? "s" : "") + " waiting";
+      }
+
+      const table2 = els.containerLogEmptyTable;
+      if (table2) {
+        const thead = table2.querySelector("thead");
+        const tbody = table2.querySelector("tbody");
+        thead.innerHTML = "";
+        tbody.innerHTML = "";
+        const headers = ["Trailer", "Lot", "Unloaded", "Verified Empty", "Days Waiting", "Comments", ""];
+        const headerRow = document.createElement("tr");
+        headers.forEach(function(h) { const th = document.createElement("th"); th.textContent = h; headerRow.appendChild(th); });
+        thead.appendChild(headerRow);
+        const frag = document.createDocumentFragment();
+        empty.forEach(function(row) {
+          const tr = document.createElement("tr");
+          [row.trailer, row.location, containerLogFormatTs(row.unloaded_at),
+           row.empty_verified_at ? containerLogFormatTs(row.empty_verified_at) : "-",
+           containerLogElapsedDays(row.unloaded_at, row.empty_verified_at)].forEach(function(val) {
+            const td = document.createElement("td"); td.textContent = val; tr.appendChild(td);
+          });
+          tr.appendChild(containerLogCommentCell(row));
+          const actionTd = document.createElement("td");
+          actionTd.style.cssText = "display:flex; gap:6px; flex-wrap:wrap;";
+          if (!row.empty_verified_at) {
+            const vBtn = document.createElement("button");
+            vBtn.type = "button"; vBtn.textContent = "Verify Empty";
+            vBtn.addEventListener("click", function() { containerLogAction("/api/container-log/verify-empty", row.id, "Marked verified empty."); });
+            actionTd.appendChild(vBtn);
+          }
+          const pBtn = document.createElement("button");
+          pBtn.type = "button"; pBtn.textContent = "Picked Up"; pBtn.className = "primary-btn";
+          pBtn.addEventListener("click", function() { containerLogAction("/api/container-log/picked-up", row.id, row.trailer + " marked picked up."); });
+          actionTd.appendChild(pBtn);
+          tr.appendChild(actionTd);
+          frag.appendChild(tr);
+        });
+        tbody.appendChild(frag);
+        if (!empty.length) appendEmptyRow(tbody, headers.length, "Nothing waiting for pickup.");
+      }
+      if (els.containerLogEmptyMeta) {
+        els.containerLogEmptyMeta.textContent = empty.length + " trailer" + (empty.length !== 1 ? "s" : "") + " waiting for pickup";
+      }
+    }
+
+    async function containerLogExport() {
+      if (els.containerLogExportBtn) els.containerLogExportBtn.disabled = true;
+      try {
+        const resp = await fetch(apiUrl("/api/container-log/export"));
+        if (!resp.ok) {
+          const data = await resp.json().catch(function() { return {}; });
+          showToast(data.detail || "Export failed.");
+          return;
+        }
+        const blob = await resp.blob();
+        const disposition = resp.headers.get("Content-Disposition") || "";
+        const match = /filename="?([^"]+)"?/.exec(disposition);
+        const filename = match ? match[1] : "ContainerLog.xlsx";
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast("Exported " + filename + ".");
+      } catch (err) {
+        showToast("Export failed: " + (err.message || String(err)));
+      } finally {
+        if (els.containerLogExportBtn) els.containerLogExportBtn.disabled = false;
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
       if (els.containerLogSubmitBtn) els.containerLogSubmitBtn.addEventListener("click", containerLogSend);
-      [els.containerLogNumberInput, els.containerLogLocationInput].forEach(function(input) {
+      [els.containerLogNumberInput, els.containerLogLocationInput, els.containerLogCommentsInput].forEach(function(input) {
         if (!input) return;
         input.addEventListener("keydown", function(e) {
           if (e.key === "Enter") containerLogSend();
         });
       });
+      if (els.containerLogRefreshBtn) els.containerLogRefreshBtn.addEventListener("click", renderContainerLogPanel);
+      if (els.containerLogExportBtn) els.containerLogExportBtn.addEventListener("click", containerLogExport);
     });
 
     // -- End ALDIOKS Container Log ------------------------------------------------
@@ -19710,6 +19953,7 @@
       try { renderCharts(); } catch (err) { console.warn("Chart render skipped:", err); }
       if (name === "truckChargeAudit") renderTruckChargeAudit();
       if (name === "bizDateAudit") renderBusinessDateAudit();
+      if (name === "containerLog") renderContainerLogPanel();
       if (name === "myPortal") {
         try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
         setTimeout(repairMyPortalPanel, 0);

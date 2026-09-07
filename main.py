@@ -10,7 +10,6 @@ from typing import Optional, List, Any, Dict
 from zoneinfo import ZoneInfo
 from io import BytesIO
 from collections import defaultdict
-import threading
 
 import requests as req_lib
 from requests import Session as ReqSession
@@ -32,16 +31,6 @@ DB_PATH = DATA_DIR / "audit.db"
 EXPORTS_DIR = DATA_DIR / "shift_exports"
 EXPORTS_DIR.mkdir(parents=True, exist_ok=True)
 HISTORICAL_DATA_PATH = BASE_DIR / "historical-data.js"
-
-# ALDIOKS Container Log — the live macro-enabled workbook that dock staff use directly
-# in Excel. This is a fixed local path on James's PC (not DATA_DIR-relative), so this
-# feature only works when main.py is run on that machine, not on a Railway deploy.
-# Override with the CONTAINER_LOG_XLSM_PATH env var if the file ever moves.
-CONTAINER_LOG_XLSM_PATH = Path(os.environ.get(
-    "CONTAINER_LOG_XLSM_PATH",
-    r"C:\Users\James.Hinna\Downloads\CONTAINER LOG 09.06.26 - LIVE.xlsm",
-))
-_container_log_lock = threading.Lock()
 
 try:
     DMS_BUSINESS_TZ = ZoneInfo("America/Chicago")
@@ -174,6 +163,20 @@ def init_db():
         );
         CREATE INDEX IF NOT EXISTS idx_billing_audit_runs_key
             ON billing_audit_runs(site, week_start, run_at);
+
+        CREATE TABLE IF NOT EXISTS container_log (
+            id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+            trailer            TEXT    NOT NULL,
+            location           TEXT    NOT NULL,
+            status             TEXT    NOT NULL DEFAULT 'FULL',
+            comments           TEXT    NOT NULL DEFAULT '',
+            dropped_at         TEXT    NOT NULL,
+            verified_at        TEXT,
+            unloaded_at        TEXT,
+            empty_verified_at  TEXT,
+            picked_up_at       TEXT,
+            created_by         TEXT    NOT NULL DEFAULT ''
+        );
     """)
     conn.commit()
     conn.close()
@@ -3148,78 +3151,231 @@ def portal_vendor_stats():
         })
     return {"ok": True, "stats": stats}
 
-class ContainerLogIn(BaseModel):
+class ContainerLogAddIn(BaseModel):
     container: str
     location: str
+    comments: Optional[str] = ""
+
+
+class ContainerLogIdIn(BaseModel):
+    id: int
+
+
+class ContainerLogCommentIn(BaseModel):
+    id: int
+    comments: str
+
+
+def _container_log_admin(username: str = Depends(require_auth)) -> str:
+    if _ROLES.get(username, "guest") != "admin":
+        raise HTTPException(status_code=403, detail="Not allowed for this login.")
+    return username
+
+
+def _container_log_now() -> str:
+    return datetime.now(DMS_BUSINESS_TZ).replace(tzinfo=None, microsecond=0).isoformat()
+
+
+@app.get("/api/container-log/list")
+def container_log_list(username: str = Depends(_container_log_admin)):
+    conn = get_db()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT * FROM container_log WHERE picked_up_at IS NULL ORDER BY id"
+    ).fetchall()]
+    conn.close()
+    return {
+        "ok": True,
+        "to_be_unloaded": [r for r in rows if r["status"] == "FULL"],
+        "empty_pickup": [r for r in rows if r["status"] == "EMPTY"],
+    }
 
 
 @app.post("/api/container-log/add", status_code=201)
-def add_container_log_entry(body: ContainerLogIn, username: str = Depends(require_auth)):
-    role = _ROLES.get(username, "guest")
-    if role != "admin":
-        raise HTTPException(status_code=403, detail="Not allowed for this login.")
-
+def container_log_add(body: ContainerLogAddIn, username: str = Depends(_container_log_admin)):
     container = body.container.strip().upper()
     location = body.location.strip().upper()
     if not container:
         raise HTTPException(status_code=400, detail="Container / trailer # is required.")
     if not location:
         raise HTTPException(status_code=400, detail="Location (CURB or door #) is required.")
+    now = _container_log_now()
+    conn = get_db()
+    cur = conn.execute(
+        "INSERT INTO container_log (trailer, location, status, comments, dropped_at, created_by) "
+        "VALUES (?, ?, 'FULL', ?, ?, ?)",
+        (container, location, (body.comments or "").strip(), now, username),
+    )
+    conn.commit()
+    new_id = cur.lastrowid
+    conn.close()
+    return {"ok": True, "id": new_id, "container": container, "location": location, "dropped_at": now}
 
-    if not CONTAINER_LOG_XLSM_PATH.exists():
-        raise HTTPException(
-            status_code=500,
-            detail=f"Container log file not found at {CONTAINER_LOG_XLSM_PATH}. "
-                   "This feature only works when the app is running on the PC that has the file.",
-        )
 
-    from openpyxl import load_workbook
-    from openpyxl.styles import Font, Alignment, Border, Side
+@app.post("/api/container-log/verify-unloaded")
+def container_log_verify_unloaded(body: ContainerLogIdIn, username: str = Depends(_container_log_admin)):
+    now = _container_log_now()
+    conn = get_db()
+    conn.execute("UPDATE container_log SET verified_at = ? WHERE id = ? AND status = 'FULL'", (now, body.id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "verified_at": now}
 
-    timestamp = datetime.now(DMS_BUSINESS_TZ).replace(tzinfo=None, microsecond=0)
 
-    with _container_log_lock:
+@app.post("/api/container-log/mark-empty")
+def container_log_mark_empty(body: ContainerLogIdIn, username: str = Depends(_container_log_admin)):
+    conn = get_db()
+    row = conn.execute("SELECT status FROM container_log WHERE id = ?", (body.id,)).fetchone()
+    if row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Container log entry not found.")
+    if row["status"] == "EMPTY":
+        conn.close()
+        raise HTTPException(status_code=409, detail="Already marked empty.")
+    now = _container_log_now()
+    conn.execute("UPDATE container_log SET status = 'EMPTY', unloaded_at = ? WHERE id = ?", (now, body.id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "unloaded_at": now}
+
+
+@app.post("/api/container-log/verify-empty")
+def container_log_verify_empty(body: ContainerLogIdIn, username: str = Depends(_container_log_admin)):
+    now = _container_log_now()
+    conn = get_db()
+    conn.execute("UPDATE container_log SET empty_verified_at = ? WHERE id = ? AND status = 'EMPTY'", (now, body.id))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "empty_verified_at": now}
+
+
+@app.post("/api/container-log/picked-up")
+def container_log_picked_up(body: ContainerLogIdIn, username: str = Depends(_container_log_admin)):
+    conn = get_db()
+    row = conn.execute("SELECT id FROM container_log WHERE id = ?", (body.id,)).fetchone()
+    if row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Container log entry not found.")
+    now = _container_log_now()
+    conn.execute("UPDATE container_log SET picked_up_at = ? WHERE id = ?", (now, body.id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+@app.post("/api/container-log/comment")
+def container_log_comment(body: ContainerLogCommentIn, username: str = Depends(_container_log_admin)):
+    conn = get_db()
+    conn.execute("UPDATE container_log SET comments = ? WHERE id = ?", (body.comments.strip(), body.id))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
+
+
+def _container_log_xlsx_bytes(rows: List[Dict[str, Any]]) -> bytes:
+    """Snapshot the current container log into a two-sheet workbook mirroring the
+    original 'To Be Unloaded' / 'Empty for Pick Up' layout, styled like the app's
+    other PowerView-style exports (branded header band, zebra striping, borders)."""
+    from openpyxl import Workbook
+    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    HEADER_FILL = PatternFill("solid", fgColor="1F3A5F")
+    HEADER_FONT = Font(name="Calibri", bold=True, color="FFFFFF", size=11)
+    BASE_FONT = Font(name="Calibri", size=10)
+    ZEBRA_FILL = PatternFill("solid", fgColor="EEF2F7")
+    _edge = Side(style="thin", color="D9DEE4")
+    BORDER = Border(left=_edge, right=_edge, top=_edge, bottom=_edge)
+
+    def fmt_ts(ts: Optional[str]) -> str:
+        if not ts:
+            return ""
         try:
-            wb = load_workbook(CONTAINER_LOG_XLSM_PATH, keep_vba=True)
-        except PermissionError:
-            raise HTTPException(
-                status_code=409,
-                detail="Container log Excel file is open elsewhere (likely in Excel). Close it and try again.",
-            )
+            return datetime.fromisoformat(ts).strftime("%m/%d/%y %H:%M")
+        except Exception:
+            return ts
+
+    def elapsed_hm(start_iso: Optional[str], end_iso: Optional[str]) -> str:
+        if not start_iso:
+            return ""
         try:
-            ws = wb["To Be Unloaded"]
-        except KeyError:
-            raise HTTPException(status_code=500, detail="'To Be Unloaded' tab not found in the container log file.")
+            start = datetime.fromisoformat(start_iso)
+            end = datetime.fromisoformat(end_iso) if end_iso else datetime.now(DMS_BUSINESS_TZ).replace(tzinfo=None)
+            total_min = max(0, int((end - start).total_seconds() // 60))
+            return f"{total_min // 60}:{total_min % 60:02d}"
+        except Exception:
+            return ""
 
-        row = 3
-        while ws.cell(row=row, column=2).value not in (None, ""):
-            row += 1
-        if row > 300:
-            raise HTTPException(status_code=500, detail="Container log tab is full (300 rows). Ask James to clear old rows.")
-
-        ws.cell(row=row, column=2).value = container            # Trailer
-        ws.cell(row=row, column=3).value = "FULL"                # Full-Empty
-        ws.cell(row=row, column=4).value = location              # Location
-        dropped_cell = ws.cell(row=row, column=5)                # Date/Time Dropped
-        dropped_cell.value = timestamp
-        dropped_cell.number_format = "mm-dd-yy hh:mm"
-
-        thin = Side(style="thin")
-        for col in range(2, 5):
-            c = ws.cell(row=row, column=col)
-            c.font = Font(name="Arial", size=11)
-            c.alignment = Alignment(horizontal="center")
-            c.border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
+    def elapsed_days(start_iso: Optional[str], end_iso: Optional[str]):
+        if not start_iso:
+            return ""
         try:
-            wb.save(CONTAINER_LOG_XLSM_PATH)
-        except PermissionError:
-            raise HTTPException(
-                status_code=409,
-                detail="Container log Excel file is open elsewhere (likely in Excel). Close it and try again.",
-            )
+            start = datetime.fromisoformat(start_iso)
+            end = datetime.fromisoformat(end_iso) if end_iso else datetime.now(DMS_BUSINESS_TZ).replace(tzinfo=None)
+            return max(0, (end - start).days)
+        except Exception:
+            return ""
 
-    return {"ok": True, "row": row, "container": container, "location": location, "timestamp": timestamp.isoformat()}
+    def style_sheet(ws, headers: List[str], data_rows: List[List[Any]], widths: List[int]):
+        ws.sheet_view.showGridLines = False
+        ws.append(headers)
+        for c in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=c)
+            cell.fill = HEADER_FILL
+            cell.font = HEADER_FONT
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            cell.border = BORDER
+        for ri, r in enumerate(data_rows, start=2):
+            ws.append(r)
+            zebra = ZEBRA_FILL if ri % 2 == 0 else None
+            for c in range(1, len(headers) + 1):
+                cell = ws.cell(row=ri, column=c)
+                cell.font = BASE_FONT
+                cell.border = BORDER
+                cell.alignment = Alignment(horizontal="center")
+                if zebra:
+                    cell.fill = zebra
+        for c, width in enumerate(widths, start=1):
+            ws.column_dimensions[get_column_letter(c)].width = width
+
+    to_be_unloaded = [r for r in rows if r["status"] == "FULL"]
+    empty_pickup = [r for r in rows if r["status"] == "EMPTY"]
+
+    wb = Workbook()
+    ws1 = wb.active
+    ws1.title = "To Be Unloaded"
+    style_sheet(
+        ws1,
+        ["Trailer", "Full-Empty", "Location", "Date/Time Dropped", "Date/Time Verified", "Total Time To Unload", "Comments"],
+        [[r["trailer"], r["status"], r["location"], fmt_ts(r["dropped_at"]), fmt_ts(r["verified_at"]),
+          elapsed_hm(r["dropped_at"], r["verified_at"]), r["comments"]] for r in to_be_unloaded],
+        [16, 12, 14, 18, 18, 18, 40],
+    )
+    ws2 = wb.create_sheet("Empty for Pick Up")
+    style_sheet(
+        ws2,
+        ["Trailer", "Lot", "Date Unloaded", "Date Verified", "Days Before Pick up", "Comments"],
+        [[r["trailer"], r["location"], fmt_ts(r["unloaded_at"]), fmt_ts(r["empty_verified_at"]),
+          elapsed_days(r["unloaded_at"], r["empty_verified_at"]), r["comments"]] for r in empty_pickup],
+        [16, 12, 18, 18, 18, 40],
+    )
+
+    buf = BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+@app.get("/api/container-log/export")
+def container_log_export(username: str = Depends(_container_log_admin)):
+    conn = get_db()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT * FROM container_log WHERE picked_up_at IS NULL ORDER BY id"
+    ).fetchall()]
+    conn.close()
+    body = _container_log_xlsx_bytes(rows)
+    stamp = datetime.now(DMS_BUSINESS_TZ).strftime("%Y-%m-%d")
+    fname = f"ContainerLog_{stamp}.xlsx"
+    ctype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    return Response(content=body, media_type=ctype, headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @app.get("/")
