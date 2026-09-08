@@ -3915,6 +3915,189 @@
       color: #fbd38d;
       border-color: #744210;
     }
+
+    /* ============================================================
+       Navigation redesign (2026-09) -- final, consolidated version.
+       Everything is scoped under #sectionMenu (the <nav> element's own
+       id) so it always outranks the three earlier .app-shell/.section-menu/
+       .menu-group/.tab-button generations above, no matter which compound
+       class selector any of them used (an ID beats any class combination).
+       Those older rules are left in place for now as a separate cleanup
+       pass rather than risk untangling them here.
+       ============================================================ */
+    .app-shell {
+      display: block;
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 20px 24px 32px;
+    }
+    #sectionMenu {
+      position: sticky;
+      top: 12px;
+      z-index: 60;
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 0 18px;
+    }
+    #sectionMenu .menu-toggle {
+      width: auto;
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 12px;
+      padding: 0 18px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #004976, #00699e);
+      color: #fff;
+      font-weight: 700;
+      box-shadow: 0 8px 22px rgba(0, 73, 118, 0.28);
+      cursor: pointer;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+    #sectionMenu .menu-toggle:hover {
+      box-shadow: 0 10px 26px rgba(0, 73, 118, 0.36);
+      transform: translateY(-1px);
+    }
+    #sectionMenu .hamburger-lines {
+      display: inline-grid;
+      width: 18px;
+      gap: 4px;
+    }
+    #sectionMenu .hamburger-lines span {
+      display: block;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+    #sectionMenu .menu-current {
+      font-size: 0.92rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    #sectionMenu .menu-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 0;
+      z-index: 70;
+      width: min(980px, calc(100vw - 40px));
+      max-height: min(640px, calc(100vh - 100px));
+      overflow-y: auto;
+      grid-template-columns: repeat(4, minmax(170px, 1fr));
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      box-shadow: var(--shadow), 0 20px 46px rgba(0, 73, 118, 0.22);
+    }
+    #sectionMenu.open .menu-panel {
+      display: grid;
+    }
+    #sectionMenu .menu-search-input {
+      grid-column: 1 / -1;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--ink);
+      padding: 0 14px;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
+    }
+    #sectionMenu .menu-search-input:focus {
+      outline: none;
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(0, 169, 202, 0.18);
+    }
+    #sectionMenu .menu-search-empty {
+      grid-column: 1 / -1;
+      padding: 18px 4px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    #sectionMenu .menu-group {
+      min-width: 0;
+      padding: 10px 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--bg);
+    }
+    #sectionMenu .menu-group.menu-group-hidden {
+      display: none;
+    }
+    #sectionMenu .menu-group-title {
+      margin: 2px 4px 8px;
+      color: var(--teal);
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    #sectionMenu .tab-button {
+      width: 100%;
+      justify-content: flex-start;
+      min-height: 36px;
+      border: 0;
+      border-left: 3px solid transparent;
+      background: transparent;
+      color: var(--ink);
+      padding: 0 10px;
+      border-radius: 8px;
+      font-size: 0.86rem;
+      box-shadow: none;
+      transition: background 0.12s ease, color 0.12s ease;
+    }
+    #sectionMenu .tab-button.tab-button-hidden {
+      display: none;
+    }
+    #sectionMenu .tab-button:hover {
+      background: rgba(0, 169, 202, 0.12);
+      color: #004976;
+    }
+    #sectionMenu .tab-button[aria-selected="true"] {
+      background: rgba(0, 169, 202, 0.16);
+      border-left-color: var(--teal);
+      color: #004976;
+      font-weight: 700;
+    }
+    :root.dark #sectionMenu .menu-toggle {
+      background: linear-gradient(135deg, #0f4f80, #0d6ba0);
+      box-shadow: 0 8px 22px rgba(0,0,0,0.4);
+    }
+    :root.dark #sectionMenu .menu-group { background: #0e1e30; border-color: #1e3a55; }
+    :root.dark #sectionMenu .menu-search-input { background: #0d1b2a; }
+    :root.dark #sectionMenu .tab-button { color: #90bcd8; }
+    :root.dark #sectionMenu .tab-button:hover { background: #1a2d40; color: #eaf4ff; }
+    :root.dark #sectionMenu .tab-button[aria-selected="true"] { background: #1a3050; color: #eaf4ff; border-left-color: #00ccee; }
+    :root.retro #sectionMenu .menu-toggle { background: linear-gradient(135deg, #3d28b0, #7a1fd0); box-shadow: 0 0 20px rgba(200,79,216,0.3); }
+    :root.retro #sectionMenu .menu-group { background: #130827; border-color: #3d28b0; }
+    :root.retro #sectionMenu .menu-search-input { background: #0a0018; }
+    :root.retro #sectionMenu .tab-button { color: #c4a8ff; }
+    :root.retro #sectionMenu .tab-button:hover { background: rgba(0,245,255,0.1); color: #00f5ff; }
+    :root.retro #sectionMenu .tab-button[aria-selected="true"] { background: rgba(0,245,255,0.14); color: #00f5ff; border-left-color: #00f5ff; }
+
+    @media (max-width: 980px) {
+      #sectionMenu .menu-panel {
+        width: min(680px, calc(100vw - 32px));
+        grid-template-columns: repeat(2, minmax(150px, 1fr));
+      }
+    }
+    @media (max-width: 680px) {
+      #sectionMenu { width: 100%; }
+      #sectionMenu .menu-toggle { width: 100%; }
+      #sectionMenu .menu-panel {
+        position: static;
+        width: 100%;
+        max-height: none;
+        grid-template-columns: 1fr;
+        margin-top: 8px;
+        box-shadow: none;
+      }
+    }
     </style>
 </head>
 <body>
@@ -3953,6 +4136,8 @@
         <span class="menu-current" id="sectionMenuCurrent">Live: My Portal</span>
       </button>
       <div class="menu-panel" id="sectionMenuPanel">
+        <input type="text" id="sectionMenuSearch" class="menu-search-input" placeholder="Search sections..." autocomplete="off" aria-label="Search sections">
+        <div class="menu-search-empty" id="sectionMenuSearchEmpty" hidden>No matching section.</div>
         <div class="menu-group">
           <div class="menu-group-title">Live</div>
           <button class="tab-button" type="button" aria-selected="true" data-tab="myPortal" data-menu-label="Live: My Portal">My Portal (OKS)</button>
@@ -7816,6 +8001,8 @@
       sectionMenu: document.getElementById("sectionMenu"),
       sectionMenuToggle: document.getElementById("sectionMenuToggle"),
       sectionMenuCurrent: document.getElementById("sectionMenuCurrent"),
+      sectionMenuSearch: document.getElementById("sectionMenuSearch"),
+      sectionMenuSearchEmpty: document.getElementById("sectionMenuSearchEmpty"),
       sampleButton: document.getElementById("sampleButton"),
       clearButton: document.getElementById("clearButton"),
       statusLine: document.getElementById("statusLine"),
@@ -8608,6 +8795,9 @@
     els.sectionMenuToggle.addEventListener("click", () => {
       const isOpen = els.sectionMenu.classList.toggle("open");
       els.sectionMenuToggle.setAttribute("aria-expanded", String(isOpen));
+      if (isOpen && els.sectionMenuSearch) {
+        setTimeout(() => els.sectionMenuSearch.focus(), 0);
+      }
     });
     document.addEventListener("click", (event) => {
       if (!els.sectionMenu.contains(event.target)) closeSectionMenu();
@@ -8615,6 +8805,36 @@
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") closeSectionMenu();
     });
+
+    function filterSectionMenu(query) {
+      const q = String(query || "").trim().toLowerCase();
+      let anyVisible = false;
+      document.querySelectorAll(".menu-group").forEach((group) => {
+        let groupHasVisible = false;
+        group.querySelectorAll(".tab-button").forEach((button) => {
+          if (button.classList.contains("role-hidden")) return;
+          const label = (button.dataset.menuLabel || button.textContent || "").toLowerCase();
+          const matches = !q || label.includes(q);
+          button.classList.toggle("tab-button-hidden", !matches);
+          if (matches) groupHasVisible = true;
+        });
+        group.classList.toggle("menu-group-hidden", !groupHasVisible);
+        if (groupHasVisible) anyVisible = true;
+      });
+      if (els.sectionMenuSearchEmpty) els.sectionMenuSearchEmpty.hidden = anyVisible;
+    }
+    if (els.sectionMenuSearch) {
+      els.sectionMenuSearch.addEventListener("input", () => filterSectionMenu(els.sectionMenuSearch.value));
+      els.sectionMenuSearch.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          if (els.sectionMenuSearch.value) {
+            event.stopPropagation();
+            els.sectionMenuSearch.value = "";
+            filterSectionMenu("");
+          }
+        }
+      });
+    }
     document.querySelectorAll("[data-audit-view-button]").forEach((button) => {
       button.addEventListener("click", () => selectBreakdownAuditView(button.dataset.auditViewButton));
     });
@@ -20026,6 +20246,10 @@
       if (!els.sectionMenu || !els.sectionMenuToggle) return;
       els.sectionMenu.classList.remove("open");
       els.sectionMenuToggle.setAttribute("aria-expanded", "false");
+      if (els.sectionMenuSearch && els.sectionMenuSearch.value) {
+        els.sectionMenuSearch.value = "";
+        filterSectionMenu("");
+      }
     }
 
     function showToast(message) {
