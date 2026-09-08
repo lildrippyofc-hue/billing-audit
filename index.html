@@ -1163,16 +1163,28 @@
       outline-offset: 2px;
     }
 
-    .primary {
+    .primary,
+    .primary-btn {
       background: #DC582A;
       border-color: #DC582A;
       color: #fff;
       font-weight: 640;
     }
 
-    .primary:hover {
+    .primary:hover,
+    .primary-btn:hover {
       background: #C04820;
       border-color: #C04820;
+      color: #fff;
+    }
+
+    .primary-btn:disabled {
+      background: var(--muted);
+      border-color: var(--muted);
+      color: #fff;
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
     }
 
     .icon {
@@ -6793,8 +6805,8 @@
       <!-- === ALERTS =========================================================== -->
       <section id="alertsPanel" class="tab-panel" aria-label="Alerts">
         <div class="motivation-bar" id="motivBar_alerts"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="table-card" style="margin-top:10px;">
-          <div class="table-header">
+        <div class="table-wrap" style="margin-top:10px;">
+          <div class="table-toolbar">
             <div>
               <div class="table-title">Active Alerts</div>
               <div class="table-meta" id="alertsTabMeta">Trucks needing attention show up here. The portal board stays clean.</div>
