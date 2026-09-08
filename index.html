@@ -29,6 +29,19 @@
       --red: #B03020;
       --shadow: 0 6px 28px rgba(0, 73, 118, 0.10);
       --radius: 10px;
+      /* My Portal (and a few other panels) were built against a second,
+         never-defined token set -- var(--border, #e2e8f0) etc. always fell
+         through to that hardcoded fallback in every theme. Defining them
+         for real here (and re-pointed at the command-deck palette below)
+         is what actually makes those panels follow dark mode. */
+      --border: #e2e8f0;
+      --text: #1a202c;
+      --card-bg: #ffffff;
+      --card: #ffffff;
+      --header-bg: #f7fafc;
+      --hover: #f0f4f8;
+      --warn-bg: #fffbeb;
+      --label: #718096;
       font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
     }
 
@@ -46,6 +59,14 @@
       --teal: #00e5ff;
       --amber: #ffa53d;
       --red: #ff3b57;
+      --border: var(--line);
+      --text: var(--ink);
+      --card-bg: var(--panel);
+      --card: var(--panel);
+      --header-bg: var(--panel-2);
+      --hover: var(--panel-2);
+      --warn-bg: #2a1f00;
+      --label: var(--teal);
       --shadow: 0 0 0 1px rgba(0,229,255,0.06), 0 8px 32px rgba(0,0,0,0.6);
       --font-display: "Chakra Petch", Inter, "Segoe UI", sans-serif;
       --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
@@ -78,14 +99,46 @@
     :root.dark .panel,
     :root.dark .metric-card,
     :root.dark .table-wrap,
-    :root.dark .lookup-box {
+    :root.dark .lookup-box,
+    :root.dark .alert-card,
+    :root.dark .area-card,
+    :root.dark .door-tile,
+    :root.dark .portal-action-item,
+    :root.dark .portal-action-panel,
+    :root.dark .portal-chart-card,
+    :root.dark .portal-client-kpi,
+    :root.dark .portal-client-panel,
+    :root.dark .portal-mini-card,
+    :root.dark .portal-schedule-panel,
+    :root.dark .portal-forecast-item,
+    :root.dark .vendor-card,
+    :root.dark .trend-chart-card,
+    :root.dark .report-modal,
+    :root.dark .sheets-modal,
+    :root.dark .dock-row {
       position: relative;
       border-radius: 4px;
     }
     :root.dark .panel::before, :root.dark .panel::after,
     :root.dark .metric-card::before, :root.dark .metric-card::after,
     :root.dark .table-wrap::before, :root.dark .table-wrap::after,
-    :root.dark .lookup-box::before, :root.dark .lookup-box::after {
+    :root.dark .lookup-box::before, :root.dark .lookup-box::after,
+    :root.dark .alert-card::before, :root.dark .alert-card::after,
+    :root.dark .area-card::before, :root.dark .area-card::after,
+    :root.dark .door-tile::before, :root.dark .door-tile::after,
+    :root.dark .portal-action-item::before, :root.dark .portal-action-item::after,
+    :root.dark .portal-action-panel::before, :root.dark .portal-action-panel::after,
+    :root.dark .portal-chart-card::before, :root.dark .portal-chart-card::after,
+    :root.dark .portal-client-kpi::before, :root.dark .portal-client-kpi::after,
+    :root.dark .portal-client-panel::before, :root.dark .portal-client-panel::after,
+    :root.dark .portal-mini-card::before, :root.dark .portal-mini-card::after,
+    :root.dark .portal-schedule-panel::before, :root.dark .portal-schedule-panel::after,
+    :root.dark .portal-forecast-item::before, :root.dark .portal-forecast-item::after,
+    :root.dark .vendor-card::before, :root.dark .vendor-card::after,
+    :root.dark .trend-chart-card::before, :root.dark .trend-chart-card::after,
+    :root.dark .report-modal::before, :root.dark .report-modal::after,
+    :root.dark .sheets-modal::before, :root.dark .sheets-modal::after,
+    :root.dark .dock-row::before, :root.dark .dock-row::after {
       content: "";
       position: absolute;
       width: 9px;
@@ -95,16 +148,40 @@
       pointer-events: none;
     }
     :root.dark .panel::before, :root.dark .metric-card::before,
-    :root.dark .table-wrap::before, :root.dark .lookup-box::before {
+    :root.dark .table-wrap::before, :root.dark .lookup-box::before,
+    :root.dark .alert-card::before, :root.dark .area-card::before,
+    :root.dark .door-tile::before, :root.dark .portal-action-item::before,
+    :root.dark .portal-action-panel::before, :root.dark .portal-chart-card::before,
+    :root.dark .portal-client-kpi::before, :root.dark .portal-client-panel::before,
+    :root.dark .portal-mini-card::before, :root.dark .portal-schedule-panel::before,
+    :root.dark .portal-forecast-item::before, :root.dark .vendor-card::before,
+    :root.dark .trend-chart-card::before, :root.dark .report-modal::before,
+    :root.dark .sheets-modal::before, :root.dark .dock-row::before {
       top: -1px; left: -1px; border-right: none; border-bottom: none;
     }
     :root.dark .panel::after, :root.dark .metric-card::after,
-    :root.dark .table-wrap::after, :root.dark .lookup-box::after {
+    :root.dark .table-wrap::after, :root.dark .lookup-box::after,
+    :root.dark .alert-card::after, :root.dark .area-card::after,
+    :root.dark .door-tile::after, :root.dark .portal-action-item::after,
+    :root.dark .portal-action-panel::after, :root.dark .portal-chart-card::after,
+    :root.dark .portal-client-kpi::after, :root.dark .portal-client-panel::after,
+    :root.dark .portal-mini-card::after, :root.dark .portal-schedule-panel::after,
+    :root.dark .portal-forecast-item::after, :root.dark .vendor-card::after,
+    :root.dark .trend-chart-card::after, :root.dark .report-modal::after,
+    :root.dark .sheets-modal::after, :root.dark .dock-row::after {
       bottom: -1px; right: -1px; border-left: none; border-top: none;
     }
     :root.dark button.primary, :root.dark .primary-btn, :root.dark .file-button.primary {
       box-shadow: 0 0 16px rgba(255, 165, 61, 0.25);
     }
+    /* Command-bar / header: distinctive cut-corner HUD panel */
+    :root.dark header,
+    :root.dark .portal-command-bar {
+      clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+      border: 1px solid var(--strong-line);
+      position: relative;
+    }
+    :root.dark .portal-command-bar { background: var(--panel-2); }
     /* Dark mode readability overrides */
     :root.dark .table-title { color: #cce8ff; }
     :root.dark .table-kicker { color: #90bcd8; }
@@ -564,6 +641,9 @@
     .portal-notif-banner { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#ebf8ff; border:1.5px solid #90cdf4; border-radius:8px; padding:8px 14px; margin:6px 0 10px; font-size:0.84em; color:#2b6cb0; }
     .portal-notif-banner button { font-size:0.82em; font-weight:700; padding:4px 12px; border-radius:6px; border:1.5px solid #3182ce; background:#3182ce; color:#fff; cursor:pointer; white-space:nowrap; }
     .portal-notif-banner .notif-dismiss { background:transparent; border-color:#90cdf4; color:#3182ce; margin-left:6px; }
+    :root.dark .portal-notif-banner { background: var(--panel-2); border-color: var(--strong-line); color: var(--ink); }
+    :root.dark .portal-notif-banner button { background: var(--teal); border-color: var(--teal); color: #00202a; }
+    :root.dark .portal-notif-banner .notif-dismiss { background: transparent; border-color: var(--strong-line); color: var(--teal); }
     .portal-refresh-btn { padding: 6px 12px; font-size: 0.82em; font-weight: 600; display: flex; align-items: center; gap: 5px; }
     /* Metric card accent stripes */
     .metric-card[data-accent] { border-left: 4px solid transparent; }
