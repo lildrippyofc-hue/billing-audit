@@ -11,6 +11,7 @@
   <title>Daily Truck Operations</title>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5098781549114915"
      crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
   <style>
     :root {
       color-scheme: light;
@@ -33,19 +34,76 @@
 
     :root.dark {
       color-scheme: dark;
-      --bg: #0b1520;
-      --panel: #132030;
-      --panel-2: #1a2d40;
-      --ink: #e8f4ff;
-      --muted: #90bcd8;
-      --line: #1e3a55;
-      --strong-line: #2e5070;
-      --green: #25c48a;
+      --bg: #070c15;
+      --panel: #0d1a26;
+      --panel-2: #101f2d;
+      --ink: #dceaf2;
+      --muted: #6f93a8;
+      --line: #1c3040;
+      --strong-line: #2a4a5e;
+      --green: #2de08a;
       --green-2: #0a2e22;
-      --teal: #00ccee;
-      --amber: #ff6b35;
-      --red: #ff4a3a;
-      --shadow: 0 6px 32px rgba(0,0,0,0.55);
+      --teal: #00e5ff;
+      --amber: #ffa53d;
+      --red: #ff3b57;
+      --shadow: 0 0 0 1px rgba(0,229,255,0.06), 0 8px 32px rgba(0,0,0,0.6);
+      --font-display: "Chakra Petch", Inter, "Segoe UI", sans-serif;
+      --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+    }
+    /* Command-deck typography + structural details -- dark mode only; light
+       mode is left as the untouched, safe fallback look. */
+    :root.dark {
+      background-image:
+        linear-gradient(var(--panel-2) 1px, transparent 1px) 0 0 / 100% 42px,
+        linear-gradient(90deg, var(--panel-2) 1px, transparent 1px) 0 0 / 42px 100%;
+      background-attachment: fixed;
+    }
+    :root.dark body {
+      background: transparent;
+    }
+    :root.dark h1, :root.dark h2, :root.dark h3,
+    :root.dark .menu-group-title, :root.dark .metric-label, :root.dark .table-title,
+    :root.dark .panel-kicker, :root.dark .menu-current, :root.dark .table-kicker {
+      font-family: var(--font-display);
+      letter-spacing: 0.02em;
+    }
+    :root.dark .metric-value, :root.dark td, :root.dark th,
+    :root.dark .dock-count {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+    :root.dark .metric-value {
+      text-shadow: 0 0 18px rgba(0,229,255,0.25);
+    }
+    :root.dark .panel,
+    :root.dark .metric-card,
+    :root.dark .table-wrap,
+    :root.dark .lookup-box {
+      position: relative;
+      border-radius: 4px;
+    }
+    :root.dark .panel::before, :root.dark .panel::after,
+    :root.dark .metric-card::before, :root.dark .metric-card::after,
+    :root.dark .table-wrap::before, :root.dark .table-wrap::after,
+    :root.dark .lookup-box::before, :root.dark .lookup-box::after {
+      content: "";
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border: 1.5px solid var(--teal);
+      opacity: 0.55;
+      pointer-events: none;
+    }
+    :root.dark .panel::before, :root.dark .metric-card::before,
+    :root.dark .table-wrap::before, :root.dark .lookup-box::before {
+      top: -1px; left: -1px; border-right: none; border-bottom: none;
+    }
+    :root.dark .panel::after, :root.dark .metric-card::after,
+    :root.dark .table-wrap::after, :root.dark .lookup-box::after {
+      bottom: -1px; right: -1px; border-left: none; border-top: none;
+    }
+    :root.dark button.primary, :root.dark .primary-btn, :root.dark .file-button.primary {
+      box-shadow: 0 0 16px rgba(255, 165, 61, 0.25);
     }
     /* Dark mode readability overrides */
     :root.dark .table-title { color: #cce8ff; }
@@ -8519,7 +8577,7 @@
         const current = root.classList.contains("retro") ? "retro" : root.classList.contains("dark") ? "dark" : "light";
         return modes[(modes.indexOf(current) + 1) % modes.length];
       }
-      const saved = localStorage.getItem("colorMode") || (localStorage.getItem("darkMode") === "true" ? "dark" : "light");
+      const saved = localStorage.getItem("colorMode") || (localStorage.getItem("darkMode") === "false" ? "light" : "dark");
       applyColorMode(saved);
         if (toggle) {
           toggle.addEventListener("click", () => {
