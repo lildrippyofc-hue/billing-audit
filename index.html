@@ -10637,6 +10637,17 @@
       }
     }
 
+    // Minnesota only: the preview table shows just the first PO on a
+    // multi-PO load (e.g. "7521444135,7522401186" -> "7521444135") since
+    // that's all Minnesota wants to see when reviewing before upload. The
+    // full PO string is untouched in row.po itself, so search-by-any-PO
+    // and the actual DMS insert (which needs every PO) both keep working.
+    function portalMnFirstPo(value) {
+      const text = String(value || "").trim();
+      if (!text) return text;
+      return text.split(/[,;]/)[0].trim() || text;
+    }
+
     function portalMnRenderSchedulePreview() {
       const schedule = state.portalMn.scheduleUpload || { rows: [], errors: [], uploaded: [] };
       const table = els.portalMnSchedulePreviewTable;
@@ -10698,7 +10709,7 @@
           ? uploadResult.status + ": " + uploadResult.message
           : ((row.errors || []).join("; ") || "Ready");
         const shownTruckNumber = uploadResult ? (uploadResult.truck_number || "-") : (row.dms_truck_number || "-");
-        [row.row_number, shownTruckNumber, row.reference || "-", row.po || "-", scheduled, row.area || "-", row.dock_type || row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
+        [row.row_number, shownTruckNumber, row.reference || "-", portalMnFirstPo(row.po) || "-", scheduled, row.area || "-", row.dock_type || row.protection || row.dock || "ALDI Schedule", row.supplier || "-", row.pallets ?? "-", statusText].forEach(function(value) {
           const td = document.createElement("td");
           td.textContent = value;
           tr.appendChild(td);
