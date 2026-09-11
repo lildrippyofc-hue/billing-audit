@@ -1757,10 +1757,19 @@ def _dms_schedule_insert_payload(
         if produce_side:
             side_range = "doors 1-74" if produce_side == "Dry" else "doors 75+"
             notes = f"{notes} / Produce: {produce_side.upper()} SIDE ({side_range})"
-    # Keep the full PO string intact (even a multi-PO cell like
-    # "7521444135,7522401186") -- that's what lets My Portal's search box find
-    # the truck by typing any one of its PO numbers, same as OKS today.
-    po_number = row.po.strip()
+    if use_oks_rules:
+        # OKS keeps the full PO string intact (even a multi-PO cell like
+        # "7521444135,7522401186") -- that's what lets My Portal's search box
+        # find the truck by typing any one of its PO numbers.
+        po_number = row.po.strip()
+    else:
+        # Minnesota only wants the first PO written into DMS's actual PO
+        # Number field (confirmed with James 2026-09-10) -- a multi-PO cell
+        # like "7521444135,7522401186" becomes just "7521444135". This means
+        # only the first PO is searchable/duplicate-detectable in DMS for MN
+        # multi-PO loads; that tradeoff was accepted in exchange for DMS not
+        # showing every PO jammed into one field.
+        po_number = re.split(r"[,;]", row.po.strip())[0].strip() or row.po.strip()
     category_desc = row.product_category.strip() if use_oks_rules else _powerview_strip_commodity_code(row.product_category)
     supplier_fallback = "MULTI PO SUPPLIER NOT KNOWN" if use_oks_rules else "MULTI PO - VENDOR NOT SPECIFIED"
     supplier_value = row.supplier.strip() or supplier_fallback
