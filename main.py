@@ -740,6 +740,24 @@ def require_auth(session: Optional[str] = Cookie(default=None)) -> str:
     return _sessions[session]
 
 
+def _require_roles(*roles: str):
+    """Login required, and the role must be one of `roles` (admin always passes)."""
+    allowed = set(roles) | {"admin"}
+
+    def _dep(username: str = Depends(require_auth)) -> str:
+        if _ROLES.get(username, "guest") not in allowed:
+            raise HTTPException(status_code=403, detail="Not allowed for this login.")
+        return username
+
+    return _dep
+
+
+# Mirrors ROLE_TABS in index.html: OKS-side DMS/portal routes serve the roles
+# that can open My Portal or DMS Stamp; Minnesota routes serve only minnesota.
+_require_oks_dms = _require_roles("oks", "manager", "teamlead", "clerk")
+_require_mn_dms = _require_roles("minnesota")
+
+
 # ── Auth routes ───────────────────────────────────────────────────────────────
 
 @app.post("/api/login")
@@ -1019,7 +1037,7 @@ def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
 
 
 @app.get("/api/dms/session")
-def dms_session_status():
+def dms_session_status(_: str = Depends(_require_oks_dms)):
     session = _ensure_dms_session()
     loc = session.get("loc") or {}
     return {
@@ -1034,7 +1052,7 @@ def dms_session_status():
 
 
 @app.get("/api/dms/mn/session")
-def dms_mn_session_status(force: bool = False):
+def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_dms)):
     session = _ensure_dms_mn_session(force=force)
     loc = session.get("loc") or {}
     return {
@@ -1049,14 +1067,14 @@ def dms_mn_session_status(force: bool = False):
 
 
 @app.get("/api/dms/mn/portal")
-def dms_mn_portal(date: Optional[str] = None, force: bool = False):
+def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depends(_require_mn_dms)):
     """Read Minnesota DMS load/stamp rows for the MN My Portal. This route never writes to DMS."""
     session = _ensure_dms_mn_session(force=force)
     return _build_dms_portal_payload(session, date)
 
 
 @app.get("/api/dms/portal")
-def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False):
+def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False, _: str = Depends(_require_oks_dms)):
     """Read DMS load/stamp rows for My Portal. This route never writes to DMS."""
     # In debug mode, never 500 — capture and return whatever we can learn.
     if debug:
@@ -1185,7 +1203,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
 
 
 @app.post("/api/portal/learn-history")
-def portal_learn_history(days: int = 7):
+def portal_learn_history(days: int = 7, _: str = Depends(_require_oks_dms)):
     """Backfill vendor learning from the last N days of real DMS shifts so the
     completion estimate is accurate right away instead of only over time."""
     session = _ensure_dms_session()
@@ -1900,7 +1918,7 @@ def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn,
 
 
 @app.get("/api/dms/schedule-upload-model")
-def dms_schedule_upload_model():
+def dms_schedule_upload_model(_: str = Depends(_require_oks_dms)):
     session = _ensure_dms_session()
     model = _dms_schedule_upload_model(session)
     insert_model = model.get("insert") if isinstance(model, dict) else None
@@ -1914,13 +1932,13 @@ def dms_schedule_upload_model():
 
 
 @app.post("/api/dms/schedule-upload")
-def dms_schedule_upload(body: DmsScheduleUploadIn):
+def dms_schedule_upload(body: DmsScheduleUploadIn, _: str = Depends(_require_oks_dms)):
     session = _ensure_dms_session()
     return _run_dms_schedule_upload(session, body, use_oks_rules=True)
 
 
 @app.get("/api/dms/mn/schedule-upload-model")
-def dms_mn_schedule_upload_model():
+def dms_mn_schedule_upload_model(_: str = Depends(_require_mn_dms)):
     session = _ensure_dms_mn_session()
     model = _dms_schedule_upload_model(session)
     insert_model = model.get("insert") if isinstance(model, dict) else None
@@ -1934,7 +1952,7 @@ def dms_mn_schedule_upload_model():
 
 
 @app.post("/api/dms/mn/schedule-upload")
-def dms_mn_schedule_upload(body: DmsScheduleUploadIn):
+def dms_mn_schedule_upload(body: DmsScheduleUploadIn, _: str = Depends(_require_mn_dms)):
     session = _ensure_dms_mn_session()
     return _run_dms_schedule_upload(session, body, use_oks_rules=False)
 
@@ -3098,7 +3116,7 @@ def dms_billing_audit_delete_run(run_id: int, _: str = Depends(require_auth)) ->
 
 
 @app.post("/api/dms/stamp")
-def dms_stamp(body: DmsStampIn):
+def dms_stamp(body: DmsStampIn, _: str = Depends(_require_oks_dms)):
     session = _ensure_dms_session()
     stamp_key = STAMP_TYPE_MAP.get(body.stamp_type.lower().replace(" ", ""), body.stamp_type)
     stamp_time = body.stamp_time or datetime.now(timezone.utc).isoformat()
@@ -3139,7 +3157,7 @@ class ShiftExportIn(BaseModel):
     trucks: List[Dict[str, Any]] = []
 
 @app.post("/api/portal/export", status_code=201)
-def save_shift_export(body: ShiftExportIn):
+def save_shift_export(body: ShiftExportIn, _: str = Depends(_require_oks_dms)):
     safe_name = "".join(c for c in body.filename if c.isalnum() or c in "-_.")
     if not safe_name.endswith(".csv"):
         safe_name += ".csv"
@@ -3156,7 +3174,7 @@ def save_shift_export(body: ShiftExportIn):
     return {"ok": True, "filename": safe_name}
 
 @app.get("/api/portal/exports")
-def list_shift_exports():
+def list_shift_exports(_: str = Depends(_require_oks_dms)):
     exports = []
     for meta_file in sorted(EXPORTS_DIR.glob("*.json"), reverse=True):
         try:
@@ -3172,7 +3190,7 @@ def list_shift_exports():
     return {"ok": True, "exports": exports}
 
 @app.get("/api/portal/exports/{filename}")
-def download_shift_export(filename: str):
+def download_shift_export(filename: str, _: str = Depends(_require_oks_dms)):
     safe_name = "".join(c for c in filename if c.isalnum() or c in "-_.")
     csv_path = EXPORTS_DIR / safe_name
     if not csv_path.exists() or csv_path.suffix != ".csv":
@@ -3190,7 +3208,7 @@ class VendorLearnIn(BaseModel):
     trucks: List[VendorLearnTruck] = []
 
 @app.post("/api/portal/learn", status_code=201)
-def portal_learn(body: VendorLearnIn):
+def portal_learn(body: VendorLearnIn, _: str = Depends(_require_oks_dms)):
     if not body.trucks:
         return {"ok": True, "inserted": 0}
     conn = get_db()
@@ -3212,7 +3230,7 @@ def portal_learn(body: VendorLearnIn):
     return {"ok": True, "inserted": inserted}
 
 @app.get("/api/portal/vendor-stats")
-def portal_vendor_stats():
+def portal_vendor_stats(_: str = Depends(_require_oks_dms)):
     conn = get_db()
     rows = conn.execute("""
         SELECT vendor, dock_min, recorded_at

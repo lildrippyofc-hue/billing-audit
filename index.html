@@ -8155,11 +8155,26 @@
       if (/^https?:\/\//i.test(path)) return path;
       return window.location.protocol === "file:" ? LOCAL_API_BASE + path : path;
     }
+    // Sessions live in server memory, so a redeploy signs everyone out. If an
+    // API call comes back 401 while the page is open, ask for a fresh sign-in
+    // instead of leaving the portals silently stuck on "unavailable".
+    (function() {
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = function(input, init) {
+        return nativeFetch(input, init).then(function(resp) {
+          const url = String(typeof input === "string" ? input : (input && input.url) || "");
+          if (resp.status === 401 && /\/api\//.test(url) && !/\/api\/(login|logout|me)(\?|$)/.test(url)) {
+            try { showLogin("Your session expired. Sign in again."); } catch (e) {}
+          }
+          return resp;
+        });
+      };
+    })();
     const TALL_DOOR_NUMBERS = new Set([1, 15, 17, 18, 21, 27, 28, 54, 56, 61, 65, 72, 73, 74, 80, 84, 86, 88, 89, 91, 94, 95, 98, 100, 103]);
     const ROLE_TABS = {
       admin: ["*"],
       oks: ["myPortal", "overview", "data", "help"],
-      minnesota: ["myPortalMn", "mnScheduleUploader", "mnBillingAudit", "guardShackMn"],
+      minnesota: ["myPortalMn", "mnScheduleUploader", "mnBillingAudit", "guardShackMn", "overview", "data"],
       manager: ["myPortal", "alerts", "dmsStamp", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       teamlead: ["myPortal", "alerts", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "help"],
       clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
@@ -9753,7 +9768,7 @@
     // Shows once per user per site per PORTAL_TOUR_VERSION; skippable at any
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
-    const PORTAL_TOUR_VERSION = "2026-09-25";
+    const PORTAL_TOUR_VERSION = "2026-09-25b";
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     const PORTAL_TOUR_STEPS = {
       oks: [
@@ -9779,6 +9794,7 @@
           body: "The popup shows status and countdown, time on dock, unload time, <b>every PO on its own line</b>, and the timeline. <b>Copy summary</b> copies the details to paste elsewhere, and <b>Shift note</b> saves a quick note on this device." },
         { title: "Alerts", target: portalTourEl("portalMnAlertsBtn"),
           body: "Click <b>Enable alerts</b> for desktop popups on detention risk, overdue unload starts, and unloader delays. They fire whenever the board refreshes (about once a minute while this page is open). Your admin can also connect Slack so supervisors are pinged when the portal is closed." },
+        { title: "Also new: Truck Report charts", body: "The menu now has <b>Overview</b> and <b>Data</b>. Attach the daily truck schedule on Overview, then open Data for the hourly flow, dock, and area charts." },
         { title: "Also new: Schedule Uploader", body: "In the <b>Minnesota Schedule Uploader</b>, rows covering multiple POs now show and send only the <b>first PO</b> to DMS, and suppliers with an Incoterm are tagged like <i>(DDP) Supplier</i>." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="mn"]'); },
           body: "You can replay this any time with the <b>What's new</b> button." }
@@ -15198,7 +15214,13 @@
       const timeRemainingToGoalMs = Math.max(0, goal5amMs - now);
       const shiftElapsedMs = Math.max(0, now - shiftStartMs);
 
-      const estimateTotal = morningClosedNoOpenArrivals ? complete.length : Math.max(enriched.length, scheduledDmsTotal);
+      // Scheduled trucks that never got a check-in stamp (late / no-show) are not
+      // coming, so they must not count toward the work remaining -- otherwise the
+      // projected finish is padded with trucks that will never hit the dock. A
+      // truck that checks in later drops out of the no-show count on the next pull.
+      const noShowCount = Math.max(state.portalMn.noShowCount || 0, (state.portalMn.noShowTrucks || []).length);
+      const estimateScheduledTotal = Math.max(0, scheduledDmsTotal - noShowCount);
+      const estimateTotal = morningClosedNoOpenArrivals ? complete.length : Math.max(enriched.length, estimateScheduledTotal);
       const scheduledNotOnBoard = morningClosedNoOpenArrivals ? 0 : Math.max(0, estimateTotal - enriched.length);
       const stillRunning = morningClosedNoOpenArrivals ? 0 : Math.max(0, estimateTotal - complete.length);
       let estMs = null;
@@ -15229,8 +15251,8 @@
           if (scheduledNotOnBoard > 0) {
             els.portalMnEstNote.textContent += " (" + scheduledNotOnBoard + " not arrived yet)";
           }
-          if (state.portalMn.noShowCount > 0) {
-            els.portalMnEstNote.textContent += " - excludes " + state.portalMn.noShowCount + " late/no-show";
+          if (noShowCount > 0) {
+            els.portalMnEstNote.textContent += " - excludes " + noShowCount + " late/no-show";
           }
         }
       } else if (enriched.length > 0 || morningClosedNoOpenArrivals) {
@@ -20554,7 +20576,7 @@
         const visibleButton = Array.from(group.querySelectorAll(".tab-button")).some((button) => !button.classList.contains("role-hidden"));
         group.classList.toggle("role-hidden", !visibleButton);
       });
-      const canUseUploads = ["admin", "manager", "teamlead", "work", "oks"].includes(role);
+      const canUseUploads = ["admin", "manager", "teamlead", "work", "oks", "minnesota"].includes(role);
       document.querySelectorAll(".work-only-btn").forEach((button) => {
         button.classList.toggle("role-hidden", !canUseUploads);
       });
