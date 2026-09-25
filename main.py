@@ -3473,6 +3473,177 @@ def container_log_export(username: str = Depends(_container_log_admin)):
     return Response(content=body, media_type=ctype, headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
+# ── Proactive dock alerts (Slack-style webhook) ──────────────────────────────
+# Runs on the server so supervisors get pinged even when nobody has My Portal
+# open. Off unless ALERT_WEBHOOK_URL (OKS) and/or ALERT_WEBHOOK_URL_MN is set.
+# The rules mirror portalCalcStatus / portalDetentionExempt / portalBuildAlerts
+# in index.html -- a second copy of the same logic, so keep the two in sync.
+
+_ALERT_SITES = {
+    "OKS": {"env": "ALERT_WEBHOOK_URL", "session": lambda: _ensure_dms_session()},
+    "MN": {"env": "ALERT_WEBHOOK_URL_MN", "session": lambda: _ensure_dms_mn_session()},
+}
+_alert_sent: Dict[str, float] = {}
+
+
+def _alert_free_minutes() -> int:
+    try:
+        return max(30, int(os.environ.get("ALERT_FREE_TIME_MINUTES", "120")))
+    except ValueError:
+        return 120
+
+
+def _alert_iso_ms(value: Any) -> Optional[float]:
+    if not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.timestamp() * 1000
+
+
+def _alert_exempt(truck: Dict[str, Any], appt_ms: Optional[float]) -> bool:
+    if re.search(r"\blate\b", str(truck.get("statusText") or ""), re.I):
+        return True
+    if re.search(r"spill", str(truck.get("comments") or ""), re.I):
+        return True
+    if appt_ms:
+        local = datetime.fromtimestamp(appt_ms / 1000, DMS_BUSINESS_TZ)
+        if local.hour == 6 and local.minute == 0:
+            return True
+    return False
+
+
+def _alert_shift_closed(business_date: str, now_ms: float) -> bool:
+    m = re.match(r"^(\d{1,2})/(\d{1,2})/(\d{4})$", business_date)
+    if not m:
+        return False
+    cutoff = datetime(int(m.group(3)), int(m.group(1)), int(m.group(2)), 9, 0, tzinfo=DMS_BUSINESS_TZ)
+    return now_ms >= cutoff.timestamp() * 1000
+
+
+def _compute_dock_alerts(trucks: List[Dict[str, Any]], business_date: str, free_minutes: int, now_ms: float) -> List[Dict[str, str]]:
+    MIN = 60000
+    closed = _alert_shift_closed(business_date, now_ms)
+    out: List[Dict[str, str]] = []
+    for t in trucks:
+        check_in = _alert_iso_ms(t.get("checkInIso"))
+        if not check_in:
+            continue
+        appt = _alert_iso_ms(t.get("appointmentIso"))
+        if _alert_exempt(t, appt):
+            continue
+        door_ms = _alert_iso_ms(t.get("driverAtDoorIso"))
+        un_start = _alert_iso_ms(t.get("unloadStartIso"))
+        un_fin = _alert_iso_ms(t.get("unloadFinishIso"))
+        rec_start = _alert_iso_ms(t.get("receivingStartIso"))
+        rec_fin = _alert_iso_ms(t.get("receivingFinishIso"))
+        done = bool(un_fin or rec_fin)
+
+        needs_start = bool(appt and door_ms and not un_start and now_ms >= appt + 30 * MIN)
+        status = "active"
+        if done:
+            status = "complete"
+        elif needs_start:
+            status = "startsoon"
+        else:
+            base = appt or check_in
+            mins_rem = round((base + free_minutes * MIN - now_ms) / MIN)
+            status = "detention" if mins_rem < 0 else "urgent" if mins_rem < 30 else "active"
+
+        if closed and status != "detention":
+            continue
+        if closed and status == "detention" and not un_start:
+            continue
+
+        who = str(t.get("supplier") or t.get("ref") or "Truck")
+        door = "Door " + str(t.get("door") or "?")
+        tid = str(t.get("id") or t.get("ref") or "")
+
+        if un_fin and not rec_start and not rec_fin and now_ms >= un_fin + 45 * MIN:
+            out.append({"kind": "recdelay", "tid": tid, "text": f"[Follow-Up] Receiving not started - {who} | {door} | Unload finished {int((now_ms - un_fin) // MIN)} min ago."})
+        if done:
+            continue
+        if status == "detention":
+            out.append({"kind": "detention", "tid": tid, "text": f"[Critical] Detention threshold reached - {who} | {door} | Past the {free_minutes}-minute free-time window."})
+        if needs_start:
+            out.append({"kind": "needstart", "tid": tid, "text": f"[Action] Unload start overdue - {who} | {door} | Driver at door {int((now_ms - appt) // MIN)} min past appointment."})
+        if un_start and now_ms >= un_start + 45 * MIN:
+            out.append({"kind": "unloaderdelay", "tid": tid, "text": f"[Action] Unloader delay - {who} | {door} | Unloading {int((now_ms - un_start) // MIN)} min with no unload-finish stamp."})
+        if status == "urgent":
+            out.append({"kind": "urgent", "tid": tid, "text": f"[Warning] Detention risk - {who} | {door} | Under 30 minutes before detention."})
+    return out
+
+
+def _post_alert_webhook(url: str, text: str) -> None:
+    # "text" is Slack's key, "content" is Discord's; each ignores the other.
+    resp = req_lib.post(url, json={"text": text, "content": text}, timeout=10)
+    resp.raise_for_status()
+
+
+def _run_alert_cycle() -> None:
+    free_minutes = _alert_free_minutes()
+    now_ms = datetime.now(timezone.utc).timestamp() * 1000
+    business_date = _dms_business_date(None)
+    for key in [k for k in _alert_sent if k.split("|")[1] != business_date]:
+        _alert_sent.pop(key, None)
+    for site, cfg in _ALERT_SITES.items():
+        url = os.environ.get(cfg["env"], "").strip()
+        if not url:
+            continue
+        try:
+            session = cfg["session"]()
+            payload = {"info": business_date, "loc": session["loc"], "userinfo": session["userinfo"], "buck": session.get("buck") or {}}
+            loads = [x for x in _first_list(_dms_json_request("api/load/getloaddetails", payload, session["config"])) if isinstance(x, dict)]
+            stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
+            trucks = _merge_dms_portal_rows(loads, stamps)
+            fresh = []
+            for a in _compute_dock_alerts(trucks, business_date, free_minutes, now_ms):
+                dedupe = f"{site}|{business_date}|{a['kind']}|{a['tid']}"
+                if dedupe not in _alert_sent:
+                    fresh.append((dedupe, a["text"]))
+            if fresh:
+                _post_alert_webhook(url, f"{site} dock alerts ({len(fresh)} new)\n" + "\n".join("- " + text for _, text in fresh))
+                for dedupe, _ in fresh:
+                    _alert_sent[dedupe] = now_ms
+        except Exception as exc:
+            print(f"[alerts] {site} cycle failed: {exc}")
+
+
+def _alerts_worker() -> None:
+    import time
+    try:
+        poll = max(60, int(os.environ.get("ALERT_POLL_SECONDS", "120")))
+    except ValueError:
+        poll = 120
+    while True:
+        _run_alert_cycle()
+        time.sleep(poll)
+
+
+@app.on_event("startup")
+def _start_alert_worker() -> None:
+    if any(os.environ.get(cfg["env"], "").strip() for cfg in _ALERT_SITES.values()):
+        import threading
+        threading.Thread(target=_alerts_worker, daemon=True, name="dock-alerts").start()
+
+
+@app.post("/api/alerts/test")
+def alerts_test(username: str = Depends(_container_log_admin)):
+    sent = []
+    for site, cfg in _ALERT_SITES.items():
+        url = os.environ.get(cfg["env"], "").strip()
+        if url:
+            _post_alert_webhook(url, f"{site} dock alerts: test message from Billing Audit. Webhook is working.")
+            sent.append(site)
+    if not sent:
+        raise HTTPException(status_code=400, detail="No alert webhook is configured (set ALERT_WEBHOOK_URL and/or ALERT_WEBHOOK_URL_MN).")
+    return {"ok": True, "sent": sent}
+
+
 @app.get("/")
 def serve_app():
     # Never cache the app shell — the whole UI is inline in index.html, so a stale

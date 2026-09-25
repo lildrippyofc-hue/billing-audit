@@ -814,6 +814,25 @@
     .report-modal-title { font-size:1.1em; font-weight:800; color:var(--text,#1a202c); }
     .report-body { margin:0; padding:18px; overflow:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:0.84em; line-height:1.5; color:var(--text,#1a202c); white-space:pre-wrap; }
     :root.dark .report-modal { background:#1a2942; }
+    /* -- My Portal "What's new" guided tour -- */
+    .tour-shield { position:fixed; inset:0; z-index:10000; background:transparent; }
+    .tour-shield.dim { background:rgba(3,10,20,0.7); }
+    .tour-spot { position:fixed; z-index:10001; border-radius:10px; pointer-events:none; outline:3px solid #38bdf8; }
+    .tour-dim { position:fixed; z-index:10001; background:rgba(3,10,20,0.7); pointer-events:none; }
+    .tour-card { position:fixed; z-index:10002; width:min(380px, calc(100vw - 24px)); box-sizing:border-box; background:var(--card-bg,#fff); color:var(--text,#1a202c); border:1px solid var(--border,#e2e8f0); border-radius:12px; box-shadow:0 12px 40px rgba(0,0,0,0.45); padding:16px 18px; }
+    :root.dark .tour-card { background:#1a2942; }
+    .tour-step { font-size:0.72em; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted,#64748b); }
+    .tour-title { font-size:1.08em; font-weight:800; margin:4px 0 6px; }
+    .tour-body { font-size:0.9em; line-height:1.5; }
+    .tour-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:14px; }
+    .tour-skip { background:none; border:none; color:var(--muted,#64748b); cursor:pointer; font:inherit; font-size:0.85em; text-decoration:underline; padding:6px 2px; }
+    .tour-nav { display:flex; gap:8px; }
+    .tour-back { background:transparent; color:inherit; border:1px solid var(--border,#cbd5e0); border-radius:6px; padding:7px 14px; font:inherit; font-size:0.88em; font-weight:700; cursor:pointer; }
+    .tour-next { background:#0b6fa4; color:#fff; border:none; border-radius:6px; padding:7px 18px; font:inherit; font-size:0.88em; font-weight:700; cursor:pointer; }
+    button.portal-dms-pill { cursor:pointer; color:inherit; font-family:inherit; }
+    @media (max-width: 680px) {
+      .tour-card { left:8px !important; right:8px !important; bottom:8px !important; top:auto !important; width:auto; transform:none !important; }
+    }
     /* -- Mobile / tablet friendliness for My Portal -- */
     @media (max-width: 680px) {
       .portal-ops-grid { grid-template-columns:1fr; }
@@ -6130,7 +6149,10 @@
               <div class="portal-dms-system">OKS Live Operations Dashboard</div>
               <div class="portal-dms-subtitle">DMS-powered shift board built for dock control, alerts, and end-of-shift review.</div>
             </div>
-            <div class="portal-dms-pill">My Portal</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+              <button type="button" class="portal-dms-pill tour-replay-btn" data-tour-site="oks" title="Replay the tour of what's new">What's new</button>
+              <div class="portal-dms-pill">My Portal</div>
+            </div>
           </div>
           <!-- Row 1: Live info -->
           <div class="portal-info-strip">
@@ -6622,7 +6644,7 @@
             <div class="report-modal-title" id="doorDetailTitle">Door  - </div>
             <button type="button" id="doorDetailCloseBtn" class="secondary-btn" style="font-size:0.82em;padding:4px 12px;" aria-label="Close">&times; Close</button>
           </div>
-          <div style="padding:16px 20px 20px;">
+          <div style="padding:16px 20px 20px;overflow-y:auto;">
             <!-- Status badge row -->
             <div id="doorDetailStatus" style="margin-bottom:14px;"></div>
             <!-- Key info grid -->
@@ -6632,6 +6654,7 @@
             <div id="doorDetailTimeline" style="display:flex;flex-direction:column;gap:6px;font-size:0.85em;"></div>
             <!-- Comments -->
             <div id="doorDetailComments" style="margin-top:14px;font-size:0.84em;color:var(--muted,#64748b);display:none;"></div>
+            <div id="doorDetailActions" style="margin-top:16px;"></div>
           </div>
         </div>
       </div>
@@ -6644,7 +6667,10 @@
               <div class="portal-dms-system">Minnesota Live Operations Dashboard</div>
               <div class="portal-dms-subtitle">Live DMS pull for the Minnesota building — same live board as OKS My Portal.</div>
             </div>
-            <div class="portal-dms-pill">MN My Portal</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;">
+              <button type="button" class="portal-dms-pill tour-replay-btn" data-tour-site="mn" title="Replay the tour of what's new">What's new</button>
+              <div class="portal-dms-pill">MN My Portal</div>
+            </div>
           </div>
           <div class="portal-controls-strip">
             <div class="mn-controls">
@@ -6652,6 +6678,7 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
                 <span id="portalMnSyncLabel">Sync MN DMS</span>
               </button>
+              <button id="portalMnAlertsBtn" type="button" class="portal-sync-btn" title="Get desktop popups for detention risk, overdue unload starts, and unloader delays">Enable alerts</button>
               <label for="portalMnBusinessDate">DMS date</label>
               <input id="portalMnBusinessDate" type="date" class="lookup-input" title="Choose the Minnesota DMS business date to load" style="max-width:150px;">
             </div>
@@ -9722,81 +9749,301 @@
       });
     })();
 
-    // -- Door detail modal --------------------------------------------------------
-    (function() {
-      var modal = els.portalDoorDetailModal;
-      if (!modal) return;
+    // -- My Portal "What's new" guided tour (OKS + Minnesota) ----------------------
+    // Shows once per user per site per PORTAL_TOUR_VERSION; skippable at any
+    // step, replayable from the "What's new" button. Bump the version (and edit
+    // the steps) when there is something new worth showing again.
+    const PORTAL_TOUR_VERSION = "2026-09-25";
+    const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
+    const PORTAL_TOUR_STEPS = {
+      oks: [
+        { title: "What's new in My Portal", body: "A quick tour of what changed: a bigger door popup, alerts, and smarter schedule uploads. It takes about a minute, and you can skip any time." },
+        { title: "Tap a door for the full picture", before: function() { portalSetView("doors"); }, target: portalTourEl("portalDoorMap"),
+          body: "On the <b>Door Map</b>, tap any occupied door to open its popup: status and detention countdown, time on dock, how long it has been unloading, <b>every PO on its own line</b>, and the full check-in to driver-left timeline." },
+        { title: "Copy summary and shift notes", target: portalTourEl("portalDoorMap"),
+          body: "In the popup, <b>Copy summary</b> puts the truck's details on your clipboard to paste into a text or chat. <b>Shift note</b> lets you jot things like \"waiting on lumper\". Notes are saved on this device only." },
+        { title: "Alerts", target: function() { const b = document.getElementById("portalNotifBanner"); return b && b.style.display !== "none" ? b : null; },
+          body: "Click <b>Enable Alerts</b> (the banner at the top of the portal) to get desktop popups for detention risk, overdue unload starts, unloader delays, and receiving follow-ups. Keep this page open to receive them. Your admin can also connect a Slack channel so supervisors get pinged even when the portal is closed." },
+        { title: "Smarter schedule uploads", target: portalTourEl("portalScheduleToggleBtn"),
+          body: "<b>Upload Schedule</b> now adds a Dry/Cold side note to Produce rows, sends Fresh Meat to its own DMS area, and tags suppliers that have an Incoterm, like <i>(DDP) Supplier</i>." },
+        { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="oks"]'); },
+          body: "You can replay this any time with the <b>What's new</b> button." }
+      ],
+      mn: [
+        { title: "What's new in Minnesota My Portal", body: "A quick tour of what changed: the door map, a bigger door popup, and alerts. It takes about a minute, and you can skip any time." },
+        { title: "A smarter Door Map", before: function() { portalMnSetView("doors"); }, target: portalTourEl("portalMnDoorMap"),
+          body: "Doors now color by status: <b>red</b> is detention, <b>yellow</b> needs review (detention risk, start soon, watch), and <b>green</b> is on track. Each tile shows the countdown and time on the door. <b>Tap any occupied door</b> to open its popup." },
+        { title: "New counters", target: portalTourEl("portalMnScorecardDoors"),
+          body: "<b>Needs review</b> and <b>Detention</b> now sit next to Open, Occupied, and 61+ min doors, so problems stand out at a glance." },
+        { title: "Door popup, copy, and notes", target: portalTourEl("portalMnDoorMap"),
+          body: "The popup shows status and countdown, time on dock, unload time, <b>every PO on its own line</b>, and the timeline. <b>Copy summary</b> copies the details to paste elsewhere, and <b>Shift note</b> saves a quick note on this device." },
+        { title: "Alerts", target: portalTourEl("portalMnAlertsBtn"),
+          body: "Click <b>Enable alerts</b> for desktop popups on detention risk, overdue unload starts, and unloader delays. They fire whenever the board refreshes (about once a minute while this page is open). Your admin can also connect Slack so supervisors are pinged when the portal is closed." },
+        { title: "Also new: Schedule Uploader", body: "In the <b>Minnesota Schedule Uploader</b>, rows covering multiple POs now show and send only the <b>first PO</b> to DMS, and suppliers with an Incoterm are tagged like <i>(DDP) Supplier</i>." },
+        { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="mn"]'); },
+          body: "You can replay this any time with the <b>What's new</b> button." }
+      ]
+    };
+    const portalTour = { active: false, site: null, idx: 0, prevView: "board", target: null, dom: null };
 
+    function portalTourSeenKey(site) { return "portalTourSeen:" + (state.auth.username || "anon") + ":" + site; }
+    function portalTourPanel(site) { return document.getElementById(site === "mn" ? "myPortalMnPanel" : "myPortalPanel"); }
+
+    function portalTourMaybeStart(site) {
+      if (portalTour.active || !state.auth.ready || !state.auth.username) return;
+      if (safeLocalStorageGet(portalTourSeenKey(site)) === PORTAL_TOUR_VERSION) return;
+      setTimeout(function() { portalTourStart(site); }, 700);
+    }
+
+    function portalTourStart(site) {
+      const panel = portalTourPanel(site);
+      if (portalTour.active || !panel || !panel.classList.contains("active")) return;
+      if (els.loginOverlay && !els.loginOverlay.hidden) return;
+      portalTour.active = true;
+      portalTour.site = site;
+      portalTour.idx = 0;
+      portalTour.prevView = site === "mn" ? (state.portalMn.view || "board") : (state.portal.portalView || "board");
+      portalTour.scrollY = window.scrollY;
+
+      const shield = document.createElement("div");
+      shield.className = "tour-shield dim";
+      const spot = document.createElement("div");
+      spot.className = "tour-spot";
+      spot.style.display = "none";
+      const card = document.createElement("div");
+      card.className = "tour-card";
+      card.setAttribute("role", "dialog");
+      card.setAttribute("aria-modal", "true");
+      card.setAttribute("aria-label", "What's new tour");
+      card.innerHTML = '<div class="tour-step"></div><div class="tour-title"></div><div class="tour-body"></div>'
+        + '<div class="tour-actions"><button type="button" class="tour-skip">Skip tour</button>'
+        + '<span class="tour-nav"><button type="button" class="tour-back">Back</button><button type="button" class="tour-next">Next</button></span></div>';
+      portalTour.dom = { shield: shield, spot: spot, card: card };
+      ["dimT", "dimB", "dimL", "dimR"].forEach(function(k) {
+        const dim = document.createElement("div");
+        dim.className = "tour-dim";
+        dim.style.display = "none";
+        portalTour.dom[k] = dim;
+      });
+      Object.keys(portalTour.dom).forEach(function(k) { document.body.appendChild(portalTour.dom[k]); });
+
+      card.querySelector(".tour-skip").addEventListener("click", function() { portalTourEnd(true); });
+      card.querySelector(".tour-back").addEventListener("click", function() { portalTourGo(-1); });
+      card.querySelector(".tour-next").addEventListener("click", function() { portalTourGo(1); });
+      document.addEventListener("keydown", portalTourKey, true);
+      window.addEventListener("resize", portalTourReposition);
+      window.addEventListener("scroll", portalTourReposition, true);
+      portalTourShow();
+    }
+
+    function portalTourKey(e) {
+      if (!portalTour.active) return;
+      if (e.key === "Escape") { e.preventDefault(); portalTourEnd(true); }
+      else if (e.key === "ArrowRight" || e.key === "Enter") { e.preventDefault(); portalTourGo(1); }
+      else if (e.key === "ArrowLeft") { e.preventDefault(); portalTourGo(-1); }
+    }
+
+    function portalTourGo(delta) {
+      const steps = PORTAL_TOUR_STEPS[portalTour.site];
+      const next = portalTour.idx + delta;
+      if (next >= steps.length) { portalTourEnd(true); return; }
+      if (next < 0) return;
+      portalTour.idx = next;
+      portalTourShow();
+    }
+
+    function portalTourShow() {
+      const steps = PORTAL_TOUR_STEPS[portalTour.site];
+      const step = steps[portalTour.idx];
+      const card = portalTour.dom.card;
+      if (step.before) { try { step.before(); } catch (e) {} }
+      card.querySelector(".tour-step").textContent = "Step " + (portalTour.idx + 1) + " of " + steps.length;
+      card.querySelector(".tour-title").textContent = step.title;
+      card.querySelector(".tour-body").innerHTML = step.body;
+      card.querySelector(".tour-back").style.visibility = portalTour.idx === 0 ? "hidden" : "visible";
+      const last = portalTour.idx === steps.length - 1;
+      card.querySelector(".tour-next").textContent = last ? "Done" : (portalTour.idx === 0 ? "Start" : "Next");
+      card.querySelector(".tour-skip").style.display = last ? "none" : "";
+      let target = null;
+      try { target = step.target ? step.target() : null; } catch (e) {}
+      if (target && !target.getClientRects().length) target = null;
+      portalTour.target = target;
+      if (target) {
+        const vh = window.innerHeight;
+        const tall = target.getBoundingClientRect().height > vh * 0.55;
+        target.scrollIntoView({ block: tall ? "start" : "center", behavior: "instant" });
+        if (tall) window.scrollBy(0, -70);
+      }
+      portalTourReposition();
+      setTimeout(portalTourReposition, 250);
+      card.querySelector(".tour-next").focus();
+    }
+
+    function portalTourReposition() {
+      if (!portalTour.active) return;
+      const panel = portalTourPanel(portalTour.site);
+      if (!panel || !panel.classList.contains("active")) { portalTourEnd(false); return; }
+      const d = portalTour.dom;
+      const card = d.card, spot = d.spot;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const target = portalTour.target;
+      const dims = [d.dimT, d.dimB, d.dimL, d.dimR];
+      if (!target || !target.getClientRects().length) {
+        spot.style.display = "none";
+        dims.forEach(function(x) { x.style.display = "none"; });
+        d.shield.classList.add("dim");
+        card.style.left = "50%"; card.style.top = "50%"; card.style.transform = "translate(-50%, -50%)";
+        return;
+      }
+      d.shield.classList.remove("dim");
+      card.style.transform = "";
+      const r = target.getBoundingClientRect();
+      const pad = 6;
+      const top = Math.max(r.top - pad, 4);
+      const bottom = Math.min(Math.max(r.bottom + pad, top + 10), top + vh * 0.42, vh - 4);
+      const left = Math.max(r.left - pad, 4);
+      const right = Math.min(r.right + pad, vw - 4);
+      spot.style.display = "block";
+      spot.style.top = top + "px"; spot.style.left = left + "px";
+      spot.style.width = Math.max(right - left, 10) + "px"; spot.style.height = Math.max(bottom - top, 10) + "px";
+      function place(el, t, l, w, h) {
+        el.style.display = "block";
+        el.style.top = t + "px"; el.style.left = l + "px"; el.style.width = Math.max(w, 0) + "px"; el.style.height = Math.max(h, 0) + "px";
+      }
+      place(d.dimT, 0, 0, vw, top);
+      place(d.dimB, bottom, 0, vw, vh - bottom);
+      place(d.dimL, top, 0, left, bottom - top);
+      place(d.dimR, top, right, vw - right, bottom - top);
+      const cardH = card.offsetHeight, cardW = card.offsetWidth;
+      let cardTop;
+      if (vh - bottom >= cardH + 16) cardTop = bottom + 12;
+      else if (top >= cardH + 16) cardTop = top - cardH - 12;
+      else cardTop = Math.max(8, vh - cardH - 12);
+      card.style.top = cardTop + "px";
+      card.style.left = Math.min(Math.max(left, 12), Math.max(12, vw - cardW - 12)) + "px";
+    }
+
+    function portalTourEnd(markSeen) {
+      if (!portalTour.active) return;
+      portalTour.active = false;
+      document.removeEventListener("keydown", portalTourKey, true);
+      window.removeEventListener("resize", portalTourReposition);
+      window.removeEventListener("scroll", portalTourReposition, true);
+      Object.keys(portalTour.dom).forEach(function(k) { portalTour.dom[k].remove(); });
+      portalTour.dom = null;
+      if (markSeen) safeLocalStorageSet(portalTourSeenKey(portalTour.site), PORTAL_TOUR_VERSION);
+      try { (portalTour.site === "mn" ? portalMnSetView : portalSetView)(portalTour.prevView); } catch (e) {}
+      window.scrollTo(0, portalTour.scrollY || 0);
+    }
+
+    document.addEventListener("click", function(e) {
+      const btn = e.target.closest && e.target.closest(".tour-replay-btn");
+      if (btn) portalTourStart(btn.dataset.tourSite);
+    });
+
+    // -- Door detail modal --------------------------------------------------------
+    // Shared renderer for the OKS and Minnesota door popups. Rows must be
+    // "enriched" (status / countdownLabel / *Ms fields from the site's calc fn).
+    function portalRenderDoorDetail(site, doorNum, r) {
       function fmt(iso) {
         if (!iso) return null;
         try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' }); }
         catch(e) { return null; }
       }
-
-      function statusColor(s) {
-        return s === 'detention' ? '#c53030'
-          : (s === 'urgent' || s === 'warning' || s === 'startsoon') ? '#b7791f'
-          : s === 'active' ? '#276749'
-          : s === 'complete' ? '#2b6cb0'
-          : '#4a5568';
+      function dur(ms) {
+        const m = Math.max(0, Math.floor(ms / 60000));
+        return m < 60 ? m + " min" : Math.floor(m / 60) + "h " + (m % 60) + "m";
       }
+      const statusColors = { detention: "#c53030", urgent: "#b7791f", warning: "#b7791f", startsoon: "#b7791f", active: "#276749", complete: "#2b6cb0" };
+      const now = Date.now();
+
+      document.getElementById('doorDetailTitle').textContent = 'Door ' + doorNum;
+
+      const statusLabel = portalStatusLabel(r.status) || r.statusText || 'Active';
+      const countdownColor = r.status === "detention" ? "#c53030" : (r.status === "urgent" || r.status === "warning" || r.status === "startsoon") ? "#b7791f" : "var(--muted,#64748b)";
+      document.getElementById('doorDetailStatus').innerHTML =
+        '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:800;font-size:0.9em;background:' + (statusColors[r.status] || '#4a5568') + ';color:#fff;">'
+        + escapeHtml(statusLabel.toUpperCase()) + '</span>'
+        + (r.countdownLabel ? '<div style="margin-top:8px;font-weight:700;font-size:0.9em;color:' + countdownColor + ';">' + escapeHtml(r.countdownLabel) + '</div>' : '');
+
+      const ageStart = r.driverAtDoorMs || r.checkInMs;
+      const unloadMs = r.unloadStartMs ? ((r.unloadFinishMs || now) - r.unloadStartMs) : null;
+      const poParts = String(r.po || "").split(/[,;]/).map(function(p) { return p.trim(); }).filter(Boolean);
+      const fields = [
+        { k: 'Supplier', v: r.supplier },
+        { k: 'Ref #', v: r.ref },
+        { k: poParts.length > 1 ? 'POs (' + poParts.length + ')' : 'PO', html: poParts.map(escapeHtml).join('<br>') },
+        { k: 'Carrier', v: r.carrier },
+        { k: 'Area', v: r.area },
+        { k: 'Appt', v: fmt(r.appointmentIso) },
+        { k: 'On dock', v: ageStart ? dur(now - ageStart) : "" },
+        { k: r.unloadFinishMs ? 'Unload took' : 'Unloading', v: unloadMs != null ? dur(unloadMs) : "" }
+      ];
+      document.getElementById('doorDetailGrid').innerHTML = fields
+        .filter(function(f) { return f.html ? true : (f.v && String(f.v).trim()); })
+        .map(function(f) {
+          return '<div class="door-detail-kv"><span class="dk">' + escapeHtml(f.k) + '</span><span class="dv">' + (f.html || escapeHtml(f.v)) + '</span></div>';
+        }).join('');
+
+      const steps = [
+        { label: 'Check-In',        iso: r.checkInIso },
+        { label: 'Driver at Door',  iso: r.driverAtDoorIso },
+        { label: 'Unload Start',    iso: r.unloadStartIso },
+        { label: 'Unload Done',     iso: r.unloadFinishIso },
+        { label: 'Receiving Start', iso: r.receivingStartIso },
+        { label: 'Receiving Done',  iso: r.receivingFinishIso },
+        { label: 'Driver Left',     iso: r.driverLeftIso }
+      ];
+      document.getElementById('doorDetailTimeline').innerHTML = steps.map(function(s) {
+        const t = fmt(s.iso);
+        return '<div class="door-tl-row">'
+          + '<div class="door-tl-dot ' + (t ? 'done' : 'pending') + '"></div>'
+          + '<span class="door-tl-label">' + escapeHtml(s.label) + '</span>'
+          + '<span class="door-tl-time">' + (t ? t : '<span style="color:var(--muted,#a0aec0);font-weight:400;">Pending</span>') + '</span>'
+          + '</div>';
+      }).join('');
+
+      const commEl = document.getElementById('doorDetailComments');
+      if (r.comments && r.comments.trim()) {
+        commEl.style.display = '';
+        commEl.innerHTML = '<strong>DMS notes:</strong> ' + escapeHtml(r.comments);
+      } else {
+        commEl.style.display = 'none';
+      }
+
+      const noteKey = "doorNote:" + site + ":" + (r.ref || r.po || doorNum);
+      const actions = document.getElementById('doorDetailActions');
+      actions.innerHTML =
+        '<div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:6px;">Shift note <span style="font-weight:400;text-transform:none;letter-spacing:0;">(saved on this device only)</span></div>'
+        + '<textarea id="doorDetailNote" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border,#e2e8f0);border-radius:6px;padding:6px 8px;font:inherit;background:transparent;color:inherit;" placeholder="e.g. waiting on lumper, spill on trailer..."></textarea>'
+        + '<div style="margin-top:8px;"><button type="button" id="doorDetailCopyBtn" class="secondary-btn" style="font-size:0.82em;">Copy summary</button></div>';
+      const noteEl = document.getElementById('doorDetailNote');
+      noteEl.value = safeLocalStorageGet(noteKey) || "";
+      noteEl.addEventListener('input', function() { safeLocalStorageSet(noteKey, noteEl.value); });
+      document.getElementById('doorDetailCopyBtn').addEventListener('click', function() {
+        const lines = [
+          "Door " + doorNum + " - " + (r.supplier || r.ref || "Truck"),
+          "Status: " + statusLabel + (r.countdownLabel ? " (" + r.countdownLabel + ")" : ""),
+          r.ref ? "Ref: " + r.ref : "",
+          poParts.length ? "PO: " + poParts.join(", ") : "",
+          r.carrier ? "Carrier: " + r.carrier : "",
+          r.appointmentIso ? "Appt: " + fmt(r.appointmentIso) : "",
+          ageStart ? "On dock: " + dur(now - ageStart) : "",
+          noteEl.value.trim() ? "Note: " + noteEl.value.trim() : ""
+        ].filter(Boolean).join("\n");
+        const btn = document.getElementById('doorDetailCopyBtn');
+        navigator.clipboard.writeText(lines).then(function() { btn.textContent = "Copied"; }, function() { btn.textContent = "Copy failed"; });
+      });
+    }
+
+    (function() {
+      var modal = els.portalDoorDetailModal;
+      if (!modal) return;
 
       function showDoorDetail(doorNum) {
         var r = (state.portal.byDoor || {})[doorNum];
         if (!r) return;
-
-        document.getElementById('doorDetailTitle').textContent = 'Door ' + doorNum;
-
-        // Status badge
-        var statusLabel = r.countdownLabel || portalStatusLabel(r.status) || r.statusText || r.status || 'Active';
-        document.getElementById('doorDetailStatus').innerHTML =
-          '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:800;font-size:0.9em;background:' + statusColor(r.status) + ';color:#fff;">'
-          + escapeHtml(statusLabel.toUpperCase()) + '</span>';
-
-        // Key info grid
-        var fields = [
-          { k: 'Supplier', v: r.supplier },
-          { k: 'Ref #', v: r.ref },
-          { k: 'PO', v: r.po },
-          { k: 'Carrier', v: r.carrier },
-          { k: 'Area', v: r.area },
-          { k: 'Appt', v: fmt(r.appointmentIso) }
-        ];
-        document.getElementById('doorDetailGrid').innerHTML = fields
-          .filter(function(f) { return f.v && String(f.v).trim(); })
-          .map(function(f) {
-            return '<div class="door-detail-kv"><span class="dk">' + escapeHtml(f.k) + '</span><span class="dv">' + escapeHtml(f.v) + '</span></div>';
-          }).join('');
-
-        // Timeline
-        var steps = [
-          { label: 'Check-In',        iso: r.checkInIso },
-          { label: 'Driver at Door',  iso: r.driverAtDoorIso },
-          { label: 'Unload Start',    iso: r.unloadStartIso },
-          { label: 'Unload Done',     iso: r.unloadFinishIso },
-          { label: 'Receiving Start', iso: r.receivingStartIso },
-          { label: 'Receiving Done',  iso: r.receivingFinishIso },
-          { label: 'Driver Left',     iso: r.driverLeftIso }
-        ];
-        document.getElementById('doorDetailTimeline').innerHTML = steps.map(function(s) {
-          var t = fmt(s.iso);
-          var done = !!t;
-          return '<div class="door-tl-row">'
-            + '<div class="door-tl-dot ' + (done ? 'done' : 'pending') + '"></div>'
-            + '<span class="door-tl-label">' + escapeHtml(s.label) + '</span>'
-            + '<span class="door-tl-time">' + (t ? t : '<span style="color:var(--muted,#a0aec0);font-weight:400;">Pending</span>') + '</span>'
-            + '</div>';
-        }).join('');
-
-        // Comments
-        var commEl = document.getElementById('doorDetailComments');
-        if (r.comments && r.comments.trim()) {
-          commEl.style.display = '';
-          commEl.innerHTML = '<strong>Notes:</strong> ' + escapeHtml(r.comments);
-        } else {
-          commEl.style.display = 'none';
-        }
-
+        portalRenderDoorDetail("oks", doorNum, r);
         modal.style.display = 'flex';
       }
 
@@ -9826,66 +10073,10 @@
       var modal = els.portalDoorDetailModal;
       if (!modal) return;
 
-      function fmt(iso) {
-        if (!iso) return null;
-        try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' }); }
-        catch(e) { return null; }
-      }
-
-      var mnStatusColor = { "Checked In": "#b7791f", "At Door": "#b7791f", "Unloading": "#276749", "Completed": "#2b6cb0" };
-
       function showMnDoorDetail(doorNum) {
         var r = (state.portalMn.byDoor || {})[doorNum];
         if (!r) return;
-
-        document.getElementById('doorDetailTitle').textContent = 'Door ' + doorNum;
-
-        var statusLabel = portalMnTruckStatus(r);
-        document.getElementById('doorDetailStatus').innerHTML =
-          '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:800;font-size:0.9em;background:' + (mnStatusColor[statusLabel] || '#4a5568') + ';color:#fff;">'
-          + escapeHtml(statusLabel.toUpperCase()) + '</span>';
-
-        var fields = [
-          { k: 'Supplier', v: r.supplier },
-          { k: 'Ref #', v: r.ref },
-          { k: 'PO', v: r.po },
-          { k: 'Carrier', v: r.carrier },
-          { k: 'Area', v: r.area },
-          { k: 'Appt', v: fmt(r.appointmentIso) }
-        ];
-        document.getElementById('doorDetailGrid').innerHTML = fields
-          .filter(function(f) { return f.v && String(f.v).trim(); })
-          .map(function(f) {
-            return '<div class="door-detail-kv"><span class="dk">' + escapeHtml(f.k) + '</span><span class="dv">' + escapeHtml(f.v) + '</span></div>';
-          }).join('');
-
-        var steps = [
-          { label: 'Check-In',        iso: r.checkInIso },
-          { label: 'Driver at Door',  iso: r.driverAtDoorIso },
-          { label: 'Unload Start',    iso: r.unloadStartIso },
-          { label: 'Unload Done',     iso: r.unloadFinishIso },
-          { label: 'Receiving Start', iso: r.receivingStartIso },
-          { label: 'Receiving Done',  iso: r.receivingFinishIso },
-          { label: 'Driver Left',     iso: r.driverLeftIso }
-        ];
-        document.getElementById('doorDetailTimeline').innerHTML = steps.map(function(s) {
-          var t = fmt(s.iso);
-          var done = !!t;
-          return '<div class="door-tl-row">'
-            + '<div class="door-tl-dot ' + (done ? 'done' : 'pending') + '"></div>'
-            + '<span class="door-tl-label">' + escapeHtml(s.label) + '</span>'
-            + '<span class="door-tl-time">' + (t ? t : '<span style="color:var(--muted,#a0aec0);font-weight:400;">Pending</span>') + '</span>'
-            + '</div>';
-        }).join('');
-
-        var commEl = document.getElementById('doorDetailComments');
-        if (r.comments && r.comments.trim()) {
-          commEl.style.display = '';
-          commEl.innerHTML = '<strong>Notes:</strong> ' + escapeHtml(r.comments);
-        } else {
-          commEl.style.display = 'none';
-        }
-
+        portalRenderDoorDetail("mn", doorNum, r);
         modal.style.display = 'flex';
       }
 
@@ -10715,6 +10906,20 @@
         portalRenderSchedulePreview();
       }
     }
+
+    (function() {
+      var btn = document.getElementById("portalMnAlertsBtn");
+      if (!btn) return;
+      function refreshLabel() {
+        var on = safeLocalStorageGet("portalAlertsEnabled") === "1" && "Notification" in window && Notification.permission === "granted";
+        btn.textContent = on ? "Alerts on" : "Enable alerts";
+      }
+      refreshLabel();
+      btn.addEventListener("click", function() {
+        portalEnableAlertsFromButton();
+        setTimeout(refreshLabel, 600);
+      });
+    })();
 
     // Minnesota only: the preview table shows just the first PO on a
     // multi-PO load (e.g. "7521444135,7522401186" -> "7521444135") since
@@ -14692,6 +14897,8 @@
         els.portalMnSyncBtn.disabled = false;
         if (els.portalMnSyncLabel) els.portalMnSyncLabel.textContent = "Sync MN DMS";
         renderPortalMn();
+        // Only notify off a fresh pull; stale rows would trigger false detention alerts.
+        if (!state.portalMn.liveError) { try { portalMnFireNotifications(); } catch (e) {} }
       }
     }
 
@@ -14742,7 +14949,9 @@
       const driverAtDoorMs = portalIsoToMs(row.driverAtDoorIso);
       const unloadStartMs = portalIsoToMs(row.unloadStartIso);
       const unloadFinishMs = portalIsoToMs(row.unloadFinishIso || row.receivingFinishIso || row.finishIso);
-      const base = { appointmentMs, checkInMs, driverAtDoorMs, unloadStartMs, unloadFinishMs, source: "DMS" };
+      const receivingStartMs = portalIsoToMs(row.receivingStartIso);
+      const receivingFinishMs = portalIsoToMs(row.receivingFinishIso);
+      const base = { appointmentMs, checkInMs, driverAtDoorMs, unloadStartMs, unloadFinishMs, receivingStartMs, receivingFinishMs, source: "DMS" };
       if (unloadFinishMs) {
         const startMs = checkInMs || appointmentMs || unloadFinishMs;
         const turnMin = Math.round((unloadFinishMs - startMs) / 60000);
@@ -15302,14 +15511,17 @@
     // with in-progress arrived trucks occupying, completed trucks freeing.
     function renderPortalMnDoorMap() {
       if (!els.portalMnDoorMap) return;
-      const rows = state.portalMn.liveRows || [];
+      const rows = portalMnEnrichedRows();
+      const rank = { detention: 0, startsoon: 1, urgent: 2, warning: 3, active: 4, waiting: 5 };
       const byDoor = {};
       rows.forEach(function(r) {
         const dn = parseInt(r.door, 10);
         if (!isFinite(dn)) return;
-        const status = portalMnTruckStatus(r);
-        if (status === "Completed") return;
-        byDoor[dn] = r;
+        if (r.status === "complete") return;
+        const cur = byDoor[dn];
+        const rr = rank[r.status] == null ? 9 : rank[r.status];
+        const cr = cur ? (rank[cur.status] == null ? 9 : rank[cur.status]) : 99;
+        if (!cur || rr < cr) byDoor[dn] = r;
       });
 
       const universe = {};
@@ -15325,10 +15537,9 @@
       const occ = Object.keys(byDoor).map(function(d) { return byDoor[d]; });
       const openCount = Math.max(0, allDoors.length - occ.length);
       const now = Date.now();
-      const aged = occ.filter(function(r) {
-        const start = portalIsoToMs(r.driverAtDoorIso) || portalIsoToMs(r.checkInIso) || portalIsoToMs(r.appointmentIso);
-        return start ? Math.floor((now - start) / 60000) >= 61 : false;
-      }).length;
+      const aged = occ.filter(function(r) { return (portalDoorAgeMinutes(r, now) || 0) >= 61; }).length;
+      const det = occ.filter(function(r) { return r.status === "detention"; }).length;
+      const eyes = occ.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
 
       // Store for click handler lookups (mirrors OKS's renderPortalDoorMap).
       state.portalMn.byDoor = byDoor;
@@ -15337,7 +15548,9 @@
         portalFillScorecard(els.portalMnScorecardDoors, [
           { value: openCount, label: "Open doors", sub: "Available now", color: "green" },
           { value: occ.length, label: "Occupied", sub: "Truck in progress", color: "blue" },
-          { value: aged, label: "61+ min doors", sub: "Aging on dock", color: aged ? "red" : "green" }
+          { value: eyes, label: "Needs review", sub: "Start soon / warning", color: "yellow" },
+          { value: aged, label: "61+ min doors", sub: "Aging on dock", color: aged ? "red" : "green" },
+          { value: det, label: "Detention", sub: "Past receiving clock", color: "red" }
         ]);
       }
 
@@ -15345,23 +15558,24 @@
         els.portalMnDoorMap.innerHTML = '<div class="door-empty">No doors yet. Sync Minnesota DMS, or set a door range above.</div>';
         return;
       }
-      const classByStatus = { "Checked In": "yellow", "At Door": "yellow", "Unloading": "green" };
+      const classByStatus = { detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" };
       els.portalMnDoorMap.innerHTML = allDoors.map(function(dn) {
         const r = byDoor[dn];
         if (!r) {
           return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
             + '<div class="door-open-label">Open</div><div class="door-dwell">&nbsp;</div></div>';
         }
-        const status = portalMnTruckStatus(r);
-        const cls = classByStatus[status] || "blue";
-        const start = portalIsoToMs(r.driverAtDoorIso) || portalIsoToMs(r.checkInIso) || portalIsoToMs(r.appointmentIso);
-        const ageMin = start ? Math.max(0, Math.floor((now - start) / 60000)) : null;
+        const cls = classByStatus[r.status] || "blue";
+        const stage = portalMnTruckStatus(r);
+        const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning") ? (r.countdownLabel || "") : "";
+        const detail = timeInfo ? stage + "  -  " + timeInfo : stage;
+        const ageMin = portalDoorAgeMinutes(r, now);
         const ageClass = portalDoorAgeClass(ageMin);
         const ageLabel = portalDoorAgeLabel(ageMin);
-        return '<div class="door-tile ' + cls + ' ' + ageClass + ' occupied" data-door="' + dn + '" title="' + escapeHtml(status) + '">'
+        return '<div class="door-tile ' + cls + ' ' + ageClass + ' occupied" data-door="' + dn + '" title="Tap for details">'
           + '<div class="door-no">' + dn + '</div>'
           + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
-          + '<div class="door-dwell">' + escapeHtml(status) + '</div>'
+          + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
           + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
           + '</div>';
       }).join("");
@@ -16241,12 +16455,24 @@
     function portalGetAlerts() {
       const freeTimeMs = (state.portal.freeTimeMinutes || 120) * 60000;
       const now = Date.now();
+      const enriched = portalCurrentTrucks().map(function(t) { return Object.assign({}, t, portalCalcStatus(t, freeTimeMs, now)); });
+      return portalBuildAlerts(enriched, now, freeTimeMs, portalShiftClosedAfterMorning(now), "");
+    }
+
+    // Minnesota alerts use the same rules as OKS (same enriched-row shape);
+    // notifications are tagged "[MN]" and deduped separately from OKS.
+    function portalMnGetAlerts() {
+      const freeTimeMs = (state.portalMn.freeTimeMinutes || 120) * 60000;
+      const now = Date.now();
+      return portalBuildAlerts(portalMnEnrichedRows(), now, freeTimeMs, portalMnShiftClosedAfterMorning(now), "MN");
+    }
+
+    function portalBuildAlerts(enriched, now, freeTimeMs, shiftClosedAfterMorning, siteLabel) {
       const MS = 60000;
-      const shiftClosedAfterMorning = portalShiftClosedAfterMorning(now);
-      const trucks = portalCurrentTrucks();
-      const enriched = trucks.map(function(t) { return Object.assign({}, t, portalCalcStatus(t, freeTimeMs, now)); });
       const freeMin = Math.round(freeTimeMs / 60000);
       const alerts = [];
+      const notifyPrefix = siteLabel ? "[" + siteLabel + "] " : "";
+      const tagPrefix = siteLabel ? siteLabel.toLowerCase() + ":" : "";
       enriched.forEach(function(r) {
         if (!r.checkInMs) return;                                // not arrived
         if (portalDetentionExempt(r)) return;                    // late/spill/6 AM appt rules do not alert detention workflow
@@ -16254,7 +16480,7 @@
         if (shiftClosedAfterMorning && r.status === "detention" && !r.unloadStartMs) return;
         const who = r.supplier || r.ref || "Truck";
         const doorStr = "Door " + (r.door || "?");
-        const id = r.id || r.ref;
+        const id = tagPrefix + (r.id || r.ref);
 
         // Receiving not started - unload finished >=45 min ago, receiving not started.
         // This runs before the complete skip because the dashboard treats unload
@@ -16312,8 +16538,14 @@
             tag: "urgent:" + id });
         }
       });
+      alerts.forEach(function(a) { a.notifyTitle = notifyPrefix + a.notifyTitle; });
       alerts.sort(function(a, b) { return a.order - b.order; });
       return alerts;
+    }
+
+    // Desktop notifications for Minnesota while the MN portal is being polled.
+    function portalMnFireNotifications() {
+      portalMnGetAlerts().forEach(function(a) { portalNotify(a.notifyTitle, a.notifyBody, a.tag); });
     }
 
     // Render the Alerts tab list + tab badge, and fire push notifications.
@@ -20455,6 +20687,7 @@
       if (name === "myPortal") {
         try { renderPortal(); } catch (err) { console.error("My Portal render failed:", err); }
         setTimeout(repairMyPortalPanel, 0);
+        portalTourMaybeStart("oks");
       } else portalStopLivePolling();
       if (name === "myPortalMn") {
         try {
@@ -20463,6 +20696,7 @@
         } catch (err) {
           console.error("Minnesota My Portal render failed:", err);
         }
+        portalTourMaybeStart("mn");
       } else portalMnStopPolling();
       if (name === "mnScheduleUploader") {
         try {
