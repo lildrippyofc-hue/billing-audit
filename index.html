@@ -6876,8 +6876,22 @@
         <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
           <button type="button" class="portal-view-btn active" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
         </div>
+
+        <!-- Vendor Performance History view (Minnesota) -->
+        <section id="portalMnVendorView" style="display:none; margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Vendor Turn-Time History</div>
+            <button type="button" id="portalMnVendorRefreshBtn" class="portal-ctrl-btn" style="font-size:0.82em;">&#x21BB; Refresh</button>
+            <button type="button" id="portalMnVendorBackfillBtn" class="portal-ctrl-btn" style="font-size:0.82em;" title="Fill the history from the last 7 days of Minnesota DMS shifts">Load last 7 days</button>
+            <span id="portalMnVendorMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+          </div>
+          <div class="vendor-grid" id="portalMnVendorGrid">
+            <div style="color:var(--muted,#718096); font-size:0.85em; padding:12px 0;">Click Refresh to load vendor data.</div>
+          </div>
+        </section>
 
         <section id="portalMnClientView" style="display:none; margin-top:10px;">
           <div class="portal-client-panel">
@@ -8309,6 +8323,9 @@
       portalMnBoard: document.getElementById("portalMnBoard"),
       portalMnBoardView: document.getElementById("portalMnBoardView"),
       portalMnDoorView: document.getElementById("portalMnDoorView"),
+      portalMnVendorView: document.getElementById("portalMnVendorView"),
+      portalMnVendorGrid: document.getElementById("portalMnVendorGrid"),
+      portalMnVendorMeta: document.getElementById("portalMnVendorMeta"),
       portalMnDoorMap: document.getElementById("portalMnDoorMap"),
       portalMnDoorRange: document.getElementById("portalMnDoorRange"),
       portalMnScorecardDoors: document.getElementById("portalMnScorecardDoors"),
@@ -9600,6 +9617,28 @@
       });
     });
     (function() {
+      const refreshBtn = document.getElementById("portalMnVendorRefreshBtn");
+      if (refreshBtn) refreshBtn.addEventListener("click", renderPortalMnVendorView);
+      const backfillBtn = document.getElementById("portalMnVendorBackfillBtn");
+      if (backfillBtn) backfillBtn.addEventListener("click", function() {
+        const label = backfillBtn.textContent;
+        backfillBtn.disabled = true;
+        backfillBtn.textContent = "Loading from DMS...";
+        fetch(apiUrl("/api/portal/mn/learn-history?days=7"), { method: "POST" })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            if (data && data.ok) {
+              showToast("Learned " + (data.total_learned || 0) + " trucks from the last " + (data.days || 7) + " days of Minnesota DMS.");
+              renderPortalMnVendorView();
+            } else {
+              showToast("Could not load history: " + ((data && data.detail) || "DMS unavailable."));
+            }
+          })
+          .catch(function() { showToast("Could not load history - could not reach DMS."); })
+          .finally(function() { backfillBtn.disabled = false; backfillBtn.textContent = label; });
+      });
+    })();
+    (function() {
       const btn = document.getElementById("portalVendorRefreshBtn");
       if (btn) btn.addEventListener("click", renderPortalVendorView);
     })();
@@ -9768,7 +9807,7 @@
     // Shows once per user per site per PORTAL_TOUR_VERSION; skippable at any
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
-    const PORTAL_TOUR_VERSION = "2026-09-25b";
+    const PORTAL_TOUR_VERSION = "2026-09-25c";
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     const PORTAL_TOUR_STEPS = {
       oks: [
@@ -9794,6 +9833,8 @@
           body: "The popup shows status and countdown, time on dock, unload time, <b>every PO on its own line</b>, and the timeline. <b>Copy summary</b> copies the details to paste elsewhere, and <b>Shift note</b> saves a quick note on this device." },
         { title: "Alerts", target: portalTourEl("portalMnAlertsBtn"),
           body: "Click <b>Enable alerts</b> for desktop popups on detention risk, overdue unload starts, and unloader delays. They fire whenever the board refreshes (about once a minute while this page is open). Your admin can also connect Slack so supervisors are pinged when the portal is closed." },
+        { title: "Vendors tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="vendors"]'); },
+          body: "<b>Vendors</b> shows how long each supplier's trucks take to turn: average, 75th percentile, range, and how many trucks. It builds itself as trucks finish unloading. Open it and hit <b>Load last 7 days</b> to fill it in right away." },
         { title: "Also new: Truck Report charts", body: "The menu now has <b>Overview</b> and <b>Data</b>. Attach the daily truck schedule on Overview, then open Data for the hourly flow, dock, and area charts." },
         { title: "Also new: Schedule Uploader", body: "In the <b>Minnesota Schedule Uploader</b>, rows covering multiple POs now show and send only the <b>first PO</b> to DMS, and suppliers with an Incoterm are tagged like <i>(DDP) Supplier</i>." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="mn"]'); },
@@ -15525,7 +15566,9 @@
       if (els.portalMnClientView) els.portalMnClientView.style.display = view === "client" ? "" : "none";
       if (els.portalMnBoardView) els.portalMnBoardView.style.display = view === "board" ? "" : "none";
       if (els.portalMnDoorView) els.portalMnDoorView.style.display = view === "doors" ? "" : "none";
+      if (els.portalMnVendorView) els.portalMnVendorView.style.display = view === "vendors" ? "" : "none";
       if (view === "doors") renderPortalMnDoorMap();
+      if (view === "vendors") renderPortalMnVendorView();
     }
 
     // Door map for Minnesota -- built from the same door-zone shape found in
@@ -16276,22 +16319,30 @@
 
     // -- Feature 5: Vendor performance history --------------------------------
     function renderPortalVendorView() {
-      const grid = els.portalVendorGrid;
-      const meta = els.portalVendorMeta;
+      portalRenderVendorCards(els.portalVendorGrid, els.portalVendorMeta, "OKS", 120);
+    }
+
+    function renderPortalMnVendorView() {
+      portalRenderVendorCards(els.portalMnVendorGrid, els.portalMnVendorMeta, "MN", state.portalMn.freeTimeMinutes || 120);
+    }
+
+    // Shared by the OKS and Minnesota Vendors tabs; history is stored per site.
+    function portalRenderVendorCards(grid, meta, site, freeMin) {
       if (!grid) return;
       grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:8px 0;">Loading...</div>';
       if (meta) meta.textContent = "";
-      fetch(apiUrl("/api/portal/vendor-stats"))
+      fetch(apiUrl("/api/portal/vendor-stats" + (site === "MN" ? "?site=MN" : "")))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (!data.ok || !data.stats || !data.stats.length) {
-            grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:12px 0;">No vendor history yet  -  data builds automatically as trucks hit unload finish.</div>';
+            grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:12px 0;">No vendor history yet  -  data builds automatically as trucks hit unload finish.'
+              + (site === "MN" ? ' Use <b>Load last 7 days</b> to fill it in from DMS now.' : '') + '</div>';
             return;
           }
           const stats = data.stats.slice().sort(function(a, b) { return a.avg_min - b.avg_min; });
           const total = stats.reduce(function(s, v) { return s + v.count; }, 0);
           if (meta) meta.textContent = stats.length + " vendors  -  " + total + " trucks tracked";
-          const FREE = 120;
+          const FREE = freeMin;
           grid.innerHTML = stats.map(function(v) {
             const h = Math.floor(v.avg_min / 60), m = v.avg_min % 60;
             const avgStr = h > 0 ? h + "h " + m + "m" : m + "m";

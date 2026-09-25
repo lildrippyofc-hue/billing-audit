@@ -178,6 +178,11 @@ def init_db():
             created_by         TEXT    NOT NULL DEFAULT ''
         );
     """)
+    # Vendor turn-time history is kept per site; rows that predate the column
+    # all came from OKS, which the column default covers.
+    vendor_cols = [r[1] for r in conn.execute("PRAGMA table_info(vendor_unload_times)")]
+    if "site" not in vendor_cols:
+        conn.execute("ALTER TABLE vendor_unload_times ADD COLUMN site TEXT NOT NULL DEFAULT 'OKS'")
     conn.commit()
     conn.close()
 
@@ -691,11 +696,11 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
     return trucks
 
 
-def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str) -> int:
+def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str, site: str = "OKS") -> int:
     """Record each completed truck's real turn time (check-in -> unload finish)
     per vendor so the completion estimate gets more accurate over time.
-    Idempotent per (vendor, truck_ref, shift_date) so repeated pulls of the same
-    shift don't double-count. Best-effort; never raises into the request."""
+    Idempotent per (site, vendor, truck_ref, shift_date) so repeated pulls of the
+    same shift don't double-count. Best-effort; never raises into the request."""
     inserted = 0
     try:
         conn = get_db()
@@ -714,15 +719,15 @@ def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str) -> int:
             if dock_min <= 0 or dock_min > 720:
                 continue
             exists = conn.execute(
-                "SELECT 1 FROM vendor_unload_times WHERE vendor=? AND truck_ref=? AND shift_date=? LIMIT 1",
-                (vendor, ref, shift_date),
+                "SELECT 1 FROM vendor_unload_times WHERE site=? AND vendor=? AND truck_ref=? AND shift_date=? LIMIT 1",
+                (site, vendor, ref, shift_date),
             ).fetchone()
             if exists:
                 continue
             conn.execute(
-                "INSERT INTO vendor_unload_times (vendor, dock_min, shift_date, source, truck_ref, recorded_at) "
-                "VALUES (?,?,?,?,?,?)",
-                (vendor, dock_min, shift_date, "DMS", ref, now_str),
+                "INSERT INTO vendor_unload_times (vendor, dock_min, shift_date, source, truck_ref, recorded_at, site) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (vendor, dock_min, shift_date, "DMS", ref, now_str, site),
             )
             inserted += 1
         conn.commit()
@@ -968,6 +973,9 @@ def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
     stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
     all_trucks = _merge_dms_portal_rows(loads, stamps)
     board = [t for t in all_trucks if t.get("checkInIso")]
+    # Minnesota's Vendors tab builds its turn-time history from completed trucks
+    # on every pull (this builder only serves the MN portal).
+    _learn_from_dms(board, info, "MN")
 
     def _stat(st):
         return str(st.get("drstat") or "").strip().lower()
@@ -1206,7 +1214,16 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
 def portal_learn_history(days: int = 7, _: str = Depends(_require_oks_dms)):
     """Backfill vendor learning from the last N days of real DMS shifts so the
     completion estimate is accurate right away instead of only over time."""
-    session = _ensure_dms_session()
+    return _learn_history(_ensure_dms_session(), days, "OKS")
+
+
+@app.post("/api/portal/mn/learn-history")
+def portal_mn_learn_history(days: int = 7, _: str = Depends(_require_mn_dms)):
+    """Same backfill for Minnesota's Vendors tab."""
+    return _learn_history(_ensure_dms_mn_session(), days, "MN")
+
+
+def _learn_history(session: Dict[str, Any], days: int, site: str) -> Dict[str, Any]:
     days = max(1, min(int(days or 7), 30))
     total_learned = 0
     dates_done = []
@@ -1222,7 +1239,7 @@ def portal_learn_history(days: int = 7, _: str = Depends(_require_oks_dms)):
             loads = [x for x in _first_list(_dms_json_request("api/load/getloaddetails", payload, session["config"])) if isinstance(x, dict)]
             stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
             trucks = _merge_dms_portal_rows(loads, stamps)
-            learned = _learn_from_dms(trucks, info)
+            learned = _learn_from_dms(trucks, info, site)
             total_learned += learned
             dates_done.append({"date": info, "trucks": len(trucks), "learned": learned})
         except Exception as e:
@@ -3229,15 +3246,23 @@ def portal_learn(body: VendorLearnIn, _: str = Depends(_require_oks_dms)):
     conn.close()
     return {"ok": True, "inserted": inserted}
 
+_require_vendor_stats = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota")
+
+
 @app.get("/api/portal/vendor-stats")
-def portal_vendor_stats(_: str = Depends(_require_oks_dms)):
+def portal_vendor_stats(site: str = "OKS", username: str = Depends(_require_vendor_stats)):
+    site = "MN" if str(site).strip().upper() == "MN" else "OKS"
+    role = _ROLES.get(username, "guest")
+    # Each site sees only its own history (admin sees either).
+    if role != "admin" and (role == "minnesota") != (site == "MN"):
+        raise HTTPException(status_code=403, detail="Not allowed for this login.")
     conn = get_db()
     rows = conn.execute("""
         SELECT vendor, dock_min, recorded_at
         FROM vendor_unload_times
-        WHERE dock_min > 0 AND dock_min <= 720
+        WHERE dock_min > 0 AND dock_min <= 720 AND site = ?
         ORDER BY vendor, recorded_at DESC
-    """).fetchall()
+    """, (site,)).fetchall()
     conn.close()
     from collections import defaultdict
     by_vendor = defaultdict(list)
