@@ -9834,7 +9834,7 @@
         { title: "Alerts", target: portalTourEl("portalMnAlertsBtn"),
           body: "Click <b>Enable alerts</b> for desktop popups on detention risk, overdue unload starts, and unloader delays. They fire whenever the board refreshes (about once a minute while this page is open). Your admin can also connect Slack so supervisors are pinged when the portal is closed." },
         { title: "Vendors tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="vendors"]'); },
-          body: "<b>Vendors</b> shows how long each supplier's trucks take to turn: average, 75th percentile, range, and how many trucks. It builds itself as trucks finish unloading. Open it and hit <b>Load last 7 days</b> to fill it in right away." },
+          body: "<b>Vendors</b> shows how long each supplier's trucks take to turn: average, 75th percentile, range, and how many trucks. It builds itself as trucks finish unloading, and it also drives the detention forecast. Open it and hit <b>Load last 7 days</b> to fill it in right away." },
         { title: "Also new: Truck Report charts", body: "The menu now has <b>Overview</b> and <b>Data</b>. Attach the daily truck schedule on Overview, then open Data for the hourly flow, dock, and area charts." },
         { title: "Also new: Schedule Uploader", body: "In the <b>Minnesota Schedule Uploader</b>, rows covering multiple POs now show and send only the <b>first PO</b> to DMS, and suppliers with an Incoterm are tagged like <i>(DDP) Supplier</i>." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="mn"]'); },
@@ -14956,6 +14956,7 @@
         renderPortalMn();
         // Only notify off a fresh pull; stale rows would trigger false detention alerts.
         if (!state.portalMn.liveError) { try { portalMnFireNotifications(); } catch (e) {} }
+        portalMnFetchVendorAvgs(false);
       }
     }
 
@@ -15100,9 +15101,24 @@
       }).join("");
     }
 
+    // Minnesota's forecast uses Minnesota's own vendor turn-time history.
+    function portalMnFetchVendorAvgs(force) {
+      if (!force && Date.now() - (state.portalMn.vendorAvgsAt || 0) < 5 * 60000) return;
+      state.portalMn.vendorAvgsAt = Date.now();
+      fetch(apiUrl("/api/portal/vendor-stats?site=MN"))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          const avgs = {};
+          (data.stats || []).forEach(function(s) { avgs[s.vendor] = s.avg_min; });
+          state.portalMn.vendorAvgs = avgs;
+          renderPortalMnDashboard();
+        })
+        .catch(function() {});
+    }
+
     function portalMnRenderRiskForecast(rows, now, freeTimeMs) {
       if (!els.portalMnForecastList || !els.portalMnForecastCount) return [];
-      const forecast = portalBuildRiskForecast(rows, now, freeTimeMs);
+      const forecast = portalBuildRiskForecast(rows, now, freeTimeMs, state.portalMn.vendorAvgs || {});
       els.portalMnForecastCount.textContent = forecast.length;
       els.portalMnForecastCount.className = "portal-action-count" + (forecast.some(function(f) { return f.level === "high"; }) ? " hot" : forecast.length ? " warn" : "");
       if (!forecast.length) {
@@ -15743,11 +15759,13 @@
       return items.sort(function(a, b) { return a.order - b.order; }).slice(0, 12);
     }
 
-    function portalVendorAvgMinutes(supplier) {
+    // `avgsOverride` lets a site use its own history (Minnesota passes its own
+    // map, even an empty one, so it never falls back to OKS's averages).
+    function portalVendorAvgMinutes(supplier, avgsOverride) {
       const raw = String(supplier || "").trim();
       if (!raw) return null;
       const upper = raw.toUpperCase();
-      const avgs = state.portal.vendorAvgs || {};
+      const avgs = avgsOverride || state.portal.vendorAvgs || {};
       if (avgs[upper]) return Number(avgs[upper]) || null;
       if (avgs[raw]) return Number(avgs[raw]) || null;
       const compact = normalizeSupplierKey(raw);
@@ -15783,7 +15801,7 @@
       return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m on door";
     }
 
-    function portalBuildRiskForecast(rows, now, freeTimeMs) {
+    function portalBuildRiskForecast(rows, now, freeTimeMs, vendorAvgs) {
       const MS = 60000;
       const out = [];
       (rows || []).forEach(function(r) {
@@ -15793,7 +15811,7 @@
         if (!deadline) return;
         const detentionDeadline = deadline + freeTimeMs;
         const minsLeft = Math.round((detentionDeadline - now) / MS);
-        const vendorAvg = portalVendorAvgMinutes(r.supplier);
+        const vendorAvg = portalVendorAvgMinutes(r.supplier, vendorAvgs);
         const defaultTurn = 120;
         let expectedRemaining;
         let reason = [];
@@ -16334,6 +16352,12 @@
       fetch(apiUrl("/api/portal/vendor-stats" + (site === "MN" ? "?site=MN" : "")))
         .then(function(r) { return r.json(); })
         .then(function(data) {
+          if (site === "MN" && data.ok) {
+            const avgs = {};
+            (data.stats || []).forEach(function(s) { avgs[s.vendor] = s.avg_min; });
+            state.portalMn.vendorAvgs = avgs;
+            state.portalMn.vendorAvgsAt = Date.now();
+          }
           if (!data.ok || !data.stats || !data.stats.length) {
             grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:12px 0;">No vendor history yet  -  data builds automatically as trucks hit unload finish.'
               + (site === "MN" ? ' Use <b>Load last 7 days</b> to fill it in from DMS now.' : '') + '</div>';
