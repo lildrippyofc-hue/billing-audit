@@ -6587,27 +6587,6 @@
         </section>
 
         <!-- End-of-shift report modal -->
-        <!-- Door Detail Modal -->
-        <div class="report-modal-overlay" id="portalDoorDetailModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Door detail">
-          <div class="report-modal" style="max-width:480px;width:95%;">
-            <div class="report-modal-head" style="display:flex;align-items:center;justify-content:space-between;">
-              <div class="report-modal-title" id="doorDetailTitle">Door  - </div>
-              <button type="button" id="doorDetailCloseBtn" class="secondary-btn" style="font-size:0.82em;padding:4px 12px;" aria-label="Close">&times; Close</button>
-            </div>
-            <div style="padding:16px 20px 20px;">
-              <!-- Status badge row -->
-              <div id="doorDetailStatus" style="margin-bottom:14px;"></div>
-              <!-- Key info grid -->
-              <div id="doorDetailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:0.88em;margin-bottom:16px;"></div>
-              <!-- Timeline -->
-              <div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:8px;">Timeline</div>
-              <div id="doorDetailTimeline" style="display:flex;flex-direction:column;gap:6px;font-size:0.85em;"></div>
-              <!-- Comments -->
-              <div id="doorDetailComments" style="margin-top:14px;font-size:0.84em;color:var(--muted,#64748b);display:none;"></div>
-            </div>
-          </div>
-        </div>
-
         <div class="report-modal-overlay" id="portalReportModal" style="display:none;">
           <div class="report-modal">
             <div class="report-modal-head">
@@ -6633,6 +6612,29 @@
         </section>
 
       </section>
+
+      <!-- Door Detail Modal: shared by OKS and Minnesota My Portal door maps.
+           Lives outside both tab-panels (which are display:none when
+           inactive) so it can still show while the MN tab is active. -->
+      <div class="report-modal-overlay" id="portalDoorDetailModal" style="display:none;" role="dialog" aria-modal="true" aria-label="Door detail">
+        <div class="report-modal" style="max-width:480px;width:95%;">
+          <div class="report-modal-head" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="report-modal-title" id="doorDetailTitle">Door  - </div>
+            <button type="button" id="doorDetailCloseBtn" class="secondary-btn" style="font-size:0.82em;padding:4px 12px;" aria-label="Close">&times; Close</button>
+          </div>
+          <div style="padding:16px 20px 20px;">
+            <!-- Status badge row -->
+            <div id="doorDetailStatus" style="margin-bottom:14px;"></div>
+            <!-- Key info grid -->
+            <div id="doorDetailGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:0.88em;margin-bottom:16px;"></div>
+            <!-- Timeline -->
+            <div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:8px;">Timeline</div>
+            <div id="doorDetailTimeline" style="display:flex;flex-direction:column;gap:6px;font-size:0.85em;"></div>
+            <!-- Comments -->
+            <div id="doorDetailComments" style="margin-top:14px;font-size:0.84em;color:var(--muted,#64748b);display:none;"></div>
+          </div>
+        </div>
+      </div>
 
       <section id="myPortalMnPanel" class="tab-panel mn-portal-panel" aria-label="Minnesota My Portal">
         <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
@@ -9817,6 +9819,83 @@
       document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && modal.style.display !== 'none') modal.style.display = 'none';
       });
+    })();
+
+    // -- Minnesota door detail (reuses the shared #portalDoorDetailModal) --------
+    (function() {
+      var modal = els.portalDoorDetailModal;
+      if (!modal) return;
+
+      function fmt(iso) {
+        if (!iso) return null;
+        try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' }); }
+        catch(e) { return null; }
+      }
+
+      var mnStatusColor = { "Checked In": "#b7791f", "At Door": "#b7791f", "Unloading": "#276749", "Completed": "#2b6cb0" };
+
+      function showMnDoorDetail(doorNum) {
+        var r = (state.portalMn.byDoor || {})[doorNum];
+        if (!r) return;
+
+        document.getElementById('doorDetailTitle').textContent = 'Door ' + doorNum;
+
+        var statusLabel = portalMnTruckStatus(r);
+        document.getElementById('doorDetailStatus').innerHTML =
+          '<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:800;font-size:0.9em;background:' + (mnStatusColor[statusLabel] || '#4a5568') + ';color:#fff;">'
+          + escapeHtml(statusLabel.toUpperCase()) + '</span>';
+
+        var fields = [
+          { k: 'Supplier', v: r.supplier },
+          { k: 'Ref #', v: r.ref },
+          { k: 'PO', v: r.po },
+          { k: 'Carrier', v: r.carrier },
+          { k: 'Area', v: r.area },
+          { k: 'Appt', v: fmt(r.appointmentIso) }
+        ];
+        document.getElementById('doorDetailGrid').innerHTML = fields
+          .filter(function(f) { return f.v && String(f.v).trim(); })
+          .map(function(f) {
+            return '<div class="door-detail-kv"><span class="dk">' + escapeHtml(f.k) + '</span><span class="dv">' + escapeHtml(f.v) + '</span></div>';
+          }).join('');
+
+        var steps = [
+          { label: 'Check-In',        iso: r.checkInIso },
+          { label: 'Driver at Door',  iso: r.driverAtDoorIso },
+          { label: 'Unload Start',    iso: r.unloadStartIso },
+          { label: 'Unload Done',     iso: r.unloadFinishIso },
+          { label: 'Receiving Start', iso: r.receivingStartIso },
+          { label: 'Receiving Done',  iso: r.receivingFinishIso },
+          { label: 'Driver Left',     iso: r.driverLeftIso }
+        ];
+        document.getElementById('doorDetailTimeline').innerHTML = steps.map(function(s) {
+          var t = fmt(s.iso);
+          var done = !!t;
+          return '<div class="door-tl-row">'
+            + '<div class="door-tl-dot ' + (done ? 'done' : 'pending') + '"></div>'
+            + '<span class="door-tl-label">' + escapeHtml(s.label) + '</span>'
+            + '<span class="door-tl-time">' + (t ? t : '<span style="color:var(--muted,#a0aec0);font-weight:400;">Pending</span>') + '</span>'
+            + '</div>';
+        }).join('');
+
+        var commEl = document.getElementById('doorDetailComments');
+        if (r.comments && r.comments.trim()) {
+          commEl.style.display = '';
+          commEl.innerHTML = '<strong>Notes:</strong> ' + escapeHtml(r.comments);
+        } else {
+          commEl.style.display = 'none';
+        }
+
+        modal.style.display = 'flex';
+      }
+
+      if (els.portalMnDoorMap) {
+        els.portalMnDoorMap.addEventListener('click', function(e) {
+          var tile = e.target.closest('.door-tile.occupied');
+          if (!tile) return;
+          showMnDoorDetail(parseInt(tile.getAttribute('data-door'), 10));
+        });
+      }
     })();
 
     // -- Guard Shack supplier table sort -----------------------------------------
@@ -15250,6 +15329,10 @@
         const start = portalIsoToMs(r.driverAtDoorIso) || portalIsoToMs(r.checkInIso) || portalIsoToMs(r.appointmentIso);
         return start ? Math.floor((now - start) / 60000) >= 61 : false;
       }).length;
+
+      // Store for click handler lookups (mirrors OKS's renderPortalDoorMap).
+      state.portalMn.byDoor = byDoor;
+
       if (els.portalMnScorecardDoors) {
         portalFillScorecard(els.portalMnScorecardDoors, [
           { value: openCount, label: "Open doors", sub: "Available now", color: "green" },
