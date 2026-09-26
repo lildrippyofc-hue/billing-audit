@@ -4,6 +4,7 @@ import hashlib
 import sqlite3
 import json
 import re
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Any, Dict
@@ -1074,11 +1075,24 @@ def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_dms)
     }
 
 
+_MN_PORTAL_CACHE_SECONDS = 10
+_mn_portal_cache: Dict[str, Any] = {"key": None, "at": 0.0, "payload": None}
+
+
 @app.get("/api/dms/mn/portal")
 def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depends(_require_mn_dms)):
     """Read Minnesota DMS load/stamp rows for the MN My Portal. This route never writes to DMS."""
+    # Every open Minnesota portal polls this route; a few seconds of sharing keeps
+    # extra viewers from multiplying the load on DMS. The Sync button (force) skips it.
+    key = _dms_business_date(date)
+    now = time.monotonic()
+    cached = _mn_portal_cache
+    if not force and cached["key"] == key and cached["payload"] is not None and now - cached["at"] < _MN_PORTAL_CACHE_SECONDS:
+        return cached["payload"]
     session = _ensure_dms_mn_session(force=force)
-    return _build_dms_portal_payload(session, date)
+    payload = _build_dms_portal_payload(session, date)
+    _mn_portal_cache.update({"key": key, "at": now, "payload": payload})
+    return payload
 
 
 @app.get("/api/dms/portal")

@@ -6876,9 +6876,16 @@
         <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
           <button type="button" class="portal-view-btn active" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
         </div>
+
+        <!-- Area breakdown view (Minnesota) -->
+        <section id="portalMnAreaView" style="display:none; margin-top:10px;">
+          <div class="dms-scorecard" id="portalMnScorecardAreas"></div>
+          <div class="area-grid" id="portalMnAreaGrid"></div>
+        </section>
 
         <!-- Vendor Performance History view (Minnesota) -->
         <section id="portalMnVendorView" style="display:none; margin-top:10px;">
@@ -7972,7 +7979,7 @@
         liveAttempted: false,
         businessDate: "",
         selectedBusinessDate: safeLocalStorageGet("portalMnBusinessDate") || "",
-        livePollMs: 60000,
+        livePollMs: 30000,
         credentialBlocked: false,
         freeTimeMinutes: 120,
         totalExpected: 0,
@@ -8323,6 +8330,9 @@
       portalMnBoard: document.getElementById("portalMnBoard"),
       portalMnBoardView: document.getElementById("portalMnBoardView"),
       portalMnDoorView: document.getElementById("portalMnDoorView"),
+      portalMnAreaView: document.getElementById("portalMnAreaView"),
+      portalMnScorecardAreas: document.getElementById("portalMnScorecardAreas"),
+      portalMnAreaGrid: document.getElementById("portalMnAreaGrid"),
       portalMnVendorView: document.getElementById("portalMnVendorView"),
       portalMnVendorGrid: document.getElementById("portalMnVendorGrid"),
       portalMnVendorMeta: document.getElementById("portalMnVendorMeta"),
@@ -9804,10 +9814,11 @@
     })();
 
     // -- My Portal "What's new" guided tour (OKS + Minnesota) ----------------------
-    // Shows once per user per site per PORTAL_TOUR_VERSION; skippable at any
+    // Shows once per user per site per PORTAL_TOUR_VERSIONS[site]; skippable at any
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
-    const PORTAL_TOUR_VERSION = "2026-09-25c";
+    // Per-site so a change to one site's tour doesn't re-show the other's.
+    const PORTAL_TOUR_VERSIONS = { oks: "2026-09-25c", mn: "2026-09-26" };
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     const PORTAL_TOUR_STEPS = {
       oks: [
@@ -9824,7 +9835,13 @@
           body: "You can replay this any time with the <b>What's new</b> button." }
       ],
       mn: [
-        { title: "What's new in Minnesota My Portal", body: "A quick tour of what changed: the door map, a bigger door popup, and alerts. It takes about a minute, and you can skip any time." },
+        { title: "What's new in Minnesota My Portal", body: "A quick tour of what changed: a new Areas tab, faster updates, a more accurate projected finish, plus the door map, popup, and alerts from before. It takes about a minute, and you can skip any time." },
+        { title: "Areas tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="areas"]'); },
+          body: "<b>Areas</b> shows every dock area with how many trucks are scheduled, arrived, and finished, plus a progress bar for each. Use it to see which area is falling behind." },
+        { title: "Faster updates", target: portalTourEl("portalMnStatus"),
+          body: "The board now refreshes from DMS every <b>30 seconds</b> and recalculates countdowns in between. This line shows when it last updated, and it catches up the moment you switch back to this tab." },
+        { title: "More accurate Projected Finish", target: portalTourEl("portalMnEstCard"),
+          body: "Projected Finish no longer counts trucks that never checked in (late or no-show) or trucks that were rejected, so it reflects the work that is actually coming." },
         { title: "A smarter Door Map", before: function() { portalMnSetView("doors"); }, target: portalTourEl("portalMnDoorMap"),
           body: "Doors now color by status: <b>red</b> is detention, <b>yellow</b> needs review (detention risk, start soon, watch), and <b>green</b> is on track. Each tile shows the countdown and time on the door. <b>Tap any occupied door</b> to open its popup." },
         { title: "New counters", target: portalTourEl("portalMnScorecardDoors"),
@@ -9848,7 +9865,7 @@
 
     function portalTourMaybeStart(site) {
       if (portalTour.active || !state.auth.ready || !state.auth.username) return;
-      if (safeLocalStorageGet(portalTourSeenKey(site)) === PORTAL_TOUR_VERSION) return;
+      if (safeLocalStorageGet(portalTourSeenKey(site)) === PORTAL_TOUR_VERSIONS[site]) return;
       setTimeout(function() { portalTourStart(site); }, 700);
     }
 
@@ -9988,7 +10005,7 @@
       window.removeEventListener("scroll", portalTourReposition, true);
       Object.keys(portalTour.dom).forEach(function(k) { portalTour.dom[k].remove(); });
       portalTour.dom = null;
-      if (markSeen) safeLocalStorageSet(portalTourSeenKey(portalTour.site), PORTAL_TOUR_VERSION);
+      if (markSeen) safeLocalStorageSet(portalTourSeenKey(portalTour.site), PORTAL_TOUR_VERSIONS[portalTour.site]);
       try { (portalTour.site === "mn" ? portalMnSetView : portalSetView)(portalTour.prevView); } catch (e) {}
       window.scrollTo(0, portalTour.scrollY || 0);
     }
@@ -14943,7 +14960,7 @@
         state.portalMn.areaSummary = Array.isArray(data.area_summary) ? data.area_summary : [];
         const loc = data.location || {};
         const locName = loc.name || loc.locName || loc.cCode || "Minnesota";
-        portalMnSetStatus("Live Minnesota DMS active: " + state.portalMn.liveRows.length + " arrived truck(s), " + state.portalMn.scheduledRows.length + " scheduled for business date " + (data.business_date || selectedDate) + " at " + locName + ".", "good");
+        portalMnSetStatus("Live Minnesota DMS active: " + state.portalMn.liveRows.length + " arrived truck(s), " + state.portalMn.scheduledRows.length + " scheduled for business date " + (data.business_date || selectedDate) + " at " + locName + ". Updated " + new Date().toLocaleTimeString() + ", auto-refreshes every " + Math.round((state.portalMn.livePollMs || 30000) / 1000) + " sec.", "good");
       } catch (err) {
         const msg = (err && (err.message || String(err))) || "Minnesota DMS unavailable.";
         state.portalMn.liveError = msg;
@@ -15572,6 +15589,7 @@
       }
       renderPortalMnDashboard();
       renderPortalMnDoorMap();
+      if (state.portalMn.view === "areas") renderPortalMnAreaView();
     }
 
     function portalMnSetView(view) {
@@ -15582,8 +15600,10 @@
       if (els.portalMnClientView) els.portalMnClientView.style.display = view === "client" ? "" : "none";
       if (els.portalMnBoardView) els.portalMnBoardView.style.display = view === "board" ? "" : "none";
       if (els.portalMnDoorView) els.portalMnDoorView.style.display = view === "doors" ? "" : "none";
+      if (els.portalMnAreaView) els.portalMnAreaView.style.display = view === "areas" ? "" : "none";
       if (els.portalMnVendorView) els.portalMnVendorView.style.display = view === "vendors" ? "" : "none";
       if (view === "doors") renderPortalMnDoorMap();
+      if (view === "areas") renderPortalMnAreaView();
       if (view === "vendors") renderPortalMnVendorView();
     }
 
@@ -15666,7 +15686,19 @@
       if (!state.portalMn.refreshInterval) {
         state.portalMn.refreshInterval = setInterval(function() {
           if (portalMnPanelIsActive()) portalMnPullLive(false, { quiet: true });
-        }, state.portalMn.livePollMs || 60000);
+        }, state.portalMn.livePollMs || 30000);
+      }
+      // Between DMS pulls, recompute countdowns / time on door from the rows we
+      // already have so the board doesn't sit frozen for a whole poll cycle.
+      if (!state.portalMn.uiTickInterval) {
+        state.portalMn.uiTickInterval = setInterval(function() {
+          if (!portalMnPanelIsActive() || state.portalMn.liveBusy) return;
+          try {
+            renderPortalMnDashboard();
+            renderPortalMnDoorMap();
+            if (state.portalMn.view === "areas") renderPortalMnAreaView();
+          } catch (e) {}
+        }, 15000);
       }
       if (!state.portalMn.liveAttempted) portalMnPullLive(false);
     }
@@ -15676,7 +15708,19 @@
         clearInterval(state.portalMn.refreshInterval);
         state.portalMn.refreshInterval = null;
       }
+      if (state.portalMn.uiTickInterval) {
+        clearInterval(state.portalMn.uiTickInterval);
+        state.portalMn.uiTickInterval = null;
+      }
     }
+
+    // Browsers throttle timers in background tabs; catch up the moment the
+    // Minnesota portal is visible again instead of waiting for the next tick.
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState === "visible" && portalMnPanelIsActive() && state.portalMn.refreshInterval) {
+        portalMnPullLive(false, { quiet: true });
+      }
+    });
 
     function portalCurrentTrucks() {
       const manualTrucks = portalLoadTrucks().map(function(t) {
@@ -16285,23 +16329,57 @@
     }
 
     function renderPortalAreaView(enriched) {
-      const rows = portalAreaRows(enriched);
+      portalRenderAreaCards(portalAreaRows(enriched), els.portalScorecardAreas, els.portalAreaGrid);
+    }
+
+    // Minnesota's per-area totals come from the same server summary as OKS's.
+    function portalMnAreaRows() {
+      const summary = Array.isArray(state.portalMn.areaSummary) ? state.portalMn.areaSummary : [];
+      if (summary.length) {
+        return summary.map(function(a) {
+          const areaName = String(a.area || "").trim();
+          return {
+            area: areaName && areaName !== "-" && areaName !== "—" ? areaName : "No area listed",
+            scheduled: Number(a.scheduled || 0),
+            checked_in: Number(a.checked_in || 0),
+            completed: Number(a.completed || 0)
+          };
+        });
+      }
+      const map = new Map();
+      portalMnEnrichedRows().forEach(function(r) {
+        const area = (r.area || "").trim() || "No area listed";
+        if (!map.has(area)) map.set(area, { area: area, scheduled: 0, checked_in: 0, completed: 0 });
+        const item = map.get(area);
+        item.scheduled += 1;
+        if (r.checkInMs) item.checked_in += 1;
+        if (r.status === "complete") item.completed += 1;
+      });
+      return Array.from(map.values()).sort(function(a, b) { return b.scheduled - a.scheduled; });
+    }
+
+    function renderPortalMnAreaView() {
+      portalRenderAreaCards(portalMnAreaRows(), els.portalMnScorecardAreas, els.portalMnAreaGrid);
+    }
+
+    // Shared by the OKS and Minnesota Areas views.
+    function portalRenderAreaCards(rows, scorecardEl, gridEl) {
       const scheduled = rows.reduce(function(sum, r) { return sum + r.scheduled; }, 0);
       const checkedIn = rows.reduce(function(sum, r) { return sum + r.checked_in; }, 0);
       const completed = rows.reduce(function(sum, r) { return sum + r.completed; }, 0);
       const open = Math.max(0, scheduled - completed);
-      portalFillScorecard(els.portalScorecardAreas, [
+      portalFillScorecard(scorecardEl, [
         { value: scheduled, label: "Scheduled", sub: "Total shift load", color: "blue" },
         { value: checkedIn, label: "Checked In", sub: "Arrived trucks", color: "yellow" },
         { value: completed, label: "Complete", sub: "Unload finished", color: "green" },
         { value: open, label: "Still Open", sub: "Not finished yet", color: open ? "red" : "green" }
       ]);
-      if (!els.portalAreaGrid) return;
+      if (!gridEl) return;
       if (!rows.length) {
-        els.portalAreaGrid.innerHTML = '<div class="door-empty">No area totals available yet.</div>';
+        gridEl.innerHTML = '<div class="door-empty">No area totals available yet.</div>';
         return;
       }
-      els.portalAreaGrid.innerHTML = rows.map(function(row) {
+      gridEl.innerHTML = rows.map(function(row) {
         const pct = row.scheduled ? Math.round((row.completed / row.scheduled) * 100) : 0;
         const width = row.scheduled ? Math.max(3, pct) : 0;
         return '<article class="area-card">'
@@ -16896,7 +16974,9 @@
 
       // Estimated completion - based on scheduled trucks likely to work.
       // Late/no-show trucks without check-in are excluded from the estimate.
-      const estimateScheduledDmsTotal = Math.max(0, scheduledDmsTotal - (state.portal.rejectedCount || 0) - (state.portal.noShowCount || 0));
+      // Rejected trucks are already dropped from totalExpected by the server
+      // (same as Minnesota), so they are not subtracted a second time here.
+      const estimateScheduledDmsTotal = Math.max(0, scheduledDmsTotal - (state.portal.noShowCount || 0));
       const estimateTotal = morningClosedNoOpenArrivals ? complete.length : Math.max(enriched.length, estimateScheduledDmsTotal + manualCount);
       const scheduledNotOnBoard = morningClosedNoOpenArrivals ? 0 : Math.max(0, estimateTotal - enriched.length);
       const stillRunning = morningClosedNoOpenArrivals ? 0 : Math.max(0, estimateTotal - complete.length);
