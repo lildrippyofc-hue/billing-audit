@@ -1213,6 +1213,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "load_count": len(loads),
         "stamp_count": len(stamps),
         "trucks": board,
+        "scheduled_trucks": all_trucks,
         "total_expected": len(all_trucks),
         "checked_in_count": len(board),
         "rejected_count": rejected_count,
