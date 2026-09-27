@@ -730,6 +730,20 @@
     .portal-view-btn.active { background:#1e3a5f; color:#fff; border-color:#1e3a5f; box-shadow: 0 2px 8px rgba(30,58,95,0.25); }
     :root.dark .portal-view-btn { background:#17263f; border-color:#1e3a55; }
     :root.dark .portal-view-btn.active { background:#2b6cb0; border-color:#2b6cb0; }
+    .chat-unread-badge { display:inline-flex; align-items:center; justify-content:center; min-width:17px; height:17px; padding:0 4px; margin-left:6px; border-radius:999px; background:#e53e3e; color:#fff; font-size:0.72em; font-weight:800; vertical-align:middle; }
+    /* -- Team chat -- */
+    .portal-chat-panel { display:flex; flex-direction:column; height:min(60vh, 520px); border:1px solid var(--border,#e2e8f0); border-radius:10px; background:var(--card-bg,#fff); overflow:hidden; }
+    :root.dark .portal-chat-panel { background:#17263f; }
+    .portal-chat-log { flex:1; overflow-y:auto; padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+    .portal-chat-msg { max-width:80%; }
+    .portal-chat-msg .pcm-meta { font-size:0.72em; font-weight:700; color:var(--muted,#718096); margin-bottom:2px; }
+    .portal-chat-msg .pcm-bubble { display:inline-block; background:var(--bg,#f1f5f9); border-radius:10px; padding:6px 11px; font-size:0.88em; line-height:1.4; white-space:pre-wrap; word-break:break-word; }
+    :root.dark .portal-chat-msg .pcm-bubble { background:#0e1c30; }
+    .portal-chat-msg.mine { align-self:flex-end; text-align:right; }
+    .portal-chat-msg.mine .pcm-bubble { background:#1e3a5f; color:#fff; }
+    :root.dark .portal-chat-msg.mine .pcm-bubble { background:#2b6cb0; }
+    .portal-chat-input-row { display:flex; gap:8px; padding:10px; border-top:1px solid var(--border,#e2e8f0); }
+    .portal-chat-input-row .lookup-input { flex:1; }
     /* -- DMS-style green/yellow/red dwell scorecard -- */
     .dms-scorecard { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:12px; }
     .dms-score { border-radius:10px; padding:12px 14px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff);
@@ -786,6 +800,8 @@
     .sheets-sync-idle { color:#a0aec0; }
     /* Clerk assignment badge on door tile */
     .door-tile .clerk-badge { font-size:0.68em; font-weight:800; color:#fff; background:#6b21a8; border-radius:4px; padding:1px 5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .door-tile .door-note-flag { font-size:0.68em; font-weight:700; color:#7c2d12; background:#fef3c7; border-radius:4px; padding:1px 5px; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    :root.dark .door-tile .door-note-flag { color:#fde68a; background:#78350f; }
     /* Sheets setup modal */
     .sheets-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9900; display:flex; align-items:center; justify-content:center; padding:16px; }
     .sheets-modal { background:var(--card-bg,#fff); border-radius:12px; max-width:680px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.4); }
@@ -6462,8 +6478,20 @@
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
+          <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalChatBadge" style="display:none;">0</span></button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
         </div>
+
+        <!-- Team chat: shared across everyone signed in to this site's My Portal -->
+        <section id="portalChatView" style="display:none; margin-top:10px;">
+          <div class="portal-chat-panel">
+            <div class="portal-chat-log" id="portalChatLog"><div class="door-empty">Loading chat...</div></div>
+            <div class="portal-chat-input-row">
+              <input id="portalChatInput" type="text" class="lookup-input" placeholder="Message the shift..." maxlength="1000" autocomplete="off">
+              <button type="button" id="portalChatSendBtn" class="file-button primary">Send</button>
+            </div>
+          </div>
+        </section>
 
         <section id="portalClientView" style="display:none; margin-top:10px;">
           <div class="portal-client-panel">
@@ -6878,8 +6906,20 @@
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
+          <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalMnChatBadge" style="display:none;">0</span></button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
         </div>
+
+        <!-- Team chat: shared across everyone signed in to Minnesota My Portal -->
+        <section id="portalMnChatView" style="display:none; margin-top:10px;">
+          <div class="portal-chat-panel">
+            <div class="portal-chat-log" id="portalMnChatLog"><div class="door-empty">Loading chat...</div></div>
+            <div class="portal-chat-input-row">
+              <input id="portalMnChatInput" type="text" class="lookup-input" placeholder="Message the shift..." maxlength="1000" autocomplete="off">
+              <button type="button" id="portalMnChatSendBtn" class="file-button primary">Send</button>
+            </div>
+          </div>
+        </section>
 
         <!-- Area breakdown view (Minnesota) -->
         <section id="portalMnAreaView" style="display:none; margin-top:10px;">
@@ -7959,6 +7999,8 @@
         cynicIndex: 0,
         cynicLastSwapMs: 0,
         vendorAvgs: {},
+        doorNotes: {},   // { truckKey: { note, updated_by, updated_at } }  -  shared, from the server
+        chat: { messages: [], lastId: 0, polling: false },
         scheduleUpload: {
           fileName: "",
           rows: [],
@@ -7990,6 +8032,8 @@
         estMs: null,
         notifiedBehind: false,
         prevStatuses: {},
+        doorNotes: {},
+        chat: { messages: [], lastId: 0, polling: false },
         scheduleUpload: {
           fileName: "",
           rows: [],
@@ -8336,6 +8380,11 @@
       portalMnVendorView: document.getElementById("portalMnVendorView"),
       portalMnVendorGrid: document.getElementById("portalMnVendorGrid"),
       portalMnVendorMeta: document.getElementById("portalMnVendorMeta"),
+      portalMnChatView: document.getElementById("portalMnChatView"),
+      portalMnChatLog: document.getElementById("portalMnChatLog"),
+      portalMnChatInput: document.getElementById("portalMnChatInput"),
+      portalMnChatSendBtn: document.getElementById("portalMnChatSendBtn"),
+      portalMnChatBadge: document.getElementById("portalMnChatBadge"),
       portalMnDoorMap: document.getElementById("portalMnDoorMap"),
       portalMnDoorRange: document.getElementById("portalMnDoorRange"),
       portalMnScorecardDoors: document.getElementById("portalMnScorecardDoors"),
@@ -8505,6 +8554,11 @@
       portalVendorView: document.getElementById("portalVendorView"),
       portalVendorGrid: document.getElementById("portalVendorGrid"),
       portalVendorMeta: document.getElementById("portalVendorMeta"),
+      portalChatView: document.getElementById("portalChatView"),
+      portalChatLog: document.getElementById("portalChatLog"),
+      portalChatInput: document.getElementById("portalChatInput"),
+      portalChatSendBtn: document.getElementById("portalChatSendBtn"),
+      portalChatBadge: document.getElementById("portalChatBadge"),
       portalScorecardDoors: document.getElementById("portalScorecardDoors"),
       portalScorecardAreas: document.getElementById("portalScorecardAreas"),
       portalDoorMap: document.getElementById("portalDoorMap"),
@@ -9818,7 +9872,7 @@
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
     // Per-site so a change to one site's tour doesn't re-show the other's.
-    const PORTAL_TOUR_VERSIONS = { oks: "2026-09-26", mn: "2026-09-26b" };
+    const PORTAL_TOUR_VERSIONS = { oks: "2026-09-27", mn: "2026-09-27" };
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     const PORTAL_TOUR_STEPS = {
       oks: [
@@ -9828,11 +9882,13 @@
         { title: "Tap a door for the full picture", before: function() { portalSetView("doors"); }, target: portalTourEl("portalDoorMap"),
           body: "On the <b>Door Map</b>, tap any occupied door to open its popup: status and detention countdown, time on dock, how long it has been unloading, <b>every PO on its own line</b>, and the full check-in to driver-left timeline." },
         { title: "Copy summary and shift notes", target: portalTourEl("portalDoorMap"),
-          body: "In the popup, <b>Copy summary</b> puts the truck's details on your clipboard to paste into a text or chat. <b>Shift note</b> lets you jot things like \"waiting on lumper\". Notes are saved on this device only." },
+          body: "In the popup, <b>Copy summary</b> puts the truck's details on your clipboard to paste into a text or chat. <b>Shift note</b> lets you jot things like \"waiting on lumper\" &mdash; it's shared, so everyone on My Portal sees it on that door." },
         { title: "Alerts", target: function() { const b = document.getElementById("portalNotifBanner"); return b && b.style.display !== "none" ? b : null; },
           body: "Click <b>Enable Alerts</b> (the banner at the top of the portal) to get desktop popups for detention risk, overdue unload starts, unloader delays, and receiving follow-ups. Keep this page open to receive them. Your admin can also connect a Slack channel so supervisors get pinged even when the portal is closed." },
         { title: "Smarter schedule uploads", target: portalTourEl("portalScheduleToggleBtn"),
           body: "<b>Upload Schedule</b> now adds a Dry/Cold side note to Produce rows, sends Fresh Meat to its own DMS area, and tags suppliers that have an Incoterm, like <i>(DDP) Supplier</i>." },
+        { title: "Team Chat", before: function() { portalSetView("chat"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="chat"]'); },
+          body: "<b>Team Chat</b> is shared by everyone signed in to OKS My Portal &mdash; a quick way to flag something without leaving the dock board. New messages show a badge here when you're on another tab." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="oks"]'); },
           body: "You can replay this any time with the <b>What's new</b> button." }
       ],
@@ -9849,13 +9905,15 @@
         { title: "New counters", target: portalTourEl("portalMnScorecardDoors"),
           body: "<b>Needs review</b> and <b>Detention</b> now sit next to Open, Occupied, and 61+ min doors, so problems stand out at a glance." },
         { title: "Door popup, copy, and notes", target: portalTourEl("portalMnDoorMap"),
-          body: "The popup shows status and countdown, time on dock, unload time, <b>every PO on its own line</b>, and the timeline. <b>Copy summary</b> copies the details to paste elsewhere, and <b>Shift note</b> saves a quick note on this device." },
+          body: "The popup shows status and countdown, time on dock, unload time, <b>every PO on its own line</b>, and the timeline. <b>Copy summary</b> copies the details to paste elsewhere, and <b>Shift note</b> is shared &mdash; everyone on My Portal sees the note on that door." },
         { title: "Alerts", target: portalTourEl("portalMnAlertsBtn"),
           body: "Click <b>Enable alerts</b> for desktop popups on detention risk, overdue unload starts, and unloader delays. They fire whenever the board refreshes (about once a minute while this page is open). Your admin can also connect Slack so supervisors are pinged when the portal is closed." },
         { title: "Vendors tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="vendors"]'); },
           body: "<b>Vendors</b> shows how long each supplier's trucks take to turn: average, 75th percentile, range, and how many trucks. It builds itself as trucks finish unloading, and it also drives the detention forecast. Open it and hit <b>Load last 7 days</b> to fill it in right away." },
         { title: "Also new: Truck Report charts", body: "The menu now has <b>Overview</b> and <b>Data</b>. Attach the daily truck schedule on Overview, then open Data for the hourly flow, dock, and area charts." },
         { title: "Also new: Schedule Uploader", body: "In the <b>Minnesota Schedule Uploader</b>, rows covering multiple POs now show and send only the <b>first PO</b> to DMS, and suppliers with an Incoterm are tagged like <i>(DDP) Supplier</i>." },
+        { title: "Team Chat", before: function() { portalMnSetView("chat"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="chat"]'); },
+          body: "<b>Team Chat</b> is shared by everyone signed in to Minnesota My Portal &mdash; a quick way to flag something without leaving the dock board. New messages show a badge here when you're on another tab." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="mn"]'); },
           body: "You can replay this any time with the <b>What's new</b> button." }
       ]
@@ -10017,6 +10075,158 @@
       if (btn) portalTourStart(btn.dataset.tourSite);
     });
 
+    // -- Shared door notes ---------------------------------------------------------
+    // Notes are stored server-side per (site, business date, truck) so everyone on
+    // My Portal sees the same note on that door -- not just the device that typed it.
+    let portalPendingNoteFlush = null;   // set while a note has an unsaved debounce pending
+
+    function portalDoorNoteBadge(siteKey, r, dn) {
+      const st = siteKey === "mn" ? state.portalMn : state.portal;
+      const info = (st.doorNotes || {})[String(r.ref || r.po || dn)];
+      if (!info || !info.note) return "";
+      const short = info.note.length > 26 ? info.note.slice(0, 26) + "…" : info.note;
+      return '<div class="door-note-flag" title="' + escapeHtml(info.note) + '">📝 ' + escapeHtml(short) + '</div>';
+    }
+
+    function portalFetchDoorNotes(siteKey) {
+      const st = siteKey === "mn" ? state.portalMn : state.portal;
+      const bizDate = st.businessDate;
+      if (!bizDate) return;
+      fetch(apiUrl("/api/portal/door-notes?site=" + (siteKey === "mn" ? "MN" : "OKS") + "&business_date=" + encodeURIComponent(bizDate)))
+        .then(function(r) { return r.json(); })
+        .then(function(data) { st.doorNotes = (data && data.notes) || {}; })
+        .catch(function() {});
+    }
+
+    function portalSaveDoorNote(siteKey, bizDate, truckKey, doorNum, note) {
+      const st = siteKey === "mn" ? state.portalMn : state.portal;
+      return fetch(apiUrl("/api/portal/door-notes?site=" + (siteKey === "mn" ? "MN" : "OKS")), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ business_date: bizDate, truck_key: truckKey, note: note, door: String(doorNum || "") })
+      }).then(function(resp) {
+        return resp.json().then(function(data) {
+          if (!resp.ok || !data.ok) throw new Error((data && data.detail) || "Save failed");
+          const trimmed = note.trim();
+          const info = trimmed ? { note: trimmed, updated_by: data.updated_by, updated_at: data.updated_at } : null;
+          st.doorNotes = st.doorNotes || {};
+          if (info) st.doorNotes[truckKey] = info; else delete st.doorNotes[truckKey];
+          return info;
+        });
+      });
+    }
+
+    // -- Team chat -------------------------------------------------------------
+    // One shared chat per site (OKS / Minnesota) so everyone signed in to that
+    // site's My Portal can talk. Polled every 5s while the Chat view is open;
+    // otherwise piggybacks on the normal live-DMS poll just to keep the unread
+    // badge current.
+    function portalChatState(siteKey) { return siteKey === "mn" ? state.portalMn : state.portal; }
+    function portalChatSiteParam(siteKey) { return siteKey === "mn" ? "MN" : "OKS"; }
+    function portalChatEls(siteKey) {
+      return siteKey === "mn"
+        ? { view: els.portalMnChatView, log: els.portalMnChatLog, input: els.portalMnChatInput, sendBtn: els.portalMnChatSendBtn, badge: els.portalMnChatBadge }
+        : { view: els.portalChatView, log: els.portalChatLog, input: els.portalChatInput, sendBtn: els.portalChatSendBtn, badge: els.portalChatBadge };
+    }
+    function portalChatReadKey(siteKey) { return "portalChatRead:" + (state.auth.username || "anon") + ":" + siteKey; }
+
+    function portalChatRenderMessages(siteKey) {
+      const st = portalChatState(siteKey), e = portalChatEls(siteKey);
+      if (!e.log) return;
+      const msgs = st.chat.messages || [];
+      if (!msgs.length) { e.log.innerHTML = '<div class="door-empty">No messages yet. Say hello.</div>'; return; }
+      const atBottom = e.log.scrollTop + e.log.clientHeight >= e.log.scrollHeight - 24;
+      e.log.innerHTML = msgs.map(function(m) {
+        const mine = m.username === state.auth.username;
+        let t = "";
+        try { t = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+        return '<div class="portal-chat-msg' + (mine ? ' mine' : '') + '">'
+          + '<div class="pcm-meta">' + escapeHtml(mine ? "You" : m.username) + ' · ' + t + '</div>'
+          + '<div class="pcm-bubble">' + escapeHtml(m.message) + '</div></div>';
+      }).join("");
+      if (atBottom) e.log.scrollTop = e.log.scrollHeight;
+    }
+
+    function portalChatUpdateBadge(siteKey) {
+      const st = portalChatState(siteKey), e = portalChatEls(siteKey);
+      if (!e.badge) return;
+      const active = e.view && e.view.style.display !== "none";
+      if (active) {
+        safeLocalStorageSet(portalChatReadKey(siteKey), String(st.chat.lastId || 0));
+        e.badge.style.display = "none";
+        return;
+      }
+      const lastRead = parseInt(safeLocalStorageGet(portalChatReadKey(siteKey)) || "0", 10) || 0;
+      const unread = (st.chat.messages || []).filter(function(m) { return m.id > lastRead; }).length;
+      if (unread > 0) { e.badge.textContent = unread > 99 ? "99+" : String(unread); e.badge.style.display = ""; }
+      else e.badge.style.display = "none";
+    }
+
+    function portalChatPoll(siteKey) {
+      const st = portalChatState(siteKey);
+      const after = st.chat.lastId || 0;
+      return fetch(apiUrl("/api/portal/chat?site=" + portalChatSiteParam(siteKey) + (after ? "&after_id=" + after : "")))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data || !data.ok) return;
+          const incoming = data.messages || [];
+          if (!incoming.length) return;
+          st.chat.messages = (after ? st.chat.messages.concat(incoming) : incoming).slice(-300);
+          st.chat.lastId = st.chat.messages[st.chat.messages.length - 1].id;
+          portalChatRenderMessages(siteKey);
+          portalChatUpdateBadge(siteKey);
+        })
+        .catch(function() {});
+    }
+
+    function portalChatSend(siteKey) {
+      const e = portalChatEls(siteKey);
+      if (!e.input) return;
+      const text = e.input.value.trim();
+      if (!text) return;
+      e.input.value = "";
+      e.sendBtn.disabled = true;
+      fetch(apiUrl("/api/portal/chat?site=" + portalChatSiteParam(siteKey)), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      }).then(function(resp) {
+        return resp.json().then(function(data) { return { ok: resp.ok, data: data }; });
+      }).then(function(res) {
+        if (!res.ok || !res.data.ok) { showToast((res.data && res.data.detail) || "Message failed to send."); e.input.value = text; return; }
+        portalChatPoll(siteKey);   // pick up the new message (and anyone else's) right away
+      }).catch(function() {
+        showToast("Message failed to send.");
+        e.input.value = text;
+      }).finally(function() {
+        e.sendBtn.disabled = false;
+        e.input.focus();
+      });
+    }
+
+    function portalChatViewOpened(siteKey) {
+      const st = portalChatState(siteKey);
+      portalChatPoll(siteKey).then(function() { portalChatUpdateBadge(siteKey); });
+      if (!st.chatFastInterval) st.chatFastInterval = setInterval(function() { portalChatPoll(siteKey); }, 5000);
+    }
+
+    function portalChatViewClosed(siteKey) {
+      const st = portalChatState(siteKey);
+      if (st.chatFastInterval) { clearInterval(st.chatFastInterval); st.chatFastInterval = null; }
+    }
+
+    (function() {
+      function wire(siteKey, inputEl, btnEl) {
+        if (!inputEl || !btnEl) return;
+        btnEl.addEventListener("click", function() { portalChatSend(siteKey); });
+        inputEl.addEventListener("keydown", function(e) {
+          if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); portalChatSend(siteKey); }
+        });
+      }
+      wire("oks", els.portalChatInput, els.portalChatSendBtn);
+      wire("mn", els.portalMnChatInput, els.portalMnChatSendBtn);
+    })();
+
     // -- Door detail modal --------------------------------------------------------
     // Shared renderer for the OKS and Minnesota door popups. Rows must be
     // "enriched" (status / countdownLabel / *Ms fields from the site's calc fn).
@@ -10087,15 +10297,47 @@
         commEl.style.display = 'none';
       }
 
-      const noteKey = "doorNote:" + site + ":" + (r.ref || r.po || doorNum);
+      const truckKey = String(r.ref || r.po || doorNum).trim();
+      const siteState = site === "mn" ? state.portalMn : state.portal;
+      const bizDate = siteState.businessDate || "";
+      const existingNote = (siteState.doorNotes || {})[truckKey];
       const actions = document.getElementById('doorDetailActions');
       actions.innerHTML =
-        '<div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:6px;">Shift note <span style="font-weight:400;text-transform:none;letter-spacing:0;">(saved on this device only)</span></div>'
+        '<div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:6px;">Shift note <span style="font-weight:400;text-transform:none;letter-spacing:0;">(shared — everyone on My Portal sees this)</span></div>'
         + '<textarea id="doorDetailNote" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border,#e2e8f0);border-radius:6px;padding:6px 8px;font:inherit;background:transparent;color:inherit;" placeholder="e.g. waiting on lumper, spill on trailer..."></textarea>'
+        + '<div id="doorDetailNoteStatus" style="font-size:0.74em;color:var(--muted,#64748b);margin-top:3px;min-height:1.2em;"></div>'
         + '<div style="margin-top:8px;"><button type="button" id="doorDetailCopyBtn" class="secondary-btn" style="font-size:0.82em;">Copy summary</button></div>';
       const noteEl = document.getElementById('doorDetailNote');
-      noteEl.value = safeLocalStorageGet(noteKey) || "";
-      noteEl.addEventListener('input', function() { safeLocalStorageSet(noteKey, noteEl.value); });
+      const noteStatusEl = document.getElementById('doorDetailNoteStatus');
+      noteEl.value = existingNote ? existingNote.note : "";
+      function noteByline(info) {
+        if (!info || !info.note) return "";
+        const who = info.updated_by ? info.updated_by : "someone";
+        const t = fmt(info.updated_at || "");
+        return "Last edited by " + who + (t ? " at " + t : "");
+      }
+      noteStatusEl.textContent = noteByline(existingNote);
+      portalPendingNoteFlush = null;
+      let noteSaveTimer = null;
+      function doSaveNote() {
+        clearTimeout(noteSaveTimer);
+        portalPendingNoteFlush = null;
+        if (!bizDate) { noteStatusEl.textContent = "Could not save — no business date loaded."; return; }
+        const value = noteEl.value;
+        noteStatusEl.textContent = "Saving...";
+        portalSaveDoorNote(site, bizDate, truckKey, doorNum, value).then(function(info) {
+          if (noteEl.value === value) noteStatusEl.textContent = info ? noteByline(info) : "";
+        }, function() {
+          if (noteEl.value === value) noteStatusEl.textContent = "Save failed — will retry on next edit.";
+        });
+      }
+      noteEl.addEventListener('input', function() {
+        noteStatusEl.textContent = "Typing...";
+        clearTimeout(noteSaveTimer);
+        noteSaveTimer = setTimeout(doSaveNote, 700);
+        portalPendingNoteFlush = doSaveNote;
+      });
+      noteEl.addEventListener('blur', function() { if (portalPendingNoteFlush) portalPendingNoteFlush(); });
       document.getElementById('doorDetailCopyBtn').addEventListener('click', function() {
         const lines = [
           "Door " + doorNum + " - " + (r.supplier || r.ref || "Truck"),
@@ -10132,15 +10374,18 @@
         });
       }
 
-      // Close on button or backdrop click
-      document.getElementById('doorDetailCloseBtn').addEventListener('click', function() {
+      // Close on button or backdrop click. Flush any unsaved note first so a quick
+      // close right after typing doesn't lose the edit to the debounce timer.
+      function closeDoorModal() {
+        if (portalPendingNoteFlush) portalPendingNoteFlush();
         modal.style.display = 'none';
-      });
+      }
+      document.getElementById('doorDetailCloseBtn').addEventListener('click', closeDoorModal);
       modal.addEventListener('click', function(e) {
-        if (e.target === modal) modal.style.display = 'none';
+        if (e.target === modal) closeDoorModal();
       });
       document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.style.display !== 'none') modal.style.display = 'none';
+        if (e.key === 'Escape' && modal.style.display !== 'none') closeDoorModal();
       });
     })();
 
@@ -14434,6 +14679,8 @@
         state.portal.liveUpdatedAt = data.updated_at || new Date().toISOString();
         state.portal.liveError = "";
         state.portal.credentialBlocked = false;
+        portalFetchDoorNotes("oks");
+        if (state.portal.portalView !== "chat") portalChatPoll("oks").then(function() { portalChatUpdateBadge("oks"); });
         if (els.portalDmsStatus) {
           const loc = data.location || {};
           const locName = loc.name || loc.locName || loc.cCode || "ALDIOKS";
@@ -14594,6 +14841,7 @@
         clearInterval(state.portal.uiTickInterval);
         state.portal.uiTickInterval = null;
       }
+      portalChatViewClosed("oks");
       if (state.portal.liveClockInterval) {
         clearInterval(state.portal.liveClockInterval);
         state.portal.liveClockInterval = null;
@@ -14956,6 +15204,8 @@
         state.portalMn.liveUpdatedAt = data.updated_at || new Date().toISOString();
         state.portalMn.liveError = "";
         state.portalMn.credentialBlocked = false;
+        portalFetchDoorNotes("mn");
+        if (state.portalMn.view !== "chat") portalChatPoll("mn").then(function() { portalChatUpdateBadge("mn"); });
         state.portalMn.totalExpected = (typeof data.total_expected === "number")
           ? data.total_expected : state.portalMn.scheduledRows.length;
         state.portalMn.rejectedCount = data.rejected_count || 0;
@@ -15612,9 +15862,11 @@
       if (els.portalMnDoorView) els.portalMnDoorView.style.display = view === "doors" ? "" : "none";
       if (els.portalMnAreaView) els.portalMnAreaView.style.display = view === "areas" ? "" : "none";
       if (els.portalMnVendorView) els.portalMnVendorView.style.display = view === "vendors" ? "" : "none";
+      if (els.portalMnChatView) els.portalMnChatView.style.display = view === "chat" ? "" : "none";
       if (view === "doors") renderPortalMnDoorMap();
       if (view === "areas") renderPortalMnAreaView();
       if (view === "vendors") renderPortalMnVendorView();
+      if (view === "chat") portalChatViewOpened("mn"); else portalChatViewClosed("mn");
     }
 
     // Door map for Minnesota -- built from the same door-zone shape found in
@@ -15688,6 +15940,7 @@
           + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
           + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
           + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
+          + portalDoorNoteBadge("mn", r, dn)
           + '</div>';
       }).join("");
     }
@@ -15722,6 +15975,7 @@
         clearInterval(state.portalMn.uiTickInterval);
         state.portalMn.uiTickInterval = null;
       }
+      portalChatViewClosed("mn");
     }
 
     // Browsers throttle timers in background tabs; catch up the moment the
@@ -16481,6 +16735,7 @@
           + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
           + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
           + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '')
+          + portalDoorNoteBadge("oks", r, dn)
           + '</div>';
       }).join("");
     }
@@ -16581,7 +16836,7 @@
     }
 
     function portalSetView(view) {
-      view = ["doors","areas","vendors","client"].includes(view) ? view : "board";
+      view = ["doors","areas","vendors","chat","client"].includes(view) ? view : "board";
       state.portal.portalView = view;
       document.querySelectorAll("#portalViewSwitch .portal-view-btn").forEach(function(button) {
         button.classList.toggle("active", button.dataset.view === view);
@@ -16590,9 +16845,11 @@
       if (els.portalDoorView)   els.portalDoorView.style.display   = view === "doors"   ? "" : "none";
       if (els.portalAreaView)   els.portalAreaView.style.display   = view === "areas"   ? "" : "none";
       if (els.portalVendorView) els.portalVendorView.style.display = view === "vendors" ? "" : "none";
+      if (els.portalChatView)   els.portalChatView.style.display   = view === "chat"    ? "" : "none";
       if (els.portalClientView) els.portalClientView.style.display = view === "client"  ? "" : "none";
       if (view === "board") renderPortalBoard();
       else portalRenderActiveView();
+      if (view === "chat") portalChatViewOpened("oks"); else portalChatViewClosed("oks");
     }
 
     // -- Feature 5: Vendor performance history --------------------------------

@@ -178,6 +178,26 @@ def init_db():
             picked_up_at       TEXT,
             created_by         TEXT    NOT NULL DEFAULT ''
         );
+
+        CREATE TABLE IF NOT EXISTS door_notes (
+            site           TEXT    NOT NULL,
+            business_date  TEXT    NOT NULL,
+            truck_key      TEXT    NOT NULL,
+            note           TEXT    NOT NULL DEFAULT '',
+            door           TEXT    NOT NULL DEFAULT '',
+            updated_by     TEXT    NOT NULL DEFAULT '',
+            updated_at     TEXT    NOT NULL,
+            PRIMARY KEY (site, business_date, truck_key)
+        );
+
+        CREATE TABLE IF NOT EXISTS portal_chat (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            site        TEXT    NOT NULL,
+            username    TEXT    NOT NULL,
+            message     TEXT    NOT NULL,
+            created_at  TEXT    NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_portal_chat_site_id ON portal_chat(site, id);
     """)
     # Vendor turn-time history is kept per site; rows that predate the column
     # all came from OKS, which the column default covers.
@@ -3264,13 +3284,21 @@ def portal_learn(body: VendorLearnIn, _: str = Depends(_require_oks_dms)):
 _require_vendor_stats = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota")
 
 
-@app.get("/api/portal/vendor-stats")
-def portal_vendor_stats(site: str = "OKS", username: str = Depends(_require_vendor_stats)):
-    site = "MN" if str(site).strip().upper() == "MN" else "OKS"
+def _site_param(site: str) -> str:
+    return "MN" if str(site).strip().upper() == "MN" else "OKS"
+
+
+def _check_site_role(username: str, site: str) -> None:
+    """Each site's data is only readable/writable by that site's roles (admin sees either)."""
     role = _ROLES.get(username, "guest")
-    # Each site sees only its own history (admin sees either).
     if role != "admin" and (role == "minnesota") != (site == "MN"):
         raise HTTPException(status_code=403, detail="Not allowed for this login.")
+
+
+@app.get("/api/portal/vendor-stats")
+def portal_vendor_stats(site: str = "OKS", username: str = Depends(_require_vendor_stats)):
+    site = _site_param(site)
+    _check_site_role(username, site)
     conn = get_db()
     rows = conn.execute("""
         SELECT vendor, dock_min, recorded_at
@@ -3303,6 +3331,112 @@ def portal_vendor_stats(site: str = "OKS", username: str = Depends(_require_vend
             "last_seen": latest_seen.get(vendor, ""),
         })
     return {"ok": True, "stats": stats}
+
+
+class DoorNoteIn(BaseModel):
+    business_date: str
+    truck_key: str
+    note: str = ""
+    door: str = ""
+
+
+@app.get("/api/portal/door-notes")
+def get_door_notes(site: str = "OKS", business_date: str = "", username: str = Depends(_require_vendor_stats)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    business_date = business_date.strip()
+    if not business_date:
+        return {"ok": True, "notes": {}}
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT truck_key, note, updated_by, updated_at FROM door_notes "
+        "WHERE site=? AND business_date=? AND note != ''",
+        (site, business_date),
+    ).fetchall()
+    conn.close()
+    notes = {r[0]: {"note": r[1], "updated_by": r[2], "updated_at": r[3]} for r in rows}
+    return {"ok": True, "notes": notes}
+
+
+@app.post("/api/portal/door-notes")
+def save_door_note(body: DoorNoteIn, site: str = "OKS", username: str = Depends(_require_vendor_stats)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    business_date = body.business_date.strip()
+    truck_key = body.truck_key.strip()[:200]
+    if not business_date or not truck_key:
+        raise HTTPException(status_code=400, detail="business_date and truck_key are required.")
+    note = body.note.strip()[:500]
+    now_str = datetime.now(timezone.utc).isoformat()
+    conn = get_db()
+    if note:
+        conn.execute(
+            "INSERT INTO door_notes (site, business_date, truck_key, note, door, updated_by, updated_at) "
+            "VALUES (?,?,?,?,?,?,?) "
+            "ON CONFLICT(site, business_date, truck_key) DO UPDATE SET "
+            "note=excluded.note, door=excluded.door, updated_by=excluded.updated_by, updated_at=excluded.updated_at",
+            (site, business_date, truck_key, note, body.door.strip()[:20], username, now_str),
+        )
+    else:
+        conn.execute(
+            "DELETE FROM door_notes WHERE site=? AND business_date=? AND truck_key=?",
+            (site, business_date, truck_key),
+        )
+    # Best-effort prune of old shifts so this table doesn't grow forever.
+    conn.execute("DELETE FROM door_notes WHERE updated_at < ?", ((datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "updated_by": username, "updated_at": now_str}
+
+
+class ChatMessageIn(BaseModel):
+    message: str
+
+
+@app.get("/api/portal/chat")
+def get_portal_chat(site: str = "OKS", after_id: int = 0, username: str = Depends(_require_vendor_stats)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    conn = get_db()
+    if after_id > 0:
+        rows = conn.execute(
+            "SELECT id, username, message, created_at FROM portal_chat WHERE site=? AND id > ? ORDER BY id ASC LIMIT 200",
+            (site, after_id),
+        ).fetchall()
+    else:
+        rows = list(reversed(conn.execute(
+            "SELECT id, username, message, created_at FROM portal_chat WHERE site=? ORDER BY id DESC LIMIT 50",
+            (site,),
+        ).fetchall()))
+    conn.close()
+    messages = [{"id": r[0], "username": r[1], "message": r[2], "created_at": r[3]} for r in rows]
+    return {"ok": True, "messages": messages}
+
+
+@app.post("/api/portal/chat", status_code=201)
+def post_portal_chat(body: ChatMessageIn, site: str = "OKS", username: str = Depends(_require_vendor_stats)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    text = body.message.strip()[:1000]
+    if not text:
+        raise HTTPException(status_code=400, detail="Message is empty.")
+    now_str = datetime.now(timezone.utc).isoformat()
+    conn = get_db()
+    cur = conn.execute(
+        "INSERT INTO portal_chat (site, username, message, created_at) VALUES (?,?,?,?)",
+        (site, username, text, now_str),
+    )
+    msg_id = cur.lastrowid
+    # Keep the table bounded -- shift chat doesn't need to be a permanent archive.
+    conn.execute(
+        "DELETE FROM portal_chat WHERE site=? AND id NOT IN "
+        "(SELECT id FROM portal_chat WHERE site=? ORDER BY id DESC LIMIT 500)",
+        (site, site),
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True, "message": {"id": msg_id, "username": username, "message": text, "created_at": now_str}}
+
 
 class ContainerLogAddIn(BaseModel):
     container: str
