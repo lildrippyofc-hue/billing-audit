@@ -4474,6 +4474,11 @@
               <div class="metric-value" id="dockTypeCount">0</div>
               <div class="metric-note" id="dockTypeNote">Truck groups in the report.</div>
             </article>
+            <article class="metric-card" data-accent="purple">
+              <div class="metric-label">Total Pallets</div>
+              <div class="metric-value" id="totalPalletsCard">--</div>
+              <div class="metric-note" id="totalPalletsCardNote">Includes est. breakdown pallets.</div>
+            </article>
           </div>
 
           <div class="overview-grid">
@@ -8358,6 +8363,8 @@
       topArea: document.getElementById("topArea"),
       topAreaNote: document.getElementById("topAreaNote"),
       dockTypeCount: document.getElementById("dockTypeCount"),
+      totalPalletsCard: document.getElementById("totalPalletsCard"),
+      totalPalletsCardNote: document.getElementById("totalPalletsCardNote"),
       dockTypeNote: document.getElementById("dockTypeNote"),
       dockKicker: document.getElementById("dockKicker"),
       dockList: document.getElementById("dockList"),
@@ -13276,16 +13283,43 @@
       }, { pallets: 0, breakdown: 0 });
     }
 
+    // Shared logic behind the two "total pallets" spots (Overview summary card, Data
+    // tab chart). Distinguishes "no pallets column at all" from "column found, this
+    // report totals zero" -- the sample data has breakdown comment codes but no
+    // pallets column, which used to read as a misleading "0 scheduled".
+    function palletsSummaryText(total) {
+      const hasPalletsColumn = Boolean(state.selectors.pallets);
+      const totalAfter = total.pallets + total.breakdown;
+      if (!hasPalletsColumn) {
+        return total.breakdown
+          ? `No pallet column found, but ~${formatNumber(total.breakdown)} est. breakdown pallets detected`
+          : "No pallet column found in this report";
+      }
+      if (total.breakdown) {
+        return `${formatNumber(total.pallets)} scheduled + ~${formatNumber(total.breakdown)} est. breakdown = ${formatNumber(totalAfter)} total pallets tonight`;
+      }
+      return `${formatNumber(totalAfter)} total pallets tonight`;
+    }
+
+    // Overview's version is a metric-card note sitting under a big number that already
+    // shows the total, so it skips repeating that total the way the Data tab kicker does.
+    function palletsSummaryCardNote(total) {
+      const hasPalletsColumn = Boolean(state.selectors.pallets);
+      if (!hasPalletsColumn) {
+        return total.breakdown
+          ? `No pallet column, but ~${formatNumber(total.breakdown)} est. breakdown pallets found.`
+          : "No pallet column found in this report.";
+      }
+      return total.breakdown
+        ? `${formatNumber(total.pallets)} scheduled + ~${formatNumber(total.breakdown)} est. breakdown.`
+        : "Includes est. breakdown pallets.";
+    }
+
     function renderDockPalletsList() {
       const totals = aggregatePalletsByDockType();
       const total = totalPalletsTonight();
-      const totalAfter = total.pallets + total.breakdown;
       const maxAfter = Math.max(...totals.map((item) => item.afterBreakdown), 1);
-      els.dockPalletsKicker.textContent = totalAfter
-        ? total.breakdown
-          ? `${formatNumber(total.pallets)} scheduled + ~${formatNumber(total.breakdown)} est. breakdown = ${formatNumber(totalAfter)} total pallets tonight`
-          : `${formatNumber(totalAfter)} total pallets tonight`
-        : "No pallet column found in this report";
+      els.dockPalletsKicker.textContent = palletsSummaryText(total);
       els.dockPalletsList.innerHTML = "";
 
       if (!totals.length) {
@@ -13505,6 +13539,11 @@
       els.topAreaNote.textContent = topDock ? `${formatNumber(topDock.value)} trucks.` : "No type found.";
       els.dockTypeCount.textContent = dockTotals.length;
       els.dockTypeNote.textContent = dockTotals[0] ? `${dockTotals.length} type${dockTotals.length === 1 ? "" : "s"} found.` : "No types found.";
+
+      const palletTotal = totalPalletsTonight();
+      const palletsAfter = palletTotal.pallets + palletTotal.breakdown;
+      els.totalPalletsCard.textContent = palletsAfter ? formatNumber(palletsAfter) : "--";
+      els.totalPalletsCardNote.textContent = palletsSummaryCardNote(palletTotal);
     }
 
     function compactLabel(label) {
