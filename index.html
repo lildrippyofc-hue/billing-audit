@@ -4555,6 +4555,15 @@
             </div>
             <div class="dock-list" id="dockPalletsList"></div>
           </section>
+
+          <section class="panel chart-panel-wide" aria-labelledby="projectedBreakdownTitle">
+            <div class="panel-header">
+              <h2 id="projectedBreakdownTitle">Projected Breakdowns Tonight</h2>
+              <span class="panel-kicker" id="projectedBreakdownKicker">Based on each supplier's breakdown history</span>
+            </div>
+            <div class="friendly-note" style="margin:-2px 0 10px;">Trucks not yet marked as a breakdown, projected from how often that supplier's loads have broken down before. The extra-pallet estimate uses the average pallets a breakdown has actually added in that dock area, measured from real DMS shift history.</div>
+            <div class="dock-list" id="projectedBreakdownList"></div>
+          </section>
         </div>
       </section>
 
@@ -8221,6 +8230,12 @@
       return map;
     }, new Map());
 
+    // Average pallets a breakdown actually adds, per site and dock area, measured from
+    // DMS stamp comments ("9c", "14 C", ...) over recent shifts -- see
+    // build_breakdown_model.py. Falls back to the site-wide average when a dock area
+    // doesn't have enough of its own history yet. Rerun the script every month or two.
+    const PALLET_BREAKDOWN_MODEL = {"oks":{"global":9.6,"byArea":{"produce":9.1,"freezer":10.2,"dry":11.0,"cooler":5.0,"fresh meat":10.5,"amb":9.5,"chill":6.6},"sample":510},"mn":{"global":12.6,"byArea":{"amb":11.5,"produce":15.0,"chill":7.9,"fresh meat":11.2,"freezer":16.1,"slip sheet":28.2},"sample":853}};
+
     const HISTORICAL_TALL_DOOR_SUPPLIERS = HISTORICAL_DATA.tallDoorSuppliers || [];
     const HISTORICAL_TALL_DOOR_SUPPLIER_KEYS = HISTORICAL_TALL_DOOR_SUPPLIERS.map((item) => ({
       ...item,
@@ -8352,6 +8367,8 @@
       areaHourChartKicker: document.getElementById("areaHourChartKicker"),
       dockPalletsList: document.getElementById("dockPalletsList"),
       dockPalletsKicker: document.getElementById("dockPalletsKicker"),
+      projectedBreakdownList: document.getElementById("projectedBreakdownList"),
+      projectedBreakdownKicker: document.getElementById("projectedBreakdownKicker"),
       hourTotalChart: document.getElementById("hourTotalChart"),
       hourTotalChartKicker: document.getElementById("hourTotalChartKicker"),
       dockTotalChart: document.getElementById("dockTotalChart"),
@@ -12567,6 +12584,22 @@
         .trim();
     }
 
+    // Mirrors normalize_area_key in build_breakdown_model.py -- must match exactly so a
+    // dock-type label like "Std. Trailer Dry" lands on the same key as DMS's "DRY".
+    const PALLET_BREAKDOWN_AREA_SYNONYMS = { frz: "freezer", chl: "chill" };
+    function normalizeDockTypeKey(value) {
+      const text = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+        .replace(/\bstd\.?\s*trailer\b/, "").trim();
+      return PALLET_BREAKDOWN_AREA_SYNONYMS[text] || text;
+    }
+
+    function breakdownMagnitudeForDockType(dockType) {
+      const model = PALLET_BREAKDOWN_MODEL[state.auth.role === "minnesota" ? "mn" : "oks"];
+      if (!model) return 0;
+      const key = normalizeDockTypeKey(dockType);
+      return (key && model.byArea[key]) || model.global || 0;
+    }
+
     function supplierHistoryFor(value) {
       const key = normalizeSupplierKey(value);
       if (!key) return null;
@@ -13281,6 +13314,79 @@
       });
     }
 
+    // Projects which of tonight's NOT-yet-coded trucks are statistically likely to
+    // still turn into a breakdown, using each supplier's own breakdown history (the
+    // same data the Roll Off/Breakdown Truck Finder already relies on). Requires at
+    // least 5 past loads for a supplier before trusting its rate. The extra-pallet
+    // figure uses PALLET_BREAKDOWN_MODEL -- the real average pallets a breakdown has
+    // added per dock area, measured from DMS stamp history (build_breakdown_model.py).
+    const PROJECTED_BREAKDOWN_MIN_HISTORY = 5;
+
+    function projectedBreakdownsByDockType() {
+      const totals = new Map();
+      let totalTrucks = 0, totalMatched = 0, totalExpected = 0;
+      state.normalizedRows.forEach((row) => {
+        const key = row.dockType;
+        if (!key) return;
+        if (row.breakdownPallets > 0) return;   // already coded as a breakdown tonight -- counted in the pallets chart, not projected here
+        totalTrucks += 1;
+        const history = supplierHistoryFor(row.supplier);
+        const rate = history && history.total >= PROJECTED_BREAKDOWN_MIN_HISTORY ? historyBreakdownRate(history) : null;
+        const entry = totals.get(key) || { trucks: 0, matched: 0, expected: 0 };
+        entry.trucks += 1;
+        if (rate !== null) { entry.matched += 1; entry.expected += rate; totalMatched += 1; totalExpected += rate; }
+        totals.set(key, entry);
+      });
+
+      if (totals.size > 1) totals.delete("Total Trucks");
+
+      const rows = [...totals.entries()]
+        .map(([label, v]) => ({
+          label,
+          trucks: v.trucks,
+          matched: v.matched,
+          expected: v.expected,
+          projectedExtraPallets: Math.round(v.expected * breakdownMagnitudeForDockType(label))
+        }))
+        .filter((item) => item.expected >= 0.1)
+        .sort((a, b) => b.expected - a.expected || a.label.localeCompare(b.label));
+
+      return { rows, totalTrucks, totalMatched, totalExpected, totalExtraPallets: rows.reduce((sum, item) => sum + item.projectedExtraPallets, 0) };
+    }
+
+    function renderProjectedBreakdownList() {
+      const { rows: totals, totalTrucks, totalMatched, totalExpected, totalExtraPallets } = projectedBreakdownsByDockType();
+      els.projectedBreakdownKicker.textContent = totalMatched
+        ? `~${formatNumber(Math.round(totalExpected))} likely breakdown truck${Math.round(totalExpected) === 1 ? "" : "s"} tonight (${formatNumber(totalMatched)} of ${formatNumber(totalTrucks)} scheduled trucks matched to supplier history) · +${formatNumber(totalExtraPallets)} est. additional plts`
+        : "Not enough supplier history to project tonight's breakdowns";
+      els.projectedBreakdownList.innerHTML = "";
+
+      if (!totals.length) {
+        els.projectedBreakdownList.appendChild(emptySmall("No suppliers tonight matched enough breakdown history to project from"));
+        return;
+      }
+
+      const maxExpected = Math.max(...totals.map((item) => item.expected), 1);
+      totals.forEach((item) => {
+        const percent = Math.round((item.expected / maxExpected) * 100);
+        const row = document.createElement("div");
+        row.className = "dock-row";
+        row.innerHTML = `
+          <div>
+            <div class="dock-name"></div>
+            <div class="dock-meta"></div>
+          </div>
+          <div class="dock-count"></div>
+          <div class="dock-bar"><span style="width: ${Math.max(percent, 2)}%"></span></div>
+        `;
+        row.querySelector(".dock-name").textContent = item.label;
+        row.querySelector(".dock-meta").textContent =
+          `${formatNumber(item.matched)} of ${formatNumber(item.trucks)} trucks matched · ~${item.expected.toFixed(1)} likely breakdowns`;
+        row.querySelector(".dock-count").textContent = `+${formatNumber(item.projectedExtraPallets)} plts`;
+        els.projectedBreakdownList.appendChild(row);
+      });
+    }
+
     function dockTypes() {
       const docks = aggregateBy("dockType").map((item) => item.label);
       const realDocks = docks.filter((label) => !["Area Not Found", "All Areas", "Dock Not Found"].includes(label));
@@ -13570,6 +13676,7 @@
       drawStackedHourlyAreaBars(els.areaHourChart, rows);
 
       renderDockPalletsList();
+      renderProjectedBreakdownList();
     }
 
     function drawBarChart(canvas, data, options) {
