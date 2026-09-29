@@ -4548,14 +4548,12 @@
             </div>
           </section>
 
-          <section class="panel chart-panel-wide" aria-labelledby="areaPalletsChartTitle">
+          <section class="panel chart-panel-wide" aria-labelledby="dockPalletsTitle">
             <div class="panel-header">
-              <h2 id="areaPalletsChartTitle">Pallets by Area</h2>
-              <span class="panel-kicker" id="areaPalletsChartKicker">0 total pallets tonight</span>
+              <h2 id="dockPalletsTitle">Pallets by Dock Type</h2>
+              <span class="panel-kicker" id="dockPalletsKicker">0 total pallets tonight</span>
             </div>
-            <div class="chart-box">
-              <canvas id="areaPalletsChart"></canvas>
-            </div>
+            <div class="dock-list" id="dockPalletsList"></div>
           </section>
         </div>
       </section>
@@ -8352,8 +8350,8 @@
       dailyKicker: document.getElementById("dailyKicker"),
       areaHourChart: document.getElementById("areaHourChart"),
       areaHourChartKicker: document.getElementById("areaHourChartKicker"),
-      areaPalletsChart: document.getElementById("areaPalletsChart"),
-      areaPalletsChartKicker: document.getElementById("areaPalletsChartKicker"),
+      dockPalletsList: document.getElementById("dockPalletsList"),
+      dockPalletsKicker: document.getElementById("dockPalletsKicker"),
       hourTotalChart: document.getElementById("hourTotalChart"),
       hourTotalChartKicker: document.getElementById("hourTotalChartKicker"),
       dockTotalChart: document.getElementById("dockTotalChart"),
@@ -13200,24 +13198,63 @@
         .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
     }
 
-    function aggregatePalletsByArea() {
+    // Grouped by dock type (Dry, Cooler, Freezer, ...) rather than area -- this is
+    // the breakdown that maps to how staffing is actually assigned per shift.
+    function aggregatePalletsByDockType() {
       const totals = new Map();
       state.normalizedRows.forEach((row) => {
-        const key = row.area;
+        const key = row.dockType;
         if (!key) return;
-        totals.set(key, (totals.get(key) || 0) + (row.pallets || 0));
+        const entry = totals.get(key) || { pallets: 0, trucks: 0 };
+        entry.pallets += row.pallets || 0;
+        entry.trucks += 1;
+        totals.set(key, entry);
       });
 
-      if (totals.size > 1) totals.delete("All Areas");
+      if (totals.size > 1) totals.delete("Total Trucks");
 
       return [...totals.entries()]
-        .map(([label, value]) => ({ label, value }))
-        .filter((item) => item.value > 0)
-        .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+        .map(([label, v]) => ({ label, pallets: v.pallets, trucks: v.trucks, avg: v.trucks ? v.pallets / v.trucks : 0 }))
+        .filter((item) => item.pallets > 0)
+        .sort((a, b) => b.pallets - a.pallets || a.label.localeCompare(b.label));
     }
 
     function totalPalletsTonight() {
       return state.normalizedRows.reduce((sum, row) => sum + (row.pallets || 0), 0);
+    }
+
+    function renderDockPalletsList() {
+      const totals = aggregatePalletsByDockType();
+      const totalPallets = totalPalletsTonight();
+      const maxPallets = Math.max(...totals.map((item) => item.pallets), 1);
+      els.dockPalletsKicker.textContent = totalPallets
+        ? `${formatNumber(totalPallets)} total pallets tonight`
+        : "No pallet column found in this report";
+      els.dockPalletsList.innerHTML = "";
+
+      if (!totals.length) {
+        els.dockPalletsList.appendChild(emptySmall("No pallet data for this report"));
+        return;
+      }
+
+      totals.forEach((item) => {
+        const percent = Math.round((item.pallets / maxPallets) * 100);
+        const row = document.createElement("div");
+        row.className = "dock-row";
+        row.innerHTML = `
+          <div>
+            <div class="dock-name"></div>
+            <div class="dock-meta"></div>
+          </div>
+          <div class="dock-count"></div>
+          <div class="dock-bar"><span style="width: ${Math.max(percent, 2)}%"></span></div>
+        `;
+        row.querySelector(".dock-name").textContent = item.label;
+        row.querySelector(".dock-meta").textContent =
+          `${formatNumber(item.trucks)} truck${item.trucks === 1 ? "" : "s"} · avg ${formatNumber(Math.round(item.avg))} pallets/truck`;
+        row.querySelector(".dock-count").textContent = `${formatNumber(item.pallets)} plts`;
+        els.dockPalletsList.appendChild(row);
+      });
     }
 
     function dockTypes() {
@@ -13508,17 +13545,7 @@
       els.areaHourChartKicker.textContent = `${formatNumber(rows.length)} trucks split by dock type`;
       drawStackedHourlyAreaBars(els.areaHourChart, rows);
 
-      const palletsByArea = aggregatePalletsByArea();
-      const totalPallets = totalPalletsTonight();
-      els.areaPalletsChartKicker.textContent = totalPallets
-        ? `${formatNumber(totalPallets)} total pallets tonight`
-        : "No pallet column found in this report";
-      drawBarChart(els.areaPalletsChart, palletsByArea.slice(0, 12), {
-        color: theme.tertiary,
-        accent: theme.accent,
-        horizontal: true,
-        emptyLabel: "No pallet data for this report"
-      });
+      renderDockPalletsList();
     }
 
     function drawBarChart(canvas, data, options) {
