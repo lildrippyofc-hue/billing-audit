@@ -3179,6 +3179,7 @@
   
     /* -- Game frame panels ---------------------------------------- */
     #detentionPanel    { padding: 0; }
+    #azTimeAuditPanel  { padding: 0; }
     .game-frame-wrap {
       width: 100%;
       height: calc(100vh - 82px);
@@ -4385,6 +4386,10 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="guardShackMn" data-menu-label="Minnesota: Dock Cheat Sheet">MN Dock Cheat Sheet</button>
         </div>
         <div class="menu-group">
+          <div class="menu-group-title">Arizona</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="azTimeAudit" data-menu-label="Arizona: Time Audit">Arizona Time Audit</button>
+        </div>
+        <div class="menu-group">
           <div class="menu-group-title">Database</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="history" data-menu-label="Database: History">History</button>
         </div>
@@ -4568,6 +4573,15 @@
             </div>
             <div class="friendly-note" style="margin:-2px 0 10px;">Trucks not yet marked as a breakdown, projected from how often that supplier's loads have broken down before. The extra-pallet estimate uses the average pallets a breakdown has actually added in that dock area, measured from real DMS shift history.</div>
             <div class="dock-list" id="projectedBreakdownList"></div>
+          </section>
+
+          <section class="panel chart-panel-wide" aria-labelledby="combinedPalletsTitle">
+            <div class="panel-header">
+              <h2 id="combinedPalletsTitle">Total Pallets Tonight (incl. Projected Breakdowns)</h2>
+              <span class="panel-kicker" id="combinedPalletsKicker">0 total pallets tonight</span>
+            </div>
+            <div class="friendly-note" style="margin:-2px 0 10px;">Scheduled pallets, plus breakdowns already coded tonight, plus breakdowns projected from supplier history &mdash; combined per dock type. This is the full estimate for staffing.</div>
+            <div class="dock-list" id="combinedPalletsList"></div>
           </section>
         </div>
       </section>
@@ -6041,6 +6055,12 @@
         <div class="motivation-bar" id="motivBar_detention"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="game-frame-wrap">
           <iframe id="detentionFrame" src="" title="DMS Detention Report" loading="lazy"></iframe>
+        </div>
+      </section>
+      <!-- ARIZONA TIME AUDIT PANEL (Fareclock vs Turntime, runs in the browser) -->
+      <section id="azTimeAuditPanel" class="tab-panel" aria-label="Arizona Time Audit">
+        <div class="game-frame-wrap">
+          <iframe id="azTimeAuditFrame" src="" title="Arizona Time Audit" loading="lazy"></iframe>
         </div>
       </section>
       <section id="bizDateAuditPanel" class="tab-panel" aria-label="Business Date Audit">
@@ -8334,7 +8354,8 @@
       clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
       client: ["overview", "data", "trends", "help"],
       work: ["overview", "data", "ddp", "truckFinder", "audit", "turnTracker", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
-      guest: ["overview", "data", "help"]
+      guest: ["overview", "data", "help"],
+      azaudit: ["azTimeAudit"]
     };
     // PowerView-style billing audit site config — declared here (not down by
     // its render code) so the file-input/run-button wiring that runs at page
@@ -8376,6 +8397,8 @@
       dockPalletsKicker: document.getElementById("dockPalletsKicker"),
       projectedBreakdownList: document.getElementById("projectedBreakdownList"),
       projectedBreakdownKicker: document.getElementById("projectedBreakdownKicker"),
+      combinedPalletsList: document.getElementById("combinedPalletsList"),
+      combinedPalletsKicker: document.getElementById("combinedPalletsKicker"),
       hourTotalChart: document.getElementById("hourTotalChart"),
       hourTotalChartKicker: document.getElementById("hourTotalChartKicker"),
       dockTotalChart: document.getElementById("dockTotalChart"),
@@ -13301,19 +13324,6 @@
       return `${formatNumber(totalAfter)} total pallets tonight`;
     }
 
-    // Overview's version is a metric-card note sitting under a big number that already
-    // shows the total, so it skips repeating that total the way the Data tab kicker does.
-    function palletsSummaryCardNote(total) {
-      const hasPalletsColumn = Boolean(state.selectors.pallets);
-      if (!hasPalletsColumn) {
-        return total.breakdown
-          ? `No pallet column, but ~${formatNumber(total.breakdown)} est. breakdown pallets found.`
-          : "No pallet column found in this report.";
-      }
-      return total.breakdown
-        ? `${formatNumber(total.pallets)} scheduled + ~${formatNumber(total.breakdown)} est. breakdown.`
-        : "Includes est. breakdown pallets.";
-    }
 
     function renderDockPalletsList() {
       const totals = aggregatePalletsByDockType();
@@ -13418,6 +13428,86 @@
           `${formatNumber(item.matched)} of ${formatNumber(item.trucks)} trucks matched · ~${item.expected.toFixed(1)} likely breakdowns`;
         row.querySelector(".dock-count").textContent = `+${formatNumber(item.projectedExtraPallets)} plts`;
         els.projectedBreakdownList.appendChild(row);
+      });
+    }
+
+    // The full picture for staffing: scheduled pallets, plus breakdowns already coded
+    // tonight, plus breakdowns projected from supplier history -- combined per dock
+    // type. Merges aggregatePalletsByDockType() (actual) with
+    // projectedBreakdownsByDockType() (projected) so nothing is double-counted --
+    // a truck already coded as a breakdown only shows up in the actual side.
+    function combinedPalletsByDockType() {
+      const map = new Map();
+      aggregatePalletsByDockType().forEach((item) => {
+        map.set(item.label, { label: item.label, trucks: item.trucks, scheduled: item.pallets, actualBreakdown: item.breakdown, projectedBreakdown: 0 });
+      });
+      projectedBreakdownsByDockType().rows.forEach((item) => {
+        const entry = map.get(item.label) || { label: item.label, trucks: item.trucks, scheduled: 0, actualBreakdown: 0, projectedBreakdown: 0 };
+        entry.projectedBreakdown = item.projectedExtraPallets;
+        map.set(item.label, entry);
+      });
+      return [...map.values()]
+        .map((v) => ({ ...v, grandTotal: v.scheduled + v.actualBreakdown + v.projectedBreakdown }))
+        .filter((item) => item.grandTotal > 0)
+        .sort((a, b) => b.grandTotal - a.grandTotal || a.label.localeCompare(b.label));
+    }
+
+    function grandTotalPalletsTonight() {
+      const actual = totalPalletsTonight();
+      const projected = projectedBreakdownsByDockType().totalExtraPallets;
+      return {
+        scheduled: actual.pallets,
+        actualBreakdown: actual.breakdown,
+        projectedBreakdown: projected,
+        grandTotal: actual.pallets + actual.breakdown + projected
+      };
+    }
+
+    // Short form for the Overview card, which already shows the grand total as its big
+    // number -- this note breaks it down without repeating it.
+    function grandTotalCardNote(grand) {
+      const hasPalletsColumn = Boolean(state.selectors.pallets);
+      const parts = [];
+      if (hasPalletsColumn) parts.push(`${formatNumber(grand.scheduled)} scheduled`);
+      if (grand.actualBreakdown) parts.push(`~${formatNumber(grand.actualBreakdown)} actual breakdown`);
+      if (grand.projectedBreakdown) parts.push(`~${formatNumber(grand.projectedBreakdown)} projected breakdown`);
+      if (!parts.length) return "No pallet column found in this report.";
+      return parts.join(" + ") + ".";
+    }
+
+    function renderCombinedPalletsList() {
+      const totals = combinedPalletsByDockType();
+      const grand = grandTotalPalletsTonight();
+      els.combinedPalletsKicker.textContent = grand.grandTotal
+        ? `${formatNumber(grand.grandTotal)} total pallets tonight (${grandTotalCardNote(grand).replace(/\.$/, "")})`
+        : "No pallet or breakdown data for this report";
+      els.combinedPalletsList.innerHTML = "";
+
+      if (!totals.length) {
+        els.combinedPalletsList.appendChild(emptySmall("No pallet or breakdown data for this report"));
+        return;
+      }
+
+      const maxTotal = Math.max(...totals.map((item) => item.grandTotal), 1);
+      totals.forEach((item) => {
+        const percent = Math.round((item.grandTotal / maxTotal) * 100);
+        const row = document.createElement("div");
+        row.className = "dock-row";
+        row.innerHTML = `
+          <div>
+            <div class="dock-name"></div>
+            <div class="dock-meta"></div>
+          </div>
+          <div class="dock-count"></div>
+          <div class="dock-bar"><span style="width: ${Math.max(percent, 2)}%"></span></div>
+        `;
+        const metaParts = [`${formatNumber(item.trucks)} truck${item.trucks === 1 ? "" : "s"}`, `${formatNumber(item.scheduled)} scheduled`];
+        if (item.actualBreakdown) metaParts.push(`+${formatNumber(item.actualBreakdown)} actual`);
+        if (item.projectedBreakdown) metaParts.push(`+${formatNumber(item.projectedBreakdown)} projected`);
+        row.querySelector(".dock-name").textContent = item.label;
+        row.querySelector(".dock-meta").textContent = metaParts.join(" · ");
+        row.querySelector(".dock-count").textContent = `${formatNumber(item.grandTotal)} plts`;
+        els.combinedPalletsList.appendChild(row);
       });
     }
 
@@ -13540,10 +13630,9 @@
       els.dockTypeCount.textContent = dockTotals.length;
       els.dockTypeNote.textContent = dockTotals[0] ? `${dockTotals.length} type${dockTotals.length === 1 ? "" : "s"} found.` : "No types found.";
 
-      const palletTotal = totalPalletsTonight();
-      const palletsAfter = palletTotal.pallets + palletTotal.breakdown;
-      els.totalPalletsCard.textContent = palletsAfter ? formatNumber(palletsAfter) : "--";
-      els.totalPalletsCardNote.textContent = palletsSummaryCardNote(palletTotal);
+      const grand = grandTotalPalletsTonight();
+      els.totalPalletsCard.textContent = grand.grandTotal ? formatNumber(grand.grandTotal) : "--";
+      els.totalPalletsCardNote.textContent = grandTotalCardNote(grand);
     }
 
     function compactLabel(label) {
@@ -13716,6 +13805,7 @@
 
       renderDockPalletsList();
       renderProjectedBreakdownList();
+      renderCombinedPalletsList();
     }
 
     function drawBarChart(canvas, data, options) {
@@ -21697,6 +21787,7 @@
         clerk: "Clerk",
         client: "Client",
         work: "Work",
+        azaudit: "Arizona Time Audit",
         guest: "Guest"
       };
       return labels[role] || role || "Guest";
@@ -21835,6 +21926,10 @@
       if (name === "clerkBoard") renderClerkLeaderboard();
       if (name === "trends") renderTrends();
       if (name === "dmsStamp") renderDmsStamp();
+      if (name === "azTimeAudit") {
+        var azf = document.getElementById("azTimeAuditFrame");
+        if (azf && !azf.getAttribute("data-loaded")) { azf.src = "az-time-audit.html"; azf.setAttribute("data-loaded", "1"); }
+      }
       if (name === "detention") {
         var df = document.getElementById("detentionFrame");
         if (df && !df.getAttribute("data-loaded")) { df.src = "detention-section.html"; df.setAttribute("data-loaded", "1"); }

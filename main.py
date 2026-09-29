@@ -57,6 +57,7 @@ _APP_PASSWORD = os.environ.get("APP_PASSWORD", "N3747P9R")
 # clerk   -> live board, DMS stamp, clerk support
 # client  -> clean read-only reporting
 # guest   -> basic read-only reporting
+# azaudit -> Arizona Time Audit tab only
 _USERS: Dict[str, str] = {
     "james":   _hash(_APP_PASSWORD),
     "aldioks": _hash(os.environ.get("ALDIOKS_PASSWORD", os.environ.get("APP_PASSWORD", "N3747P9R"))),
@@ -69,6 +70,10 @@ _USERS: Dict[str, str] = {
     "work":    _hash(os.environ.get("WORK_PASSWORD", "work1")),
     "guest":   _hash(os.environ.get("GUEST_PASSWORD", "guest1")),
 }
+# patrick (Arizona Time Audit only): no default password in code. Set
+# PATRICK_PASSWORD on Railway to enable this login.
+if os.environ.get("PATRICK_PASSWORD"):
+    _USERS["patrick"] = _hash(os.environ["PATRICK_PASSWORD"])
 
 # Role lookup
 _ROLES: Dict[str, str] = {
@@ -82,6 +87,7 @@ _ROLES: Dict[str, str] = {
     "client":  "client",
     "work":    "work",
     "guest":   "guest",
+    "patrick": "azaudit",
 }
 
 # In-memory session store (fine for a single-process server)
@@ -3919,6 +3925,21 @@ def serve_app():
     # browser to revalidate every load so users always get the latest code.
     return FileResponse(
         str(BASE_DIR / "index.html"),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
+
+
+@app.get("/az-time-audit.html")
+def serve_az_time_audit(_user: str = Depends(_require_roles("azaudit"))):
+    # Arizona Time Audit (Fareclock vs Turntime). Fully client-side: the two Excel
+    # files are read in the browser and never uploaded. Mirrors ROLE_TABS azTimeAudit.
+    return FileResponse(
+        str(BASE_DIR / "az-time-audit.html"),
+        media_type="text/html",
         headers={
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
