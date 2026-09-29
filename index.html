@@ -12445,12 +12445,18 @@
       return [...trucks.values()]
         .map((truck) => {
           const hour = parseHour(truck.rawTime);
+          // A comment like "2c" or "5 C" marks pallets created by breaking the load
+          // down (same convention as DMS Load Details comments) -- add those on top
+          // of the scheduled pallet count to estimate what actually has to move.
+          const breakdownPallets = extractCreatedPalletCounts(truck.comments).reduce((sum, n) => sum + n, 0);
           return {
             ...truck,
             count: 1,
             hour,
             hourSort: hour === null ? 99 : hour,
-            hourLabel: hour === null ? "No time" : formatHour(hour)
+            hourLabel: hour === null ? "No time" : formatHour(hour),
+            breakdownPallets,
+            palletsAfterBreakdown: (truck.pallets || 0) + breakdownPallets
           };
         })
         .sort((a, b) => (
@@ -13200,13 +13206,16 @@
 
     // Grouped by dock type (Dry, Cooler, Freezer, ...) rather than area -- this is
     // the breakdown that maps to how staffing is actually assigned per shift.
+    // Sorted and sized by the after-breakdown estimate, since that's the pallet
+    // volume that actually has to move, not just what was scheduled.
     function aggregatePalletsByDockType() {
       const totals = new Map();
       state.normalizedRows.forEach((row) => {
         const key = row.dockType;
         if (!key) return;
-        const entry = totals.get(key) || { pallets: 0, trucks: 0 };
+        const entry = totals.get(key) || { pallets: 0, breakdown: 0, trucks: 0 };
         entry.pallets += row.pallets || 0;
+        entry.breakdown += row.breakdownPallets || 0;
         entry.trucks += 1;
         totals.set(key, entry);
       });
@@ -13214,21 +13223,35 @@
       if (totals.size > 1) totals.delete("Total Trucks");
 
       return [...totals.entries()]
-        .map(([label, v]) => ({ label, pallets: v.pallets, trucks: v.trucks, avg: v.trucks ? v.pallets / v.trucks : 0 }))
-        .filter((item) => item.pallets > 0)
-        .sort((a, b) => b.pallets - a.pallets || a.label.localeCompare(b.label));
+        .map(([label, v]) => ({
+          label,
+          pallets: v.pallets,
+          breakdown: v.breakdown,
+          afterBreakdown: v.pallets + v.breakdown,
+          trucks: v.trucks,
+          avg: v.trucks ? (v.pallets + v.breakdown) / v.trucks : 0
+        }))
+        .filter((item) => item.afterBreakdown > 0)
+        .sort((a, b) => b.afterBreakdown - a.afterBreakdown || a.label.localeCompare(b.label));
     }
 
     function totalPalletsTonight() {
-      return state.normalizedRows.reduce((sum, row) => sum + (row.pallets || 0), 0);
+      return state.normalizedRows.reduce((acc, row) => {
+        acc.pallets += row.pallets || 0;
+        acc.breakdown += row.breakdownPallets || 0;
+        return acc;
+      }, { pallets: 0, breakdown: 0 });
     }
 
     function renderDockPalletsList() {
       const totals = aggregatePalletsByDockType();
-      const totalPallets = totalPalletsTonight();
-      const maxPallets = Math.max(...totals.map((item) => item.pallets), 1);
-      els.dockPalletsKicker.textContent = totalPallets
-        ? `${formatNumber(totalPallets)} total pallets tonight`
+      const total = totalPalletsTonight();
+      const totalAfter = total.pallets + total.breakdown;
+      const maxAfter = Math.max(...totals.map((item) => item.afterBreakdown), 1);
+      els.dockPalletsKicker.textContent = totalAfter
+        ? total.breakdown
+          ? `${formatNumber(total.pallets)} scheduled + ~${formatNumber(total.breakdown)} est. breakdown = ${formatNumber(totalAfter)} total pallets tonight`
+          : `${formatNumber(totalAfter)} total pallets tonight`
         : "No pallet column found in this report";
       els.dockPalletsList.innerHTML = "";
 
@@ -13238,7 +13261,7 @@
       }
 
       totals.forEach((item) => {
-        const percent = Math.round((item.pallets / maxPallets) * 100);
+        const percent = Math.round((item.afterBreakdown / maxAfter) * 100);
         const row = document.createElement("div");
         row.className = "dock-row";
         row.innerHTML = `
@@ -13250,9 +13273,10 @@
           <div class="dock-bar"><span style="width: ${Math.max(percent, 2)}%"></span></div>
         `;
         row.querySelector(".dock-name").textContent = item.label;
-        row.querySelector(".dock-meta").textContent =
-          `${formatNumber(item.trucks)} truck${item.trucks === 1 ? "" : "s"} · avg ${formatNumber(Math.round(item.avg))} pallets/truck`;
-        row.querySelector(".dock-count").textContent = `${formatNumber(item.pallets)} plts`;
+        row.querySelector(".dock-meta").textContent = item.breakdown
+          ? `${formatNumber(item.trucks)} truck${item.trucks === 1 ? "" : "s"} · avg ${formatNumber(Math.round(item.avg))} plts/truck · +${formatNumber(item.breakdown)} est. breakdown`
+          : `${formatNumber(item.trucks)} truck${item.trucks === 1 ? "" : "s"} · avg ${formatNumber(Math.round(item.avg))} pallets/truck`;
+        row.querySelector(".dock-count").textContent = `${formatNumber(item.afterBreakdown)} plts`;
         els.dockPalletsList.appendChild(row);
       });
     }
