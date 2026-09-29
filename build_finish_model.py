@@ -46,18 +46,46 @@ def percentiles(values):
     return table
 
 
+PACE_STEP_MIN = 30
+PACE_STEPS = 29   # 0..840 minutes after the 7 PM shift start (through 9 AM)
+
+
+def pace_row(finish_times_ms, total, start_ms):
+    """Share of the night's scheduled trucks finished at each 30-minute mark after shift start.
+
+    Powers the portal's "Pace vs Usual" card: tonight's share done is ranked against
+    the same moment on recent nights.
+    """
+    finished = sorted(finish_times_ms)
+    row, j = [], 0
+    for k in range(PACE_STEPS):
+        cutoff = start_ms + k * PACE_STEP_MIN * 60000
+        while j < len(finished) and finished[j] <= cutoff:
+            j += 1
+        row.append(round(j / total, 3))
+    return row
+
+
+def shift_start_ms(business_date):
+    start = datetime(business_date.year, business_date.month, business_date.day, 19, 0, tzinfo=main.DMS_BUSINESS_TZ) - timedelta(days=1)
+    return start.timestamp() * 1000
+
+
 def build(session_fn):
     session = session_fn()
     today = datetime.now(main.DMS_BUSINESS_TZ)
     scheduled = arrived = 0
-    offsets, service, peaks = [], [], []
+    offsets, service, peaks, pace_nights = [], [], [], []
     for back in range(1, DAYS + 1):
         d = today - timedelta(days=back)
         trucks = pull_day(session, f"{d.month}/{d.day}/{d.year}")
         rows = []
+        finishes = []
         for t in trucks:
             appt, ci, us = to_ms(t["appointmentIso"]), to_ms(t["checkInIso"]), to_ms(t["unloadStartIso"])
             uf = to_ms(t["unloadFinishIso"] or t["receivingFinishIso"])
+            if uf:
+                finishes.append(uf)
             if appt:
                 scheduled += 1
                 if ci:
@@ -72,11 +100,14 @@ def build(session_fn):
             live += delta
             peak = max(peak, live)
         peaks.append(peak)
+        if trucks:
+            pace_nights.append(pace_row(finishes, len(trucks), shift_start_ms(d)))
     return {
         "fmax": round(arrived / scheduled, 3),
         "offsets": percentiles(offsets),
         "service": percentiles(service),
         "peak": round(st.median(peaks)),
+        "pace": {"stepMin": PACE_STEP_MIN, "nights": pace_nights},
     }
 
 

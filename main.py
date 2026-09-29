@@ -198,6 +198,16 @@ def init_db():
             created_at  TEXT    NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_portal_chat_site_id ON portal_chat(site, id);
+
+        CREATE TABLE IF NOT EXISTS portal_announcements (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            site        TEXT    NOT NULL,
+            message     TEXT    NOT NULL,
+            created_by  TEXT    NOT NULL,
+            created_at  TEXT    NOT NULL,
+            cleared_at  TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_portal_announcements_site ON portal_announcements(site, id);
     """)
     # Vendor turn-time history is kept per site; rows that predate the column
     # all came from OKS, which the column default covers.
@@ -3436,6 +3446,72 @@ def post_portal_chat(body: ChatMessageIn, site: str = "OKS", username: str = Dep
     conn.commit()
     conn.close()
     return {"ok": True, "message": {"id": msg_id, "username": username, "message": text, "created_at": now_str}}
+
+
+# Reading an announcement is available to anyone who can open that site's My
+# Portal; posting/clearing one is limited to the roles actually running the
+# shift (not clerk -- announcements are meant to read as more authoritative
+# than chat).
+_require_announce_read = _require_vendor_stats
+_require_announce_write = _require_roles("oks", "manager", "teamlead", "minnesota")
+
+
+class AnnouncementIn(BaseModel):
+    message: str
+
+
+def _current_announcement(conn, site: str) -> Optional[Dict[str, Any]]:
+    row = conn.execute(
+        "SELECT id, message, created_by, created_at FROM portal_announcements "
+        "WHERE site=? AND cleared_at IS NULL ORDER BY id DESC LIMIT 1",
+        (site,),
+    ).fetchone()
+    if not row:
+        return None
+    return {"id": row[0], "message": row[1], "created_by": row[2], "created_at": row[3]}
+
+
+@app.get("/api/portal/announcement")
+def get_portal_announcement(site: str = "OKS", username: str = Depends(_require_announce_read)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    conn = get_db()
+    announcement = _current_announcement(conn, site)
+    conn.close()
+    return {"ok": True, "announcement": announcement}
+
+
+@app.post("/api/portal/announcement", status_code=201)
+def post_portal_announcement(body: AnnouncementIn, site: str = "OKS", username: str = Depends(_require_announce_write)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    text = body.message.strip()[:280]
+    if not text:
+        raise HTTPException(status_code=400, detail="Message is empty.")
+    now_str = datetime.now(timezone.utc).isoformat()
+    conn = get_db()
+    # Only one announcement is pinned at a time per site -- a new one replaces it.
+    conn.execute("UPDATE portal_announcements SET cleared_at=? WHERE site=? AND cleared_at IS NULL", (now_str, site))
+    cur = conn.execute(
+        "INSERT INTO portal_announcements (site, message, created_by, created_at) VALUES (?,?,?,?)",
+        (site, text, username, now_str),
+    )
+    conn.commit()
+    announcement = {"id": cur.lastrowid, "message": text, "created_by": username, "created_at": now_str}
+    conn.close()
+    return {"ok": True, "announcement": announcement}
+
+
+@app.delete("/api/portal/announcement")
+def clear_portal_announcement(site: str = "OKS", username: str = Depends(_require_announce_write)):
+    site = _site_param(site)
+    _check_site_role(username, site)
+    now_str = datetime.now(timezone.utc).isoformat()
+    conn = get_db()
+    conn.execute("UPDATE portal_announcements SET cleared_at=? WHERE site=? AND cleared_at IS NULL", (now_str, site))
+    conn.commit()
+    conn.close()
+    return {"ok": True}
 
 
 class ContainerLogAddIn(BaseModel):

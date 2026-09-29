@@ -644,6 +644,20 @@
     :root.dark .portal-notif-banner { background: var(--panel-2); border-color: var(--strong-line); color: var(--ink); }
     :root.dark .portal-notif-banner button { background: var(--teal); border-color: var(--teal); color: #00202a; }
     :root.dark .portal-notif-banner .notif-dismiss { background: transparent; border-color: var(--strong-line); color: var(--teal); }
+    /* -- Pinned shift announcement -- */
+    .portal-announce-banner { display:flex; align-items:flex-start; gap:10px; background:#fffbeb; border:1.5px solid #f6c343; border-radius:8px; padding:10px 14px; margin:6px 0 10px; }
+    .portal-announce-banner .pab-icon { font-size:1.3em; line-height:1; flex-shrink:0; }
+    .portal-announce-banner .pab-body { flex:1; min-width:0; }
+    .portal-announce-banner .pab-text { font-size:0.94em; font-weight:700; color:#7c4a03; white-space:pre-wrap; word-break:break-word; }
+    .portal-announce-banner .pab-meta { font-size:0.74em; color:#92702a; margin-top:3px; }
+    .portal-announce-banner .pab-clear { flex-shrink:0; background:transparent; border:none; color:#92702a; font-size:1.3em; line-height:1; cursor:pointer; padding:0 2px; }
+    .portal-announce-banner .pab-clear:hover { color:#7c4a03; }
+    :root.dark .portal-announce-banner { background:#3a2e0e; border-color:#8a6d1f; }
+    :root.dark .portal-announce-banner .pab-text { color:#fde68a; }
+    :root.dark .portal-announce-banner .pab-meta,
+    :root.dark .portal-announce-banner .pab-clear { color:#d9b661; }
+    .portal-announce-composer { display:flex; gap:8px; margin:6px 0 10px; }
+    .portal-announce-composer .lookup-input { flex:1; }
     .portal-refresh-btn { padding: 6px 12px; font-size: 0.82em; font-weight: 600; display: flex; align-items: center; gap: 5px; }
     /* Metric card accent stripes */
     .metric-card[data-accent] { border-left: 4px solid transparent; }
@@ -4533,6 +4547,16 @@
               <canvas id="areaHourChart"></canvas>
             </div>
           </section>
+
+          <section class="panel chart-panel-wide" aria-labelledby="areaPalletsChartTitle">
+            <div class="panel-header">
+              <h2 id="areaPalletsChartTitle">Pallets by Area</h2>
+              <span class="panel-kicker" id="areaPalletsChartKicker">0 total pallets tonight</span>
+            </div>
+            <div class="chart-box">
+              <canvas id="areaPalletsChart"></canvas>
+            </div>
+          </section>
         </div>
       </section>
 
@@ -6158,6 +6182,20 @@
           </div>
         </div>
 
+        <!-- Pinned shift announcement -- shared by everyone on OKS My Portal -->
+        <div class="portal-announce-banner" id="portalAnnounceBanner" style="display:none;">
+          <span class="pab-icon" aria-hidden="true">&#128227;</span>
+          <div class="pab-body">
+            <div class="pab-text" id="portalAnnounceText"></div>
+            <div class="pab-meta" id="portalAnnounceMeta"></div>
+          </div>
+          <button type="button" id="portalAnnounceClearBtn" class="pab-clear announce-write-only" title="Clear this announcement" aria-label="Clear announcement">&times;</button>
+        </div>
+        <div class="portal-announce-composer announce-write-only" id="portalAnnounceComposer">
+          <input id="portalAnnounceInput" type="text" class="lookup-input" placeholder="Post a shift announcement everyone will see (e.g. Door 40 closed for maintenance)..." maxlength="280" autocomplete="off">
+          <button type="button" id="portalAnnounceSendBtn" class="secondary-btn">Announce</button>
+        </div>
+
         <!-- Command bar: info strip + controls strip -->
         <div class="portal-command-bar">
           <div class="portal-dms-titlebar">
@@ -6357,6 +6395,11 @@
             <div class="metric-label">Projected Finish</div>
             <div class="metric-value" id="portalEstComplete" style="font-size:1.3em; transition:color 0.3s;">--</div>
             <div class="metric-note" id="portalEstNote">Based on avg turn time.</div>
+          </article>
+          <article class="metric-card" id="portalUsualCard" data-accent="purple" style="transition:border-color 0.3s;">
+            <div class="metric-label">Pace vs Usual</div>
+            <div class="metric-value" id="portalUsualValue" style="font-size:1.3em; transition:color 0.3s;">--</div>
+            <div class="metric-note" id="portalUsualNote">Compared with recent nights at this hour.</div>
           </article>
           <article class="metric-card" data-accent="green">
             <div class="metric-label">Trucks Done Today</div>
@@ -6689,6 +6732,21 @@
 
       <section id="myPortalMnPanel" class="tab-panel mn-portal-panel" aria-label="Minnesota My Portal">
         <div class="motivation-bar" id="motivBar_myPortalMn"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
+
+        <!-- Pinned shift announcement -- shared by everyone on Minnesota My Portal -->
+        <div class="portal-announce-banner" id="portalMnAnnounceBanner" style="display:none;">
+          <span class="pab-icon" aria-hidden="true">&#128227;</span>
+          <div class="pab-body">
+            <div class="pab-text" id="portalMnAnnounceText"></div>
+            <div class="pab-meta" id="portalMnAnnounceMeta"></div>
+          </div>
+          <button type="button" id="portalMnAnnounceClearBtn" class="pab-clear announce-write-only" title="Clear this announcement" aria-label="Clear announcement">&times;</button>
+        </div>
+        <div class="portal-announce-composer announce-write-only" id="portalMnAnnounceComposer">
+          <input id="portalMnAnnounceInput" type="text" class="lookup-input" placeholder="Post a shift announcement everyone will see (e.g. Door 40 closed for maintenance)..." maxlength="280" autocomplete="off">
+          <button type="button" id="portalMnAnnounceSendBtn" class="secondary-btn">Announce</button>
+        </div>
+
         <div class="portal-command-bar">
           <div class="portal-dms-titlebar">
             <div class="portal-dms-title-main">
@@ -6805,6 +6863,11 @@
             <div class="metric-label">Projected Finish</div>
             <div class="metric-value" id="portalMnEstComplete" style="font-size:1.3em; transition:color 0.3s;">--</div>
             <div class="metric-note" id="portalMnEstNote">Based on avg turn time.</div>
+          </article>
+          <article class="metric-card" id="portalMnUsualCard" data-accent="purple" style="transition:border-color 0.3s;">
+            <div class="metric-label">Pace vs Usual</div>
+            <div class="metric-value" id="portalMnUsualValue" style="font-size:1.3em; transition:color 0.3s;">--</div>
+            <div class="metric-note" id="portalMnUsualNote">Compared with recent nights at this hour.</div>
           </article>
           <article class="metric-card" data-accent="green">
             <div class="metric-label">Trucks Done Today</div>
@@ -8001,6 +8064,8 @@
         vendorAvgs: {},
         doorNotes: {},   // { truckKey: { note, updated_by, updated_at } }  -  shared, from the server
         chat: { messages: [], lastId: 0, polling: false },
+        announcement: null,
+        announcementNotifiedId: 0,
         scheduleUpload: {
           fileName: "",
           rows: [],
@@ -8034,6 +8099,8 @@
         prevStatuses: {},
         doorNotes: {},
         chat: { messages: [], lastId: 0, polling: false },
+        announcement: null,
+        announcementNotifiedId: 0,
         scheduleUpload: {
           fileName: "",
           rows: [],
@@ -8119,6 +8186,10 @@
       comments: [
         "comments", "comment", "notes", "note", "remarks", "remark", "driver comments",
         "appointment comments", "load comments", "truck comments"
+      ],
+      pallets: [
+        "pallets", "pallet", "plt qty", "plt qty ", "pallet qty", "pallet quantity",
+        "pallet count", "plt count", "pallet cnt", "plt", "pallet total"
       ]
     };
 
@@ -8281,6 +8352,8 @@
       dailyKicker: document.getElementById("dailyKicker"),
       areaHourChart: document.getElementById("areaHourChart"),
       areaHourChartKicker: document.getElementById("areaHourChartKicker"),
+      areaPalletsChart: document.getElementById("areaPalletsChart"),
+      areaPalletsChartKicker: document.getElementById("areaPalletsChartKicker"),
       hourTotalChart: document.getElementById("hourTotalChart"),
       hourTotalChartKicker: document.getElementById("hourTotalChartKicker"),
       dockTotalChart: document.getElementById("dockTotalChart"),
@@ -8385,6 +8458,13 @@
       portalMnChatInput: document.getElementById("portalMnChatInput"),
       portalMnChatSendBtn: document.getElementById("portalMnChatSendBtn"),
       portalMnChatBadge: document.getElementById("portalMnChatBadge"),
+      portalMnAnnounceBanner: document.getElementById("portalMnAnnounceBanner"),
+      portalMnAnnounceText: document.getElementById("portalMnAnnounceText"),
+      portalMnAnnounceMeta: document.getElementById("portalMnAnnounceMeta"),
+      portalMnAnnounceClearBtn: document.getElementById("portalMnAnnounceClearBtn"),
+      portalMnAnnounceComposer: document.getElementById("portalMnAnnounceComposer"),
+      portalMnAnnounceInput: document.getElementById("portalMnAnnounceInput"),
+      portalMnAnnounceSendBtn: document.getElementById("portalMnAnnounceSendBtn"),
       portalMnDoorMap: document.getElementById("portalMnDoorMap"),
       portalMnDoorRange: document.getElementById("portalMnDoorRange"),
       portalMnScorecardDoors: document.getElementById("portalMnScorecardDoors"),
@@ -8559,6 +8639,13 @@
       portalChatInput: document.getElementById("portalChatInput"),
       portalChatSendBtn: document.getElementById("portalChatSendBtn"),
       portalChatBadge: document.getElementById("portalChatBadge"),
+      portalAnnounceBanner: document.getElementById("portalAnnounceBanner"),
+      portalAnnounceText: document.getElementById("portalAnnounceText"),
+      portalAnnounceMeta: document.getElementById("portalAnnounceMeta"),
+      portalAnnounceClearBtn: document.getElementById("portalAnnounceClearBtn"),
+      portalAnnounceComposer: document.getElementById("portalAnnounceComposer"),
+      portalAnnounceInput: document.getElementById("portalAnnounceInput"),
+      portalAnnounceSendBtn: document.getElementById("portalAnnounceSendBtn"),
       portalScorecardDoors: document.getElementById("portalScorecardDoors"),
       portalScorecardAreas: document.getElementById("portalScorecardAreas"),
       portalDoorMap: document.getElementById("portalDoorMap"),
@@ -9872,13 +9959,15 @@
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
     // Per-site so a change to one site's tour doesn't re-show the other's.
-    const PORTAL_TOUR_VERSIONS = { oks: "2026-09-27", mn: "2026-09-27" };
+    const PORTAL_TOUR_VERSIONS = { oks: "2026-09-28", mn: "2026-09-28" };
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     const PORTAL_TOUR_STEPS = {
       oks: [
         { title: "What's new in My Portal", body: "A quick tour of what changed: a much more accurate projected finish, a bigger door popup, alerts, and smarter schedule uploads. It takes about a minute, and you can skip any time." },
         { title: "Much more accurate Projected Finish", target: portalTourEl("portalEstCard"),
           body: "Projected Finish now simulates the rest of the night from each truck's appointment and how fast the dock really unloads, checked against past OKS shifts. It shows when <b>95% of trucks</b> will be done, plus when nearly all will be. Late trucks that probably won't show are left out, and rejected trucks no longer count twice." },
+        { title: "Pace vs Usual", target: portalTourEl("portalUsualCard"),
+          body: "The new <b>Pace vs Usual</b> card compares how many trucks are done right now with the same hour on recent OKS nights, so a slow night stands out early. It says whether you're behind, on pace, or ahead, and how many of the last 14 nights you're faster than." },
         { title: "Tap a door for the full picture", before: function() { portalSetView("doors"); }, target: portalTourEl("portalDoorMap"),
           body: "On the <b>Door Map</b>, tap any occupied door to open its popup: status and detention countdown, time on dock, how long it has been unloading, <b>every PO on its own line</b>, and the full check-in to driver-left timeline." },
         { title: "Copy summary and shift notes", target: portalTourEl("portalDoorMap"),
@@ -9887,6 +9976,8 @@
           body: "Click <b>Enable Alerts</b> (the banner at the top of the portal) to get desktop popups for detention risk, overdue unload starts, unloader delays, and receiving follow-ups. Keep this page open to receive them. Your admin can also connect a Slack channel so supervisors get pinged even when the portal is closed." },
         { title: "Smarter schedule uploads", target: portalTourEl("portalScheduleToggleBtn"),
           body: "<b>Upload Schedule</b> now adds a Dry/Cold side note to Produce rows, sends Fresh Meat to its own DMS area, and tags suppliers that have an Incoterm, like <i>(DDP) Supplier</i>." },
+        { title: "Pinned announcements", target: portalTourEl("portalAnnounceComposer"),
+          body: "Leads and supervisors can pin an <b>announcement</b> that everyone signed in to OKS My Portal sees at the top of the page &mdash; e.g. \"Door 40 closed for maintenance.\" It stays up until someone clears it, and posting one sends a desktop alert if you have alerts enabled." },
         { title: "Team Chat", before: function() { portalSetView("chat"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="chat"]'); },
           body: "<b>Team Chat</b> is shared by everyone signed in to OKS My Portal &mdash; a quick way to flag something without leaving the dock board. New messages show a badge here when you're on another tab." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="oks"]'); },
@@ -9900,6 +9991,8 @@
           body: "The board now refreshes from DMS every <b>30 seconds</b> and recalculates countdowns in between. This line shows when it last updated, and it catches up the moment you switch back to this tab." },
         { title: "Much more accurate Projected Finish", target: portalTourEl("portalMnEstCard"),
           body: "Projected Finish now simulates the rest of the night from each truck's appointment and how fast the dock really unloads, checked against past Minnesota shifts. It shows when <b>95% of trucks</b> will be done, plus when nearly all will be. Late trucks that probably won't show are left out." },
+        { title: "Pace vs Usual", target: portalTourEl("portalMnUsualCard"),
+          body: "The new <b>Pace vs Usual</b> card compares how many trucks are done right now with the same hour on recent Minnesota nights, so a slow night stands out early. It says whether you're behind, on pace, or ahead, and how many of the last 14 nights you're faster than." },
         { title: "A smarter Door Map", before: function() { portalMnSetView("doors"); }, target: portalTourEl("portalMnDoorMap"),
           body: "Doors now color by status: <b>red</b> is detention, <b>yellow</b> needs review (detention risk, start soon, watch), and <b>green</b> is on track. Each tile shows the countdown and time on the door. <b>Tap any occupied door</b> to open its popup." },
         { title: "New counters", target: portalTourEl("portalMnScorecardDoors"),
@@ -9912,6 +10005,8 @@
           body: "<b>Vendors</b> shows how long each supplier's trucks take to turn: average, 75th percentile, range, and how many trucks. It builds itself as trucks finish unloading, and it also drives the detention forecast. Open it and hit <b>Load last 7 days</b> to fill it in right away." },
         { title: "Also new: Truck Report charts", body: "The menu now has <b>Overview</b> and <b>Data</b>. Attach the daily truck schedule on Overview, then open Data for the hourly flow, dock, and area charts." },
         { title: "Also new: Schedule Uploader", body: "In the <b>Minnesota Schedule Uploader</b>, rows covering multiple POs now show and send only the <b>first PO</b> to DMS, and suppliers with an Incoterm are tagged like <i>(DDP) Supplier</i>." },
+        { title: "Pinned announcements", target: portalTourEl("portalMnAnnounceComposer"),
+          body: "Leads can pin an <b>announcement</b> that everyone signed in to Minnesota My Portal sees at the top of the page &mdash; e.g. \"Door 40 closed for maintenance.\" It stays up until someone clears it, and posting one sends a desktop alert if you have alerts enabled." },
         { title: "Team Chat", before: function() { portalMnSetView("chat"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="chat"]'); },
           body: "<b>Team Chat</b> is shared by everyone signed in to Minnesota My Portal &mdash; a quick way to flag something without leaving the dock board. New messages show a badge here when you're on another tab." },
         { title: "That's the tour", target: function() { return document.querySelector('.tour-replay-btn[data-tour-site="mn"]'); },
@@ -10225,6 +10320,99 @@
       }
       wire("oks", els.portalChatInput, els.portalChatSendBtn);
       wire("mn", els.portalMnChatInput, els.portalMnChatSendBtn);
+    })();
+
+    // -- Pinned shift announcement ----------------------------------------------
+    // One banner per site, shared by everyone signed in to that site's My Portal.
+    // Posting/clearing is limited server-side (see _require_announce_write); the
+    // composer is hidden client-side for other roles via the .announce-write-only
+    // class, but the server is what actually enforces it.
+    function portalAnnounceEls(siteKey) {
+      return siteKey === "mn"
+        ? { banner: els.portalMnAnnounceBanner, text: els.portalMnAnnounceText, meta: els.portalMnAnnounceMeta, clearBtn: els.portalMnAnnounceClearBtn, input: els.portalMnAnnounceInput, sendBtn: els.portalMnAnnounceSendBtn }
+        : { banner: els.portalAnnounceBanner, text: els.portalAnnounceText, meta: els.portalAnnounceMeta, clearBtn: els.portalAnnounceClearBtn, input: els.portalAnnounceInput, sendBtn: els.portalAnnounceSendBtn };
+    }
+
+    function portalRenderAnnouncement(siteKey) {
+      const st = portalChatState(siteKey), e = portalAnnounceEls(siteKey);
+      if (!e.banner) return;
+      const a = st.announcement;
+      if (!a) { e.banner.style.display = "none"; return; }
+      let t = "";
+      try { t = new Date(a.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (err) {}
+      e.text.textContent = a.message;
+      e.meta.textContent = "Posted by " + a.created_by + (t ? " · " + t : "");
+      e.banner.style.display = "flex";
+    }
+
+    function portalFetchAnnouncement(siteKey) {
+      const st = portalChatState(siteKey);
+      return fetch(apiUrl("/api/portal/announcement?site=" + portalChatSiteParam(siteKey)))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data || !data.ok) return;
+          const a = data.announcement;
+          const isNew = a && a.id !== (st.announcement && st.announcement.id);
+          st.announcement = a;
+          portalRenderAnnouncement(siteKey);
+          if (isNew && a.id > (st.announcementNotifiedId || 0)) {
+            st.announcementNotifiedId = a.id;
+            portalNotify("Announcement (" + portalChatSiteParam(siteKey) + ")", a.message, "announce:" + portalChatSiteParam(siteKey) + ":" + a.id);
+          }
+        })
+        .catch(function() {});
+    }
+
+    function portalAnnounceSend(siteKey) {
+      const e = portalAnnounceEls(siteKey);
+      if (!e.input) return;
+      const text = e.input.value.trim();
+      if (!text) return;
+      e.sendBtn.disabled = true;
+      fetch(apiUrl("/api/portal/announcement?site=" + portalChatSiteParam(siteKey)), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      }).then(function(resp) {
+        return resp.json().then(function(data) { return { ok: resp.ok, data: data }; });
+      }).then(function(res) {
+        if (!res.ok || !res.data.ok) { showToast((res.data && res.data.detail) || "Could not post announcement."); return; }
+        e.input.value = "";
+        const st = portalChatState(siteKey);
+        st.announcement = res.data.announcement;
+        st.announcementNotifiedId = res.data.announcement.id;   // it's ours, no need to notify ourselves
+        portalRenderAnnouncement(siteKey);
+      }).catch(function() {
+        showToast("Could not post announcement.");
+      }).finally(function() {
+        e.sendBtn.disabled = false;
+      });
+    }
+
+    function portalAnnounceClear(siteKey) {
+      const e = portalAnnounceEls(siteKey);
+      fetch(apiUrl("/api/portal/announcement?site=" + portalChatSiteParam(siteKey)), { method: "DELETE" })
+        .then(function(resp) { return resp.json().then(function(data) { return { ok: resp.ok, data: data }; }); })
+        .then(function(res) {
+          if (!res.ok || !res.data.ok) { showToast("Could not clear announcement."); return; }
+          const st = portalChatState(siteKey);
+          st.announcement = null;
+          portalRenderAnnouncement(siteKey);
+        })
+        .catch(function() { showToast("Could not clear announcement."); });
+    }
+
+    (function() {
+      function wire(siteKey) {
+        const e = portalAnnounceEls(siteKey);
+        if (e.sendBtn) e.sendBtn.addEventListener("click", function() { portalAnnounceSend(siteKey); });
+        if (e.input) e.input.addEventListener("keydown", function(ev) {
+          if (ev.key === "Enter") { ev.preventDefault(); portalAnnounceSend(siteKey); }
+        });
+        if (e.clearBtn) e.clearBtn.addEventListener("click", function() { portalAnnounceClear(siteKey); });
+      }
+      wire("oks");
+      wire("mn");
     })();
 
     // -- Door detail modal --------------------------------------------------------
@@ -10818,7 +11006,7 @@
       state.activeDock = "all";
       state.chartMode = "bar";
       state.auditDecisions = {};
-      state.selectors = { reference: "", time: "", dock: "", area: "", supplier: "", po: "", terms: "", comments: "" };
+      state.selectors = { reference: "", time: "", dock: "", area: "", supplier: "", po: "", terms: "", comments: "", pallets: "" };
       renderAll();
       showToast("Report cleared.");
     }
@@ -12108,7 +12296,8 @@
         supplier: findHeader(headers, aliases.supplier),
         po: findHeader(headers, aliases.po),
         terms: findHeader(headers, aliases.terms),
-        comments: findHeader(headers, aliases.comments)
+        comments: findHeader(headers, aliases.comments),
+        pallets: findHeader(headers, aliases.pallets)
       };
 
       if (!selected.reference) selected.reference = findHeaderByPattern(headers, rows, /(?:^|\b)(ref|reference)[\s:#-]*[a-z0-9-]+/i);
@@ -12231,6 +12420,7 @@
             dockType: cleanGroupValue(getValue(row, state.selectors.dock), "Total Trucks"),
             area: cleanGroupValue(getValue(row, state.selectors.area) || inferAreaValue(row), "All Areas"),
             supplier: cleanGroupValue(getValue(row, state.selectors.supplier), "Supplier Not Found"),
+            pallets: parsePalletCount(getValue(row, state.selectors.pallets)),
             poNumbers: collectPoNumbers([row]),
             terms: getTruckTerms([row]),
             comments: collectComments([row]),
@@ -12247,6 +12437,7 @@
         if (truck.dockType === "Total Trucks") truck.dockType = cleanGroupValue(getValue(row, state.selectors.dock), "Total Trucks");
         if (truck.area === "All Areas") truck.area = cleanGroupValue(getValue(row, state.selectors.area) || inferAreaValue(row), "All Areas");
         if (truck.supplier === "Supplier Not Found") truck.supplier = cleanGroupValue(getValue(row, state.selectors.supplier), "Supplier Not Found");
+        truck.pallets += parsePalletCount(getValue(row, state.selectors.pallets));
         truck.poNumbers = collectPoNumbers(truck.rawRows);
         truck.terms = getTruckTerms(truck.rawRows);
         truck.comments = collectComments(truck.rawRows);
@@ -12276,6 +12467,16 @@
       return header ? cleanCell(row[header] || "") : "";
     }
 
+    // Pallet counts sometimes arrive as "24", "24.0", or "24 plts" -- keep only the
+    // number. Truck-report pallet columns are per PO line, so callers sum across a
+    // truck's rawRows to get that truck's total.
+    function parsePalletCount(value) {
+      const match = String(value || "").match(/-?\d+(?:\.\d+)?/);
+      if (!match) return 0;
+      const n = Math.round(parseFloat(match[0]));
+      return Number.isFinite(n) && n > 0 ? n : 0;
+    }
+
     function inferAreaValue(row) {
       const used = new Set([
         state.selectors.reference,
@@ -12284,7 +12485,8 @@
         state.selectors.supplier,
         state.selectors.po,
         state.selectors.terms,
-        state.selectors.comments
+        state.selectors.comments,
+        state.selectors.pallets
       ].filter(Boolean));
 
       const candidates = state.headers
@@ -12998,6 +13200,26 @@
         .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
     }
 
+    function aggregatePalletsByArea() {
+      const totals = new Map();
+      state.normalizedRows.forEach((row) => {
+        const key = row.area;
+        if (!key) return;
+        totals.set(key, (totals.get(key) || 0) + (row.pallets || 0));
+      });
+
+      if (totals.size > 1) totals.delete("All Areas");
+
+      return [...totals.entries()]
+        .map(([label, value]) => ({ label, value }))
+        .filter((item) => item.value > 0)
+        .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+    }
+
+    function totalPalletsTonight() {
+      return state.normalizedRows.reduce((sum, row) => sum + (row.pallets || 0), 0);
+    }
+
     function dockTypes() {
       const docks = aggregateBy("dockType").map((item) => item.label);
       const realDocks = docks.filter((label) => !["Area Not Found", "All Areas", "Dock Not Found"].includes(label));
@@ -13285,6 +13507,18 @@
 
       els.areaHourChartKicker.textContent = `${formatNumber(rows.length)} trucks split by dock type`;
       drawStackedHourlyAreaBars(els.areaHourChart, rows);
+
+      const palletsByArea = aggregatePalletsByArea();
+      const totalPallets = totalPalletsTonight();
+      els.areaPalletsChartKicker.textContent = totalPallets
+        ? `${formatNumber(totalPallets)} total pallets tonight`
+        : "No pallet column found in this report";
+      drawBarChart(els.areaPalletsChart, palletsByArea.slice(0, 12), {
+        color: theme.tertiary,
+        accent: theme.accent,
+        horizontal: true,
+        emptyLabel: "No pallet data for this report"
+      });
     }
 
     function drawBarChart(canvas, data, options) {
@@ -14680,6 +14914,7 @@
         state.portal.liveError = "";
         state.portal.credentialBlocked = false;
         portalFetchDoorNotes("oks");
+        portalFetchAnnouncement("oks");
         if (state.portal.portalView !== "chat") portalChatPoll("oks").then(function() { portalChatUpdateBadge("oks"); });
         if (els.portalDmsStatus) {
           const loc = data.location || {};
@@ -15127,6 +15362,7 @@
       portalStartLivePolling();
       if (!state.portal.liveAttempted) portalPullLiveDms(false);
       portalFetchVendorAvgs();
+      portalFetchAnnouncement("oks");
       portalRequestNotifPermission();
       renderPortalBoard();
       portalLoadExportsList();
@@ -15205,6 +15441,7 @@
         state.portalMn.liveError = "";
         state.portalMn.credentialBlocked = false;
         portalFetchDoorNotes("mn");
+        portalFetchAnnouncement("mn");
         if (state.portalMn.view !== "chat") portalChatPoll("mn").then(function() { portalChatUpdateBadge("mn"); });
         state.portalMn.totalExpected = (typeof data.total_expected === "number")
           ? data.total_expected : state.portalMn.scheduledRows.length;
@@ -15598,6 +15835,8 @@
         if (els.portalMnEstNote) els.portalMnEstNote.textContent = "Sync Minnesota DMS above.";
       }
 
+      portalRenderPaceCard("mn", complete.length, scheduledDmsTotal, now, shiftStartMs);
+
       const behindMs = (estMs !== null && stillRunning > 0) ? Math.max(0, estMs - goal5amMs) : 0;
       portalMnRenderClientSummary({
         shiftTotal: shiftTotal,
@@ -15787,6 +16026,7 @@
       if (!state.portalMn.liveAttempted) {
         portalMnInitializeDate();
         portalMnStartPolling();
+        portalFetchAnnouncement("mn");
       }
       const scheduled = state.portalMn.scheduledRows || [];
       const arrived = state.portalMn.liveRows || [];
@@ -16075,7 +16315,7 @@
     // Backtested on 28 real shifts (14 per site) it predicts when 95% of the night's
     // trucks are done to within ~30 min on average; the old formula was off by
     // 45-120 min.
-    const PORTAL_FINISH_MODEL = {"oks":{"fmax":0.81,"offsets":[-612,-612,-533,-500,-464,-425,-402,-388,-375,-356,-343,-332,-315,-298,-286,-279,-270,-259,-252,-243,-233,-222,-215,-210,-205,-198,-191,-185,-178,-172,-169,-164,-160,-156,-148,-145,-143,-139,-135,-130,-125,-122,-121,-116,-110,-107,-103,-99,-94,-91,-87,-83,-81,-76,-72,-66,-64,-60,-55,-54,-50,-46,-42,-40,-35,-32,-30,-27,-23,-21,-19,-15,-13,-11,-7,-3,-1,1,6,8,12,15,20,23,27,34,38,46,53,57,68,82,88,98,107,118,130,147,165,191,191],"service":[0,0,0,0,0,0,1,2,3,5,6,6,7,8,8,9,10,10,11,11,12,13,13,14,14,15,16,16,16,17,18,18,19,19,19,20,20,21,22,22,23,23,24,24,24,25,25,26,26,27,27,28,28,29,29,29,30,30,31,31,32,32,33,34,34,35,36,37,37,38,38,39,40,41,42,43,43,44,45,46,48,48,50,51,53,54,58,62,66,69,72,75,81,90,98,111,121,140,162,221,221],"peak":10},"mn":{"fmax":0.877,"offsets":[-170,-170,-146,-130,-116,-106,-91,-80,-71,-60,-51,-46,-42,-38,-36,-34,-32,-31,-30,-29,-28,-27,-26,-24,-23,-22,-21,-21,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-7,-6,-6,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,17,18,19,20,22,24,25,26,27,30,32,33,35,37,38,40,43,44,46,48,50,51,54,56,58,61,65,68,71,75,79,83,88,95,102,109,119,130,152,152],"service":[0,0,0,0,0,0,0,0,1,2,3,4,4,5,6,7,7,8,8,9,9,10,10,10,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15,15,16,16,16,16,17,17,17,18,18,18,19,19,19,20,20,21,21,22,22,22,23,23,24,24,25,25,26,26,27,28,29,29,30,31,32,33,35,37,38,40,42,45,47,50,52,56,59,60,64,68,71,76,81,86,94,98,113,127,140,162,162],"peak":16}};
+    const PORTAL_FINISH_MODEL = {"oks":{"fmax":0.81,"offsets":[-612,-612,-533,-500,-464,-425,-402,-388,-375,-356,-343,-332,-315,-298,-286,-279,-270,-259,-252,-243,-233,-222,-215,-210,-205,-198,-191,-185,-178,-172,-169,-164,-160,-156,-148,-145,-143,-139,-135,-130,-125,-122,-121,-116,-110,-107,-103,-99,-94,-91,-87,-83,-81,-76,-72,-66,-64,-60,-55,-54,-50,-46,-42,-40,-35,-32,-30,-27,-23,-21,-19,-15,-13,-11,-7,-3,-1,1,6,8,12,15,20,23,27,34,38,46,53,57,68,82,88,98,107,118,130,147,165,191,191],"service":[0,0,0,0,0,0,1,2,3,5,6,6,7,8,8,9,10,10,11,11,12,13,13,14,14,15,16,16,16,17,18,18,19,19,19,20,20,21,22,22,23,23,24,24,24,25,25,26,26,27,27,28,28,29,29,29,30,30,31,31,32,32,33,34,34,35,36,37,37,38,38,39,40,41,42,43,43,44,45,46,48,48,50,51,53,54,58,62,66,69,72,75,81,90,98,111,121,140,162,221,221],"peak":10,"pace":{"stepMin":30,"nights":[[0.0,0.0,0.0,0.0,0.046,0.073,0.11,0.156,0.193,0.257,0.303,0.349,0.376,0.44,0.495,0.523,0.569,0.661,0.716,0.771,0.826,0.835,0.835,0.835,0.835,0.835,0.835,0.835,0.835],[0.0,0.0,0.0,0.008,0.025,0.083,0.158,0.208,0.283,0.333,0.35,0.417,0.467,0.5,0.533,0.6,0.617,0.65,0.683,0.692,0.758,0.775,0.8,0.8,0.8,0.8,0.8,0.8,0.8],[0.0,0.01,0.031,0.052,0.073,0.104,0.177,0.26,0.292,0.365,0.417,0.49,0.531,0.573,0.604,0.656,0.677,0.708,0.74,0.802,0.833,0.833,0.833,0.833,0.833,0.833,0.833,0.833,0.833],[0.0,0.0,0.0,0.0,0.048,0.095,0.155,0.238,0.286,0.393,0.452,0.5,0.583,0.619,0.631,0.655,0.702,0.726,0.75,0.798,0.821,0.821,0.821,0.821,0.821,0.821,0.821,0.821,0.821],[0.0,0.0,0.0,0.0,0.035,0.059,0.094,0.188,0.235,0.282,0.329,0.341,0.435,0.506,0.553,0.612,0.671,0.729,0.788,0.812,0.812,0.812,0.812,0.812,0.812,0.812,0.812,0.812,0.812],[0.0,0.0,0.0,0.0,0.028,0.055,0.101,0.174,0.248,0.266,0.312,0.349,0.376,0.422,0.468,0.514,0.55,0.578,0.624,0.651,0.661,0.661,0.661,0.67,0.67,0.67,0.67,0.67,0.67],[0.0,0.0,0.0,0.0,0.046,0.102,0.111,0.167,0.222,0.269,0.315,0.398,0.454,0.519,0.546,0.611,0.657,0.704,0.741,0.759,0.787,0.815,0.824,0.824,0.824,0.833,0.833,0.833,0.843],[0.0,0.0,0.008,0.024,0.048,0.079,0.087,0.151,0.214,0.254,0.286,0.294,0.349,0.397,0.437,0.5,0.532,0.571,0.611,0.659,0.698,0.722,0.73,0.73,0.73,0.73,0.738,0.738,0.738],[0.0,0.0,0.0,0.0,0.035,0.096,0.096,0.148,0.2,0.217,0.313,0.33,0.374,0.409,0.487,0.574,0.609,0.626,0.713,0.748,0.783,0.8,0.809,0.826,0.826,0.826,0.826,0.826,0.826],[0.0,0.0,0.0,0.0,0.044,0.099,0.132,0.187,0.275,0.341,0.407,0.462,0.516,0.571,0.626,0.659,0.769,0.78,0.78,0.78,0.791,0.802,0.802,0.802,0.802,0.802,0.802,0.802,0.802],[0.0,0.0,0.027,0.067,0.093,0.147,0.16,0.213,0.28,0.387,0.4,0.427,0.48,0.547,0.6,0.627,0.693,0.733,0.747,0.76,0.773,0.773,0.773,0.773,0.773,0.773,0.773,0.773,0.773],[0.0,0.0,0.013,0.027,0.067,0.133,0.173,0.28,0.347,0.4,0.467,0.533,0.587,0.653,0.693,0.76,0.827,0.88,0.893,0.893,0.893,0.893,0.893,0.893,0.893,0.893,0.893,0.893,0.893],[0.0,0.0,0.0,0.012,0.047,0.093,0.163,0.221,0.279,0.36,0.407,0.442,0.535,0.593,0.651,0.686,0.733,0.814,0.837,0.837,0.837,0.837,0.837,0.837,0.837,0.837,0.837,0.837,0.837],[0.0,0.009,0.027,0.035,0.053,0.097,0.124,0.177,0.239,0.265,0.345,0.389,0.425,0.478,0.522,0.584,0.637,0.681,0.743,0.805,0.823,0.841,0.867,0.867,0.867,0.867,0.867,0.867,0.867]]}},"mn":{"fmax":0.877,"offsets":[-170,-170,-146,-130,-116,-106,-91,-80,-71,-60,-51,-46,-42,-38,-36,-34,-32,-31,-30,-29,-28,-27,-26,-24,-23,-22,-21,-21,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-7,-6,-6,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,13,14,15,17,18,19,20,22,24,25,26,27,30,32,33,35,37,38,40,43,44,46,48,50,51,54,56,58,61,65,68,71,75,79,83,88,95,102,109,119,130,152,152],"service":[0,0,0,0,0,0,0,0,1,2,3,4,4,5,6,7,7,8,8,9,9,10,10,10,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15,15,16,16,16,16,17,17,17,18,18,18,19,19,19,20,20,21,21,22,22,22,23,23,24,24,25,25,26,26,27,28,29,29,30,31,32,33,35,37,38,40,42,45,47,50,52,56,59,60,64,68,71,76,81,86,94,98,113,127,140,162,162],"peak":16,"pace":{"stepMin":30,"nights":[[0.0,0.0,0.0,0.0,0.0,0.014,0.021,0.062,0.139,0.188,0.222,0.257,0.312,0.403,0.438,0.5,0.576,0.646,0.681,0.757,0.799,0.847,0.861,0.868,0.868,0.868,0.868,0.868,0.868],[0.0,0.0,0.0,0.0,0.0,0.0,0.013,0.046,0.112,0.145,0.217,0.283,0.395,0.48,0.533,0.559,0.618,0.724,0.763,0.809,0.842,0.855,0.855,0.855,0.855,0.855,0.855,0.855,0.855],[0.0,0.0,0.0,0.0,0.01,0.01,0.021,0.062,0.156,0.188,0.229,0.312,0.365,0.438,0.51,0.594,0.646,0.708,0.833,0.875,0.885,0.885,0.885,0.885,0.885,0.885,0.885,0.885,0.885],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.082,0.165,0.247,0.318,0.365,0.471,0.565,0.635,0.671,0.729,0.788,0.812,0.812,0.835,0.835,0.835,0.835,0.835,0.835,0.835,0.835,0.835],[0.0,0.0,0.0,0.0,0.0,0.0,0.025,0.076,0.203,0.278,0.329,0.456,0.544,0.62,0.671,0.759,0.848,0.899,0.911,0.924,0.924,0.924,0.924,0.924,0.924,0.924,0.924,0.924,0.924],[0.0,0.0,0.0,0.0,0.0,0.0,0.025,0.058,0.133,0.2,0.25,0.308,0.383,0.433,0.542,0.658,0.733,0.775,0.842,0.858,0.875,0.883,0.883,0.883,0.883,0.883,0.883,0.883,0.883],[0.0,0.0,0.0,0.0,0.0,0.007,0.014,0.098,0.161,0.238,0.287,0.357,0.427,0.49,0.545,0.622,0.692,0.755,0.804,0.853,0.874,0.874,0.874,0.874,0.874,0.874,0.874,0.874,0.874],[0.0,0.0,0.0,0.0,0.0,0.007,0.007,0.067,0.104,0.178,0.207,0.281,0.326,0.415,0.496,0.556,0.6,0.704,0.733,0.815,0.844,0.859,0.859,0.867,0.867,0.867,0.867,0.867,0.867],[0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.072,0.115,0.165,0.237,0.288,0.331,0.403,0.453,0.532,0.59,0.64,0.683,0.755,0.777,0.799,0.806,0.806,0.806,0.806,0.806,0.806,0.806],[0.0,0.0,0.0,0.0,0.0,0.0,0.01,0.067,0.105,0.181,0.219,0.286,0.314,0.362,0.4,0.486,0.524,0.629,0.676,0.771,0.79,0.81,0.848,0.857,0.867,0.867,0.867,0.867,0.867],[0.0,0.0,0.0,0.0,0.0,0.0,0.011,0.109,0.13,0.228,0.315,0.413,0.457,0.565,0.609,0.674,0.717,0.739,0.837,0.87,0.88,0.913,0.913,0.913,0.913,0.913,0.913,0.913,0.913],[0.0,0.0,0.0,0.0,0.0,0.011,0.033,0.111,0.233,0.333,0.467,0.544,0.644,0.722,0.767,0.8,0.867,0.878,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9,0.9],[0.0,0.0,0.0,0.0,0.0,0.008,0.041,0.098,0.197,0.262,0.328,0.385,0.475,0.582,0.623,0.721,0.77,0.828,0.893,0.91,0.918,0.918,0.918,0.918,0.918,0.918,0.918,0.918,0.918],[0.0,0.0,0.0,0.0,0.0,0.0,0.015,0.062,0.154,0.223,0.292,0.392,0.492,0.554,0.6,0.731,0.777,0.862,0.892,0.908,0.915,0.915,0.915,0.915,0.915,0.915,0.915,0.915,0.915]]}}};
     // Fraction of the peak door count that actually turns trucks all night (calibrated in backtests).
     const PORTAL_FINISH_CAPACITY = 0.5;
     const PORTAL_FINISH_SIMS = 120;
@@ -16237,6 +16477,61 @@
       const d = new Date(ms);
       const h = d.getHours();
       return (h % 12 || 12) + ":" + String(d.getMinutes()).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
+    }
+
+    // Where tonight's progress sits among recent nights at the same hour. `done` is
+    // trucks finished so far, `total` is trucks scheduled tonight (rejected excluded),
+    // `startMs` is the 7 PM shift start. Backtested on 28 shifts, share-done at a given
+    // hour tracks how late the night ends (rank correlation ~-0.6 to -0.95 from
+    // midnight on). Returns null when there is nothing meaningful to compare yet.
+    function portalPaceVsUsual(siteKey, done, total, now, startMs) {
+      const model = PORTAL_FINISH_MODEL[siteKey];
+      const pace = model && model.pace;
+      if (!pace || !pace.nights || !pace.nights.length || !total || !startMs) return null;
+      const steps = pace.nights[0].length;
+      const pos = (now - startMs) / (pace.stepMin * 60000);
+      if (pos < 0) return { skip: "early" };
+      if (pos > steps - 1) return { skip: "late" };                 // past the tracked night (9 AM)
+      const i = Math.floor(pos), frac = pos - i;
+      const hist = pace.nights.map(function(night) {
+        const a = night[i], b = night[Math.min(i + 1, steps - 1)];
+        return a + (b - a) * frac;
+      }).sort(function(x, y) { return x - y; });
+      const n = hist.length;
+      const usual = n % 2 ? hist[n >> 1] : (hist[n / 2 - 1] + hist[n / 2]) / 2;
+      if (usual < 0.03) return { skip: "early" };                   // almost nothing is done on a normal night yet
+      const tonight = done / total;
+      let beaten = 0;
+      hist.forEach(function(v) {
+        if (v < tonight - 1e-9) beaten += 1;
+        else if (Math.abs(v - tonight) <= 1e-9) beaten += 0.5;
+      });
+      const share = beaten / n;
+      return {
+        status: share < 0.25 ? "behind" : share > 0.75 ? "ahead" : "on",
+        done: done, usualCount: Math.round(usual * total), fasterThan: Math.round(beaten), n: n
+      };
+    }
+
+    function portalRenderPaceCard(siteKey, done, total, now, startMs) {
+      const prefix = siteKey === "mn" ? "portalMn" : "portal";
+      const valueEl = document.getElementById(prefix + "UsualValue");
+      const noteEl = document.getElementById(prefix + "UsualNote");
+      const cardEl = document.getElementById(prefix + "UsualCard");
+      if (!valueEl || !noteEl) return;
+      const r = portalPaceVsUsual(siteKey, done, total, now, startMs);
+      const colors = { behind: "#c53030", on: "", ahead: "#2f855a" };
+      if (!r || r.skip) {
+        valueEl.textContent = "--";
+        valueEl.style.color = "";
+        noteEl.textContent = r && r.skip === "late" ? "Past the 9 AM tracked window." : "Too early to compare with recent nights.";
+        if (cardEl) cardEl.style.borderColor = "";
+        return;
+      }
+      valueEl.textContent = r.status === "behind" ? "Behind usual" : r.status === "ahead" ? "Ahead of usual" : "On usual pace";
+      valueEl.style.color = colors[r.status];
+      noteEl.textContent = r.done + " done vs ~" + r.usualCount + " usual by now | faster than " + r.fasterThan + " of " + r.n + " recent nights";
+      if (cardEl) cardEl.style.borderColor = r.status === "behind" ? "#c53030" : r.status === "ahead" ? "#2f855a" : "";
     }
 
     // `avgsOverride` lets a site use its own history (Minnesota passes its own
@@ -17465,6 +17760,8 @@
         if (els.portalEstComplete) els.portalEstComplete.textContent = " - ";
         if (els.portalEstNote) els.portalEstNote.textContent = "Clock in trucks above.";
       }
+
+      portalRenderPaceCard("oks", complete.length, scheduledDmsTotal, now, shiftStartMs);
 
       // Color the Est. card and show pace banner vs 4AM goal
       const behindMs = (estMs !== null && stillRunning > 0) ? Math.max(0, estMs - goal4amMs) : 0;
@@ -21179,6 +21476,12 @@
       const canUseUploads = ["admin", "manager", "teamlead", "work", "oks", "minnesota"].includes(role);
       document.querySelectorAll(".work-only-btn").forEach((button) => {
         button.classList.toggle("role-hidden", !canUseUploads);
+      });
+      // Mirrors _require_announce_write in main.py -- clerks can read a pinned
+      // announcement but not post or clear one.
+      const canAnnounce = ["admin", "manager", "teamlead", "oks", "minnesota"].includes(role);
+      document.querySelectorAll(".announce-write-only").forEach((el) => {
+        el.classList.toggle("role-hidden", !canAnnounce);
       });
       if (els.authChip) els.authChip.hidden = !state.auth.username;
       if (els.authUserLabel) {
