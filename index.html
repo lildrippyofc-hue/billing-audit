@@ -11335,10 +11335,18 @@
 
       if (uploadBtn) uploadBtn.disabled = !hasRows || hasBlockingErrors || !confirmBox || !confirmBox.checked;
       if (status) {
-        status.className = "portal-schedule-status" + (hasBlockingErrors ? " bad" : hasRows ? " good" : "");
-        if (!hasRows) status.textContent = "Attach a truck schedule to begin.";
-        else if (hasBlockingErrors) status.textContent = schedule.fileName + " loaded with " + schedule.errors.length + " issue(s). Fix the file before uploading.";
-        else status.textContent = schedule.fileName + " ready: " + schedule.rows.length + " schedule row(s) will be checked against DMS before upload.";
+        if (schedule.uploadSummaryText) {
+          // A result from an actual upload attempt takes priority over the
+          // generic "ready to upload" message — otherwise the finally-block
+          // re-render below always clobbers the result the user just got.
+          status.className = "portal-schedule-status " + (schedule.uploadSummaryBad ? "bad" : "good");
+          status.textContent = schedule.uploadSummaryText;
+        } else {
+          status.className = "portal-schedule-status" + (hasBlockingErrors ? " bad" : hasRows ? " good" : "");
+          if (!hasRows) status.textContent = "Attach a truck schedule to begin.";
+          else if (hasBlockingErrors) status.textContent = schedule.fileName + " loaded with " + schedule.errors.length + " issue(s). Fix the file before uploading.";
+          else status.textContent = schedule.fileName + " ready: " + schedule.rows.length + " schedule row(s) will be checked against DMS before upload.";
+        }
       }
       if (!table) return;
       const thead = table.querySelector("thead");
@@ -11440,18 +11448,16 @@
         const data = await resp.json().catch(function() { return {}; });
         if (!resp.ok) throw new Error(data.detail || data.error || "DMS schedule upload failed.");
         state.portal.scheduleUpload.uploaded = data.results || [];
-        if (els.portalScheduleStatus) {
-          els.portalScheduleStatus.className = "portal-schedule-status " + (data.failed ? "warn" : "good");
+        {
           const modelNote = data.model_error ? " DMS upload model was unavailable, so the known Load Details insert format was used." : "";
-          els.portalScheduleStatus.textContent = "Upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
+          state.portal.scheduleUpload.uploadSummaryText = "Upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
+          state.portal.scheduleUpload.uploadSummaryBad = false;
         }
         showToast("Schedule upload finished.");
         portalPullLiveDms(true);
       } catch (error) {
-        if (els.portalScheduleStatus) {
-          els.portalScheduleStatus.className = "portal-schedule-status bad";
-          els.portalScheduleStatus.textContent = error.message || "DMS schedule upload failed.";
-        }
+        state.portal.scheduleUpload.uploadSummaryText = error.message || "DMS schedule upload failed.";
+        state.portal.scheduleUpload.uploadSummaryBad = true;
         showToast(error.message || "DMS schedule upload failed.");
       } finally {
         if (els.portalScheduleUploadBtn) {
