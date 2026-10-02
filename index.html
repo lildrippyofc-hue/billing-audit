@@ -4575,6 +4575,15 @@
             <div class="dock-list" id="projectedBreakdownList"></div>
           </section>
 
+          <section class="panel chart-panel-wide" aria-labelledby="projectedRollOffTitle">
+            <div class="panel-header">
+              <h2 id="projectedRollOffTitle">Projected Roll Offs Tonight</h2>
+              <span class="panel-kicker" id="projectedRollOffKicker">Based on each supplier's breakdown history</span>
+            </div>
+            <div class="friendly-note" style="margin:-2px 0 10px;">Trucks not yet marked as a breakdown, projected as a likely Roll Off when that supplier's historical breakdown rate is below the 70% cutoff Roll Off Audit uses &mdash; the same supplier history, read the other way.</div>
+            <div class="dock-list" id="projectedRollOffList"></div>
+          </section>
+
           <section class="panel chart-panel-wide" aria-labelledby="combinedPalletsTitle">
             <div class="panel-header">
               <h2 id="combinedPalletsTitle">Total Pallets Tonight (incl. Projected Breakdowns)</h2>
@@ -8397,6 +8406,8 @@
       dockPalletsKicker: document.getElementById("dockPalletsKicker"),
       projectedBreakdownList: document.getElementById("projectedBreakdownList"),
       projectedBreakdownKicker: document.getElementById("projectedBreakdownKicker"),
+      projectedRollOffList: document.getElementById("projectedRollOffList"),
+      projectedRollOffKicker: document.getElementById("projectedRollOffKicker"),
       combinedPalletsList: document.getElementById("combinedPalletsList"),
       combinedPalletsKicker: document.getElementById("combinedPalletsKicker"),
       hourTotalChart: document.getElementById("hourTotalChart"),
@@ -13437,6 +13448,73 @@
       });
     }
 
+    // Same per-truck supplier-history read as projectedBreakdownsByDockType(), but
+    // classified the other way: a truck is a likely Roll Off when its supplier's
+    // historical breakdown rate falls below the 0.70 cutoff Roll Off Audit itself uses
+    // (see historyBreakdownRate / "Possible Roll Off" in the Truck Finder logic).
+    // A truck already coded as a breakdown tonight is excluded -- it can't be a roll off.
+    function projectedRollOffsByDockType() {
+      const totals = new Map();
+      let totalTrucks = 0, totalMatched = 0, totalRollOffs = 0;
+      state.normalizedRows.forEach((row) => {
+        const key = row.dockType;
+        if (!key) return;
+        if (row.breakdownPallets > 0) return;
+        totalTrucks += 1;
+        const history = supplierHistoryFor(row.supplier);
+        const rate = history && history.total >= PROJECTED_BREAKDOWN_MIN_HISTORY ? historyBreakdownRate(history) : null;
+        const entry = totals.get(key) || { trucks: 0, matched: 0, rollOffs: 0 };
+        entry.trucks += 1;
+        if (rate !== null) {
+          entry.matched += 1;
+          totalMatched += 1;
+          if (rate < 0.70) { entry.rollOffs += 1; totalRollOffs += 1; }
+        }
+        totals.set(key, entry);
+      });
+
+      if (totals.size > 1) totals.delete("Total Trucks");
+
+      const rows = [...totals.entries()]
+        .map(([label, v]) => ({ label, trucks: v.trucks, matched: v.matched, rollOffs: v.rollOffs }))
+        .filter((item) => item.rollOffs > 0)
+        .sort((a, b) => b.rollOffs - a.rollOffs || a.label.localeCompare(b.label));
+
+      return { rows, totalTrucks, totalMatched, totalRollOffs };
+    }
+
+    function renderProjectedRollOffList() {
+      const { rows: totals, totalTrucks, totalMatched, totalRollOffs } = projectedRollOffsByDockType();
+      els.projectedRollOffKicker.textContent = totalMatched
+        ? `~${formatNumber(totalRollOffs)} likely roll off${totalRollOffs === 1 ? "" : "s"} tonight (${formatNumber(totalMatched)} of ${formatNumber(totalTrucks)} scheduled trucks matched to supplier history)`
+        : "Not enough supplier history to project tonight's roll offs";
+      els.projectedRollOffList.innerHTML = "";
+
+      if (!totals.length) {
+        els.projectedRollOffList.appendChild(emptySmall("No suppliers tonight matched enough history to project a roll off"));
+        return;
+      }
+
+      const maxRollOffs = Math.max(...totals.map((item) => item.rollOffs), 1);
+      totals.forEach((item) => {
+        const percent = Math.round((item.rollOffs / maxRollOffs) * 100);
+        const row = document.createElement("div");
+        row.className = "dock-row";
+        row.innerHTML = `
+          <div>
+            <div class="dock-name"></div>
+            <div class="dock-meta"></div>
+          </div>
+          <div class="dock-count"></div>
+          <div class="dock-bar"><span style="width: ${Math.max(percent, 2)}%"></span></div>
+        `;
+        row.querySelector(".dock-name").textContent = item.label;
+        row.querySelector(".dock-meta").textContent = `${formatNumber(item.matched)} of ${formatNumber(item.trucks)} trucks matched`;
+        row.querySelector(".dock-count").textContent = `${formatNumber(item.rollOffs)} truck${item.rollOffs === 1 ? "" : "s"}`;
+        els.projectedRollOffList.appendChild(row);
+      });
+    }
+
     // The full picture for staffing: scheduled pallets, plus breakdowns already coded
     // tonight, plus breakdowns projected from supplier history -- combined per dock
     // type. Merges aggregatePalletsByDockType() (actual) with
@@ -13811,6 +13889,7 @@
 
       renderDockPalletsList();
       renderProjectedBreakdownList();
+      renderProjectedRollOffList();
       renderCombinedPalletsList();
     }
 
