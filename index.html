@@ -812,10 +812,11 @@
     :root.dark .door-tile.ns-yellow .door-ns { color:#f6e05e; }
     :root.dark .door-tile.ns-red .door-ns { color:#feb2b2; }
     .door-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin:0 0 10px; }
-    .door-sort { display:inline-flex; border:1px solid var(--border,#cbd5e0); border-radius:8px; overflow:hidden; }
-    .door-sort button { border:0; background:transparent; padding:6px 14px; font-weight:700; font-size:0.82em; cursor:pointer; color:var(--text,#2d3748); }
-    .door-sort button.active { background:#1e3a5f; color:#fff; }
-    :root.dark .door-sort button.active { background:#2b6cb0; }
+    .door-sortbox { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px 8px; font-size:0.82em; font-weight:700; color:var(--text,#2d3748); }
+    .door-sort-select { padding:5px 8px; border:1px solid var(--border,#cbd5e0); border-radius:6px; background:transparent; color:inherit; font:inherit; max-width:100%; }
+    .door-sort-select option { color:#1a202c; background:#fff; }
+    .door-sort-rev[aria-pressed="true"] { background:#1e3a5f; color:#fff; border-color:#1e3a5f; }
+    :root.dark .door-sort-rev[aria-pressed="true"] { background:#2b6cb0; border-color:#2b6cb0; }
     .door-ns-set { display:inline-flex; align-items:center; gap:6px; font-size:0.8em; font-weight:700; color:var(--text,#2d3748); }
     .door-ns-set input { width:54px; padding:4px 6px; border:1px solid var(--border,#cbd5e0); border-radius:6px; background:transparent; color:inherit; font:inherit; }
     .door-sort-note { font-size:0.76em; color:var(--muted,#718096); margin:-4px 0 10px; }
@@ -6879,10 +6880,9 @@
             <span id="portalSheetsSyncStatus" class="sheets-sync-idle" style="font-size:0.78em;"></span>
           </div>
           <div class="door-controls">
-            <div class="door-sort" id="portalDoorSort" role="group" aria-label="Sort the door map">
-              <button type="button" data-sort="door" class="active">Door #</button>
-              <button type="button" data-sort="priority">Priority</button>
-            </div>
+            <span class="door-sortbox"><label for="portalDoorSort">Sort by</label>
+              <select id="portalDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
             <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red">Not started: yellow after
               <input id="portalNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
               <input id="portalNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
@@ -6943,6 +6943,9 @@
           <div class="portal-vendor-toolbar">
             <div class="table-title">Shift Completion &amp; Performance by Zone</div>
             <span id="portalZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+            <span class="door-sortbox" title="Sorts every zone's door map (shared with the Door Map tab)"><label for="portalZonesSort">Sort doors by</label>
+              <select id="portalZonesSort" class="door-sort-select" aria-label="Sort the zone door maps"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
           </div>
           <div class="zone-building" id="portalZonesBuilding"></div>
           <div class="zone-grid" id="portalZonesGrid"></div>
@@ -15522,6 +15525,7 @@
         carrier: String(row.carrier || "").trim(),
         comments: String(row.comments || "").trim(),
         statusText: String(row.statusText || row.drstat || row.status || "").trim(),
+        pallets: Number.isFinite(Number(row.pallets)) && row.pallets !== null && row.pallets !== "" ? Number(row.pallets) : null,
         appointmentIso: row.appointmentIso || null,
         checkInIso: row.checkInIso || null,
         driverAtDoorIso: row.driverAtDoorIso || null,
@@ -17761,8 +17765,92 @@
       return tier * 10000 + Math.min(9999, Math.max(0, within));
     }
 
+    // Door map sort options, shared by the whole-dock map and every zone's map. Open doors always
+    // go last (except when sorting by door number) and ties fall back to door number.
+    const PORTAL_DOOR_SORTS = [
+      { key: "door", label: "Door #", note: "" },
+      { key: "priority", label: "Priority (most urgent first)", note: "Most urgent first: red not-started, detention, yellow not-started, start-now, detention risk, then trucks waiting to start, unloading, and receiving." },
+      { key: "color", label: "Color (red, yellow, green)", note: "Red doors first, then yellow, then green; the most urgent first within each color." },
+      { key: "wait", label: "Longest on the door", note: "Trucks that have been on their door the longest come first." },
+      { key: "stage", label: "Stage (waiting first)", note: "Trucks waiting to start first, then unloading, then receiving; longest on the door first within each stage." },
+      { key: "supplier", label: "Supplier A to Z", note: "Suppliers in alphabetical order." },
+      { key: "pallets", label: "Biggest load first", note: "Largest pallet count first; loads with no pallet count last." },
+      { key: "unloader", label: "Unloader A to Z", note: "Unloader names in alphabetical order; doors with no unloader last." }
+    ];
+
     function portalDoorSortMode() {
-      return safeLocalStorageGet("portalDoorSort") === "priority" ? "priority" : "door";
+      const stored = safeLocalStorageGet("portalDoorSort");
+      return PORTAL_DOOR_SORTS.some(function(s) { return s.key === stored; }) ? stored : "door";
+    }
+    function portalDoorSortReverse() { return safeLocalStorageGet("portalDoorSortRev") === "1"; }
+
+    // The color a door shows: red or yellow from a not-started wait or a detention status, else green.
+    function portalDoorColor(r, now, th) {
+      const ns = portalNotStartedInfo(r, now, th);
+      const cls = ({ detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" })[r.status] || "blue";
+      if ((ns && ns.level === "red") || cls === "red") return "red";
+      if ((ns && ns.level === "yellow") || cls === "yellow") return "yellow";
+      return cls;
+    }
+
+    // 0 = at the door waiting to start, 1 = checked in, 2 = unloading, 3 = unloaded, 4 = receiving.
+    function portalDoorStageRank(r) {
+      if (r.receivingStartMs || r.receivingFinishMs) return 4;
+      if (r.unloadFinishMs) return 3;
+      if (r.unloadStartMs) return 2;
+      return r.driverAtDoorMs ? 0 : 1;
+    }
+
+    // Orders door numbers for the chosen sort. `truckFor(dn)` returns the truck on that door or null.
+    function portalSortDoors(doors, truckFor, now, th) {
+      const mode = portalDoorSortMode(), reverse = portalDoorSortReverse();
+      const items = doors.map(function(dn) { return { dn: dn, r: truckFor(dn) || null }; });
+      const supplier = function(x) { return String((x.r && (x.r.supplier || x.r.ref)) || ""); };
+      const unloader = function(x) {
+        const info = x.r && (state.portal.unloaders || {})[String(x.r.ref || x.r.po || x.dn)];
+        return info && info.unloader ? info.unloader : "";
+      };
+      const age = function(x) { return portalDoorAgeMinutes(x.r, now) || 0; };
+      const colorRank = { red: 0, yellow: 1, green: 2, blue: 3 };
+      const text = function(a, b) { return a.localeCompare(b, undefined, { sensitivity: "base" }); };
+      items.sort(function(a, b) {
+        if (mode !== "door") {
+          if (!a.r && !b.r) return a.dn - b.dn;                                          // two open doors: by number
+          if (!a.r !== !b.r) return a.r ? -1 : 1;                                        // open doors last
+        }
+        let c;
+        if (mode === "priority") c = portalDoorPriority(b.r, now, th) - portalDoorPriority(a.r, now, th);
+        else if (mode === "color") c = colorRank[portalDoorColor(a.r, now, th)] - colorRank[portalDoorColor(b.r, now, th)] || portalDoorPriority(b.r, now, th) - portalDoorPriority(a.r, now, th);
+        else if (mode === "wait") c = age(b) - age(a);
+        else if (mode === "stage") c = portalDoorStageRank(a.r) - portalDoorStageRank(b.r) || age(b) - age(a);
+        else if (mode === "supplier") c = text(supplier(a), supplier(b));
+        else if (mode === "pallets") {
+          const pa = Number.isFinite(a.r.pallets), pb = Number.isFinite(b.r.pallets);
+          if (pa !== pb) return pa ? -1 : 1;                                             // unknown size last
+          c = pa ? b.r.pallets - a.r.pallets : 0;
+        } else if (mode === "unloader") {
+          const ua = unloader(a), ub = unloader(b);
+          if (!ua !== !ub) return ua ? -1 : 1;                                           // no unloader last
+          c = text(ua, ub);
+        } else c = a.dn - b.dn;
+        if (reverse) c = -c;
+        return c || a.dn - b.dn;
+      });
+      return items.map(function(x) { return x.dn; });
+    }
+
+    function portalDoorSortNoteText() {
+      const mode = portalDoorSortMode(), reverse = portalDoorSortReverse();
+      const entry = PORTAL_DOOR_SORTS.filter(function(s) { return s.key === mode; })[0];
+      if (mode === "door") return reverse ? "Highest door number first." : "";
+      return entry.note + " Open doors last." + (reverse ? " Order reversed." : "");
+    }
+
+    function portalDoorSortLabel() {
+      const mode = portalDoorSortMode(), reverse = portalDoorSortReverse();
+      if (mode === "door") return reverse ? "highest door number first" : "by door number";
+      const entry = PORTAL_DOOR_SORTS.filter(function(s) { return s.key === mode; })[0];
+      return entry.label.toLowerCase() + (reverse ? ", reversed" : "");
     }
 
     // The truck that "owns" each door right now: arrived, not finished, most urgent status wins.
@@ -17870,17 +17958,9 @@
         els.portalDoorMap.innerHTML = '<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load today\'s scheduled doors.</div>';
         return;
       }
-      const byPriority = portalDoorSortMode() === "priority";
-      const ordered = allDoors.slice();
-      if (byPriority) {
-        ordered.sort(function(a, b) { return portalDoorPriority(byDoor[b], nowMs, th) - portalDoorPriority(byDoor[a], nowMs, th) || a - b; });
-      }
+      const ordered = portalSortDoors(allDoors, function(dn) { return byDoor[dn]; }, nowMs, th);
       const sortNote = document.getElementById("portalDoorSortNote");
-      if (sortNote) {
-        sortNote.textContent = byPriority
-          ? "Most urgent first: red not-started, detention, yellow not-started, start-now, detention risk, then trucks waiting to start, unloading, and receiving. Open doors last."
-          : "";
-      }
+      if (sortNote) sortNote.textContent = portalDoorSortNoteText();
       els.portalDoorMap.innerHTML = ordered.map(function(dn) { return portalDoorTileHtml(dn, byDoor[dn], nowMs, th); }).join("");
     }
 
@@ -18258,7 +18338,6 @@
       const byDoor = portalBuildByDoor(liveRows);
       state.portal.byDoor = byDoor;
       const th = portalNsThresholds();
-      const byPriority = portalDoorSortMode() === "priority";
       const zoneOf = function(r) { const loc = portalZoneLocate(r && r.area); return loc ? loc.group : -1; };
       if (meta) meta.textContent = z.total.completed + " of " + z.total.scheduled + " trucks complete (" + z.total.pct + "%) across the whole shift";
 
@@ -18284,9 +18363,8 @@
         // This zone's doors: its usual home doors plus any door one of its trucks is on right now.
         const doorSet = new Set(((PORTAL_ZONE_MODEL.zoneDoors || {})[g.def.key] || []).slice());
         Object.keys(byDoor).forEach(function(d) { if (zoneOf(byDoor[d]) === gi) doorSet.add(Number(d)); });
-        const zoneDoors = Array.from(doorSet).sort(function(a, b) { return a - b; });
         const mine = function(dn) { return byDoor[dn] && zoneOf(byDoor[dn]) === gi ? byDoor[dn] : null; };
-        if (byPriority) zoneDoors.sort(function(a, b) { return portalDoorPriority(mine(b), nowMs, th) - portalDoorPriority(mine(a), nowMs, th) || a - b; });
+        const zoneDoors = portalSortDoors(Array.from(doorSet), mine, nowMs, th);
         const nsInfos = zoneDoors.map(function(dn) { return portalNotStartedInfo(mine(dn), nowMs, th); }).filter(Boolean);
         const nsRedN = nsInfos.filter(function(n) { return n.level === "red"; }).length;
         const nsYellowN = nsInfos.length - nsRedN;
@@ -18330,7 +18408,7 @@
           + kpi(String(waitingForDoor), "Waiting for a door")
           + kpi(inUse + " of " + zoneDoors.length, "Doors in use")
           + '</div>'
-          + '<div class="zone-doors"><div class="zone-doors-head">Door map &middot; ' + zoneDoors.length + ' doors &middot; ' + (byPriority ? 'most urgent first' : 'by door number') + '</div>'
+          + '<div class="zone-doors"><div class="zone-doors-head">Door map &middot; ' + zoneDoors.length + ' doors &middot; ' + escapeHtml(portalDoorSortLabel()) + '</div>'
           + (zoneDoors.length ? '<div class="door-map zone-door-map">' + doorTiles + '</div>' : '<div class="door-empty">No doors known for this zone yet.</div>')
           + '</div>'
           + (g.areas.length > 1
@@ -18371,8 +18449,14 @@
 
     // Door Map sort buttons and the not-started thresholds.
     function portalSyncDoorControls() {
-      const mode = portalDoorSortMode();
-      document.querySelectorAll("#portalDoorSort button").forEach(function(b) { b.classList.toggle("active", b.dataset.sort === mode); });
+      const mode = portalDoorSortMode(), reversed = portalDoorSortReverse();
+      document.querySelectorAll(".door-sort-select").forEach(function(sel) {
+        if (!sel.options.length) {
+          PORTAL_DOOR_SORTS.forEach(function(s) { const o = document.createElement("option"); o.value = s.key; o.textContent = s.label; sel.appendChild(o); });
+        }
+        sel.value = mode;
+      });
+      document.querySelectorAll(".door-sort-rev").forEach(function(b) { b.setAttribute("aria-pressed", String(reversed)); });
       const th = portalNsThresholds();
       const y = document.getElementById("portalNsYellow"), r = document.getElementById("portalNsRed");
       if (y && document.activeElement !== y) y.value = th.yellow;
@@ -18386,10 +18470,19 @@
       if (state.portal.portalView === "zones") renderPortalZonesView();
       try { renderAlertsTab(); } catch (err) { console.error(err); }
     }
+    // The Door Map tab and the Zones tab each have a sort box; both drive the same saved setting.
+    document.addEventListener("change", function(e) {
+      if (e.target.classList && e.target.classList.contains("door-sort-select")) {
+        safeLocalStorageSet("portalDoorSort", e.target.value);
+        portalDoorControlsChanged();
+      }
+    });
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".door-sort-rev")) return;
+      safeLocalStorageSet("portalDoorSortRev", portalDoorSortReverse() ? "0" : "1");
+      portalDoorControlsChanged();
+    });
     (function() {
-      document.querySelectorAll("#portalDoorSort button").forEach(function(b) {
-        b.addEventListener("click", function() { safeLocalStorageSet("portalDoorSort", b.dataset.sort); portalDoorControlsChanged(); });
-      });
       [["portalNsYellow", "portalNsYellow"], ["portalNsRed", "portalNsRed"]].forEach(function(p) {
         const input = document.getElementById(p[0]);
         if (input) input.addEventListener("change", function() { safeLocalStorageSet(p[1], input.value); portalDoorControlsChanged(); });
