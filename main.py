@@ -196,6 +196,22 @@ def init_db():
             PRIMARY KEY (site, business_date, truck_key)
         );
 
+        CREATE TABLE IF NOT EXISTS load_unloaders (
+            site           TEXT    NOT NULL,
+            business_date  TEXT    NOT NULL,
+            truck_key      TEXT    NOT NULL,
+            unloader       TEXT    NOT NULL,
+            supplier       TEXT    NOT NULL DEFAULT '',
+            area           TEXT    NOT NULL DEFAULT '',
+            door           TEXT    NOT NULL DEFAULT '',
+            pallets        INTEGER,
+            unload_min     REAL,
+            updated_by     TEXT    NOT NULL DEFAULT '',
+            updated_at     TEXT    NOT NULL,
+            PRIMARY KEY (site, business_date, truck_key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_load_unloaders_site_name ON load_unloaders(site, unloader);
+
         CREATE TABLE IF NOT EXISTS portal_chat (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             site        TEXT    NOT NULL,
@@ -671,6 +687,10 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
         merged.get("recfin") or merged.get("receivingFinish") or merged.get("receiving_finish")
     )
     driver_left = _parse_dms_time(merged.get("drleft") or merged.get("driverLeft"))
+    try:
+        pallets = int(float(merged.get("qty"))) if merged.get("qty") not in (None, "") else None
+    except (TypeError, ValueError):
+        pallets = None
     ref = (
         merged.get("trkNum") or merged.get("trk") or merged.get("truck")
         or merged.get("cabNum") or merged.get("rowid") or merged.get("poNum") or ""
@@ -685,6 +705,7 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
         "carrier": str(merged.get("trnum") or merged.get("carr") or "").strip(),
         "po": str(merged.get("poNum") or merged.get("po") or "").strip(),
         "area": str(merged.get("area") or "").strip(),
+        "pallets": pallets,
         "comments": str(merged.get("comments") or merged.get("notes") or "").strip(),
         "appointmentIso": appointment,
         "checkInIso": check_in,
@@ -772,6 +793,54 @@ def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str, site: str = "
     except Exception:
         pass
     return inserted
+
+
+def _sync_unloader_stats(trucks: List[Dict[str, Any]], shift_date: str, site: str = "OKS") -> None:
+    """Refresh pallets / unload time on loads that have an unloader assigned, so
+    Performance by Name stays current as DMS stamps arrive. Best-effort."""
+    try:
+        conn = get_db()
+        assigned = {
+            r[0] for r in conn.execute(
+                "SELECT truck_key FROM load_unloaders WHERE site=? AND business_date=?", (site, shift_date)
+            ).fetchall()
+        }
+        if not assigned:
+            conn.close()
+            return
+        grouped: Dict[str, Dict[str, Any]] = {}
+        for t in trucks:
+            key = str(t.get("ref") or t.get("po") or t.get("door") or "").strip()
+            if key not in assigned:
+                continue
+            g = grouped.setdefault(key, {"supplier": "", "area": "", "door": "", "pallets": None, "start": None, "finish": None})
+            g["supplier"] = g["supplier"] or t.get("supplier") or ""
+            g["area"] = g["area"] or t.get("area") or ""
+            g["door"] = g["door"] or t.get("door") or ""
+            if t.get("pallets") is not None:
+                g["pallets"] = (g["pallets"] or 0) + t["pallets"]
+            if t.get("unloadStartIso") and (g["start"] is None or t["unloadStartIso"] < g["start"]):
+                g["start"] = t["unloadStartIso"]
+            if t.get("unloadFinishIso") and (g["finish"] is None or t["unloadFinishIso"] > g["finish"]):
+                g["finish"] = t["unloadFinishIso"]
+        for key, g in grouped.items():
+            unload_min = None
+            if g["start"] and g["finish"]:
+                try:
+                    mins = (datetime.fromisoformat(g["finish"]) - datetime.fromisoformat(g["start"])).total_seconds() / 60
+                    if 0 < mins <= 480:
+                        unload_min = round(mins, 1)
+                except Exception:
+                    pass
+            conn.execute(
+                "UPDATE load_unloaders SET supplier=?, area=?, door=?, pallets=?, unload_min=? "
+                "WHERE site=? AND business_date=? AND truck_key=?",
+                (g["supplier"][:120], g["area"][:40], str(g["door"])[:20], g["pallets"], unload_min, site, shift_date, key),
+            )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -1191,6 +1260,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
     # Learn from completed trucks automatically (deduped) so the completion
     # estimate sharpens over time with zero manual save.
     _learn_from_dms(board, info)
+    _sync_unloader_stats(board, info)
     # Counts for the end-of-shift report.
     def _stat(st):
         return str(st.get("drstat") or "").strip().lower()
@@ -3403,6 +3473,153 @@ def save_door_note(body: DoorNoteIn, site: str = "OKS", username: str = Depends(
     conn.commit()
     conn.close()
     return {"ok": True, "updated_by": username, "updated_at": now_str}
+
+
+# ── Unloader names (OKS only) ───────────────────────────────────────────────
+# An optional name attached to a load from the door map popup. Everyone on OKS
+# My Portal sees it; Performance by Name aggregates it per person.
+
+_require_unloader_write = _require_roles("oks", "manager", "teamlead", "clerk")
+_require_performance_read = _require_roles("oks", "manager", "teamlead")
+
+
+def _clean_unloader_name(raw: str) -> str:
+    name = re.sub(r"\s+", " ", str(raw or "")).strip()[:40]
+    if name and (name.islower() or name.isupper()):
+        name = name.title()
+    return name
+
+
+def _unloader_date_iso(business_date: str) -> Optional[str]:
+    for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(business_date.strip(), fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    return None
+
+
+class UnloaderIn(BaseModel):
+    business_date: str
+    truck_key: str
+    unloader: str = ""
+    door: str = ""
+    supplier: str = ""
+    area: str = ""
+
+
+@app.get("/api/portal/unloaders")
+def get_unloaders(business_date: str = "", username: str = Depends(_require_unloader_write)):
+    business_date = business_date.strip()
+    conn = get_db()
+    assigned: Dict[str, Any] = {}
+    if business_date:
+        rows = conn.execute(
+            "SELECT truck_key, unloader, updated_by, updated_at FROM load_unloaders WHERE site='OKS' AND business_date=?",
+            (business_date,),
+        ).fetchall()
+        assigned = {r[0]: {"unloader": r[1], "updated_by": r[2], "updated_at": r[3]} for r in rows}
+    roster_rows = conn.execute(
+        "SELECT unloader, COUNT(*) AS n, MAX(updated_at) AS last FROM load_unloaders WHERE site='OKS' "
+        "GROUP BY unloader ORDER BY last DESC LIMIT 80"
+    ).fetchall()
+    conn.close()
+    return {"ok": True, "unloaders": assigned, "roster": [r[0] for r in roster_rows]}
+
+
+@app.post("/api/portal/unloaders")
+def save_unloader(body: UnloaderIn, username: str = Depends(_require_unloader_write)):
+    business_date = body.business_date.strip()
+    truck_key = body.truck_key.strip()[:200]
+    if not business_date or not truck_key:
+        raise HTTPException(status_code=400, detail="business_date and truck_key are required.")
+    name = _clean_unloader_name(body.unloader)
+    now_str = datetime.now(timezone.utc).isoformat()
+    conn = get_db()
+    if name:
+        # Reuse an existing spelling so "john" and "John" are one person in the stats.
+        existing = conn.execute(
+            "SELECT unloader FROM load_unloaders WHERE site='OKS' AND lower(unloader)=lower(?) LIMIT 1", (name,)
+        ).fetchone()
+        if existing:
+            name = existing[0]
+        conn.execute(
+            "INSERT INTO load_unloaders (site, business_date, truck_key, unloader, supplier, area, door, updated_by, updated_at) "
+            "VALUES ('OKS',?,?,?,?,?,?,?,?) "
+            "ON CONFLICT(site, business_date, truck_key) DO UPDATE SET "
+            "unloader=excluded.unloader, updated_by=excluded.updated_by, updated_at=excluded.updated_at, "
+            "supplier=CASE WHEN excluded.supplier != '' THEN excluded.supplier ELSE load_unloaders.supplier END, "
+            "area=CASE WHEN excluded.area != '' THEN excluded.area ELSE load_unloaders.area END, "
+            "door=CASE WHEN excluded.door != '' THEN excluded.door ELSE load_unloaders.door END",
+            (business_date, truck_key, name, body.supplier.strip()[:120], body.area.strip()[:40],
+             body.door.strip()[:20], username, now_str),
+        )
+    else:
+        conn.execute(
+            "DELETE FROM load_unloaders WHERE site='OKS' AND business_date=? AND truck_key=?",
+            (business_date, truck_key),
+        )
+    conn.execute("DELETE FROM load_unloaders WHERE updated_at < ?", ((datetime.now(timezone.utc) - timedelta(days=200)).isoformat(),))
+    conn.commit()
+    conn.close()
+    return {"ok": True, "unloader": name, "updated_by": username, "updated_at": now_str}
+
+
+@app.get("/api/portal/performance")
+def get_unloader_performance(days: int = 30, username: str = Depends(_require_performance_read)):
+    days = max(1, min(int(days), 180))
+    cutoff = (datetime.now(DMS_BUSINESS_TZ) - timedelta(days=days)).strftime("%Y-%m-%d")
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT unloader, business_date, supplier, area, pallets, unload_min FROM load_unloaders WHERE site='OKS'"
+    ).fetchall()
+    conn.close()
+
+    people: Dict[str, Dict[str, Any]] = {}
+    daily: Dict[str, Dict[str, int]] = {}
+    for name, bdate, supplier, area, pallets, unload_min in rows:
+        iso = _unloader_date_iso(bdate)
+        if not iso or iso < cutoff:
+            continue
+        p = people.setdefault(name, {
+            "name": name, "loads": 0, "pallets": 0, "timed_loads": 0, "timed_pallets": 0,
+            "unload_min_total": 0.0, "dates": set(), "areas": {},
+        })
+        p["loads"] += 1
+        p["pallets"] += pallets or 0
+        p["dates"].add(iso)
+        if area:
+            p["areas"][area] = p["areas"].get(area, 0) + 1
+        if unload_min:
+            p["timed_loads"] += 1
+            p["unload_min_total"] += unload_min
+            p["timed_pallets"] += pallets or 0
+        daily.setdefault(iso, {})
+        daily[iso][name] = daily[iso].get(name, 0) + 1
+
+    out = []
+    for p in people.values():
+        timed = p["timed_loads"]
+        hours = p["unload_min_total"] / 60
+        out.append({
+            "name": p["name"],
+            "loads": p["loads"],
+            "pallets": p["pallets"],
+            "timed_loads": timed,
+            "avg_unload_min": round(p["unload_min_total"] / timed, 1) if timed else None,
+            "pallets_per_hour": round(p["timed_pallets"] / hours, 1) if hours > 0 and p["timed_pallets"] else None,
+            "days_worked": len(p["dates"]),
+            "last_date": max(p["dates"]) if p["dates"] else "",
+            "top_area": max(p["areas"], key=p["areas"].get) if p["areas"] else "",
+        })
+    out.sort(key=lambda x: (-x["loads"], x["name"].lower()))
+    return {
+        "ok": True,
+        "days": days,
+        "people": out,
+        "daily": [{"date": d, "counts": c} for d, c in sorted(daily.items())],
+        "totals": {"loads": sum(x["loads"] for x in out), "pallets": sum(x["pallets"] for x in out), "people": len(out)},
+    }
 
 
 class ChatMessageIn(BaseModel):
