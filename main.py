@@ -3573,6 +3573,114 @@ def save_unloader(body: UnloaderIn, username: str = Depends(_require_unloader_wr
     return {"ok": True, "unloader": name, "updated_by": username, "updated_at": now_str}
 
 
+# Zone grouping for the team comparison. Must match PORTAL_ZONE_GROUPS in index.html and ZONES in
+# build_zone_model.py; areas outside these three are compared among themselves as "other".
+_PERF_ZONES = [
+    ("freezer", ("frz", "freezer")),
+    ("chilled", ("chl", "chill", "cooler", "eggs", "egg", "fresh meat", "meat", "produce")),
+    ("dry", ("dry", "amb", "ambient", "slip sheet", "slip", "floor loaded", "floor load", "floor")),
+]
+_PERF_MIN_SAMPLE = 5                    # finished loads / gaps needed before a measure is rated
+_PERF_RATIO_CAP = (0.25, 2.0)           # one wild measure cannot swamp the overall score
+
+
+def _perf_zone(area: str) -> str:
+    text = re.sub(r"[^a-z0-9]+", " ", str(area or "").lower()).strip()
+    for key, names in _PERF_ZONES:
+        if text in names:
+            return key
+    return "other"
+
+
+def _perf_band(ratio: float) -> str:
+    if ratio >= 1.10:
+        return "green"
+    if ratio >= 0.90:
+        return "even"
+    if ratio >= 0.75:
+        return "yellow"
+    return "red"
+
+
+_PERF_LABELS = {"green": "Above the team", "even": "On par with the team", "yellow": "Below the team", "red": "Well below the team"}
+
+
+def _unloader_ratings(people: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """Rate each unloader against the team average (1.00 = the team's pace).
+
+    Speed measures are compared like-for-like: a person's pallets are priced at what the team
+    takes per pallet in the SAME zones, so someone working Dry is not marked down for Dry being
+    slower than Freezer. Ratios above 1 are better than the team on every measure.
+    """
+    lo, hi = _PERF_RATIO_CAP
+
+    def clamp(x: float) -> float:
+        return max(lo, min(hi, x))
+
+    zone_pallets: Dict[str, float] = {}
+    zone_hours: Dict[str, float] = {}
+    zone_n: Dict[str, int] = {}
+    zone_min: Dict[str, float] = {}
+    team_gap_total = team_gap_count = team_loads = team_nights = 0
+    for p in people.values():
+        for z, a in p["zp"].items():
+            zone_pallets[z] = zone_pallets.get(z, 0) + a["pallets"]
+            zone_hours[z] = zone_hours.get(z, 0) + a["hours"]
+        for z, a in p["zt"].items():
+            zone_n[z] = zone_n.get(z, 0) + a["n"]
+            zone_min[z] = zone_min.get(z, 0) + a["min"]
+        team_gap_total += p["gap_total"]
+        team_gap_count += p["gap_count"]
+        team_loads += p["loads"]
+        team_nights += len(p["dates"])
+
+    def measure(value: float, team_value: float, ratio: float, n: int) -> Dict[str, Any]:
+        r = clamp(ratio)
+        return {"value": round(value, 1), "team": round(team_value, 1), "index": round(r * 100), "band": _perf_band(r), "n": n}
+
+    ratings: Dict[str, Any] = {}
+    if len(people) < 2:      # a team of one would just be compared with itself
+        for name in people:
+            ratings[name] = {"ready": False, "measures": {}, "needs": "Needs at least 2 unloaders with data before anyone can be compared with the team."}
+        return {"people": ratings, "team": {"people": len(people), "pallets_per_hour": None, "avg_unload_min": None, "avg_gap_min": None, "loads_per_night": None}}
+    team_pph = (sum(zone_pallets.values()) / sum(zone_hours.values())) if sum(zone_hours.values()) > 0 else None
+    team_avg_min = (sum(zone_min.values()) / sum(zone_n.values())) if sum(zone_n.values()) > 0 else None
+    for name, p in people.items():
+        ms: Dict[str, Any] = {}
+        pal_loads = sum(a["n"] for a in p["zp"].values())
+        if pal_loads >= _PERF_MIN_SAMPLE:
+            actual_hours = sum(a["hours"] for a in p["zp"].values())
+            expected_hours = sum(a["pallets"] / (zone_pallets[z] / zone_hours[z]) for z, a in p["zp"].items() if zone_hours.get(z, 0) > 0 and zone_pallets.get(z, 0) > 0)
+            pallets = sum(a["pallets"] for a in p["zp"].values())
+            if actual_hours > 0 and expected_hours > 0:
+                ms["pph"] = measure(pallets / actual_hours, pallets / expected_hours, expected_hours / actual_hours, pal_loads)
+        if p["timed_loads"] >= _PERF_MIN_SAMPLE:
+            actual_avg = sum(a["min"] for a in p["zt"].values()) / p["timed_loads"]
+            expected_avg = sum(a["n"] * (zone_min[z] / zone_n[z]) for z, a in p["zt"].items() if zone_n.get(z, 0) > 0) / p["timed_loads"]
+            if actual_avg > 0 and expected_avg > 0:
+                ms["time"] = measure(actual_avg, expected_avg, expected_avg / actual_avg, p["timed_loads"])
+        if p["gap_count"] >= _PERF_MIN_SAMPLE and team_gap_count > 0:
+            person_gap = p["gap_total"] / p["gap_count"]
+            team_gap = team_gap_total / team_gap_count
+            ms["gap"] = measure(person_gap, team_gap, (team_gap / person_gap) if person_gap > 0 else hi, p["gap_count"])
+        if p["loads"] >= _PERF_MIN_SAMPLE and team_nights > 0 and len(p["dates"]) > 0:
+            per_night = p["loads"] / len(p["dates"])
+            team_per_night = team_loads / team_nights
+            ms["volume"] = measure(per_night, team_per_night, per_night / team_per_night, p["loads"])
+        if len(ms) >= 2:
+            index = sum(m["index"] for m in ms.values()) / len(ms)
+            band = _perf_band(index / 100)
+            ratings[name] = {"ready": True, "index": round(index), "band": band, "label": _PERF_LABELS[band], "measures": ms}
+        else:
+            ratings[name] = {"ready": False, "measures": ms,
+                             "needs": "Needs at least %d finished loads with timing to compare with the team." % _PERF_MIN_SAMPLE}
+    return {"people": ratings, "team": {
+        "people": len(people), "pallets_per_hour": round(team_pph, 1) if team_pph else None,
+        "avg_unload_min": round(team_avg_min, 1) if team_avg_min else None,
+        "avg_gap_min": round(team_gap_total / team_gap_count, 1) if team_gap_count else None,
+        "loads_per_night": round(team_loads / team_nights, 1) if team_nights else None}}
+
+
 @app.get("/api/portal/performance")
 def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = Depends(_require_performance_read)):
     days = max(1, min(int(days), 180))
@@ -3604,6 +3712,7 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = 
             "name": name, "loads": 0, "pallets": 0, "timed_loads": 0, "timed_pallets": 0,
             "unload_min_total": 0.0, "dates": set(), "areas": {},
             "gap_total": 0.0, "gap_count": 0, "gap_longest": 0.0, "long_gaps": 0, "gap_work_min": 0.0,
+            "zp": {}, "zt": {},     # per-zone sums for the team comparison: pallets/hours and loads/minutes
         })
         p["loads"] += 1
         p["pallets"] += pallets or 0
@@ -3614,6 +3723,15 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = 
             p["timed_loads"] += 1
             p["unload_min_total"] += unload_min
             p["timed_pallets"] += pallets or 0
+            zone = _perf_zone(area)
+            t = p["zt"].setdefault(zone, {"n": 0, "min": 0.0})
+            t["n"] += 1
+            t["min"] += unload_min
+            if pallets and pallets > 0:
+                q = p["zp"].setdefault(zone, {"pallets": 0, "hours": 0.0, "n": 0})
+                q["pallets"] += pallets
+                q["hours"] += unload_min / 60
+                q["n"] += 1
         daily.setdefault(iso, {})
         daily[iso][name] = daily[iso].get(name, 0) + 1
 
@@ -3635,12 +3753,14 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = 
                 p["gap_work_min"] += mins
             latest_finish = max(latest_finish, finish)
 
+    comparison = _unloader_ratings(people)
     out = []
     for p in people.values():
         timed = p["timed_loads"]
         hours = p["unload_min_total"] / 60
         gaps = p["gap_count"]
         out.append({
+            "rating": comparison["people"][p["name"]],
             "name": p["name"],
             "loads": p["loads"],
             "pallets": p["pallets"],
@@ -3662,6 +3782,7 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = 
         "ok": True,
         "days": days,
         "max_gap": max_gap,
+        "team": comparison["team"],
         "people": out,
         "daily": [{"date": d, "counts": c} for d, c in sorted(daily.items())],
         "totals": {"loads": sum(x["loads"] for x in out), "pallets": sum(x["pallets"] for x in out), "people": len(out)},
