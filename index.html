@@ -823,7 +823,33 @@
     .zone-doors-head { font-size:0.78em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); margin-bottom:6px; }
     #myPortalPanel .zone-door-map { grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:6px; }
     #myPortalPanel .zone-door-map .door-tile { min-height:58px; padding:6px 7px; }
-    .portal-popup-stack { position:fixed; top:64px; right:14px; z-index:9999; display:flex; flex-direction:column; gap:10px; width:min(400px, calc(100vw - 24px)); pointer-events:none; }
+    .portal-notif-dock { position:fixed; top:56px; right:14px; z-index:9999; display:flex; flex-direction:column; align-items:flex-end; }
+    .portal-notif-bell { display:inline-flex; align-items:center; gap:8px; border:0; border-radius:999px; padding:7px 14px; background:#1e3a5f; color:#fff; font:inherit; font-weight:800; font-size:0.84em; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+    .portal-notif-dock.has-red .portal-notif-bell { background:#c53030; }
+    .bell-count { background:#fff; color:#1a202c; border-radius:999px; min-width:22px; padding:1px 7px; text-align:center; }
+    .bell-ping { animation:bellPing .6s ease; }
+    @keyframes bellPing { 0%, 100% { transform:scale(1); } 40% { transform:scale(1.18) rotate(-6deg); } }
+    .portal-notif-menu { margin-top:8px; width:min(400px, calc(100vw - 24px)); background:var(--card-bg,#fff); color:var(--text,#1a202c); border:1px solid var(--border,#e2e8f0); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.4); overflow:hidden; }
+    .portal-notif-menu[hidden] { display:none; }
+    :root.dark .portal-notif-menu { background:#132030; border-color:#1e3a55; color:#eaf4ff; }
+    .notif-head { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; font-weight:800; border-bottom:1px solid var(--border,#e2e8f0); }
+    :root.dark .notif-head, :root.dark .notif-row { border-color:#1e3a55; }
+    .notif-head button { font:inherit; font-size:0.78em; font-weight:700; border:0; background:transparent; color:#2b6cb0; cursor:pointer; }
+    :root.dark .notif-head button { color:#90cdf4; }
+    .portal-notif-list { max-height:min(60vh, 440px); overflow-y:auto; }
+    .notif-row { display:flex; gap:10px; align-items:flex-start; padding:10px 14px; border-left:6px solid #d69e2e; border-bottom:1px solid var(--border,#e2e8f0); }
+    .notif-row.red { border-left-color:#e53e3e; }
+    .notif-main { flex:1; min-width:0; }
+    .notif-title { font-weight:800; font-size:0.92em; }
+    .notif-text { font-size:0.8em; color:var(--muted,#718096); margin-top:2px; line-height:1.4; }
+    :root.dark .notif-text { color:#a9bdd6; }
+    .notif-btns { display:flex; gap:6px; align-items:center; flex:none; }
+    .notif-act { font:inherit; font-size:0.76em; font-weight:700; border-radius:6px; padding:3px 10px; border:1.5px solid #1e3a5f; background:#1e3a5f; color:#fff; cursor:pointer; }
+    :root.dark .notif-act { background:#2b6cb0; border-color:#2b6cb0; }
+    .notif-x { border:0; background:transparent; font-size:1.3em; line-height:1; cursor:pointer; color:var(--muted,#718096); }
+    .notif-foot { padding:8px 14px; font-size:0.72em; color:var(--muted,#718096); }
+    .portal-popup.popup-out { transition:transform .35s ease-in, opacity .35s ease-in; transform:translateY(-70px) scale(.85); opacity:0; }
+    .portal-popup-stack { position:fixed; top:108px; right:14px; z-index:9999; display:flex; flex-direction:column; gap:10px; width:min(400px, calc(100vw - 24px)); pointer-events:none; }
     .portal-popup { pointer-events:auto; display:flex; gap:12px; align-items:flex-start; background:#fffbea; color:#1a202c; border:2px solid #d69e2e; border-left-width:8px; border-radius:12px; padding:12px 14px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
     .portal-popup.red { background:#fff1f0; border-color:#e53e3e; }
     .portal-popup.pop-in { animation:portalPopIn .25s ease-out; }
@@ -841,7 +867,7 @@
     :root.dark .portal-popup-text, :root.dark .portal-popup-close { color:#e2e8f0; }
     :root.dark .portal-popup-actions button { background:#2b6cb0; border-color:#2b6cb0; }
     :root.dark .portal-popup-actions button.ghost { background:transparent; color:#bee3f8; }
-    @media (max-width: 700px) { .portal-popup-stack { top:56px; right:8px; } }
+    @media (max-width: 700px) { .portal-popup-stack { top:100px; right:8px; } .portal-notif-dock { top:50px; right:8px; } }
     /* Pace ticker: how the building and each zone compare with the average night. */
     .portal-ticker { display:flex; align-items:stretch; margin:10px 0; border:1px solid var(--border,#e2e8f0); border-radius:10px; overflow:hidden; background:var(--card-bg,#fff); }
     :root.dark .portal-ticker { background:#17263f; border-color:#1e3a55; }
@@ -1076,6 +1102,9 @@
     .kiosk-exit-hint { position: fixed; bottom: 16px; right: 20px; font-size: 0.78rem; color: rgba(255,255,255,0.25); pointer-events: none; }
     /* No-show section */
     #portalNoShowSection { margin-top: 8px; }
+    /* Collapsed (the default): just the header row, so a long no-show list never crowds the screen. */
+    #portalNoShowSection.collapsed .portal-late-note,
+    #portalNoShowSection.collapsed .table-scroller { display: none; }
     .portal-late-panel { border-left: 5px solid #dd6b20; }
     .portal-late-panel .table-meta { color: var(--muted,#718096); }
     .portal-late-panel.has-late .table-title { color: #c05621; }
@@ -6819,11 +6848,12 @@
 
         <!-- Late / no-show trucks are separated from detention risk because they have not arrived. -->
         <section id="portalNoShowSection" class="table-wrap portal-late-panel" style="display:none;">
-          <div class="table-toolbar">
+          <div class="table-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
             <div>
               <div class="table-title">Late Truck Separation</div>
               <div class="table-meta" id="portalNoShowSummary">No late / no-show trucks right now.</div>
             </div>
+            <button type="button" id="portalLateToggle" class="portal-ctrl-btn" aria-expanded="false" style="flex:none;">Show</button>
           </div>
           <div class="portal-late-note">These trucks are late or not checked in. They stay out of detention warnings because detention only matters after the truck arrives.</div>
           <div class="table-scroller" style="margin-top:10px;">
@@ -18376,6 +18406,10 @@
     const _portalNsLastNotify = { red: 0, yellow: 0 };
     const _portalPopupDismissed = new Set();
     const _portalPopupSeen = new Set();
+    const _portalPopupFirstShown = new Map();   // id -> when its popup first appeared
+    const PORTAL_POPUP_MS = 30000;              // a popup stays up this long, then docks into the bell menu
+    let _portalPopupTimer = null;
+    let _portalMenuOpen = false;
     let _portalPopupItems = [];
 
     function portalLiveDataFresh(now) {
@@ -18420,43 +18454,112 @@
       }
     }
 
-    function portalPopupRender(items) {
+    // New alerts pop up on screen for 30 seconds, then slide up into the Notifications bell at the
+    // top right. The bell's drop-down keeps every alert that is still unresolved until it is cleared.
+    function portalPopupRender(fresh) {
       const stack = document.getElementById("portalPopupStack");
       if (!stack) return;
-      const shown = items.slice(0, 4);
+      const shown = fresh.slice(0, 4);
       stack.innerHTML = "";
       shown.forEach(function(it) {
         const el = document.createElement("div");
         el.className = "portal-popup " + it.level + (_portalPopupSeen.has(it.id) ? "" : " pop-in");
+        el.dataset.id = it.id;
         _portalPopupSeen.add(it.id);
         el.setAttribute("role", "alert");
         el.innerHTML = '<div class="portal-popup-body"><div class="portal-popup-title"></div><div class="portal-popup-text"></div>'
           + '<div class="portal-popup-actions"><button type="button" class="act"></button></div></div>'
-          + '<button type="button" class="portal-popup-close" aria-label="Dismiss">&times;</button>';
+          + '<button type="button" class="portal-popup-close" aria-label="Move to notifications" title="Move to notifications">&times;</button>';
         el.querySelector(".portal-popup-title").textContent = it.title;
         el.querySelector(".portal-popup-text").textContent = it.text;
         el.querySelector(".act").textContent = it.actionLabel;
         el.querySelector(".act").addEventListener("click", function() { it.onAction(); });
         el.querySelector(".portal-popup-close").addEventListener("click", function() {
-          _portalPopupDismissed.add(it.id);
-          portalPopupRender(_portalPopupItems.filter(function(x) { return !_portalPopupDismissed.has(x.id); }));
+          _portalPopupFirstShown.set(it.id, Date.now() - PORTAL_POPUP_MS);     // dock it now; it stays in the bell menu
+          portalAttentionRender();
         });
         stack.appendChild(el);
       });
-      if (items.length > shown.length) {
+      if (fresh.length > shown.length) {
         const more = document.createElement("button");
         more.type = "button";
         more.className = "portal-popup-more";
-        more.textContent = "+" + (items.length - shown.length) + " more need attention - open the door map";
-        more.addEventListener("click", function() {
-          safeLocalStorageSet("portalDoorSort", "priority");
-          selectTab("myPortal");
-          portalSetView("doors");
-          portalDoorControlsChanged();
-        });
+        more.textContent = "+" + (fresh.length - shown.length) + " more - open notifications";
+        more.addEventListener("click", function() { _portalMenuOpen = true; portalAttentionRender(); });
         stack.appendChild(more);
       }
     }
+
+    function portalBellRender(active) {
+      const dock = document.getElementById("portalNotifDock");
+      if (!dock) return;
+      if (!active.length) _portalMenuOpen = false;
+      dock.style.display = active.length ? "" : "none";
+      dock.classList.toggle("has-red", active.some(function(x) { return x.level === "red"; }));
+      document.getElementById("portalNotifCount").textContent = String(active.length);
+      document.getElementById("portalNotifMenu").hidden = !_portalMenuOpen;
+      document.getElementById("portalNotifBell").setAttribute("aria-expanded", String(_portalMenuOpen));
+      if (!_portalMenuOpen) return;
+      const list = document.getElementById("portalNotifList");
+      const scroll = list.scrollTop;
+      list.innerHTML = "";
+      active.forEach(function(it) {
+        const row = document.createElement("div");
+        row.className = "notif-row " + it.level;
+        row.innerHTML = '<div class="notif-main"><div class="notif-title"></div><div class="notif-text"></div></div>'
+          + '<div class="notif-btns"><button type="button" class="notif-act"></button><button type="button" class="notif-x" aria-label="Clear" title="Clear">&times;</button></div>';
+        row.querySelector(".notif-title").textContent = it.title;
+        row.querySelector(".notif-text").textContent = it.text;
+        row.querySelector(".notif-act").textContent = it.actionLabel;
+        row.querySelector(".notif-act").addEventListener("click", function() { _portalMenuOpen = false; portalAttentionRender(); it.onAction(); });
+        row.querySelector(".notif-x").addEventListener("click", function() { _portalPopupDismissed.add(it.id); portalAttentionRender(); });
+        list.appendChild(row);
+      });
+      list.scrollTop = scroll;
+    }
+
+    function portalAttentionRender() {
+      const now = Date.now();
+      const active = _portalPopupItems.filter(function(x) { return !_portalPopupDismissed.has(x.id); });
+      active.forEach(function(x) { if (!_portalPopupFirstShown.has(x.id)) _portalPopupFirstShown.set(x.id, now); });
+      const fresh = active.filter(function(x) { return now - _portalPopupFirstShown.get(x.id) < PORTAL_POPUP_MS; });
+      portalPopupRender(_portalMenuOpen ? [] : fresh);     // while the menu is open it already lists them
+      portalBellRender(active);
+      clearTimeout(_portalPopupTimer);
+      if (fresh.length) {
+        const wait = Math.min.apply(null, fresh.map(function(x) { return PORTAL_POPUP_MS - (now - _portalPopupFirstShown.get(x.id)); }));
+        _portalPopupTimer = setTimeout(portalAttentionDockExpired, Math.max(250, wait));
+      }
+    }
+
+    // Slides the popups that have been up for 30 seconds toward the bell, then re-renders without them.
+    function portalAttentionDockExpired() {
+      const now = Date.now();
+      let any = false;
+      document.querySelectorAll("#portalPopupStack .portal-popup").forEach(function(el) {
+        const t = _portalPopupFirstShown.get(el.dataset.id);
+        if (t != null && now - t >= PORTAL_POPUP_MS) { el.classList.add("popup-out"); any = true; }
+      });
+      const bell = document.getElementById("portalNotifBell");
+      if (any && bell) { bell.classList.remove("bell-ping"); void bell.offsetWidth; bell.classList.add("bell-ping"); }
+      setTimeout(portalAttentionRender, any ? 380 : 0);
+    }
+
+    // Delegated, so it works no matter where the bell markup sits relative to this script.
+    document.addEventListener("click", function(e) {
+      if (e.target.closest("#portalNotifBell")) { _portalMenuOpen = !_portalMenuOpen; portalAttentionRender(); return; }
+      if (e.target.closest("#portalNotifClearAll")) {
+        _portalPopupItems.forEach(function(x) { _portalPopupDismissed.add(x.id); });
+        portalAttentionRender();
+        return;
+      }
+      // composedPath() still lists the dock for a click on a row that was just removed from the page.
+      const inside = e.composedPath().some(function(el) { return el.id === "portalNotifDock"; });
+      if (_portalMenuOpen && !inside) { _portalMenuOpen = false; portalAttentionRender(); }
+    });
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && _portalMenuOpen) { _portalMenuOpen = false; portalAttentionRender(); }
+    });
 
     // Runs on the 15 s alert tick and after each live refresh: announces newly overdue trucks (one
     // grouped, rate-limited desktop notification per colour) and keeps the on-screen popups current.
@@ -18488,7 +18591,7 @@
       });
       items.sort(function(a, b) { return a.order - b.order || b.mins - a.mins; });
       _portalPopupItems = items;
-      portalPopupRender(items.filter(function(x) { return !_portalPopupDismissed.has(x.id); }));
+      portalAttentionRender();
     }
 
     // -- Pace ticker --------------------------------------------------------------------
@@ -18556,6 +18659,25 @@
       _portalTickerShape = shape;
     }
 
+    // The Late Truck Separation panel belongs to the Board view: it is hidden on the Door Map, Zones
+    // and the other views, and shows as a slim bar until opened (the choice is remembered).
+    function portalSyncLatePanel() {
+      const section = document.getElementById("portalNoShowSection");
+      if (!section) return;
+      const hasLate = (state.portal.noShowTrucks || []).length > 0;
+      const onBoard = (state.portal.portalView || "board") === "board";
+      section.style.display = hasLate && onBoard ? "" : "none";
+      const open = safeLocalStorageGet("portalLateOpen") === "1";
+      section.classList.toggle("collapsed", !open);
+      const btn = document.getElementById("portalLateToggle");
+      if (btn) { btn.textContent = open ? "Hide" : "Show"; btn.setAttribute("aria-expanded", String(open)); }
+    }
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest("#portalLateToggle")) return;
+      safeLocalStorageSet("portalLateOpen", safeLocalStorageGet("portalLateOpen") === "1" ? "0" : "1");
+      portalSyncLatePanel();
+    });
+
     function portalRenderActiveView(enriched) {
       const view = state.portal.portalView || "board";
       if (view === "doors") renderPortalDoorMap(enriched);
@@ -18575,6 +18697,7 @@
       if (els.portalAreaView)   els.portalAreaView.style.display   = view === "areas"   ? "" : "none";
       const zonesView = document.getElementById("portalZonesView");
       if (zonesView) zonesView.style.display = view === "zones" ? "" : "none";
+      portalSyncLatePanel();
       if (els.portalVendorView) els.portalVendorView.style.display = view === "vendors" ? "" : "none";
       if (els.portalChatView)   els.portalChatView.style.display   = view === "chat"    ? "" : "none";
       if (els.portalClientView) els.portalClientView.style.display = view === "client"  ? "" : "none";
@@ -19691,12 +19814,12 @@
         const noShowTrucks  = state.portal.noShowTrucks || [];
         if (!noShowSection || !noShowTable) return;
         if (!noShowTrucks.length) {
-          noShowSection.style.display = "none";
           noShowSection.classList.remove("has-late");
+          portalSyncLatePanel();
           return;
         }
-        noShowSection.style.display = "";
         noShowSection.classList.add("has-late");
+        portalSyncLatePanel();
         if (noShowSummary) {
           noShowSummary.textContent = noShowTrucks.length + " scheduled truck" + (noShowTrucks.length !== 1 ? "s" : "") + " have not checked in. They are separated from detention risk.";
         }
@@ -23749,6 +23872,16 @@
 
   <!-- On-screen attention popups (doors that need starting, zones running behind). Placed after the
        kiosk overlay so they paint above it on a TV. -->
+  <div class="portal-notif-dock" id="portalNotifDock" style="display:none;">
+    <button type="button" class="portal-notif-bell" id="portalNotifBell" aria-haspopup="true" aria-expanded="false" title="Open notifications">
+      <span aria-hidden="true">&#x1F514;</span><span>Notifications</span><span class="bell-count" id="portalNotifCount">0</span>
+    </button>
+    <div class="portal-notif-menu" id="portalNotifMenu" hidden>
+      <div class="notif-head"><span>Needs attention</span><button type="button" id="portalNotifClearAll">Clear all</button></div>
+      <div class="portal-notif-list" id="portalNotifList"></div>
+      <div class="notif-foot">New alerts pop up for 30 seconds, then wait here until they are cleared or resolved.</div>
+    </div>
+  </div>
   <div class="portal-popup-stack" id="portalPopupStack" aria-live="assertive"></div>
 
   </body>
