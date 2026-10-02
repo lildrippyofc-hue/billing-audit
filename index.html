@@ -4494,6 +4494,37 @@
       }
     }
 
+    /* -- End-of-shift report preview -- */
+    .shift-rpt-overlay { position:fixed; inset:0; z-index:9995; display:none; flex-direction:column; background:rgba(15,23,42,.74);
+      padding:max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+    .shift-rpt-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:10px 14px; background:var(--card-bg,#fff); color:var(--text,#1a202c); border-radius:12px 12px 0 0; border-bottom:1px solid var(--border,#e2e8f0); }
+    :root.dark .shift-rpt-bar { background:#132030; color:#eaf4ff; border-bottom-color:#1e3a55; }
+    .shift-rpt-title { margin-right:auto; font-weight:800; font-size:1.05em; }
+    .shift-rpt-sub { font-weight:600; font-size:0.8em; color:var(--muted,#718096); margin-left:6px; }
+    .shift-rpt-cmp { display:inline-flex; align-items:center; gap:6px; font-size:0.84em; font-weight:700; }
+    .shift-rpt-cmp select { width:auto; }
+    .shift-rpt-bar button { font-weight:700; }
+    .shift-rpt-bar button:disabled { opacity:.5; cursor:not-allowed; }
+    .shift-rpt-body { flex:1; min-height:0; position:relative; overflow:auto; background:#eef2f7; border-radius:0 0 12px 12px; -webkit-overflow-scrolling:touch; }
+    #shiftRptFrame { display:block; width:100%; height:100%; border:0; background:#fff; }
+    .shift-rpt-msg { padding:34px 22px 18px; text-align:center; color:#334155; font-weight:600; line-height:1.5; }
+    .shift-rpt-msg.error { color:#c53030; }
+    body.shift-rpt-open .portal-notif-dock, body.shift-rpt-open .portal-popup-stack { display:none !important; }
+    @media (max-width: 700px) {
+      .shift-rpt-overlay { padding:0; }
+      .shift-rpt-bar { border-radius:0; padding:8px 10px; }
+      .shift-rpt-body { border-radius:0; }
+      /* Three tidy rows: title + Close, the comparison choice, then Download + Print. */
+      .shift-rpt-bar { gap:8px; }
+      .shift-rpt-title { order:1; flex:1 1 0; min-width:0; }
+      #shiftRptClose { order:2; flex:0 0 auto; }
+      .shift-rpt-cmp { order:3; flex:1 1 100%; justify-content:space-between; }
+      .shift-rpt-cmp select { flex:1; }
+      #shiftRptDownload { order:4; flex:1 1 0; }
+      #shiftRptPrint { order:5; flex:1 1 0; }
+      #shiftRptDownload, #shiftRptPrint { padding-left:6px; padding-right:6px; font-size:0.84em; }
+    }
+
     /* -- iPhone / touch friendliness. Kept last so it wins over the rules above. -- */
     /* Floating bell and popups stay clear of the notch and the rounded corners. */
     .portal-notif-dock { top:max(56px, calc(env(safe-area-inset-top, 0px) + 12px)); right:max(14px, env(safe-area-inset-right, 0px)); }
@@ -6619,6 +6650,7 @@
             <div class="portal-ctrl-sep"></div>
             <!-- Report / export -->
             <div class="portal-ctrl-cluster">
+              <button id="portalShiftReportPageBtn" type="button" class="portal-ctrl-btn" title="Charts and a comparison with earlier nights, ready to download or save as a PDF">&#x1F4CA; Shift Report</button>
               <button id="portalShiftReportBtn" type="button" class="portal-ctrl-btn">&#x1F4CB; Report</button>
               <button id="portalExportBtn" type="button" class="portal-ctrl-btn">&#x2B07; Export</button>
             </div>
@@ -7104,6 +7136,26 @@
         </section>
 
       </section>
+
+      <!-- End-of-shift report: charts + comparison with earlier nights (preview, download, print) -->
+      <div class="shift-rpt-overlay" id="shiftRptOverlay" style="display:none;" role="dialog" aria-modal="true" aria-label="End-of-shift report">
+        <div class="shift-rpt-bar">
+          <div class="shift-rpt-title">Shift Report <span class="shift-rpt-sub" id="shiftRptSub"></span></div>
+          <label class="shift-rpt-cmp">Compare with
+            <select id="shiftRptDays" class="lookup-input" aria-label="How many earlier nights to compare with">
+              <option value="3">last 3 nights</option><option value="7" selected>last 7 nights</option><option value="14">last 14 nights</option>
+            </select>
+          </label>
+          <button type="button" id="shiftRptDownload" class="secondary-btn" disabled>&#x2B07; Download report</button>
+          <button type="button" id="shiftRptPrint" class="secondary-btn" disabled>&#x1F5A8; Print / Save as PDF</button>
+          <button type="button" id="shiftRptClose" class="secondary-btn">Close</button>
+        </div>
+        <div class="shift-rpt-body">
+          <div id="shiftRptMsg" class="shift-rpt-msg"></div>
+          <button type="button" id="shiftRptRetry" class="secondary-btn" style="display:none; margin:0 auto 16px;">Try again</button>
+          <iframe id="shiftRptFrame" title="End-of-shift report preview" style="display:none;"></iframe>
+        </div>
+      </div>
 
       <!-- Door Detail Modal: shared by OKS and Minnesota My Portal door maps.
            Lives outside both tab-panels (which are display:none when
@@ -10375,7 +10427,7 @@
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
     // Per-site so a change to one site's tour doesn't re-show the other's.
-    const PORTAL_TOUR_VERSIONS = { oks: "2026-10-02", mn: "2026-09-28" };
+    const PORTAL_TOUR_VERSIONS = { oks: "2026-10-02-2", mn: "2026-09-28" };
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     // Zone cards only exist once DMS data is in, so a zone step points at the card piece when it is
     // there and at the whole grid when it is not.
@@ -10384,7 +10436,11 @@
     };
     const PORTAL_TOUR_STEPS = {
       oks: [
-        { title: "What's new in My Portal", body: "The newest changes come first: a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that pop up and then tuck into a bell, a pace ticker, unloader performance bars, and a layout that works on a phone. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
+        { title: "What's new in My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that pop up and then tuck into a bell, a pace ticker, unloader performance bars, and a layout that works on a phone. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
+        { title: "New: end-of-shift report", target: portalTourEl("portalShiftReportPageBtn"),
+          body: "<b>Shift Report</b> builds a full report for the night: the numbers that matter, charts of how the shift ran, and a comparison with the <b>last 7 nights</b> (you can pick 3 or 14). Press it when the shift is done. It says <b>Final</b> once every truck is finished and nothing is left to arrive, or <b>still in progress</b> if you open it early. The first one takes a bit because it reads the earlier nights from DMS, then it is quick." },
+        { title: "Charts, comparison and unloaders", target: portalTourEl("portalShiftReportPageBtn"),
+          body: "The report shows trucks finished through the night against the average, arrivals and finishes by hour, and trend lines for when 95% were done, pallets per hour and wait time. It also breaks the night down by zone and supplier. If unloader names were entered, a <b>Performance by unloader</b> section ranks each person against the team and their own recent pace (only for logins that can see Performance by Name). Use <b>Download report</b> to save it as a file, or <b>Print / Save as PDF</b>." },
         { title: "New Zones tab", before: function() { portalSetView("zones"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
@@ -19104,6 +19160,473 @@
       });
       svg.innerHTML = bars + xlabels;
     }
+
+    // -- End-of-shift report: charts, comparison with earlier nights, per-unloader section -----------
+    // The server (/api/portal/shift-report) sends one night's numbers plus the nights it is compared
+    // with. This builds ONE self-contained HTML document (inline SVG charts, no outside files). The
+    // preview shows it, and Download / Print (Save as PDF) use exactly the same document.
+    const SHIFT_RPT = { days: 7, data: null, doc: "", busy: false };
+    const SHIFT_RPT_ZONES = { freezer: "Freezer", chilled: "Cooler / Fresh Meat / Produce", dry: "Dry / Slip Sheet / Floor Load", other: "Other areas" };
+    const SHIFT_RPT_GOAL_MIN = 540;                      // 4 AM, in minutes after the 7 PM start
+
+    // Minutes after 7 PM -> clock text ("4:05 AM").
+    function shiftRptClock(min) {
+      if (min == null || !isFinite(min)) return "--";
+      const total = Math.round(19 * 60 + min), day = ((total % 1440) + 1440) % 1440;
+      const h = Math.floor(day / 60), m = day % 60;
+      return (h % 12 || 12) + ":" + String(m).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
+    }
+    function shiftRptDur(min) {
+      if (min == null || !isFinite(min)) return "--";
+      const m = Math.round(min);
+      return m < 60 ? m + " min" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m";
+    }
+    function shiftRptNum(v, places) {
+      return v == null || !isFinite(v) ? "--" : Number(v).toLocaleString("en-US", { maximumFractionDigits: places == null ? 0 : places });
+    }
+    function shiftRptDay(businessDate) {         // "9/19/2026" -> "Sat 9/19"
+      const m = /^(\d+)\/(\d+)\/(\d+)$/.exec(String(businessDate || ""));
+      if (!m) return String(businessDate || "");
+      const d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]));
+      return d.toLocaleDateString("en-US", { weekday: "short" }) + " " + m[1] + "/" + m[2];
+    }
+    function shiftRptLongDate(businessDate) {    // "9/19/2026" -> "Saturday, September 19, 2026"
+      const m = /^(\d+)\/(\d+)\/(\d+)$/.exec(String(businessDate || ""));
+      if (!m) return String(businessDate || "");
+      return new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+    }
+    function shiftRptHourLabel(h) { return shiftRptClock(h * 60).replace(":00", ""); }
+    function shiftRptNiceStep(max, ticks) {
+      const raw = Math.max(max, 1e-9) / (ticks || 5), pow = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / pow;
+      return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * pow;
+    }
+    function shiftRptEsc(v) { return escapeHtml(String(v == null ? "" : v)); }
+
+    // "Higher / lower than the average" with a good / bad colour.
+    function shiftRptDelta(cur, base, cfg) {
+      if (cur == null || base == null) return { text: "no earlier nights to compare", cls: "na" };
+      const diff = cur - base, a = Math.abs(diff);
+      if (a < (cfg.tol == null ? 0.5 : cfg.tol)) return { text: "right on the average", cls: "flat" };
+      const up = diff > 0;
+      const good = cfg.better ? (up === (cfg.better === "up")) : null;
+      return { text: (up ? "▲ " : "▼ ") + cfg.fmt(a) + " " + cfg.words[up ? 0 : 1] + " than the average", cls: good == null ? "flat" : (good ? "good" : "bad") };
+    }
+
+    // ---- inline SVG charts (all return a string) ----
+    function shiftRptSvgFrame(W, H, inner, label) {
+      return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + shiftRptEsc(label) + '" preserveAspectRatio="xMidYMid meet">' + inner + '</svg>';
+    }
+    function shiftRptAxis(P, W, H, ymax, step, yFmt) {
+      let g = "";
+      for (let v = 0; v <= ymax + 1e-9; v += step) {
+        const y = P.t + (H - P.t - P.b) * (1 - v / ymax);
+        g += '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#e2e8f0" stroke-width="1"/>'
+          + '<text x="' + (P.l - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#64748b">' + shiftRptEsc(yFmt ? yFmt(v) : shiftRptNum(v, step < 1 ? 1 : 0)) + '</text>';
+      }
+      return g;
+    }
+    // Lines over a shared x axis. o: { n, series:[{data,color,width,dash,opacity}], xTicks:[[i,label]], vlines:[{i,label,color}], yFmt, label }
+    function shiftRptSvgLines(o) {
+      const W = o.w || 720, H = o.h || 270, P = { l: 46, r: 16, t: 14, b: 30 }, iw = W - P.l - P.r, ih = H - P.t - P.b;
+      let ymax = 1;
+      o.series.forEach(function(s) { s.data.forEach(function(v) { if (v != null && v > ymax) ymax = v; }); });
+      const step = shiftRptNiceStep(ymax, 5); ymax = Math.ceil(ymax / step) * step;
+      const X = function(i) { return P.l + iw * (i / (o.n - 1)); }, Y = function(v) { return P.t + ih * (1 - v / ymax); };
+      let g = shiftRptAxis(P, W, H, ymax, step, o.yFmt);
+      (o.xTicks || []).forEach(function(t, k) {
+        if (o.narrow && k % 2) return;        // every other label on a narrow chart, so they never overlap
+        g += '<line x1="' + X(t[0]).toFixed(1) + '" x2="' + X(t[0]).toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="#f1f5f9"/>'
+          + '<text x="' + X(t[0]).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + shiftRptEsc(t[1]) + '</text>';
+      });
+      (o.vlines || []).forEach(function(v) {
+        g += '<line x1="' + X(v.i).toFixed(1) + '" x2="' + X(v.i).toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="' + v.color + '" stroke-width="1.5" stroke-dasharray="5 4"/>'
+          + '<text x="' + (X(v.i) + 5).toFixed(1) + '" y="' + (P.t + 11) + '" font-size="11" font-weight="700" fill="' + v.color + '">' + shiftRptEsc(v.label) + '</text>';
+      });
+      o.series.forEach(function(s) {
+        let d = "", pen = false;
+        s.data.forEach(function(v, i) {
+          if (v == null) { pen = false; return; }
+          d += (pen ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1) + " "; pen = true;
+        });
+        if (d) g += '<path d="' + d + '" fill="none" stroke="' + s.color + '" stroke-width="' + (s.width || 2) + '" stroke-linejoin="round" stroke-linecap="round"'
+          + (s.dash ? ' stroke-dasharray="' + s.dash + '"' : '') + (s.opacity ? ' opacity="' + s.opacity + '"' : '') + '/>';
+      });
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+    // Grouped bars per category plus an optional comparison line. o: { labels, groups:[{data,color}], line:{data,color}, label }
+    function shiftRptSvgBars(o) {
+      const W = o.w || 720, H = o.h || 250, P = { l: 40, r: 14, t: 14, b: 30 }, iw = W - P.l - P.r, ih = H - P.t - P.b, n = o.labels.length;
+      let ymax = 1;
+      o.groups.forEach(function(gr) { gr.data.forEach(function(v) { if (v != null && v > ymax) ymax = v; }); });
+      if (o.line) o.line.data.forEach(function(v) { if (v != null && v > ymax) ymax = v; });
+      const step = shiftRptNiceStep(ymax, 5); ymax = Math.ceil(ymax / step) * step;
+      const slot = iw / n, bw = Math.min(26, (slot - 6) / o.groups.length), Y = function(v) { return P.t + ih * (1 - v / ymax); };
+      let g = shiftRptAxis(P, W, H, ymax, step);
+      o.labels.forEach(function(lab, i) {
+        const x0 = P.l + slot * i + (slot - bw * o.groups.length) / 2;
+        o.groups.forEach(function(gr, k) {
+          const v = gr.data[i] || 0;
+          if (v > 0) g += '<rect x="' + (x0 + bw * k).toFixed(1) + '" y="' + Y(v).toFixed(1) + '" width="' + (bw - 1).toFixed(1) + '" height="' + (P.t + ih - Y(v)).toFixed(1) + '" rx="2" fill="' + gr.color + '"/>';
+        });
+        if (!o.narrow || i % 2 === 0) g += '<text x="' + (P.l + slot * i + slot / 2).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + shiftRptEsc(o.narrow ? lab.replace(" ", "") : lab) + '</text>';
+      });
+      if (o.line) {
+        let d = "", dots = "";
+        o.line.data.forEach(function(v, i) {
+          if (v == null) return;
+          const x = P.l + slot * i + slot / 2, y = Y(v);
+          d += (d ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1) + " ";
+          dots += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="' + o.line.color + '"/>';
+        });
+        g += '<path d="' + d + '" fill="none" stroke="' + o.line.color + '" stroke-width="2" stroke-dasharray="5 4"/>' + dots;
+      }
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+    // One value per night as a dotted line (not bars, so a time of night can use a tight axis). o: { items:[{label,value,hi}], yFmt, goal:{value,label}, label }
+    function shiftRptSvgTrend(o) {
+      // Drawn at the width of one of three side-by-side cards (about 255px) so the text is not shrunk.
+      const W = 260, H = 205, P = { l: 46, r: 12, t: 18, b: 30 }, iw = W - P.l - P.r, ih = H - P.t - P.b;
+      const vals = o.items.map(function(i) { return i.value; }).filter(function(v) { return v != null; });
+      if (!vals.length) return '<div class="empty">No data</div>';
+      let lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+      if (o.goal) { lo = Math.min(lo, o.goal.value); hi = Math.max(hi, o.goal.value); }
+      const pad = Math.max((hi - lo) * 0.15, hi * 0.03, 1); lo = Math.max(0, lo - pad); hi += pad;
+      const step = shiftRptNiceStep(hi - lo, 4); lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+      const n = o.items.length, X = function(i) { return P.l + (n === 1 ? iw / 2 : iw * (i / (n - 1))); }, Y = function(v) { return P.t + ih * (1 - (v - lo) / (hi - lo)); };
+      let g = "";
+      for (let v = lo; v <= hi + 1e-9; v += step) {
+        g += '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="#e2e8f0"/>'
+          + '<text x="' + (P.l - 6) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end" font-size="10.5" fill="#64748b">' + shiftRptEsc(o.yFmt(v)) + '</text>';
+      }
+      if (o.goal) g += '<line x1="' + P.l + '" x2="' + (W - P.r) + '" y1="' + Y(o.goal.value).toFixed(1) + '" y2="' + Y(o.goal.value).toFixed(1) + '" stroke="#c53030" stroke-width="1.5" stroke-dasharray="5 4"/>'
+        + '<text x="' + (W - P.r - 2) + '" y="' + (Y(o.goal.value) - 4).toFixed(1) + '" text-anchor="end" font-size="10.5" font-weight="700" fill="#c53030">' + shiftRptEsc(o.goal.label) + '</text>';
+      let d = "";
+      o.items.forEach(function(it, i) { if (it.value != null) d += (d ? "L" : "M") + X(i).toFixed(1) + " " + Y(it.value).toFixed(1) + " "; });
+      g += '<path d="' + d + '" fill="none" stroke="#94a3b8" stroke-width="2"/>';
+      o.items.forEach(function(it, i) {
+        if (it.value != null) g += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(it.value).toFixed(1) + '" r="' + (it.hi ? 5.5 : 3.5) + '" fill="' + (it.hi ? "#2b6cb0" : "#94a3b8") + '"/>';
+        if (it.hi && it.value != null) g += '<text x="' + (X(i) + (i === n - 1 ? 6 : 0)).toFixed(1) + '" y="' + (Y(it.value) - 9).toFixed(1) + '" text-anchor="' + (i === n - 1 ? "end" : "middle") + '" font-size="11" font-weight="800" fill="#2b6cb0">' + shiftRptEsc(o.yFmt(it.value)) + '</text>';
+        g += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="9.5" fill="' + (it.hi ? "#2b6cb0" : "#64748b") + '" font-weight="' + (it.hi ? 800 : 400) + '">' + shiftRptEsc(it.label) + '</text>';
+      });
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+    // Horizontal bars, one per person, with a team reference line. o: { items:[{label,value}], ref:{value,label}, fmt, label }
+    function shiftRptSvgHBars(o) {
+      const rowH = 30, W = 320, P = { l: 92, r: 52, t: 10, b: 24 }, n = o.items.length, H = P.t + P.b + rowH * n, iw = W - P.l - P.r;
+      let max = Math.max.apply(null, o.items.map(function(i) { return i.value; }).concat(o.ref ? [o.ref.value] : [], [1]));
+      max *= 1.08;
+      let g = "";
+      o.items.forEach(function(it, i) {
+        const y = P.t + rowH * i, w = Math.max(2, iw * it.value / max);
+        const better = o.better === "down" ? it.value <= (o.ref ? o.ref.value : Infinity) : it.value >= (o.ref ? o.ref.value : -Infinity);
+        g += '<text x="' + (P.l - 8) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-size="11.5" fill="#1a202c">' + shiftRptEsc(it.label.length > 13 ? it.label.slice(0, 12) + "…" : it.label) + '</text>'
+          + '<rect x="' + P.l + '" y="' + (y + 6) + '" width="' + w.toFixed(1) + '" height="' + (rowH - 12) + '" rx="3" fill="' + (o.ref ? (better ? "#2f855a" : "#b7791f") : "#2b6cb0") + '"/>'
+          + '<text x="' + (P.l + w + 5).toFixed(1) + '" y="' + (y + rowH / 2 + 4) + '" font-size="11.5" font-weight="700" fill="#1a202c" stroke="#fff" stroke-width="3" paint-order="stroke">' + shiftRptEsc(o.fmt(it.value)) + '</text>';
+      });
+      if (o.ref) {
+        const x = P.l + iw * o.ref.value / max;
+        g += '<line x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="#2b6cb0" stroke-width="1.5" stroke-dasharray="5 4"/>'
+          + '<text x="' + x.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="#2b6cb0">' + shiftRptEsc(o.ref.label) + '</text>';
+      }
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+
+    // Each wide chart is also drawn in a narrow shape. The page shows the narrow one on a phone (so the text
+    // stays readable) and the wide one everywhere else, including print.
+    function shiftRptBoth(fn, o, narrowH) {
+      return '<div class="cw">' + fn(Object.assign({}, o)) + '</div><div class="cn">' + fn(Object.assign({}, o, { w: 300, h: narrowH, narrow: true })) + '</div>';
+    }
+
+    function shiftRptKpis(t, b) {
+      const n1 = function(a) { return shiftRptNum(a, 1); };
+      const defs = [
+        { k: "completed", label: "Trucks unloaded", val: function(v) { return shiftRptNum(v); }, sub: "of " + shiftRptNum(t.arrived) + " that arrived", better: "up", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 },
+        { k: "pct_by_goal", label: "Finished by 4 AM", val: function(v) { return shiftRptNum(v) + "%"; }, sub: shiftRptNum(t.finished_by_goal) + " of " + shiftRptNum(t.arrived) + " arrived", better: "up", words: ["higher", "lower"], fmt: function(a) { return shiftRptNum(a) + " pts"; }, tol: 1 },
+        { k: "p95_finish_min", label: "95% of trucks done", val: shiftRptClock, sub: "goal is 4:00 AM", better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+        { k: "last_finish_min", label: "Last truck finished", val: shiftRptClock, sub: "the very last one is often a straggler", better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+        { k: "avg_unload_min", label: "Average unload time", val: shiftRptDur, sub: "unload start to finish", better: "down", words: ["slower", "faster"], fmt: shiftRptDur, tol: 2 },
+        { k: "avg_wait_min", label: "Average wait to start", val: shiftRptDur, sub: "check-in to unload start", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+        { k: "avg_dock_min", label: "Average time on dock", val: shiftRptDur, sub: "check-in to unload finish", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+        { k: "pallets_total", label: "Pallets unloaded", val: function(v) { return shiftRptNum(v); }, sub: "on finished trucks", better: "up", words: ["more", "fewer"], fmt: function(a) { return shiftRptNum(a) + " pallets"; }, tol: 10 },
+        { k: "pph", label: "Pallets per unload hour", val: function(v) { return shiftRptNum(v, 1); }, sub: "per door, not per person", better: "up", words: ["higher", "lower"], fmt: n1, tol: 0.5 },
+        { k: "over_2h", label: "Over 2 hours on dock", val: function(v) { return shiftRptNum(v); }, sub: "check-in to finish", better: "down", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 },
+        { k: "never_arrived", label: "Scheduled, never arrived", val: function(v) { return shiftRptNum(v); }, sub: "no check-in all night", better: "down", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 },
+        { k: "rejected", label: "Rejected loads", val: function(v) { return shiftRptNum(v); }, sub: "not counted as scheduled", better: "down", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " loads"; }, tol: 1 },
+        { k: "peak_unloading", label: "Most unloading at once", val: function(v) { return shiftRptNum(v); }, sub: "trucks at the same moment", better: null, words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 }
+      ];
+      return defs.map(function(d) {
+        const cur = t[d.k], base = b ? b[d.k] : null, delta = shiftRptDelta(cur, base, d);
+        return '<div class="kpi"><div class="kpi-l">' + shiftRptEsc(d.label) + '</div><div class="kpi-v">' + shiftRptEsc(d.val(cur)) + '</div>'
+          + '<div class="kpi-s">' + shiftRptEsc(d.sub) + '</div>'
+          + '<div class="kpi-d ' + delta.cls + '">' + shiftRptEsc(delta.text) + '</div>'
+          + (b && base != null ? '<div class="kpi-b">Average of ' + b.nights + ' nights: ' + shiftRptEsc(d.val(base)) + '</div>' : '') + '</div>';
+      }).join("");
+    }
+
+    // A few plain-language lines about what stood out. Only says what the numbers support.
+    function shiftRptInsights(data) {
+      const t = data.tonight, b = data.baseline, out = [];
+      const nights = b ? b.nights + "-night average" : null;
+      if (t.p95_finish_min != null) {
+        const vs = t.p95_finish_min - SHIFT_RPT_GOAL_MIN;
+        let s = "95% of trucks were unloaded by <b>" + shiftRptClock(t.p95_finish_min) + "</b>, "
+          + (vs <= 0 ? shiftRptDur(-vs) + " ahead of the 4:00 AM goal" : shiftRptDur(vs) + " past the 4:00 AM goal");
+        if (b && b.p95_finish_min != null) {
+          const diff = t.p95_finish_min - b.p95_finish_min;
+          s += Math.abs(diff) < 5 ? ", right on the " + nights : ", " + shiftRptDur(Math.abs(diff)) + (diff > 0 ? " later" : " earlier") + " than the " + nights;
+        }
+        out.push(s + ".");
+      }
+      if (b && b.completed) {
+        const pct = Math.round((t.completed - b.completed) / b.completed * 100);
+        out.push("<b>" + shiftRptNum(t.completed) + "</b> trucks were unloaded, " + (Math.abs(pct) < 3 ? "about the same as" : Math.abs(pct) + "% " + (pct > 0 ? "more than" : "fewer than")) + " the " + nights + " (" + shiftRptNum(b.completed, 1) + ").");
+      }
+      if (b && t.avg_wait_min != null && b.avg_wait_min != null && Math.abs(t.avg_wait_min - b.avg_wait_min) >= 10) {
+        out.push("Trucks waited <b>" + shiftRptDur(t.avg_wait_min) + "</b> on average between check-in and the start of unloading, " + shiftRptDur(Math.abs(t.avg_wait_min - b.avg_wait_min)) + (t.avg_wait_min > b.avg_wait_min ? " longer" : " shorter") + " than the " + nights + ".");
+      }
+      if (b) {
+        let worst = null, best = null;
+        Object.keys(t.zones || {}).forEach(function(z) {
+          const a = t.zones[z], base = b.zones && b.zones[z];
+          if (!base || a.completed < 5 || a.p95_finish_min == null || base.p95_finish_min == null) return;
+          const diff = a.p95_finish_min - base.p95_finish_min;
+          if (!worst || diff > worst.diff) worst = { z: z, diff: diff };
+          if (!best || diff < best.diff) best = { z: z, diff: diff };
+        });
+        if (worst && worst.diff >= 20) out.push("<b>" + shiftRptEsc(SHIFT_RPT_ZONES[worst.z]) + "</b> finished " + shiftRptDur(worst.diff) + " later than its own " + nights + ".");
+        if (best && best.diff <= -20 && (!worst || best.z !== worst.z)) out.push("<b>" + shiftRptEsc(SHIFT_RPT_ZONES[best.z]) + "</b> finished " + shiftRptDur(-best.diff) + " earlier than its own " + nights + ".");
+      }
+      const arr = (t.hourly || []).map(function(h) { return h.arrivals; });
+      const peak = Math.max.apply(null, arr.concat([0]));
+      if (peak > 0) {
+        const h = arr.indexOf(peak);
+        out.push("Arrivals peaked in the <b>" + shiftRptHourLabel(h) + " hour</b> with " + peak + " trucks" + (b && b.hourly && b.hourly[h] ? " (usual for that hour: " + shiftRptNum(b.hourly[h].arrivals, 1) + ")" : "") + ".");
+      }
+      if (t.never_arrived || t.rejected) out.push(shiftRptNum(t.never_arrived) + " scheduled trucks never checked in and " + shiftRptNum(t.rejected) + " loads were rejected.");
+      return out.slice(0, 6);
+    }
+
+    function shiftRptTable(headers, rows, cls) {
+      return '<div class="tw"><table class="' + (cls || "") + '"><thead><tr>' + headers.map(function(h) { return '<th' + (h.num ? ' class="num"' : '') + '>' + shiftRptEsc(h.t) + '</th>'; }).join("") + '</tr></thead><tbody>'
+        + rows.map(function(r) { return '<tr' + (r.hi ? ' class="hi"' : '') + '>' + r.cells.map(function(c, i) { return '<td' + (headers[i].num ? ' class="num"' : '') + '>' + c + '</td>'; }).join("") + '</tr>'; }).join("")
+        + '</tbody></table></div>';
+    }
+
+    function shiftRptUnloaderHtml(u, chartId) {
+      if (!u || !u.people || !u.people.length) return "";
+      const team = u.team || {};
+      const pct = function(v, base) { return v != null && base ? Math.round((v / base - 1) * 100) : null; };
+      const sgn = function(p, better) {
+        if (p == null) return '<span class="muted">--</span>';
+        return '<span class="' + (Math.abs(p) < 3 ? "flat" : ((p > 0) === (better !== "down") ? "good" : "bad")) + '">' + (p > 0 ? "+" : "") + p + "%</span>";
+      };
+      const time = function(iso) { return iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "--"; };
+      const people = u.people;
+      const rows = people.map(function(p) {
+        const r = p.rating, e = p.earlier;
+        const vsTeam = people.length > 1 ? sgn(pct(p.pallets_per_hour, team.pallets_per_hour)) : '<span class="muted">--</span>';
+        const vsOwn = e && e.pallets_per_hour != null && p.pallets_per_hour != null ? sgn(pct(p.pallets_per_hour, e.pallets_per_hour)) : '<span class="muted">first night</span>';
+        const chip = r && r.ready ? '<span class="chip band-' + shiftRptEsc(r.band) + '">' + r.index + ' &middot; ' + shiftRptEsc(r.label) + '</span>' : '<span class="muted">still building</span>';
+        return { cells: [
+          '<b>' + shiftRptEsc(p.name) + '</b><div class="sub">' + shiftRptEsc(Object.keys(p.areas || {}).join(", ")) + '</div>',
+          shiftRptNum(p.loads), shiftRptNum(p.pallets), shiftRptNum(p.pallets_per_hour, 1), vsTeam,
+          shiftRptDur(p.avg_unload_min), p.avg_gap_min != null ? shiftRptDur(p.avg_gap_min) : "--",
+          '<span class="nw">' + time(p.first_start) + " &ndash; " + time(p.last_finish) + '</span>', vsOwn, chip] };
+      });
+      const hb = shiftRptSvgHBars({ items: people.filter(function(p) { return p.pallets_per_hour != null; }).map(function(p) { return { label: p.name, value: p.pallets_per_hour }; }).sort(function(a, b) { return b.value - a.value; }),
+        ref: people.length > 1 && team.pallets_per_hour ? { value: team.pallets_per_hour, label: "team " + shiftRptNum(team.pallets_per_hour, 1) } : null, fmt: function(v) { return shiftRptNum(v, 1); }, label: "Pallets per unload hour by unloader" });
+      const gapItems = people.filter(function(p) { return p.avg_gap_min != null; }).map(function(p) { return { label: p.name, value: p.avg_gap_min }; }).sort(function(a, b) { return a.value - b.value; });
+      const gb = gapItems.length ? shiftRptSvgHBars({ items: gapItems, better: "down", ref: people.length > 1 && team.avg_gap_min != null ? { value: team.avg_gap_min, label: "team " + shiftRptNum(team.avg_gap_min, 1) + " min" } : null, fmt: function(v) { return shiftRptNum(v, 1) + " min"; }, label: "Average downtime between loads by unloader" }) : '<div class="empty">Not enough back-to-back loads to measure downtime.</div>';
+      const hasPph = people.some(function(p) { return p.pallets_per_hour != null; });
+      return '<section class="sec"><h2>Performance by unloader</h2>'
+        + '<p class="lead">' + people.length + ' unloader' + (people.length === 1 ? "" : "s") + ' recorded on this shift, ' + shiftRptNum(team.loads) + ' loads and ' + shiftRptNum(team.pallets) + ' pallets. Team pace: '
+        + (team.pallets_per_hour != null ? shiftRptNum(team.pallets_per_hour, 1) + ' pallets per hour' : 'not enough timed loads yet') + (team.avg_unload_min != null ? ', ' + shiftRptDur(team.avg_unload_min) + ' average unload' : '') + '.</p>'
+        + '<div class="two">'
+        + '<div class="card"><h3>Pallets per unload hour <span class="muted">(higher is better)</span></h3>' + (hasPph ? hb : '<div class="empty">No timed loads with pallet counts yet.</div>') + '</div>'
+        + '<div class="card"><h3>Downtime between loads <span class="muted">(lower is better)</span></h3>' + gb + '</div></div>'
+        + shiftRptTable([{ t: "Unloader" }, { t: "Loads", num: 1 }, { t: "Pallets", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "vs team", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Avg downtime", num: 1 }, { t: "Worked" }, { t: "vs own recent pace", num: 1 }, { t: "30-day rating" }], rows, "wide")
+        + '<p class="note">Pallets per hour counts only loads that have both a pallet count and unload start and finish times. Downtime is the gap between one load finishing and that person\'s next load starting, ignoring gaps over 60 minutes (breaks). '
+        + '"vs own recent pace" compares pallets per hour with that person\'s average over the earlier nights shown in this report. The 30-day rating compares them with the team over the last 30 days, adjusted for which zones they worked.</p></section>';
+    }
+
+    function shiftRptDoc(data) {
+      const t = data.tonight, b = data.baseline, prev = data.previous || [], status = data.status || {};
+      const stepOf = function(min) { return Math.min(56, Math.max(0, Math.floor(min / 15))); };
+      const shiftStartMs = Date.parse(t.shift_start);
+      const nowStep = status.final ? 56 : stepOf((Date.parse(data.generated_at) - shiftStartMs) / 60000);
+      const tonightCurve = t.curve_fin.map(function(v, i) { return i <= nowStep ? v : null; });
+      const ticks = [[0, "7 PM"], [8, "9 PM"], [16, "11 PM"], [24, "1 AM"], [32, "3 AM"], [40, "5 AM"], [48, "7 AM"], [56, "9 AM"]];
+      const goalLine = [{ i: 36, label: "4 AM goal", color: "#c53030" }];
+      const prevLines = prev.filter(function(p) { return p.has_data; }).map(function(p) { return { data: p.curve_fin, color: "#94a3b8", width: 1.2, opacity: 0.45 }; });
+      const curveSeries = prevLines.concat(b ? [{ data: b.curve_fin, color: "#dd6b20", width: 2.4, dash: "6 4" }] : [], [{ data: tonightCurve, color: "#2b6cb0", width: 3.2 }]);
+      const curveSvg = shiftRptBoth(shiftRptSvgLines, { n: 57, series: curveSeries, xTicks: ticks, vlines: goalLine, label: "Trucks finished through the night" }, 250);
+      const hourLabels = []; for (let h = 0; h < 14; h++) hourLabels.push(shiftRptHourLabel(h));
+      const flowSvg = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.arrivals; }), color: "#90cdf4" }, { data: t.hourly.map(function(h) { return h.finishes; }), color: "#2b6cb0" }],
+        line: b ? { data: b.hourly.map(function(h) { return h.finishes; }), color: "#dd6b20" } : null, label: "Trucks arriving and finishing each hour" }, 240);
+      const nightsAsc = prev.concat([t]);
+      const trendItems = function(key) { return nightsAsc.map(function(n, i) { return { label: shiftRptDay(n.business_date).replace(/^\w+ /, ""), value: n.has_data ? n[key] : null, hi: i === nightsAsc.length - 1 }; }); };
+      const trend1 = shiftRptSvgTrend({ items: trendItems("p95_finish_min"), yFmt: shiftRptClock, goal: { value: SHIFT_RPT_GOAL_MIN, label: "4 AM" }, label: "Time 95% of trucks were done, by night" });
+      const trend2 = shiftRptSvgTrend({ items: trendItems("pph"), yFmt: function(v) { return shiftRptNum(v, 0); }, label: "Pallets per unload hour, by night" });
+      const trend3 = shiftRptSvgTrend({ items: trendItems("avg_wait_min"), yFmt: function(v) { return shiftRptNum(v, 0) + "m"; }, label: "Average wait to start unloading, by night" });
+
+      const zoneRows = Object.keys(t.zones || {}).map(function(z) {
+        const a = t.zones[z], base = b && b.zones ? b.zones[z] : null;
+        const cell = function(cur, bv, cfg, fmt) {
+          const d = shiftRptDelta(cur, bv, cfg);
+          return shiftRptEsc(fmt(cur)) + (base && bv != null ? '<div class="sub ' + d.cls + '">' + shiftRptEsc(d.text.replace(" than the average", "")) + '</div>' : '');
+        };
+        return { cells: ['<b>' + shiftRptEsc(SHIFT_RPT_ZONES[z] || z) + '</b>', shiftRptNum(a.scheduled), shiftRptNum(a.arrived), shiftRptNum(a.completed),
+          cell(a.p95_finish_min, base && base.p95_finish_min, { better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 }, shiftRptClock),
+          cell(a.avg_unload_min, base && base.avg_unload_min, { better: "down", words: ["slower", "faster"], fmt: shiftRptDur, tol: 2 }, shiftRptDur),
+          cell(a.pph, base && base.pph, { better: "up", words: ["higher", "lower"], fmt: function(v) { return shiftRptNum(v, 1); }, tol: 0.5 }, function(v) { return shiftRptNum(v, 1); })] };
+      });
+      const zonesTable = shiftRptTable([{ t: "Zone" }, { t: "Scheduled", num: 1 }, { t: "Arrived", num: 1 }, { t: "Unloaded", num: 1 }, { t: "95% done", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Pallets/hr", num: 1 }], zoneRows);
+      const supRows = function(list, key) {
+        return (list || []).map(function(s) { return { cells: [shiftRptEsc(s.supplier), shiftRptNum(s.trucks), key === "slow" ? shiftRptDur(s.avg_dock_min) : shiftRptNum(s.pallets), key === "slow" ? shiftRptDur(s.max_dock_min) : shiftRptDur(s.avg_dock_min)] }; });
+      };
+      const slowTable = (t.suppliers.slowest || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Avg time on dock", num: 1 }, { t: "Longest", num: 1 }], supRows(t.suppliers.slowest, "slow")) : '<div class="empty">No supplier had two or more finished trucks.</div>';
+      const busyTable = (t.suppliers.busiest || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg time on dock", num: 1 }], supRows(t.suppliers.busiest, "busy")) : '<div class="empty">No supplier data.</div>';
+      const histRows = nightsAsc.map(function(n, i) {
+        const me = i === nightsAsc.length - 1;
+        if (!n.has_data) return { hi: me, cells: ['<b>' + shiftRptEsc(shiftRptDay(n.business_date)) + '</b>', '<span class="muted" colspan="8">no shift</span>', "", "", "", "", "", "", ""] };
+        return { hi: me, cells: ['<b>' + shiftRptEsc(shiftRptDay(n.business_date)) + (me ? ' (this report)' : '') + '</b>', shiftRptNum(n.completed), shiftRptNum(n.pct_by_goal) + "%", shiftRptClock(n.p95_finish_min), shiftRptDur(n.avg_unload_min),
+          shiftRptDur(n.avg_wait_min), shiftRptNum(n.pph, 1), shiftRptNum(n.over_2h), shiftRptNum(n.never_arrived) + " / " + shiftRptNum(n.rejected)] };
+      });
+      const histTable = shiftRptTable([{ t: "Night" }, { t: "Unloaded", num: 1 }, { t: "By 4 AM", num: 1 }, { t: "95% done", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Avg wait", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Over 2 h", num: 1 }, { t: "No-show / rej.", num: 1 }], histRows, "wide");
+
+      const final = !!status.final;
+      const banner = !t.scheduled
+        ? '<div class="banner warn"><b>No trucks found.</b> DMS has no loads for this business date, so there is nothing to report.</div>'
+        : final
+        ? '<div class="banner ok"><b>Final.</b> Every truck that checked in has been unloaded and nothing is left to arrive.</div>'
+        : '<div class="banner warn"><b>Shift still in progress.</b> ' + shiftRptNum(status.open) + ' truck' + (status.open === 1 ? " is" : "s are") + ' still open and ' + shiftRptNum(status.pending) + ' scheduled truck' + (status.pending === 1 ? "" : "s") + ' ha' + (status.pending === 1 ? "s" : "ve") + ' not arrived yet, so these numbers are partial.</div>';
+      const compare = b ? 'Compared with the average of the previous <b>' + b.nights + '</b> night' + (b.nights === 1 ? "" : "s") + ' (' + b.dates.map(function(d) { return shiftRptEsc(shiftRptDay(d)); }).join(", ") + ').'
+        : 'No earlier nights were available to compare with.';
+      const missing = (data.missing || []).length ? '<p class="note">Could not read ' + data.missing.map(function(d) { return shiftRptEsc(shiftRptDay(d)); }).join(", ") + ' from DMS, so ' + (data.missing.length === 1 ? "it is" : "they are") + ' left out of the comparison.</p>' : '';
+      const insights = shiftRptInsights(data);
+      const generated = new Date(data.generated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+      const unloaderHtml = shiftRptUnloaderHtml(data.unloaders);
+      const unloaderNote = data.unloaders_hidden ? "" : (data.unloaders ? "" : '<p class="note">No unloader names were entered on this shift, so there is no per-unloader section.</p>');
+      const css = ':root{--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--blue:#2b6cb0;--green:#2f855a;--red:#c53030;--amber:#b7791f}'
+        + '*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:var(--ink);font:14px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
+        + '.page{max-width:920px;margin:0 auto;background:#fff;padding:26px 24px 40px}'
+        + 'h1{font-size:1.65rem;margin:0 0 2px;color:#0f2f4d}h2{font-size:1.18rem;margin:26px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--line);color:#0f2f4d}h3{font-size:.92rem;margin:0 0 6px}'
+        + '.meta{color:var(--muted);font-size:.86rem}.lead{margin:4px 0 12px}.muted{color:var(--muted);font-weight:400}.note{color:var(--muted);font-size:.8rem;margin:8px 0 0}'
+        + '.banner{border-radius:8px;padding:9px 12px;margin:14px 0 4px;font-size:.9rem}.banner.ok{background:#e6f4ea;border:1px solid #9ad2ae}.banner.warn{background:#fff7e0;border:1px solid #f0c75e}'
+        + '.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;break-inside:avoid}'
+        + '.kpi-l{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.kpi-v{font-size:1.75rem;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}'
+        + '.kpi-s{font-size:.74rem;color:var(--muted)}.kpi-d{font-size:.8rem;font-weight:700;margin-top:4px}.kpi-b{font-size:.72rem;color:var(--muted)}'
+        + '.good{color:var(--green)}.bad{color:var(--red)}.flat{color:var(--muted)}.na{color:var(--muted);font-weight:400}'
+        + '.insights{margin:6px 0 0;padding-left:20px}.insights li{margin:4px 0}'
+        + '.card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}.sec{break-inside:auto}.chart{width:100%;height:auto;display:block}'
+        + '.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.78rem;color:var(--muted);margin-top:4px}.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}'
+        + '.legend i.bar{height:10px;border:0;width:11px;border-radius:2px}.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}'
+        + 'table{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:8px}th{text-align:left;font-size:.7rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:5px 7px;border-bottom:2px solid var(--line)}'
+        + 'td{padding:6px 7px;border-bottom:1px solid var(--line);vertical-align:top}th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}tr.hi td{background:#ebf4ff}.sub{font-size:.72rem;color:var(--muted)}'
+        + '.chip{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.72rem;font-weight:800;color:#fff;background:#718096;white-space:nowrap}.nw{white-space:nowrap}.band-green{background:#2f855a}.band-even{background:#2b6cb0}.band-yellow{background:#b7791f}.band-red{background:#c53030}'
+        + '.empty{color:var(--muted);font-size:.84rem;padding:14px 4px}.wide{font-size:.8rem}.defs{font-size:.78rem;color:var(--muted)}.defs li{margin:3px 0}'
+        + '.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.cn{display:none}'
+        + '.card,.kpi{min-width:0}'
+        + '@media(max-width:640px){.cw{display:none}.cn{display:block}.page{padding:16px 12px 30px}.two,.three{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-v{font-size:1.4rem}.tw table{min-width:460px}.tw table.wide{min-width:640px}}'
+        + '@media print{.cw{display:block!important}.cn{display:none!important}body{background:#fff}.page{max-width:none;padding:0}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}h2{break-after:avoid}.card,.kpi,tr{break-inside:avoid}.tw{overflow:visible}.tw table,.tw table.wide{min-width:0}table.wide{font-size:.7rem}th,td{padding:4px 4px}th{font-size:.62rem}.nw,.chip{white-space:normal}@page{size:letter;margin:12mm}}';
+      return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OKS End-of-Shift Report ' + shiftRptEsc(t.business_date) + '</title><style>' + css + '</style></head><body><div class="page">'
+        + '<h1>OKS End-of-Shift Report</h1>'
+        + '<div class="meta">Business date <b>' + shiftRptEsc(shiftRptLongDate(t.business_date)) + '</b> &middot; shift 7:00 PM to 9:00 AM &middot; generated ' + shiftRptEsc(generated) + '</div>'
+        + banner + '<p class="meta">' + compare + '</p>' + missing
+        + '<h2>The night at a glance</h2>'
+        + (insights.length ? '<ul class="insights">' + insights.map(function(s) { return '<li>' + s + '</li>'; }).join("") + '</ul>' : '')
+        + '<div class="kpis" style="margin-top:12px">' + shiftRptKpis(t, b) + '</div>'
+        + '<section class="sec"><h2>Trucks finished through the night</h2><div class="card">' + curveSvg
+        + '<div class="legend"><span><i style="border-color:#2b6cb0"></i>This shift</span>' + (b ? '<span><i style="border-color:#dd6b20;border-top-style:dashed"></i>Average of ' + b.nights + ' nights</span>' : '')
+        + '<span><i style="border-color:#94a3b8"></i>Each earlier night</span><span><i style="border-color:#c53030;border-top-style:dashed"></i>4 AM goal</span></div></div></section>'
+        + '<section class="sec"><h2>Arrivals and finishes by hour</h2><div class="card">' + flowSvg
+        + '<div class="legend"><span><i class="bar" style="background:#90cdf4"></i>Trucks arriving</span><span><i class="bar" style="background:#2b6cb0"></i>Trucks finishing</span>' + (b ? '<span><i style="border-color:#dd6b20;border-top-style:dashed"></i>Usual finishes (' + b.nights + '-night average)</span>' : '') + '</div></div></section>'
+        + '<section class="sec"><h2>How this shift compares with the last ' + (nightsAsc.length - 1) + ' nights</h2><div class="three">'
+        + '<div class="card"><h3>When 95% were done</h3>' + trend1 + '</div><div class="card"><h3>Pallets per unload hour</h3>' + trend2 + '</div><div class="card"><h3>Average wait to start</h3>' + trend3 + '</div></div>' + histTable + '</section>'
+        + '<section class="sec"><h2>By zone</h2>' + zonesTable + '<p class="note">Zone differences are against that zone\'s own average over the same earlier nights.</p></section>'
+        + '<section class="sec"><h2>Suppliers</h2><div class="two"><div class="card"><h3>Slowest to turn <span class="muted">(2+ trucks)</span></h3>' + slowTable + '</div><div class="card"><h3>Busiest</h3>' + busyTable + '</div></div></section>'
+        + unloaderHtml + unloaderNote
+        + '<h2>How to read this</h2><ul class="defs"><li><b>95% of trucks done</b> is the time by which 95% of the trucks that were unloaded had finished. It ignores the last few stragglers.</li>'
+        + '<li><b>Wait to start</b> runs from driver check-in to the start of unloading. <b>Time on dock</b> runs from check-in to unload finish. <b>Average unload time</b> runs from unload start to finish, and ignores anything over 8 hours as a stamping error.</li>'
+        + '<li><b>Finished by 4 AM</b> is the share of trucks that checked in which finished unloading by 4:00 AM. <b>Scheduled, never arrived</b> trucks are left out of every time and pace figure.</li>'
+        + '<li><b>Pallets per unload hour</b> is pallets on timed unloads divided by the hours spent unloading them, per door, not per person.</li>'
+        + '<li>Nights with fewer than 10 arrivals are treated as no shift and are not used in the averages. All times come from DMS stamps.</li></ul>'
+        + '</div></body></html>';
+    }
+
+    function shiftRptFilename(data) {
+      const m = /^(\d+)\/(\d+)\/(\d+)$/.exec(data.business_date || "");
+      return "OKS_shift_report_" + (m ? m[3] + "-" + m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0") : "latest") + ".html";
+    }
+
+    function shiftRptSetState(text, isError) {
+      const msg = document.getElementById("shiftRptMsg"), frame = document.getElementById("shiftRptFrame");
+      if (msg) { msg.textContent = text || ""; msg.style.display = text ? "" : "none"; msg.classList.toggle("error", !!isError); }
+      if (frame) frame.style.display = text ? "none" : "";
+      ["shiftRptDownload", "shiftRptPrint"].forEach(function(id) { const b = document.getElementById(id); if (b) b.disabled = !!text || !SHIFT_RPT.doc; });
+      const retry = document.getElementById("shiftRptRetry"); if (retry) retry.style.display = isError ? "" : "none";
+    }
+
+    function shiftRptLoad() {
+      if (SHIFT_RPT.busy) return;
+      SHIFT_RPT.busy = true; SHIFT_RPT.doc = "";
+      shiftRptSetState("Building your report. The first time it also reads the earlier nights from DMS, which can take up to a minute. After that it is quick.");
+      const date = portalSelectedBusinessDate() || portalDefaultBusinessDateKey();
+      fetch(apiUrl("/api/portal/shift-report?business_date=" + encodeURIComponent(date) + "&days=" + SHIFT_RPT.days))
+        .then(function(r) { return r.json().then(function(j) { if (!r.ok) throw new Error(j && j.detail ? j.detail : "HTTP " + r.status); return j; }); })
+        .then(function(data) {
+          SHIFT_RPT.data = data; SHIFT_RPT.doc = shiftRptDoc(data);
+          const frame = document.getElementById("shiftRptFrame");
+          if (frame) frame.srcdoc = SHIFT_RPT.doc;
+          const sub = document.getElementById("shiftRptSub");
+          if (sub) sub.textContent = data.business_date + (data.status && data.status.final ? " - final" : " - shift still in progress");
+          shiftRptSetState("");
+        })
+        .catch(function(err) { shiftRptSetState("Could not build the report: " + (err && err.message ? err.message : err), true); })
+        .then(function() { SHIFT_RPT.busy = false; });
+    }
+
+    function shiftRptOpen() {
+      const ov = document.getElementById("shiftRptOverlay");
+      if (!ov) return;
+      ov.style.display = "flex";
+      document.body.classList.add("shift-rpt-open");
+      const sel = document.getElementById("shiftRptDays"); if (sel) sel.value = String(SHIFT_RPT.days);
+      shiftRptLoad();
+    }
+    function shiftRptClose() {
+      const ov = document.getElementById("shiftRptOverlay");
+      if (ov) ov.style.display = "none";
+      document.body.classList.remove("shift-rpt-open");
+    }
+    function shiftRptDownload() {
+      if (!SHIFT_RPT.doc || !SHIFT_RPT.data) return;
+      const blob = new Blob([SHIFT_RPT.doc], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob), a = document.createElement("a");
+      a.href = url; a.download = shiftRptFilename(SHIFT_RPT.data); document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 2000);
+    }
+    function shiftRptPrint() {
+      const frame = document.getElementById("shiftRptFrame");
+      if (!frame || !SHIFT_RPT.doc) return;
+      try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { alert("Open the downloaded report and use Print > Save as PDF."); }
+    }
+    document.addEventListener("click", function(e) {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest("#portalShiftReportPageBtn")) shiftRptOpen();
+      else if (t.closest("#shiftRptClose")) shiftRptClose();
+      else if (t.closest("#shiftRptDownload")) shiftRptDownload();
+      else if (t.closest("#shiftRptPrint")) shiftRptPrint();
+      else if (t.closest("#shiftRptRetry")) shiftRptLoad();
+    });
+    document.addEventListener("change", function(e) {
+      if (e.target && e.target.id === "shiftRptDays") { SHIFT_RPT.days = Number(e.target.value) || 7; shiftRptLoad(); }
+    });
+    document.addEventListener("keydown", function(e) {
+      const ov = document.getElementById("shiftRptOverlay");
+      if (e.key === "Escape" && ov && ov.style.display !== "none") shiftRptClose();
+    });
 
     function portalBuildShiftReport() {
       const rows = portalEnrichedTrucks();
