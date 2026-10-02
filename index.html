@@ -801,6 +801,69 @@
     .door-tile.open { border-top-color:#cbd5e0; background:var(--bg,#f7fafc); opacity:0.85; }
     .door-tile.open .door-no { color:var(--muted,#a0aec0); font-weight:700; }
     .door-open-label { font-size:0.74em; font-weight:700; color:#38a169; margin-top:auto; }
+    /* A truck at the door whose unload has not started: yellow after the first threshold, red after the second. */
+    #myPortalPanel .door-tile.ns-yellow { background:#fffbea; border:2px solid #d69e2e; border-top:6px solid #d69e2e; box-shadow:0 0 0 3px rgba(214,158,46,.28); }
+    #myPortalPanel .door-tile.ns-red    { background:#fff1f0; border:2px solid #e53e3e; border-top:6px solid #e53e3e; box-shadow:0 0 0 3px rgba(229,62,62,.32); }
+    :root.dark #myPortalPanel .door-tile.ns-yellow { background:#3a3012; }
+    :root.dark #myPortalPanel .door-tile.ns-red    { background:#4a1d1d; }
+    .door-tile .door-ns { font-size:0.7em; font-weight:800; margin-top:2px; }
+    .door-tile.ns-yellow .door-ns { color:#975a16; }
+    .door-tile.ns-red .door-ns { color:#c53030; }
+    :root.dark .door-tile.ns-yellow .door-ns { color:#f6e05e; }
+    :root.dark .door-tile.ns-red .door-ns { color:#feb2b2; }
+    .door-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin:0 0 10px; }
+    .door-sort { display:inline-flex; border:1px solid var(--border,#cbd5e0); border-radius:8px; overflow:hidden; }
+    .door-sort button { border:0; background:transparent; padding:6px 14px; font-weight:700; font-size:0.82em; cursor:pointer; color:var(--text,#2d3748); }
+    .door-sort button.active { background:#1e3a5f; color:#fff; }
+    :root.dark .door-sort button.active { background:#2b6cb0; }
+    .door-ns-set { display:inline-flex; align-items:center; gap:6px; font-size:0.8em; font-weight:700; color:var(--text,#2d3748); }
+    .door-ns-set input { width:54px; padding:4px 6px; border:1px solid var(--border,#cbd5e0); border-radius:6px; background:transparent; color:inherit; font:inherit; }
+    .door-sort-note { font-size:0.76em; color:var(--muted,#718096); margin:-4px 0 10px; }
+    .zone-doors { margin-top:14px; }
+    .zone-doors-head { font-size:0.78em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); margin-bottom:6px; }
+    #myPortalPanel .zone-door-map { grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:6px; }
+    #myPortalPanel .zone-door-map .door-tile { min-height:58px; padding:6px 7px; }
+    .portal-popup-stack { position:fixed; top:64px; right:14px; z-index:9999; display:flex; flex-direction:column; gap:10px; width:min(400px, calc(100vw - 24px)); pointer-events:none; }
+    .portal-popup { pointer-events:auto; display:flex; gap:12px; align-items:flex-start; background:#fffbea; color:#1a202c; border:2px solid #d69e2e; border-left-width:8px; border-radius:12px; padding:12px 14px; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+    .portal-popup.red { background:#fff1f0; border-color:#e53e3e; }
+    .portal-popup.pop-in { animation:portalPopIn .25s ease-out; }
+    @keyframes portalPopIn { from { transform:translateX(24px); opacity:0; } to { transform:none; opacity:1; } }
+    .portal-popup-body { flex:1; min-width:0; }
+    .portal-popup-title { font-weight:800; font-size:1.02em; line-height:1.25; }
+    .portal-popup-text { font-size:0.86em; margin-top:3px; line-height:1.4; color:#4a5568; }
+    .portal-popup-actions { display:flex; gap:8px; margin-top:8px; }
+    .portal-popup-actions button { font:inherit; font-size:0.8em; font-weight:700; border-radius:6px; padding:4px 12px; cursor:pointer; border:1.5px solid #1e3a5f; background:#1e3a5f; color:#fff; }
+    .portal-popup-actions button.ghost { background:transparent; color:#1e3a5f; }
+    .portal-popup-close { border:0; background:transparent; font-size:1.4em; line-height:1; cursor:pointer; color:#4a5568; padding:0 2px; }
+    .portal-popup-more { pointer-events:auto; align-self:flex-end; background:#1e3a5f; color:#fff; border:0; border-radius:999px; padding:6px 14px; font:inherit; font-weight:700; font-size:0.82em; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+    :root.dark .portal-popup { background:#3a3012; color:#fefcbf; }
+    :root.dark .portal-popup.red { background:#4a1d1d; color:#fed7d7; }
+    :root.dark .portal-popup-text, :root.dark .portal-popup-close { color:#e2e8f0; }
+    :root.dark .portal-popup-actions button { background:#2b6cb0; border-color:#2b6cb0; }
+    :root.dark .portal-popup-actions button.ghost { background:transparent; color:#bee3f8; }
+    @media (max-width: 700px) { .portal-popup-stack { top:56px; right:8px; } }
+    /* Pace ticker: how the building and each zone compare with the average night. */
+    .portal-ticker { display:flex; align-items:stretch; margin:10px 0; border:1px solid var(--border,#e2e8f0); border-radius:10px; overflow:hidden; background:var(--card-bg,#fff); }
+    :root.dark .portal-ticker { background:#17263f; border-color:#1e3a55; }
+    .portal-ticker-tag { flex:none; display:flex; align-items:center; background:#1e3a5f; color:#fff; font-weight:800; font-size:0.78em; letter-spacing:.08em; padding:0 14px; }
+    .portal-ticker-window { flex:1; min-width:0; overflow:hidden; white-space:nowrap; }
+    .portal-ticker-track { display:inline-flex; animation:portalTickerScroll var(--ticker-secs,40s) linear infinite; will-change:transform; }
+    .portal-ticker:hover .portal-ticker-track { animation-play-state:paused; }
+    .portal-ticker-set { display:inline-flex; flex:none; min-width:60vw; }
+    @keyframes portalTickerScroll { from { transform:translateX(0); } to { transform:translateX(-50%); } }
+    .ticker-item { display:inline-flex; align-items:center; gap:8px; padding:10px 22px; font-weight:700; font-size:0.9em; border-right:1px solid var(--border,#e2e8f0); color:var(--text,#2d3748); }
+    :root.dark .ticker-item { border-right-color:#1e3a55; }
+    .ticker-item .dot { width:10px; height:10px; border-radius:50%; background:#a0aec0; flex:none; }
+    .ticker-item.green .dot { background:#38a169; } .ticker-item.yellow .dot { background:#d69e2e; } .ticker-item.red .dot { background:#e53e3e; }
+    .ticker-item .state { font-weight:800; }
+    .ticker-item.green .state { color:#2f855a; } .ticker-item.yellow .state { color:#b7791f; } .ticker-item.red .state { color:#c53030; }
+    :root.dark .ticker-item.green .state { color:#68d391; } :root.dark .ticker-item.yellow .state { color:#f6e05e; } :root.dark .ticker-item.red .state { color:#fc8181; }
+    .ticker-item .est { font-weight:600; color:var(--muted,#718096); }
+    @media (prefers-reduced-motion: reduce) { .portal-ticker-track { animation:none; } .portal-ticker-window { overflow-x:auto; } .portal-ticker-set + .portal-ticker-set { display:none; } }
+    .kiosk-ticker { width:100%; border-top:1px solid rgba(255,255,255,0.14); border-bottom:1px solid rgba(255,255,255,0.14); background:rgba(255,255,255,0.05); overflow:hidden; white-space:nowrap; }
+    .kiosk-ticker .ticker-item { color:#eaf4ff; font-size:clamp(1rem,2.2vw,1.5rem); border-right-color:rgba(255,255,255,0.14); }
+    .kiosk-ticker .ticker-item .est { color:#9db8d6; }
+    .kiosk-ticker .ticker-item.green .state { color:#4ade80; } .kiosk-ticker .ticker-item.yellow .state { color:#fbbf24; } .kiosk-ticker .ticker-item.red .state { color:#f87171; }
     :root.dark .door-tile.open { background:#0e1c30; }
     .door-range-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
     .door-range-row label { font-size:0.82em; font-weight:700; color:var(--label,#718096); }
@@ -883,12 +946,12 @@
     :root.dark .zone-chip.red    { background:#822727; color:#fed7d7; }
     :root.dark .zone-chip.none   { background:#2d3748; color:#cbd5e0; }
     .zone-finish { font-size:0.84em; font-weight:700; color:var(--text,#2d3748); margin:2px 0 8px; }
-    .alert-card.alert-zonered    { border-left-color:#e53e3e; }
-    .alert-card.alert-zoneyellow { border-left-color:#d69e2e; }
-    .alert-card-sev.sev-zonered    { background:#fff5f5; color:#c53030; }
-    .alert-card-sev.sev-zoneyellow { background:#fffaf0; color:#b7791f; }
-    :root.dark .alert-card-sev.sev-zonered { background:#3d1515; }
-    :root.dark .alert-card-sev.sev-zoneyellow { background:#3d2f15; }
+    .alert-card.alert-zonered, .alert-card.alert-notstartedred       { border-left-color:#e53e3e; }
+    .alert-card.alert-zoneyellow, .alert-card.alert-notstartedyellow { border-left-color:#d69e2e; }
+    .alert-card-sev.sev-zonered, .alert-card-sev.sev-notstartedred       { background:#fff5f5; color:#c53030; }
+    .alert-card-sev.sev-zoneyellow, .alert-card-sev.sev-notstartedyellow { background:#fffaf0; color:#b7791f; }
+    :root.dark .alert-card-sev.sev-zonered, :root.dark .alert-card-sev.sev-notstartedred { background:#3d1515; }
+    :root.dark .alert-card-sev.sev-zoneyellow, :root.dark .alert-card-sev.sev-notstartedyellow { background:#3d2f15; }
     .zone-foot { font-size:0.76em; color:var(--muted,#718096); margin-top:12px; line-height:1.5; }
     @media (max-width: 700px) { .zone-kpis { grid-template-columns:repeat(2,1fr); } }
     /* -- Shift report modal -- */
@@ -6332,7 +6395,7 @@
 
         <!-- Notification permission banner -->
         <div class="portal-notif-banner" id="portalNotifBanner" style="display:none;">
-          <span>Enable desktop alerts for detention, urgent trucks, and shift pace warnings.</span>
+          <span>Enable desktop alerts for doors that need starting, detention, zones running behind, and shift pace warnings.</span>
           <div style="display:flex;gap:6px;flex-shrink:0;">
             <button id="portalNotifEnableBtn" type="button">Enable Alerts</button>
             <button id="portalNotifDismissBtn" type="button" class="notif-dismiss">Not now</button>
@@ -6351,6 +6414,12 @@
         <div class="portal-announce-composer announce-write-only" id="portalAnnounceComposer">
           <input id="portalAnnounceInput" type="text" class="lookup-input" placeholder="Post a shift announcement everyone will see (e.g. Door 40 closed for maintenance)..." maxlength="280" autocomplete="off">
           <button type="button" id="portalAnnounceSendBtn" class="secondary-btn">Announce</button>
+        </div>
+
+        <!-- Pace ticker: building and zones vs the average night, with estimated finish times -->
+        <div class="portal-ticker" id="portalTicker" style="display:none;" aria-label="Pace compared with the average night">
+          <div class="portal-ticker-tag">PACE</div>
+          <div class="portal-ticker-window"><div class="portal-ticker-track" id="portalTickerTrack"></div></div>
         </div>
 
         <!-- Command bar: info strip + controls strip -->
@@ -6779,6 +6848,20 @@
             <button type="button" id="portalSheetsSetupBtn" class="secondary-btn" style="font-size:0.8em;">Setup Sheets Sync</button>
             <span id="portalSheetsSyncStatus" class="sheets-sync-idle" style="font-size:0.78em;"></span>
           </div>
+          <div class="door-controls">
+            <div class="door-sort" id="portalDoorSort" role="group" aria-label="Sort the door map">
+              <button type="button" data-sort="door" class="active">Door #</button>
+              <button type="button" data-sort="priority">Priority</button>
+            </div>
+            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red">Not started: yellow after
+              <input id="portalNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
+              <input id="portalNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
+              <select id="portalNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
+                <option value="ready">the later of door arrival and appointment</option>
+                <option value="door">driver at the door</option>
+              </select></span>
+          </div>
+          <div class="door-sort-note" id="portalDoorSortNote"></div>
           <div class="dms-scorecard" id="portalScorecardDoors"></div>
           <div class="door-map" id="portalDoorMap"></div>
         </section>
@@ -9624,7 +9707,9 @@
         portalTickCountdowns();
         portalTickKiosk();
       }
-      tick();
+      // First tick runs once the whole script has loaded: on a :00/:30 second it renders the board,
+      // which needs constants declared further down the file.
+      setTimeout(tick, 0);
       setInterval(tick, 1000);
     })();
 
@@ -16935,7 +17020,7 @@
     // from ~120 real nights by build_zone_model.py: `models` feed the shared-dock finish simulation,
     // `pace` holds the usual share-finished curve (15-min steps from 7 PM) and how a gap to that
     // curve maps to a finish time. Rerun the script every month or two.
-    const PORTAL_ZONE_MODEL = {"doors":6,"nights":120,"models":{"freezer":{"fmax":0.837,"offsets":[-532,-532,-486,-447,-422,-395,-371,-352,-336,-321,-311,-294,-283,-269,-253,-241,-230,-222,-215,-210,-205,-199,-191,-184,-177,-173,-168,-166,-163,-159,-156,-152,-149,-144,-143,-135,-130,-127,-123,-120,-117,-114,-111,-107,-104,-99,-95,-93,-90,-87,-84,-80,-78,-76,-75,-73,-70,-67,-66,-64,-62,-60,-59,-56,-54,-52,-50,-48,-46,-44,-41,-38,-35,-34,-32,-29,-25,-22,-20,-18,-16,-12,-9,-6,-3,0,5,7,12,15,20,24,27,31,35,41,49,56,65,81,81],"service":[0,0,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,23,24,24,24,25,25,26,26,27,27,28,28,28,29,29,30,30,31,31,32,32,32,33,33,34,35,35,35,36,37,37,38,38,39,39,40,41,41,42,43,44,45,47,48,49,50,53,54,57,58,62,68,75,90,117,117]},"chilled":{"fmax":0.874,"offsets":[-631,-631,-548,-490,-448,-410,-381,-353,-335,-314,-296,-283,-270,-260,-251,-242,-232,-222,-213,-206,-199,-194,-187,-182,-177,-171,-167,-163,-158,-152,-148,-144,-140,-135,-130,-127,-122,-120,-116,-112,-110,-105,-101,-98,-94,-92,-88,-86,-83,-80,-76,-73,-70,-68,-65,-63,-61,-59,-57,-55,-52,-50,-48,-46,-43,-41,-39,-36,-34,-31,-29,-27,-25,-23,-21,-19,-17,-15,-12,-10,-7,-5,-2,0,5,7,11,15,21,27,34,40,46,55,65,73,85,102,127,162,162],"service":[0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,10,11,11,12,12,12,13,13,14,14,15,15,16,16,17,17,17,18,18,19,19,20,20,20,21,21,21,22,22,23,24,24,25,25,26,26,27,27,28,29,29,30,31,31,32,33,33,34,35,36,36,37,39,40,41,42,43,45,47,48,51,53,56,61,66,72,81,94,109,130,221,221]},"dry":{"fmax":0.811,"offsets":[-561,-561,-510,-464,-429,-402,-381,-362,-342,-324,-309,-296,-286,-276,-264,-257,-250,-241,-235,-227,-222,-215,-209,-203,-196,-191,-185,-180,-175,-171,-167,-162,-158,-152,-149,-145,-141,-137,-132,-129,-125,-121,-117,-114,-111,-107,-103,-100,-97,-94,-90,-87,-84,-81,-78,-76,-73,-71,-68,-65,-62,-58,-55,-53,-50,-47,-43,-41,-39,-36,-33,-31,-29,-25,-23,-20,-17,-15,-13,-10,-7,-4,-2,0,4,9,13,17,21,26,30,36,43,50,57,67,75,90,106,147,147],"service":[0,0,0,0,0,0,2,4,5,6,7,8,9,9,10,11,11,12,12,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,24,24,25,25,26,27,27,28,28,29,29,30,31,31,32,33,33,34,35,36,37,38,38,39,40,41,42,43,44,45,46,48,49,50,51,53,54,56,57,59,61,63,65,68,71,75,77,80,84,88,93,98,104,112,125,137,152,183,231,317,317]}},"pace":{"freezer":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,0.105,0.125,0.167,0.2,0.231,0.267,0.3,0.333,0.375,0.4,0.438,0.462,0.5,0.5,0.545,0.571,0.6,0.615,0.667,0.667,0.7,0.706,0.727,0.75,0.778,0.8,0.8,0.812,0.833,0.833,0.833,0.833,0.833,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846],"finish":519.0,"fit":[[11.81,0.718],[17.66,0.432],[20.89,0.454],[37.98,0.227],[67.64,0.081],[114.65,-0.22]]},"chilled":{"curve":[0.0,0.0,0.0,0.0,0.021,0.024,0.027,0.047,0.069,0.09,0.115,0.13,0.163,0.195,0.217,0.253,0.283,0.31,0.341,0.363,0.395,0.435,0.47,0.495,0.534,0.568,0.594,0.628,0.667,0.691,0.71,0.741,0.767,0.793,0.806,0.81,0.833,0.844,0.851,0.865,0.868,0.874,0.874,0.875,0.877,0.877,0.88,0.88,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882],"finish":536.0,"fit":[[4.9,0.941],[3.55,1.049],[4.66,0.916],[4.83,0.886],[22.62,0.306],[66.35,0.094]]},"dry":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.031,0.052,0.069,0.092,0.111,0.131,0.167,0.198,0.223,0.252,0.292,0.316,0.358,0.388,0.417,0.448,0.473,0.51,0.533,0.561,0.592,0.623,0.644,0.675,0.704,0.723,0.729,0.75,0.759,0.769,0.774,0.778,0.792,0.792,0.796,0.802,0.804,0.804,0.806,0.807,0.807,0.807,0.809,0.809,0.811,0.811,0.811,0.811,0.811,0.811],"finish":525.0,"fit":[[34.61,0.321],[33.71,0.449],[36.26,0.216],[41.66,0.167],[67.84,-0.08],[155.15,-0.446]]}}};
+    const PORTAL_ZONE_MODEL = {"doors":6,"nights":120,"models":{"freezer":{"fmax":0.837,"offsets":[-532,-532,-486,-447,-422,-395,-371,-352,-336,-321,-311,-294,-283,-269,-253,-241,-230,-222,-215,-210,-205,-199,-191,-184,-177,-173,-168,-166,-163,-159,-156,-152,-149,-144,-143,-135,-130,-127,-123,-120,-117,-114,-111,-107,-104,-99,-95,-93,-90,-87,-84,-80,-78,-76,-75,-73,-70,-67,-66,-64,-62,-60,-59,-56,-54,-52,-50,-48,-46,-44,-41,-38,-35,-34,-32,-29,-25,-22,-20,-18,-16,-12,-9,-6,-3,0,5,7,12,15,20,24,27,31,35,41,49,56,65,81,81],"service":[0,0,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,23,24,24,24,25,25,26,26,27,27,28,28,28,29,29,30,30,31,31,32,32,32,33,33,34,35,35,35,36,37,37,38,38,39,39,40,41,41,42,43,44,45,47,48,49,50,53,54,57,58,62,68,75,90,117,117]},"chilled":{"fmax":0.874,"offsets":[-631,-631,-548,-490,-448,-410,-381,-353,-335,-314,-296,-283,-270,-260,-251,-242,-232,-222,-213,-206,-199,-194,-187,-182,-177,-171,-167,-163,-158,-152,-148,-144,-140,-135,-130,-127,-122,-120,-116,-112,-110,-105,-101,-98,-94,-92,-88,-86,-83,-80,-76,-73,-70,-68,-65,-63,-61,-59,-57,-55,-52,-50,-48,-46,-43,-41,-39,-36,-34,-31,-29,-27,-25,-23,-21,-19,-17,-15,-12,-10,-7,-5,-2,0,5,7,11,15,21,27,34,40,46,55,65,73,85,102,127,162,162],"service":[0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,10,11,11,12,12,12,13,13,14,14,15,15,16,16,17,17,17,18,18,19,19,20,20,20,21,21,21,22,22,23,24,24,25,25,26,26,27,27,28,29,29,30,31,31,32,33,33,34,35,36,36,37,39,40,41,42,43,45,47,48,51,53,56,61,66,72,81,94,109,130,221,221]},"dry":{"fmax":0.811,"offsets":[-561,-561,-510,-464,-429,-402,-381,-362,-342,-324,-309,-296,-286,-276,-264,-257,-250,-241,-235,-227,-222,-215,-209,-203,-196,-191,-185,-180,-175,-171,-167,-162,-158,-152,-149,-145,-141,-137,-132,-129,-125,-121,-117,-114,-111,-107,-103,-100,-97,-94,-90,-87,-84,-81,-78,-76,-73,-71,-68,-65,-62,-58,-55,-53,-50,-47,-43,-41,-39,-36,-33,-31,-29,-25,-23,-20,-17,-15,-13,-10,-7,-4,-2,0,4,9,13,17,21,26,30,36,43,50,57,67,75,90,106,147,147],"service":[0,0,0,0,0,0,2,4,5,6,7,8,9,9,10,11,11,12,12,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,24,24,25,25,26,27,27,28,28,29,29,30,31,31,32,33,33,34,35,36,37,38,38,39,40,41,42,43,44,45,46,48,49,50,51,53,54,56,57,59,61,63,65,68,71,75,77,80,84,88,93,98,104,112,125,137,152,183,231,317,317]}},"pace":{"freezer":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,0.105,0.125,0.167,0.2,0.231,0.267,0.3,0.333,0.375,0.4,0.438,0.462,0.5,0.5,0.545,0.571,0.6,0.615,0.667,0.667,0.7,0.706,0.727,0.75,0.778,0.8,0.8,0.812,0.833,0.833,0.833,0.833,0.833,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846],"finish":519.0,"fit":[[11.81,0.718],[17.66,0.432],[20.89,0.454],[37.98,0.227],[67.64,0.081],[114.65,-0.22]]},"chilled":{"curve":[0.0,0.0,0.0,0.0,0.021,0.024,0.027,0.047,0.069,0.09,0.115,0.13,0.163,0.195,0.217,0.253,0.283,0.31,0.341,0.363,0.395,0.435,0.47,0.495,0.534,0.568,0.594,0.628,0.667,0.691,0.71,0.741,0.767,0.793,0.806,0.81,0.833,0.844,0.851,0.865,0.868,0.874,0.874,0.875,0.877,0.877,0.88,0.88,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882],"finish":536.0,"fit":[[4.9,0.941],[3.55,1.049],[4.66,0.916],[4.83,0.886],[22.62,0.306],[66.35,0.094]]},"dry":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.031,0.052,0.069,0.092,0.111,0.131,0.167,0.198,0.223,0.252,0.292,0.316,0.358,0.388,0.417,0.448,0.473,0.51,0.533,0.561,0.592,0.623,0.644,0.675,0.704,0.723,0.729,0.75,0.759,0.769,0.774,0.778,0.792,0.792,0.796,0.802,0.804,0.804,0.806,0.807,0.807,0.807,0.809,0.809,0.811,0.811,0.811,0.811,0.811,0.811],"finish":525.0,"fit":[[34.61,0.321],[33.71,0.449],[36.26,0.216],[41.66,0.167],[67.84,-0.08],[155.15,-0.446]]},"all":{"curve":[0.0,0.0,0.0,0.008,0.009,0.013,0.02,0.037,0.058,0.08,0.102,0.122,0.15,0.176,0.207,0.234,0.272,0.308,0.333,0.362,0.392,0.425,0.454,0.488,0.521,0.551,0.584,0.609,0.642,0.662,0.69,0.716,0.736,0.759,0.776,0.784,0.799,0.808,0.82,0.828,0.831,0.835,0.836,0.836,0.837,0.838,0.838,0.838,0.838,0.839,0.839,0.839,0.839,0.839,0.839,0.839,0.839],"finish":536.0}},"zoneDoors":{"freezer":[95,96,97,98,99,100,101,103],"chilled":[69,70,71,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94],"dry":[1,15,17,18,21,25,26,27,28,29,30,31,32,33,46,47,48,49,50,51,52,53,54,55,56,61,62,63,64,65,66,67,73,74]}};
     // Seeded so the projection only moves when the inputs do, not on every redraw.
     function portalFinishRng(seed) {
       let a = seed >>> 0;
@@ -17593,11 +17678,65 @@
       return out;
     }
 
-    // True door-management engine: render EVERY door on the dock. A door is
-    // "occupied" by a checked-in truck that is still in progress; a completed
-    // truck frees its door (shows Open). Doors with no in-progress truck = Open.
-    function renderPortalDoorMap(enriched) {
-      const rows = enriched || portalEnrichedTrucks();
+    // -- Not-started doors and the priority sort ---------------------------------------
+    // "Not started" = the driver is at the door and the unload has not begun. The clock runs
+    // from the driver-at-door stamp (DMS has no door-assignment time). Yellow after the first
+    // threshold, red after the second; both are adjustable on the Door Map and default to
+    // 15 and 30 minutes.
+    const PORTAL_NS_STALE_MIN = 720;     // ignore rows with stamps over 12 h old
+
+    function portalNsThresholds() {
+      const read = function(key, fallback, lo, hi) {
+        const v = parseInt(safeLocalStorageGet(key) || "", 10);
+        return isFinite(v) ? Math.min(hi, Math.max(lo, v)) : fallback;
+      };
+      const yellow = read("portalNsYellow", 15, 1, 240);
+      return { yellow: yellow, red: Math.max(yellow + 1, read("portalNsRed", 30, 2, 480)) };
+    }
+
+    // Where the not-started clock begins: "ready" = the later of the driver reaching the door and
+    // the appointment time (a truck that is hours early is not overdue), "door" = driver at the
+    // door. On 9,251 real loads, 76% of drivers reach the door before their appointment, so the
+    // "door" clock makes 65% of trucks go red at some point against 29% for "ready".
+    function portalNsClock() {
+      return safeLocalStorageGet("portalNsClock") === "door" ? "door" : "ready";
+    }
+
+    function portalNotStartedInfo(r, now, th) {
+      if (!r || r.status === "complete" || !r.driverAtDoorMs) return null;
+      if (r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs) return null;
+      const basis = portalNsClock();
+      const from = basis === "door" ? r.driverAtDoorMs : Math.max(r.driverAtDoorMs, r.appointmentMs || 0);
+      const mins = Math.floor((now - from) / 60000);
+      if (mins < th.yellow || mins > PORTAL_NS_STALE_MIN) return null;
+      return { mins: mins, level: mins >= th.red ? "red" : "yellow", basis: basis };
+    }
+
+    // Higher = more urgent. Tier first, then the longer wait within a tier.
+    function portalDoorPriority(r, now, th) {
+      if (!r) return -1;
+      const ns = portalNotStartedInfo(r, now, th);
+      const since = function(ms) { return ms ? Math.min(9999, Math.max(0, Math.floor((now - ms) / 60000))) : 0; };
+      let tier, within;
+      if (ns && ns.level === "red")            { tier = 10; within = ns.mins; }
+      else if (r.status === "detention")       { tier = 9;  within = r.minutesInDetention || 0; }
+      else if (ns)                             { tier = 8;  within = ns.mins; }
+      else if (r.status === "startsoon")       { tier = 7;  within = r.startLateMin || 0; }
+      else if (r.status === "urgent")          { tier = 6;  within = 60 - Math.round((r.msRemaining || 0) / 60000); }
+      else if (r.status === "warning")         { tier = 5;  within = 120 - Math.round((r.msRemaining || 0) / 60000); }
+      else if (r.driverAtDoorMs && !r.unloadStartMs) { tier = 4; within = since(r.driverAtDoorMs); }
+      else if (!r.unloadStartMs)               { tier = 3;  within = since(r.checkInMs); }
+      else if (!r.unloadFinishMs)              { tier = 2;  within = since(r.unloadStartMs); }
+      else                                     { tier = 1;  within = since(r.unloadFinishMs); }
+      return tier * 10000 + Math.min(9999, Math.max(0, within));
+    }
+
+    function portalDoorSortMode() {
+      return safeLocalStorageGet("portalDoorSort") === "priority" ? "priority" : "door";
+    }
+
+    // The truck that "owns" each door right now: arrived, not finished, most urgent status wins.
+    function portalBuildByDoor(rows) {
       const rank = { detention: 0, startsoon: 1, urgent: 2, warning: 3, active: 4, waiting: 5 };
       const byDoor = {};
       rows.forEach(function(r) {
@@ -17610,6 +17749,53 @@
         const cr = cur ? (rank[cur.status] == null ? 9 : rank[cur.status]) : 99;
         if (!cur || rr < cr) byDoor[dn] = r;
       });
+      return byDoor;
+    }
+
+    // One door tile, shared by the whole-dock map and the per-zone maps.
+    function portalDoorTileHtml(dn, r, now, th) {
+      // Clerk assignment from Google Sheet (door number keyed as string)
+      const clerkReq = state.portal.sheetAssignments[String(dn)] || "";
+      if (!r) {
+        return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
+          + '<div class="door-open-label">Open</div>'
+          + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '<div class="door-dwell">&nbsp;</div>')
+          + '</div>';
+      }
+      const classByStatus = { detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" };
+      const cls = classByStatus[r.status] || "blue";
+      const stage = r.receivingFinishMs ? "Done"
+        : r.receivingStartMs  ? "Receiving"
+        : r.unloadFinishMs    ? "Rec Pending"
+        : r.unloadStartMs     ? "Unloading"
+        : r.driverAtDoorMs    ? "At Door"
+        : r.checkInMs         ? "Checked In"
+        : "";
+      const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning")
+        ? (r.countdownLabel || "") : "";
+      const detail = stage ? (timeInfo ? stage + "  -  " + timeInfo : stage) : (r.countdownLabel || portalStatusLabel(r.status));
+      const ageMin = portalDoorAgeMinutes(r, now);
+      const ageClass = portalDoorAgeClass(ageMin);
+      const ageLabel = portalDoorAgeLabel(ageMin);
+      const ns = portalNotStartedInfo(r, now, th);
+      return '<div class="door-tile ' + cls + ' ' + ageClass + (ns ? ' ns-' + ns.level : '') + ' occupied" data-door="' + dn + '" title="Tap for details">'
+        + '<div class="door-no">' + dn + '</div>'
+        + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
+        + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
+        + (ns ? '<div class="door-ns">NOT STARTED ' + ns.mins + ' min</div>' : '')
+        + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
+        + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '')
+        + portalDoorNoteBadge("oks", r, dn)
+        + portalUnloaderBadge(r, dn)
+        + '</div>';
+    }
+
+    // True door-management engine: render EVERY door on the dock. A door is
+    // "occupied" by a checked-in truck that is still in progress; a completed
+    // truck frees its door (shows Open). Doors with no in-progress truck = Open.
+    function renderPortalDoorMap(enriched) {
+      const rows = enriched || portalEnrichedTrucks();
+      const byDoor = portalBuildByDoor(rows);
 
       // Door universe: explicit range if set; otherwise show the full dock by default.
       const universe = {};
@@ -17628,9 +17814,16 @@
       const eyes = occ.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
       const aged = occ.filter(function(r) { return (portalDoorAgeMinutes(r, Date.now()) || 0) >= 61; }).length;
       const openCount = Math.max(0, allDoors.length - occ.length);
+      const nowMs = Date.now();
+      const th = portalNsThresholds();
+      const nsList = occ.map(function(r) { return portalNotStartedInfo(r, nowMs, th); }).filter(Boolean);
+      const nsRed = nsList.filter(function(n) { return n.level === "red"; }).length;
+      const nsYellow = nsList.length - nsRed;
       portalFillScorecard(els.portalScorecardDoors, [
         { value: openCount, label: "Open doors", sub: "Available now", color: "green" },
         { value: occ.length, label: "Occupied", sub: "Truck in progress", color: "blue" },
+        { value: nsRed, label: "Not started " + th.red + "+ min", sub: "At the door, red", color: nsRed ? "red" : "green" },
+        { value: nsYellow, label: "Not started " + th.yellow + "+ min", sub: "At the door, yellow", color: nsYellow ? "yellow" : "green" },
         { value: eyes, label: "Needs review", sub: "Start soon / warning", color: "yellow" },
         { value: aged, label: "61+ min doors", sub: "Aging on dock", color: aged ? "red" : "green" },
         { value: det, label: "Detention", sub: "Past receiving clock", color: "red" }
@@ -17647,41 +17840,18 @@
         els.portalDoorMap.innerHTML = '<div class="door-empty">No doors yet. Enter your door range above (e.g. 1-120), or wait for DMS to load today\'s scheduled doors.</div>';
         return;
       }
-      const classByStatus = { detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" };
-      els.portalDoorMap.innerHTML = allDoors.map(function(dn) {
-        const r = byDoor[dn];
-        // Clerk assignment from Google Sheet (door number keyed as string)
-        const clerkReq = state.portal.sheetAssignments[String(dn)] || "";
-        if (!r) {
-          return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
-            + '<div class="door-open-label">Open</div>'
-            + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '<div class="door-dwell">&nbsp;</div>')
-            + '</div>';
-        }
-        const cls = classByStatus[r.status] || "blue";
-        const stage = r.receivingFinishMs ? "Done"
-          : r.receivingStartMs  ? "Receiving"
-          : r.unloadFinishMs    ? "Rec Pending"
-          : r.unloadStartMs     ? "Unloading"
-          : r.driverAtDoorMs    ? "At Door"
-          : r.checkInMs         ? "Checked In"
+      const byPriority = portalDoorSortMode() === "priority";
+      const ordered = allDoors.slice();
+      if (byPriority) {
+        ordered.sort(function(a, b) { return portalDoorPriority(byDoor[b], nowMs, th) - portalDoorPriority(byDoor[a], nowMs, th) || a - b; });
+      }
+      const sortNote = document.getElementById("portalDoorSortNote");
+      if (sortNote) {
+        sortNote.textContent = byPriority
+          ? "Most urgent first: red not-started, detention, yellow not-started, start-now, detention risk, then trucks waiting to start, unloading, and receiving. Open doors last."
           : "";
-        const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning")
-          ? (r.countdownLabel || "") : "";
-        const detail = stage ? (timeInfo ? stage + "  -  " + timeInfo : stage) : (r.countdownLabel || portalStatusLabel(r.status));
-        const ageMin = portalDoorAgeMinutes(r, Date.now());
-        const ageClass = portalDoorAgeClass(ageMin);
-        const ageLabel = portalDoorAgeLabel(ageMin);
-        return '<div class="door-tile ' + cls + ' ' + ageClass + ' occupied" data-door="' + dn + '" title="Tap for details">'
-          + '<div class="door-no">' + dn + '</div>'
-          + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
-          + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
-          + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
-          + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '')
-          + portalDoorNoteBadge("oks", r, dn)
-          + portalUnloaderBadge(r, dn)
-          + '</div>';
-      }).join("");
+      }
+      els.portalDoorMap.innerHTML = ordered.map(function(dn) { return portalDoorTileHtml(dn, byDoor[dn], nowMs, th); }).join("");
     }
 
     function portalAreaRows(enriched) {
@@ -17911,7 +18081,10 @@
       const elapsed = (now - shiftStartMs) / 60000;
       if (!Array.isArray(rows) || !rows.length || !shiftStartMs || elapsed < 0 || elapsed > 14 * 60) return null;
       const arrived = [], notArrived = [], counts = {};
+      let allScheduled = 0, allDone = 0;
       rows.forEach(function(r) {
+        allScheduled += 1;
+        if (portalIsoToMs(r.unloadFinishIso) || portalIsoToMs(r.receivingFinishIso)) allDone += 1;
         const loc = portalZoneLocate(r.area);
         if (!loc) return;
         const z = PORTAL_ZONE_GROUPS[loc.group].key;
@@ -17948,6 +18121,21 @@
         out[z] = { key: z, status: status, lag: lag, usual: usual, share: share, scheduled: c.scheduled, done: c.done,
                    remaining: remaining, estMs: estMs };
       });
+
+      // The whole building against its own average pace (same rule, no separate finish model:
+      // the building's finish estimate is the existing Est. Finish card).
+      const bp = model.pace.all;
+      if (bp && allScheduled >= 3) {
+        const share = allDone / allScheduled;
+        const usual = bp.curve[Math.min(bp.curve.length - 1, Math.max(0, Math.floor(elapsed / 15)))];
+        const lag = elapsed - portalZoneTypicalMin(bp.curve, share);
+        const remaining = fc ? fc.expectedRemaining : 0;
+        let status;
+        if (remaining < 0.5) status = "done";
+        else if (elapsed < PORTAL_ZONE_STATUS_FROM_MIN || usual < 0.03) status = "early";
+        else status = lag <= 0 ? "green" : lag < 30 ? "yellow" : "red";
+        out.all = { key: "all", status: status, lag: lag, usual: usual, share: share, scheduled: allScheduled, done: allDone, remaining: remaining, estMs: null };
+      }
       return out;
     }
 
@@ -17991,7 +18179,7 @@
       const now = Date.now();
       const est = portalZoneEstimatesNow(now);
       const alerts = [];
-      if (!est || portalShiftClosedAfterMorning(now)) return alerts;
+      if (!est || portalShiftClosedAfterMorning(now) || !portalLiveDataFresh(now)) return alerts;
       const date = state.portal.businessDate || "";
       PORTAL_ZONE_GROUPS.forEach(function(g) {
         const r = est[g.key];
@@ -18036,6 +18224,12 @@
       const nowMs = Date.now();
       const z = portalZonesCompute(trucks, nowMs);
       const est = portalZoneEstimatesNow(nowMs);
+      const liveRows = portalEnrichedTrucks();
+      const byDoor = portalBuildByDoor(liveRows);
+      state.portal.byDoor = byDoor;
+      const th = portalNsThresholds();
+      const byPriority = portalDoorSortMode() === "priority";
+      const zoneOf = function(r) { const loc = portalZoneLocate(r && r.area); return loc ? loc.group : -1; };
       if (meta) meta.textContent = z.total.completed + " of " + z.total.scheduled + " trucks complete (" + z.total.pct + "%) across the whole shift";
 
       const building = document.getElementById("portalZonesBuilding");
@@ -18055,8 +18249,23 @@
       const kpi = function(value, label, warn) {
         return '<div class="zone-kpi' + (warn ? ' warn' : '') + '"><span class="v">' + escapeHtml(value) + '</span><span class="l">' + escapeHtml(label) + '</span></div>';
       };
-      grid.innerHTML = z.groups.map(function(g) {
+      grid.innerHTML = z.groups.map(function(g, gi) {
         const m = g.metrics;
+        // This zone's doors: its usual home doors plus any door one of its trucks is on right now.
+        const doorSet = new Set(((PORTAL_ZONE_MODEL.zoneDoors || {})[g.def.key] || []).slice());
+        Object.keys(byDoor).forEach(function(d) { if (zoneOf(byDoor[d]) === gi) doorSet.add(Number(d)); });
+        const zoneDoors = Array.from(doorSet).sort(function(a, b) { return a - b; });
+        const mine = function(dn) { return byDoor[dn] && zoneOf(byDoor[dn]) === gi ? byDoor[dn] : null; };
+        if (byPriority) zoneDoors.sort(function(a, b) { return portalDoorPriority(mine(b), nowMs, th) - portalDoorPriority(mine(a), nowMs, th) || a - b; });
+        const nsInfos = zoneDoors.map(function(dn) { return portalNotStartedInfo(mine(dn), nowMs, th); }).filter(Boolean);
+        const nsRedN = nsInfos.filter(function(n) { return n.level === "red"; }).length;
+        const nsYellowN = nsInfos.length - nsRedN;
+        const inUse = zoneDoors.filter(function(dn) { return mine(dn); }).length;
+        const waitingForDoor = liveRows.filter(function(r) { return zoneOf(r) === gi && r.checkInMs && r.status !== "complete" && !isFinite(parseInt(r.door, 10)); }).length;
+        const doorTiles = zoneDoors.map(function(dn) {
+          if (!mine(dn) && byDoor[dn]) return '<div class="door-tile open"><div class="door-no">' + dn + '</div><div class="door-dwell">In use by another zone</div></div>';
+          return portalDoorTileHtml(dn, mine(dn), nowMs, th);
+        }).join("");
         const palletLine = m.pallets ? " · " + formatNumber(m.palletsDone) + " of " + formatNumber(m.pallets) + " pallets" : "";
         const rows = g.areas.map(function(a) {
           const am = a.metrics;
@@ -18086,6 +18295,13 @@
           + kpi(portalZoneFmtMin(m.avgDock), "Avg dock time")
           + kpi(m.palletsPerHour != null ? m.palletsPerHour.toFixed(1) : "--", "Pallets / unload hr")
           + kpi(String(m.unloadMins.length), "Unloads timed")
+          + kpi(String(nsYellowN), "Not started " + th.yellow + "+ min", nsYellowN > 0)
+          + kpi(String(nsRedN), "Not started " + th.red + "+ min", nsRedN > 0)
+          + kpi(String(waitingForDoor), "Waiting for a door")
+          + kpi(inUse + " of " + zoneDoors.length, "Doors in use")
+          + '</div>'
+          + '<div class="zone-doors"><div class="zone-doors-head">Door map &middot; ' + zoneDoors.length + ' doors &middot; ' + (byPriority ? 'most urgent first' : 'by door number') + '</div>'
+          + (zoneDoors.length ? '<div class="door-map zone-door-map">' + doorTiles + '</div>' : '<div class="door-empty">No doors known for this zone yet.</div>')
           + '</div>'
           + (g.areas.length > 1
               ? '<div class="zone-table-wrap"><table class="zone-table"><thead><tr><th>Area</th><th class="num">Done</th><th class="num">%</th><th class="num">On dock</th><th class="num">Avg unload</th><th class="num">Pallets</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
@@ -18106,6 +18322,238 @@
           + 'Pallets / unload hr = pallets on finished unloads divided by the hours spent unloading them (per door, not per person). '
           + 'Oldest on dock = the longest a truck that has not finished has been on the dock, measured the same way.';
       }
+    }
+
+    // Tapping a door on a zone's map opens the same detail popup as the main Door Map.
+    (function() {
+      const zonesGrid = document.getElementById("portalZonesGrid");
+      if (!zonesGrid) return;
+      zonesGrid.addEventListener("click", function(e) {
+        const tile = e.target.closest(".door-tile.occupied");
+        if (!tile) return;
+        const dn = parseInt(tile.getAttribute("data-door"), 10);
+        const r = (state.portal.byDoor || {})[dn];
+        if (!r || !els.portalDoorDetailModal) return;
+        portalRenderDoorDetail("oks", dn, r);
+        els.portalDoorDetailModal.style.display = "flex";
+      });
+    })();
+
+    // Door Map sort buttons and the not-started thresholds.
+    function portalSyncDoorControls() {
+      const mode = portalDoorSortMode();
+      document.querySelectorAll("#portalDoorSort button").forEach(function(b) { b.classList.toggle("active", b.dataset.sort === mode); });
+      const th = portalNsThresholds();
+      const y = document.getElementById("portalNsYellow"), r = document.getElementById("portalNsRed");
+      if (y && document.activeElement !== y) y.value = th.yellow;
+      if (r && document.activeElement !== r) r.value = th.red;
+      const c = document.getElementById("portalNsClock");
+      if (c) c.value = portalNsClock();
+    }
+    function portalDoorControlsChanged() {
+      portalSyncDoorControls();
+      try { renderPortalDoorMap(); } catch (err) { console.error("Door map render failed:", err); }
+      if (state.portal.portalView === "zones") renderPortalZonesView();
+      try { renderAlertsTab(); } catch (err) { console.error(err); }
+    }
+    (function() {
+      document.querySelectorAll("#portalDoorSort button").forEach(function(b) {
+        b.addEventListener("click", function() { safeLocalStorageSet("portalDoorSort", b.dataset.sort); portalDoorControlsChanged(); });
+      });
+      [["portalNsYellow", "portalNsYellow"], ["portalNsRed", "portalNsRed"]].forEach(function(p) {
+        const input = document.getElementById(p[0]);
+        if (input) input.addEventListener("change", function() { safeLocalStorageSet(p[1], input.value); portalDoorControlsChanged(); });
+      });
+      const clock = document.getElementById("portalNsClock");
+      if (clock) clock.addEventListener("change", function() { safeLocalStorageSet("portalNsClock", clock.value); portalDoorControlsChanged(); });
+      portalSyncDoorControls();
+    })();
+
+    // -- Attention popups and notifications for trucks that need starting -----------------
+    // Live data only refreshes while My Portal is the open tab, so nothing is raised from data
+    // more than 5 minutes old (leaving the tab would otherwise make every truck look overdue).
+    const _portalNsFired = new Set();           // "ns:<truck>:<level>:<date>" already announced
+    const _portalNsLastNotify = { red: 0, yellow: 0 };
+    const _portalPopupDismissed = new Set();
+    const _portalPopupSeen = new Set();
+    let _portalPopupItems = [];
+
+    function portalLiveDataFresh(now) {
+      const t = Date.parse(state.portal.liveUpdatedAt || "");
+      return isFinite(t) && now - t <= 5 * 60000;
+    }
+
+    function portalNotStartedAlerts(now) {
+      const out = [];
+      if (!portalLiveDataFresh(now) || portalShiftClosedAfterMorning(now)) return out;
+      const th = portalNsThresholds();
+      const date = state.portal.businessDate || "";
+      portalEnrichedTrucks().forEach(function(r) {
+        if (!r.checkInMs) return;
+        const ns = portalNotStartedInfo(r, now, th);
+        if (!ns) return;
+        const dn = parseInt(r.door, 10);
+        const where = isFinite(dn) ? "Door " + dn : "Truck " + (r.ref || "?");
+        const red = ns.level === "red";
+        const who = r.supplier || r.ref || "Truck";
+        out.push({
+          kind: "ns", level: ns.level, door: isFinite(dn) ? dn : null, mins: ns.mins, where: where, who: who, truck: r, truckId: String(r.id || r.ref || ""),
+          sev: red ? "notstartedred" : "notstartedyellow", order: red ? 1 : 3, icon: red ? "CRITICAL" : "WARNING", sevLabel: red ? "Not Started" : "Start Soon",
+          title: where + (red ? " is overdue to start" : " needs to be started soon"),
+          detail: who + " | " + ns.mins + " min " + (ns.basis === "door" ? "at the door" : "since it was ready (at the door and past its appointment time)") + " and the unload has not started. Start it" + (red ? " now." : " soon."),
+          tag: "ns:" + (r.id || r.ref || where) + ":" + ns.level + ":" + date
+        });
+      });
+      out.sort(function(a, b) { return a.order - b.order || b.mins - a.mins; });
+      return out;
+    }
+
+    function portalPopupGoDoor(item) {
+      selectTab("myPortal");
+      portalSetView("doors");
+      const byDoor = portalBuildByDoor(portalEnrichedTrucks());
+      state.portal.byDoor = byDoor;
+      const r = item.door != null ? byDoor[item.door] : null;
+      if (r && els.portalDoorDetailModal) {
+        portalRenderDoorDetail("oks", item.door, r);
+        els.portalDoorDetailModal.style.display = "flex";
+      }
+    }
+
+    function portalPopupRender(items) {
+      const stack = document.getElementById("portalPopupStack");
+      if (!stack) return;
+      const shown = items.slice(0, 4);
+      stack.innerHTML = "";
+      shown.forEach(function(it) {
+        const el = document.createElement("div");
+        el.className = "portal-popup " + it.level + (_portalPopupSeen.has(it.id) ? "" : " pop-in");
+        _portalPopupSeen.add(it.id);
+        el.setAttribute("role", "alert");
+        el.innerHTML = '<div class="portal-popup-body"><div class="portal-popup-title"></div><div class="portal-popup-text"></div>'
+          + '<div class="portal-popup-actions"><button type="button" class="act"></button></div></div>'
+          + '<button type="button" class="portal-popup-close" aria-label="Dismiss">&times;</button>';
+        el.querySelector(".portal-popup-title").textContent = it.title;
+        el.querySelector(".portal-popup-text").textContent = it.text;
+        el.querySelector(".act").textContent = it.actionLabel;
+        el.querySelector(".act").addEventListener("click", function() { it.onAction(); });
+        el.querySelector(".portal-popup-close").addEventListener("click", function() {
+          _portalPopupDismissed.add(it.id);
+          portalPopupRender(_portalPopupItems.filter(function(x) { return !_portalPopupDismissed.has(x.id); }));
+        });
+        stack.appendChild(el);
+      });
+      if (items.length > shown.length) {
+        const more = document.createElement("button");
+        more.type = "button";
+        more.className = "portal-popup-more";
+        more.textContent = "+" + (items.length - shown.length) + " more need attention - open the door map";
+        more.addEventListener("click", function() {
+          safeLocalStorageSet("portalDoorSort", "priority");
+          selectTab("myPortal");
+          portalSetView("doors");
+          portalDoorControlsChanged();
+        });
+        stack.appendChild(more);
+      }
+    }
+
+    // Runs on the 15 s alert tick and after each live refresh: announces newly overdue trucks (one
+    // grouped, rate-limited desktop notification per colour) and keeps the on-screen popups current.
+    // `alreadyNotified` holds trucks the older per-truck "Unload start overdue" alert notifies about
+    // itself, so they are not announced twice (they still get a popup and an Alerts-tab card).
+    function portalAttentionTick(now, nsAlerts, zoneAlerts, alreadyNotified) {
+      ["red", "yellow"].forEach(function(level) {
+        const due = nsAlerts.filter(function(a) { return a.level === level && !_portalNsFired.has(a.tag); });
+        if (!due.length || now - _portalNsLastNotify[level] < 5 * 60000) return;
+        due.forEach(function(a) { _portalNsFired.add(a.tag); });
+        const pending = due.filter(function(a) { return !(alreadyNotified && alreadyNotified.has(a.truckId)); });
+        if (!pending.length) return;
+        _portalNsLastNotify[level] = now;
+        const names = pending.slice(0, 5).map(function(a) { return a.where + " (" + a.who + ", " + a.mins + " min)"; });
+        const more = pending.length > 5 ? " +" + (pending.length - 5) + " more" : "";
+        const title = (level === "red" ? "[Critical] " : "[Warning] ")
+          + (pending.length === 1 ? pending[0].title : pending.length + " doors " + (level === "red" ? "are overdue to start" : "need to be started soon"));
+        portalNotify(title, names.join(", ") + more, "ns-group:" + level + ":" + now);
+        portalBeep(level === "red" ? "detention" : "urgent");
+      });
+      const items = [];
+      nsAlerts.forEach(function(a) {
+        items.push({ id: a.tag, level: a.level, order: a.order, mins: a.mins, title: a.title,
+          text: a.who + " | waiting " + a.mins + " min to start, unload not started", actionLabel: "View door", onAction: function() { portalPopupGoDoor(a); } });
+      });
+      zoneAlerts.forEach(function(a) {
+        items.push({ id: a.tag, level: a.sev === "zonered" ? "red" : "yellow", order: a.order * 2, mins: 0, title: a.title,
+          text: a.detail, actionLabel: "View zones", onAction: function() { selectTab("myPortal"); portalSetView("zones"); } });
+      });
+      items.sort(function(a, b) { return a.order - b.order || b.mins - a.mins; });
+      _portalPopupItems = items;
+      portalPopupRender(items.filter(function(x) { return !_portalPopupDismissed.has(x.id); }));
+    }
+
+    // -- Pace ticker --------------------------------------------------------------------
+    // Scrolls along the top of My Portal (and the TV/kiosk screen): is the building, and each
+    // zone, ahead of or behind the average night, plus its estimated finish time.
+    function portalTickerItems(now) {
+      if (!portalLiveDataFresh(now) || portalShiftClosedAfterMorning(now)) return null;
+      const est = portalZoneEstimatesNow(now);
+      if (!est) return null;
+      const items = [];
+      const describe = function(label, r, estMs) {
+        if (!r) return;
+        let cls = "none", text;
+        if (r.status === "done") { cls = "green"; text = "finished for the night"; }
+        else if (r.status === "early") text = "pace comparison starts at 10 PM";
+        else {
+          cls = r.status;
+          const m = Math.abs(Math.round(r.lag));
+          text = r.status === "green" ? (r.lag <= -5 ? m + " min ahead of average" : "right on average pace")
+            : (m >= 5 ? m + " min behind average" : "slightly behind average");
+        }
+        const finish = r.status !== "done" && estMs && estMs > now ? "est. finish " + portalFinishClock(estMs) : "";
+        items.push({ label: label, cls: cls, state: text, finish: finish });
+      };
+      describe("WHOLE BUILDING", est.all, state.portal.estMs);
+      PORTAL_ZONE_GROUPS.forEach(function(g) { describe(g.title.toUpperCase(), est[g.key], est[g.key] && est[g.key].estMs); });
+      return items;
+    }
+
+    let _portalTickerShape = "";
+    function portalRenderTicker() {
+      const targets = [[document.getElementById("portalTicker"), document.getElementById("portalTickerTrack")],
+                       [document.getElementById("kioskTicker"), document.getElementById("kioskTickerTrack")]];
+      let items = null;
+      try { items = portalTickerItems(Date.now()); } catch (err) { console.error("Ticker failed:", err); }
+      if (!items || !items.length) {
+        _portalTickerShape = "";
+        targets.forEach(function(p) { if (p[0]) p[0].style.display = "none"; });
+        return;
+      }
+      const itemHtml = function(it, i) {
+        return '<span class="ticker-item ' + it.cls + '" data-i="' + i + '"><span class="dot"></span><span class="name">' + escapeHtml(it.label)
+          + '</span><span class="state">' + escapeHtml(it.state) + '</span><span class="est">' + escapeHtml(it.finish) + '</span></span>';
+      };
+      const shape = items.map(function(it) { return it.label; }).join("|");
+      targets.forEach(function(p) {
+        const wrap = p[0], track = p[1];
+        if (!wrap || !track) return;
+        wrap.style.display = "";
+        if (_portalTickerShape !== shape || !track.firstChild) {
+          const set = '<span class="portal-ticker-set">' + items.map(itemHtml).join("") + '</span>';
+          track.innerHTML = set + set;                      // doubled so the scroll loops without a gap
+          const chars = items.reduce(function(s, it) { return s + it.label.length + it.state.length + it.finish.length + 10; }, 0);
+          track.style.setProperty("--ticker-secs", Math.max(30, Math.round(chars * 0.22)) + "s");
+        } else {
+          items.forEach(function(it, i) {                   // same items: update text in place so the scroll never restarts
+            track.querySelectorAll('.ticker-item[data-i="' + i + '"]').forEach(function(el) {
+              el.className = "ticker-item " + it.cls;
+              el.querySelector(".state").textContent = it.state;
+              el.querySelector(".est").textContent = it.finish;
+            });
+          });
+        }
+      });
+      _portalTickerShape = shape;
     }
 
     function portalRenderActiveView(enriched) {
@@ -18465,17 +18913,25 @@
         _portalZoneFired.add(a.tag);
         portalNotify(a.notifyTitle, a.notifyBody, a.tag);
         portalBeep(a.sev === "zonered" ? "detention" : "urgent");
-        showToast(a.title);
       });
-      zoneAlerts.sort(function(a, b) { return a.order - b.order; });
-      const alerts = zoneAlerts.concat(truckAlerts);
+      zoneAlerts.forEach(function(a) { a.order = a.sev === "zonered" ? 0 : 2; });
+
+      // Trucks at the door that have not started: Alerts-tab cards, grouped notifications, and
+      // on-screen popups (the popups also carry the zone alerts).
+      let nsAlerts = [];
+      const nowMs = Date.now();
+      try { nsAlerts = portalNotStartedAlerts(nowMs); } catch (err) { console.error("Not-started alerts failed:", err); }
+      const legacyNeedStart = new Set(truckAlerts.filter(function(a) { return a.sev === "needstart" && a.truck; }).map(function(a) { return String(a.truck.id || a.truck.ref); }));
+      try { portalAttentionTick(nowMs, nsAlerts, zoneAlerts, legacyNeedStart); } catch (err) { console.error("Attention popups failed:", err); }
+      try { portalRenderTicker(); } catch (err) { console.error("Ticker render failed:", err); }
+      const alerts = zoneAlerts.concat(nsAlerts).sort(function(a, b) { return a.order - b.order; }).concat(truckAlerts);
 
       // Tab badge  -  red if any detention, otherwise orange.
       if (badge) {
         if (alerts.length > 0) {
           badge.textContent = alerts.length;
           badge.style.display = "";
-          const hasRed = alerts.some(function(a) { return a.sev === "detention" || a.sev === "zonered"; });
+          const hasRed = alerts.some(function(a) { return a.sev === "detention" || a.sev === "zonered" || a.sev === "notstartedred"; });
           badge.className = "alerts-tab-badge" + (hasRed ? "" : " badge-orange");
         } else {
           badge.style.display = "none";
@@ -23287,8 +23743,13 @@
       <div class="kiosk-card kiosk-done"><div class="kiosk-card-val" id="kioskDone"> - </div><div class="kiosk-card-lbl">Done Today</div></div>
     </div>
     <div class="kiosk-pace" id="kioskPace"></div>
+    <div class="kiosk-ticker" id="kioskTicker" style="display:none;"><div class="portal-ticker-track" id="kioskTickerTrack"></div></div>
     <div class="kiosk-exit-hint">Click or press ESC to exit</div>
   </div>
+
+  <!-- On-screen attention popups (doors that need starting, zones running behind). Placed after the
+       kiosk overlay so they paint above it on a TV. -->
+  <div class="portal-popup-stack" id="portalPopupStack" aria-live="assertive"></div>
 
   </body>
 </html>

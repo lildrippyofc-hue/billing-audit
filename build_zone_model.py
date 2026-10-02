@@ -75,7 +75,9 @@ def load_nights(path):
             m, d, y = map(int, str(r[ix["Bus. Date"]]).strip().split("/"))
         except ValueError:
             continue
+        door = r[ix["Door Number"]]
         nights.setdefault((y, m, d), []).append({
+            "door": int(door) if isinstance(door, (int, float)) and int(door) > 0 else None,
             "z": zone_of(r[ix["Dock Type"]]),
             "appt": local_ms(r[ix["Appointment"]]),
             "ci": local_ms(r[ix["Driver Check In"]]) or local_ms(r[ix["Clerk Check In"]]),
@@ -92,6 +94,9 @@ def load_nights(path):
 
 
 def zone_trucks(night, zone):
+    """Trucks in one zone; zone=None means the whole building (including unzoned trucks)."""
+    if zone is None:
+        return night["trucks"]
     return [t for t in night["trucks"] if t["z"] == zone]
 
 
@@ -183,7 +188,36 @@ def build(path, doors, keep_last=False):
             b = sxy / sxx if sxx > 1e-9 else 0.0
             fit.append([round(my - b * mx, 2), round(b, 3)])
         pace[zone] = {"curve": typical, "finish": round(finish, 1), "fit": fit}
-    return {"doors": doors, "nights": len(nights), "models": models, "pace": pace}
+
+    # Whole-building average pace, so the portal can say how far ahead of or behind average the dock is.
+    curves = [c for c in (curve(n, None) for n in nights) if c]
+    pace["all"] = {
+        "curve": [round(st.median(c[k] for c in curves), 3) for k in range(STEPS + 1)],
+        "finish": round(st.median((truth_p95(n, None) - n["start"]) / MIN for n in nights if truth_p95(n, None) is not None), 1),
+    }
+    return {"doors": doors, "nights": len(nights), "models": models, "pace": pace, "zoneDoors": zone_doors(nights)}
+
+
+def zone_doors(nights, min_loads=10, min_share=0.6, max_door=200):
+    """Each zone's 'home' doors: real dock doors where one zone takes most of the loads.
+
+    Used for the per-zone door maps on the Zones view. Doors above `max_door` are yard or
+    staging placeholders, not dock doors. A zone truck on any other door still shows on its
+    zone's map while it is there, so nothing is hidden.
+    """
+    per_door = {}
+    for night in nights:
+        for t in night["trucks"]:
+            if t["door"] and t["door"] <= max_door:
+                per_door.setdefault(t["door"], []).append(t["z"])
+    out = {name: [] for name, _ in ZONES}
+    for door, zs in sorted(per_door.items()):
+        if len(zs) < min_loads:
+            continue
+        best = max((n for n, _ in ZONES), key=lambda n: zs.count(n))
+        if zs.count(best) / len(zs) >= min_share:
+            out[best].append(door)
+    return out
 
 
 if __name__ == "__main__":
