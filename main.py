@@ -206,6 +206,8 @@ def init_db():
             door           TEXT    NOT NULL DEFAULT '',
             pallets        INTEGER,
             unload_min     REAL,
+            unload_start   TEXT,
+            unload_finish  TEXT,
             updated_by     TEXT    NOT NULL DEFAULT '',
             updated_at     TEXT    NOT NULL,
             PRIMARY KEY (site, business_date, truck_key)
@@ -236,6 +238,11 @@ def init_db():
     vendor_cols = [r[1] for r in conn.execute("PRAGMA table_info(vendor_unload_times)")]
     if "site" not in vendor_cols:
         conn.execute("ALTER TABLE vendor_unload_times ADD COLUMN site TEXT NOT NULL DEFAULT 'OKS'")
+    # load_unloaders shipped without start/finish stamps; add them to existing databases.
+    unloader_cols = [r[1] for r in conn.execute("PRAGMA table_info(load_unloaders)")]
+    for col in ("unload_start", "unload_finish"):
+        if col not in unloader_cols:
+            conn.execute(f"ALTER TABLE load_unloaders ADD COLUMN {col} TEXT")
     conn.commit()
     conn.close()
 
@@ -833,9 +840,10 @@ def _sync_unloader_stats(trucks: List[Dict[str, Any]], shift_date: str, site: st
                 except Exception:
                     pass
             conn.execute(
-                "UPDATE load_unloaders SET supplier=?, area=?, door=?, pallets=?, unload_min=? "
+                "UPDATE load_unloaders SET supplier=?, area=?, door=?, pallets=?, unload_min=?, unload_start=?, unload_finish=? "
                 "WHERE site=? AND business_date=? AND truck_key=?",
-                (g["supplier"][:120], g["area"][:40], str(g["door"])[:20], g["pallets"], unload_min, site, shift_date, key),
+                (g["supplier"][:120], g["area"][:40], str(g["door"])[:20], g["pallets"], unload_min,
+                 g["start"], g["finish"], site, shift_date, key),
             )
         conn.commit()
         conn.close()
@@ -3566,24 +3574,36 @@ def save_unloader(body: UnloaderIn, username: str = Depends(_require_unloader_wr
 
 
 @app.get("/api/portal/performance")
-def get_unloader_performance(days: int = 30, username: str = Depends(_require_performance_read)):
+def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = Depends(_require_performance_read)):
     days = max(1, min(int(days), 180))
+    # A gap longer than this is treated as a break / waiting on trucks, not idle time.
+    max_gap = max(10, min(int(max_gap), 240))
     cutoff = (datetime.now(DMS_BUSINESS_TZ) - timedelta(days=days)).strftime("%Y-%m-%d")
     conn = get_db()
     rows = conn.execute(
-        "SELECT unloader, business_date, supplier, area, pallets, unload_min FROM load_unloaders WHERE site='OKS'"
+        "SELECT unloader, business_date, supplier, area, pallets, unload_min, unload_start, unload_finish "
+        "FROM load_unloaders WHERE site='OKS'"
     ).fetchall()
     conn.close()
 
     people: Dict[str, Dict[str, Any]] = {}
     daily: Dict[str, Dict[str, int]] = {}
-    for name, bdate, supplier, area, pallets, unload_min in rows:
+    spans: Dict[Any, List[Any]] = {}   # (person, night) -> [(start, finish, unload_min)]
+    for name, bdate, supplier, area, pallets, unload_min, u_start, u_finish in rows:
         iso = _unloader_date_iso(bdate)
         if not iso or iso < cutoff:
             continue
+        if u_start and u_finish:
+            try:
+                spans.setdefault((name, iso), []).append(
+                    (datetime.fromisoformat(u_start), datetime.fromisoformat(u_finish), unload_min or 0)
+                )
+            except ValueError:
+                pass
         p = people.setdefault(name, {
             "name": name, "loads": 0, "pallets": 0, "timed_loads": 0, "timed_pallets": 0,
             "unload_min_total": 0.0, "dates": set(), "areas": {},
+            "gap_total": 0.0, "gap_count": 0, "gap_longest": 0.0, "long_gaps": 0, "gap_work_min": 0.0,
         })
         p["loads"] += 1
         p["pallets"] += pallets or 0
@@ -3597,10 +3617,29 @@ def get_unloader_performance(days: int = 30, username: str = Depends(_require_pe
         daily.setdefault(iso, {})
         daily[iso][name] = daily[iso].get(name, 0) + 1
 
+    # Downtime between loads: per person per night, the gap from the latest finish so
+    # far to the next load's start. Overlapping loads count as a 0-minute gap.
+    for (name, _iso), items in spans.items():
+        p = people[name]
+        items.sort(key=lambda s: s[0])
+        latest_finish = items[0][1]
+        p["gap_work_min"] += items[0][2]
+        for start, finish, mins in items[1:]:
+            gap = max(0.0, (start - latest_finish).total_seconds() / 60)
+            if gap > max_gap:
+                p["long_gaps"] += 1
+            else:
+                p["gap_total"] += gap
+                p["gap_count"] += 1
+                p["gap_longest"] = max(p["gap_longest"], gap)
+                p["gap_work_min"] += mins
+            latest_finish = max(latest_finish, finish)
+
     out = []
     for p in people.values():
         timed = p["timed_loads"]
         hours = p["unload_min_total"] / 60
+        gaps = p["gap_count"]
         out.append({
             "name": p["name"],
             "loads": p["loads"],
@@ -3611,11 +3650,18 @@ def get_unloader_performance(days: int = 30, username: str = Depends(_require_pe
             "days_worked": len(p["dates"]),
             "last_date": max(p["dates"]) if p["dates"] else "",
             "top_area": max(p["areas"], key=p["areas"].get) if p["areas"] else "",
+            "gap_count": gaps,
+            "avg_gap_min": round(p["gap_total"] / gaps, 1) if gaps else None,
+            "idle_total_min": round(p["gap_total"], 1),
+            "idle_pct": round(100 * p["gap_total"] / (p["gap_total"] + p["gap_work_min"]), 1) if gaps and (p["gap_total"] + p["gap_work_min"]) > 0 else None,
+            "longest_gap_min": round(p["gap_longest"], 1) if gaps else None,
+            "long_gaps": p["long_gaps"],
         })
     out.sort(key=lambda x: (-x["loads"], x["name"].lower()))
     return {
         "ok": True,
         "days": days,
+        "max_gap": max_gap,
         "people": out,
         "daily": [{"date": d, "counts": c} for d, c in sorted(daily.items())],
         "totals": {"loads": sum(x["loads"] for x in out), "pallets": sum(x["pallets"] for x in out), "people": len(out)},

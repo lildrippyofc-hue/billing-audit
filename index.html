@@ -4615,6 +4615,13 @@
               <option value="30" selected>Last 30 days</option>
               <option value="90">Last 90 days</option>
             </select>
+            <label for="unloaderPerfMaxGap" style="font-weight:700;font-size:0.85em;margin-left:6px;" title="A wait longer than this is treated as a break or waiting on trucks, not idle time">Count gaps up to</label>
+            <select id="unloaderPerfMaxGap" class="lookup-input" style="width:auto;min-width:110px;">
+              <option value="30">30 min</option>
+              <option value="60" selected>60 min</option>
+              <option value="90">90 min</option>
+              <option value="120">120 min</option>
+            </select>
             <button type="button" id="unloaderPerfRefreshBtn" class="secondary-btn">Refresh</button>
           </div>
           <div class="summary-grid" id="unloaderPerfSummary"></div>
@@ -4634,6 +4641,11 @@
             <div class="dock-list" id="unloaderPerfTimeList"></div>
           </section>
           <section class="panel chart-panel-wide">
+            <div class="panel-header"><h2>Downtime Between Loads</h2><span class="panel-kicker" id="unloaderPerfGapKicker"></span></div>
+            <div class="friendly-note" style="margin:-2px 0 10px;">The wait between finishing one load and starting the next, per person per night. A wait longer than the "Count gaps up to" setting is treated as a break (or no trucks to unload) and left out of the average, but counted as a long gap. This includes time spent waiting on trucks, so compare people working the same nights.</div>
+            <div class="dock-list" id="unloaderPerfGapList"></div>
+          </section>
+          <section class="panel chart-panel-wide">
             <div class="panel-header"><h2>Loads per Night</h2><span class="panel-kicker" id="unloaderPerfDailyKicker"></span></div>
             <div class="dock-list" id="unloaderPerfDailyList"></div>
           </section>
@@ -4641,7 +4653,7 @@
             <div class="panel-header"><h2>Leaderboard</h2><span class="panel-kicker">Everyone with at least one load</span></div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Name</th><th>Loads</th><th>Pallets</th><th>Avg unload</th><th>Pallets / hr</th><th>Nights</th><th>Main area</th><th>Last night</th></tr></thead>
+                <thead><tr><th>Name</th><th>Loads</th><th>Pallets</th><th>Avg unload</th><th>Pallets / hr</th><th>Avg gap</th><th>Idle share</th><th>Nights</th><th>Main area</th><th>Last night</th></tr></thead>
                 <tbody id="unloaderPerfTableBody"></tbody>
               </table>
             </div>
@@ -22152,8 +22164,10 @@
       const kicker = document.getElementById("unloaderPerfKicker");
       const summary = document.getElementById("unloaderPerfSummary");
       const days = rangeEl ? rangeEl.value : "30";
+      const gapEl = document.getElementById("unloaderPerfMaxGap");
+      const maxGap = gapEl ? gapEl.value : "60";
       kicker.textContent = "Loading...";
-      fetch(apiUrl("/api/portal/performance?days=" + encodeURIComponent(days)))
+      fetch(apiUrl("/api/portal/performance?days=" + encodeURIComponent(days) + "&max_gap=" + encodeURIComponent(maxGap)))
         .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.detail || "Could not load performance."); return d; }); })
         .then(function(data) {
           const people = data.people || [];
@@ -22163,11 +22177,14 @@
           kicker.textContent = totals.loads
             ? formatNumber(totals.loads) + " load" + (totals.loads === 1 ? "" : "s") + " across " + formatNumber(totals.people) + " " + (totals.people === 1 ? "person" : "people") + " in the last " + data.days + " days"
             : "No names assigned yet";
+          const gapCount = people.reduce(function(s, p) { return s + p.gap_count; }, 0);
+          const gapTotal = people.reduce(function(s, p) { return s + (p.avg_gap_min || 0) * p.gap_count; }, 0);
           summary.innerHTML = [
             ["Loads Tracked", formatNumber(totals.loads), "Loads with an unloader name."],
             ["Pallets Handled", formatNumber(totals.pallets), "From DMS pallet counts."],
             ["People", formatNumber(totals.people), "Distinct unloader names."],
-            ["Avg Unload Time", timedLoads ? unloaderFmtMinutes(timedMin / timedLoads) : "--", timedLoads ? formatNumber(timedLoads) + " finished unloads timed." : "Waiting on finished unloads."]
+            ["Avg Unload Time", timedLoads ? unloaderFmtMinutes(timedMin / timedLoads) : "--", timedLoads ? formatNumber(timedLoads) + " finished unloads timed." : "Waiting on finished unloads."],
+            ["Avg Gap Between Loads", gapCount ? unloaderFmtMinutes(gapTotal / gapCount) : "--", gapCount ? formatNumber(gapCount) + " gaps up to " + data.max_gap + " min." : "Needs two timed loads in one night."]
           ].map(function(c, i) {
             return '<article class="metric-card"' + (i === 1 ? ' data-accent="purple"' : "") + '><div class="metric-label">' + escapeHtml(c[0]) + '</div><div class="metric-value">' + escapeHtml(c[1]) + '</div><div class="metric-note">' + escapeHtml(c[2]) + '</div></article>';
           }).join("");
@@ -22188,6 +22205,20 @@
               .map(function(p) { return { label: p.name, value: p.avg_unload_min, count: unloaderFmtMinutes(p.avg_unload_min), meta: p.timed_loads + " timed load" + (p.timed_loads === 1 ? "" : "s") + (p.timed_loads < 5 ? " · small sample" : "") }; }),
             { empty: "Needs finished unloads (unload start and finish in DMS).", kicker: "Quickest first" });
 
+          unloaderRenderBars(document.getElementById("unloaderPerfGapList"), document.getElementById("unloaderPerfGapKicker"),
+            people.filter(function(p) { return p.avg_gap_min != null; })
+              .sort(function(a, b) { return a.avg_gap_min - b.avg_gap_min; })
+              .map(function(p) {
+                return {
+                  label: p.name, value: Math.max(p.avg_gap_min, 0.5), count: unloaderFmtMinutes(p.avg_gap_min) + " avg",
+                  meta: p.gap_count + " gap" + (p.gap_count === 1 ? "" : "s") + " · " + (p.idle_pct != null ? p.idle_pct + "% idle · " : "")
+                    + "longest " + unloaderFmtMinutes(p.longest_gap_min)
+                    + (p.long_gaps ? " · " + p.long_gaps + " long gap" + (p.long_gaps === 1 ? "" : "s") + " skipped" : "")
+                    + (p.gap_count < 5 ? " · small sample" : "")
+                };
+              }),
+            { empty: "Needs a named associate with two or more finished unloads in the same night.", kicker: "Least downtime first · gaps up to " + data.max_gap + " min" });
+
           const daily = (data.daily || []).slice().reverse().slice(0, 14);
           unloaderRenderBars(document.getElementById("unloaderPerfDailyList"), document.getElementById("unloaderPerfDailyKicker"),
             daily.map(function(d) {
@@ -22206,14 +22237,14 @@
           if (!people.length) {
             const tr = document.createElement("tr");
             const td = document.createElement("td");
-            td.colSpan = 8;
+            td.colSpan = 10;
             td.textContent = "No data yet.";
             tr.appendChild(td);
             tbody.appendChild(tr);
           }
           people.forEach(function(p) {
             const tr = document.createElement("tr");
-            [p.name, p.loads, formatNumber(p.pallets), unloaderFmtMinutes(p.avg_unload_min), p.pallets_per_hour != null ? p.pallets_per_hour : "--", p.days_worked, p.top_area || "--", p.last_date || "--"].forEach(function(v) {
+            [p.name, p.loads, formatNumber(p.pallets), unloaderFmtMinutes(p.avg_unload_min), p.pallets_per_hour != null ? p.pallets_per_hour : "--", p.avg_gap_min != null ? unloaderFmtMinutes(p.avg_gap_min) : "--", p.idle_pct != null ? p.idle_pct + "%" : "--", p.days_worked, p.top_area || "--", p.last_date || "--"].forEach(function(v) {
               const td = document.createElement("td");
               td.textContent = v;
               tr.appendChild(td);
@@ -22229,7 +22260,9 @@
     (function() {
       const range = document.getElementById("unloaderPerfRange");
       const btn = document.getElementById("unloaderPerfRefreshBtn");
+      const gap = document.getElementById("unloaderPerfMaxGap");
       if (range) range.addEventListener("change", renderUnloaderPerformance);
+      if (gap) gap.addEventListener("change", renderUnloaderPerformance);
       if (btn) btn.addEventListener("click", renderUnloaderPerformance);
     })();
 
