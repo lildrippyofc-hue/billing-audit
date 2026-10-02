@@ -841,6 +841,56 @@
     .area-bar > i { display:block; height:100%; background:linear-gradient(90deg,#38a169,#68d391); border-radius:6px; }
     .area-card .area-pct { font-size:0.78em; font-weight:700; color:#2f855a; margin-top:4px; }
     :root.dark .area-card { background:#17263f; }
+    .zone-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:12px; }
+    .zone-card { border-radius:10px; padding:15px 17px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); }
+    :root.dark .zone-card { background:#17263f; border-color:#1e3a55; }
+    .zone-head { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .zone-head h3 { margin:0; font-size:1.1em; font-weight:800; color:var(--text,#1a202c); }
+    .zone-pct { font-size:1.9em; font-weight:800; color:#2f855a; line-height:1; }
+    .zone-sub { font-size:0.82em; color:var(--muted,#718096); margin:6px 0 12px; }
+    .zone-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px 10px; margin-bottom:14px; }
+    .zone-kpi .v { display:block; font-weight:800; font-size:1.05em; color:var(--text,#1a202c); }
+    .zone-kpi .l { display:block; font-size:0.7em; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); }
+    .zone-kpi.warn .v { color:#c05621; }
+    .zone-table-wrap { overflow-x:auto; }
+    .zone-table { width:100%; min-width:0; border-collapse:collapse; font-size:0.82em; }
+    .zone-table th { text-align:left; font-size:0.78em; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); padding:4px 6px; border-bottom:1px solid var(--border,#e2e8f0); }
+    .zone-table td { padding:6px 6px; border-bottom:1px solid var(--border,#e2e8f0); color:var(--text,#2d3748); }
+    .zone-table td.num, .zone-table th.num { text-align:right; }
+    .zone-building { font-size:0.92em; font-weight:600; color:var(--text,#2d3748); background:var(--card-bg,#fff); border:1px solid var(--border,#e2e8f0); border-radius:10px; padding:10px 14px; margin-bottom:12px; }
+    :root.dark .zone-building { background:#17263f; border-color:#1e3a55; }
+    .zone-card.zs-green  { border-left:6px solid #38a169; }
+    .zone-card.zs-yellow { border-left:6px solid #d69e2e; }
+    .zone-card.zs-red    { border-left:6px solid #e53e3e; }
+    :root.dark .zone-card.zs-green  { border-left-color:#38a169; }
+    :root.dark .zone-card.zs-yellow { border-left-color:#d69e2e; }
+    :root.dark .zone-card.zs-red    { border-left-color:#e53e3e; }
+    .zone-card.zs-green  .zone-pct { color:#2f855a; }
+    .zone-card.zs-yellow .zone-pct { color:#b7791f; }
+    .zone-card.zs-red    .zone-pct { color:#c53030; }
+    .zone-card.zs-none   .zone-pct { color:var(--text,#2d3748); }
+    .zone-card.zs-yellow .area-bar > i { background:linear-gradient(90deg,#d69e2e,#ecc94b); }
+    .zone-card.zs-red    .area-bar > i { background:linear-gradient(90deg,#e53e3e,#fc8181); }
+    .zone-card.zs-none   .area-bar > i { background:linear-gradient(90deg,#4a5568,#a0aec0); }
+    .zone-status { margin:2px 0 6px; }
+    .zone-chip { display:inline-block; font-size:0.78em; font-weight:800; letter-spacing:.02em; padding:3px 10px; border-radius:999px; }
+    .zone-chip.green  { background:#c6f6d5; color:#22543d; }
+    .zone-chip.yellow { background:#fefcbf; color:#744210; }
+    .zone-chip.red    { background:#fed7d7; color:#822727; }
+    .zone-chip.none   { background:#edf2f7; color:#4a5568; }
+    :root.dark .zone-chip.green  { background:#22543d; color:#c6f6d5; }
+    :root.dark .zone-chip.yellow { background:#744210; color:#fefcbf; }
+    :root.dark .zone-chip.red    { background:#822727; color:#fed7d7; }
+    :root.dark .zone-chip.none   { background:#2d3748; color:#cbd5e0; }
+    .zone-finish { font-size:0.84em; font-weight:700; color:var(--text,#2d3748); margin:2px 0 8px; }
+    .alert-card.alert-zonered    { border-left-color:#e53e3e; }
+    .alert-card.alert-zoneyellow { border-left-color:#d69e2e; }
+    .alert-card-sev.sev-zonered    { background:#fff5f5; color:#c53030; }
+    .alert-card-sev.sev-zoneyellow { background:#fffaf0; color:#b7791f; }
+    :root.dark .alert-card-sev.sev-zonered { background:#3d1515; }
+    :root.dark .alert-card-sev.sev-zoneyellow { background:#3d2f15; }
+    .zone-foot { font-size:0.76em; color:var(--muted,#718096); margin-top:12px; line-height:1.5; }
+    @media (max-width: 700px) { .zone-kpis { grid-template-columns:repeat(2,1fr); } }
     /* -- Shift report modal -- */
     .report-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px; }
     .report-modal { background:var(--card-bg,#fff); border-radius:12px; max-width:680px; width:100%; max-height:85vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.3); }
@@ -6627,6 +6677,7 @@
           <button type="button" class="portal-view-btn active" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
+          <button type="button" class="portal-view-btn" data-view="zones">Zones</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
           <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalChatBadge" style="display:none;">0</span></button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
@@ -6772,6 +6823,17 @@
         <section id="portalAreaView" style="display:none; margin-top:10px;">
           <div class="dms-scorecard" id="portalScorecardAreas"></div>
           <div class="area-grid" id="portalAreaGrid"></div>
+        </section>
+
+        <!-- Cold vs Dry zones view -->
+        <section id="portalZonesView" style="display:none; margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Shift Completion &amp; Performance by Zone</div>
+            <span id="portalZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+          </div>
+          <div class="zone-building" id="portalZonesBuilding"></div>
+          <div class="zone-grid" id="portalZonesGrid"></div>
+          <div class="zone-foot" id="portalZonesFoot"></div>
         </section>
 
         <!-- Vendor Performance History view -->
@@ -16869,6 +16931,11 @@
     const PORTAL_FINISH_CAPACITY = 0.5;
     const PORTAL_FINISH_SIMS = 120;
 
+    // Per-zone model for the Zones view (Freezer / Cooler-Meat-Produce / Dry-Slip-Floor), measured
+    // from ~120 real nights by build_zone_model.py: `models` feed the shared-dock finish simulation,
+    // `pace` holds the usual share-finished curve (15-min steps from 7 PM) and how a gap to that
+    // curve maps to a finish time. Rerun the script every month or two.
+    const PORTAL_ZONE_MODEL = {"doors":6,"nights":120,"models":{"freezer":{"fmax":0.837,"offsets":[-532,-532,-486,-447,-422,-395,-371,-352,-336,-321,-311,-294,-283,-269,-253,-241,-230,-222,-215,-210,-205,-199,-191,-184,-177,-173,-168,-166,-163,-159,-156,-152,-149,-144,-143,-135,-130,-127,-123,-120,-117,-114,-111,-107,-104,-99,-95,-93,-90,-87,-84,-80,-78,-76,-75,-73,-70,-67,-66,-64,-62,-60,-59,-56,-54,-52,-50,-48,-46,-44,-41,-38,-35,-34,-32,-29,-25,-22,-20,-18,-16,-12,-9,-6,-3,0,5,7,12,15,20,24,27,31,35,41,49,56,65,81,81],"service":[0,0,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,23,24,24,24,25,25,26,26,27,27,28,28,28,29,29,30,30,31,31,32,32,32,33,33,34,35,35,35,36,37,37,38,38,39,39,40,41,41,42,43,44,45,47,48,49,50,53,54,57,58,62,68,75,90,117,117]},"chilled":{"fmax":0.874,"offsets":[-631,-631,-548,-490,-448,-410,-381,-353,-335,-314,-296,-283,-270,-260,-251,-242,-232,-222,-213,-206,-199,-194,-187,-182,-177,-171,-167,-163,-158,-152,-148,-144,-140,-135,-130,-127,-122,-120,-116,-112,-110,-105,-101,-98,-94,-92,-88,-86,-83,-80,-76,-73,-70,-68,-65,-63,-61,-59,-57,-55,-52,-50,-48,-46,-43,-41,-39,-36,-34,-31,-29,-27,-25,-23,-21,-19,-17,-15,-12,-10,-7,-5,-2,0,5,7,11,15,21,27,34,40,46,55,65,73,85,102,127,162,162],"service":[0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,10,11,11,12,12,12,13,13,14,14,15,15,16,16,17,17,17,18,18,19,19,20,20,20,21,21,21,22,22,23,24,24,25,25,26,26,27,27,28,29,29,30,31,31,32,33,33,34,35,36,36,37,39,40,41,42,43,45,47,48,51,53,56,61,66,72,81,94,109,130,221,221]},"dry":{"fmax":0.811,"offsets":[-561,-561,-510,-464,-429,-402,-381,-362,-342,-324,-309,-296,-286,-276,-264,-257,-250,-241,-235,-227,-222,-215,-209,-203,-196,-191,-185,-180,-175,-171,-167,-162,-158,-152,-149,-145,-141,-137,-132,-129,-125,-121,-117,-114,-111,-107,-103,-100,-97,-94,-90,-87,-84,-81,-78,-76,-73,-71,-68,-65,-62,-58,-55,-53,-50,-47,-43,-41,-39,-36,-33,-31,-29,-25,-23,-20,-17,-15,-13,-10,-7,-4,-2,0,4,9,13,17,21,26,30,36,43,50,57,67,75,90,106,147,147],"service":[0,0,0,0,0,0,2,4,5,6,7,8,9,9,10,11,11,12,12,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,24,24,25,25,26,27,27,28,28,29,29,30,31,31,32,33,33,34,35,36,37,38,38,39,40,41,42,43,44,45,46,48,49,50,51,53,54,56,57,59,61,63,65,68,71,75,77,80,84,88,93,98,104,112,125,137,152,183,231,317,317]}},"pace":{"freezer":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,0.105,0.125,0.167,0.2,0.231,0.267,0.3,0.333,0.375,0.4,0.438,0.462,0.5,0.5,0.545,0.571,0.6,0.615,0.667,0.667,0.7,0.706,0.727,0.75,0.778,0.8,0.8,0.812,0.833,0.833,0.833,0.833,0.833,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846],"finish":519.0,"fit":[[11.81,0.718],[17.66,0.432],[20.89,0.454],[37.98,0.227],[67.64,0.081],[114.65,-0.22]]},"chilled":{"curve":[0.0,0.0,0.0,0.0,0.021,0.024,0.027,0.047,0.069,0.09,0.115,0.13,0.163,0.195,0.217,0.253,0.283,0.31,0.341,0.363,0.395,0.435,0.47,0.495,0.534,0.568,0.594,0.628,0.667,0.691,0.71,0.741,0.767,0.793,0.806,0.81,0.833,0.844,0.851,0.865,0.868,0.874,0.874,0.875,0.877,0.877,0.88,0.88,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882],"finish":536.0,"fit":[[4.9,0.941],[3.55,1.049],[4.66,0.916],[4.83,0.886],[22.62,0.306],[66.35,0.094]]},"dry":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.031,0.052,0.069,0.092,0.111,0.131,0.167,0.198,0.223,0.252,0.292,0.316,0.358,0.388,0.417,0.448,0.473,0.51,0.533,0.561,0.592,0.623,0.644,0.675,0.704,0.723,0.729,0.75,0.759,0.769,0.774,0.778,0.792,0.792,0.796,0.802,0.804,0.804,0.806,0.807,0.807,0.807,0.809,0.809,0.811,0.811,0.811,0.811,0.811,0.811],"finish":525.0,"fit":[[34.61,0.321],[33.71,0.449],[36.26,0.216],[41.66,0.167],[67.84,-0.08],[155.15,-0.446]]}}};
     // Seeded so the projection only moves when the inputs do, not on every redraw.
     function portalFinishRng(seed) {
       let a = seed >>> 0;
@@ -16932,14 +16999,19 @@
 
     // arrived: [{ci, us, uf}] in ms (checked-in trucks; us/uf null until stamped).
     // notArrived: [{appt}] in ms. Returns projected times in ms, or null if there is nothing to project.
-    function portalFinishForecast(siteKey, arrived, notArrived, now) {
+    // Optional `zoneCfg` ({ models: { zoneKey: model }, doors }) runs the same simulation as ONE
+    // shared dock where every truck (tagged `z`) draws from its own zone's arrival and unload-time
+    // model, and additionally returns each zone's own 95%-done time. Without it nothing changes.
+    function portalFinishForecast(siteKey, arrived, notArrived, now, zoneCfg) {
       const model = PORTAL_FINISH_MODEL[siteKey];
-      if (!model) return null;
+      if (!model && !zoneCfg) return null;
+      const zones = zoneCfg ? zoneCfg.models : null;
+      const modelOf = function(t) { return zones ? zones[t.z] : model; };
       const MIN = 60000;
-      const finished = [], unloading = [], waiting = [];
+      const finished = [], finishedZ = [], unloading = [], waiting = [];
       arrived.forEach(function(t) {
         if (!t.ci) return;
-        if (t.uf) finished.push(t.uf);
+        if (t.uf) { finished.push(t.uf); if (zones) finishedZ.push(t.z); }
         else if (t.us) unloading.push(t);
         else waiting.push(t);
       });
@@ -16947,49 +17019,64 @@
 
       // Chance each not-yet-arrived truck still shows up, given it has not by now.
       const coming = [];
+      const zoneRemaining = {};
       let comingExpected = 0, unlikely = 0;
       notArrived.forEach(function(t) {
-        const f0 = model.fmax * portalFinishCdf(model.offsets, (now - t.appt) / MIN);
-        const p = f0 >= model.fmax ? 0 : Math.max(0, Math.min(1, (model.fmax - f0) / (1 - f0)));
+        const m = modelOf(t);
+        const f0 = m.fmax * portalFinishCdf(m.offsets, (now - t.appt) / MIN);
+        const p = f0 >= m.fmax ? 0 : Math.max(0, Math.min(1, (m.fmax - f0) / (1 - f0)));
         comingExpected += p;
+        if (zones) zoneRemaining[t.z] = (zoneRemaining[t.z] || 0) + p;
         if (p < 0.5) unlikely += 1;
-        if (p > 0) coming.push({ appt: t.appt, f0: f0 });
+        if (p > 0) coming.push({ appt: t.appt, f0: f0, m: m, z: t.z });
       });
       if (!finished.length && !unloading.length && !waiting.length && !coming.length) return null;
 
-      const doors = Math.max(Math.round(model.peak * PORTAL_FINISH_CAPACITY), unloading.length, 1);
+      const doors = Math.max(zoneCfg ? zoneCfg.doors : Math.round(model.peak * PORTAL_FINISH_CAPACITY), unloading.length, 1);
       const rng = portalFinishRng(20260925);
-      const drawService = function() { return portalFinishQuantile(model.service, rng()); };
+      const drawService = function(m) { return portalFinishQuantile(m.service, rng()); };
       // Remaining unload time for a truck that has already been unloading `x` minutes.
-      const drawServiceOver = function(x) {
-        const u0 = portalFinishCdf(model.service, x);
+      const drawServiceOver = function(m, x) {
+        const u0 = portalFinishCdf(m.service, x);
         if (u0 >= 0.995) return x + 5 + rng() * 15;
-        return portalFinishQuantile(model.service, u0 + (1 - u0) * rng());
+        return portalFinishQuantile(m.service, u0 + (1 - u0) * rng());
       };
 
       const p90s = [], p95s = [], p99s = [];
+      const zoneP95 = {};
       for (let s = 0; s < PORTAL_FINISH_SIMS; s++) {
         const fins = finished.slice();
+        const finZ = zones ? finishedZ.slice() : null;
         const heap = [];
         unloading.forEach(function(t) {
           const el = (now - t.us) / MIN;
-          const f = now + Math.max(drawServiceOver(el) - el, 1) * MIN;
+          const f = now + Math.max(drawServiceOver(modelOf(t), el) - el, 1) * MIN;
           heap.push(f); fins.push(f);
+          if (finZ) finZ.push(t.z);
         });
         for (let k = unloading.length; k < doors; k++) heap.push(now);
         heap.sort(function(a, b) { return a - b; });
-        const queue = waiting.map(function(t) { return t.ci; });
+        const queue = waiting.map(function(t) { return { arr: t.ci, z: t.z, m: modelOf(t) }; });
         coming.forEach(function(t) {
           const u = t.f0 + (1 - t.f0) * rng();
-          if (u > model.fmax) return;                                   // simulated no-show
-          queue.push(Math.max(now, t.appt + portalFinishQuantile(model.offsets, u / model.fmax) * MIN));
+          if (u > t.m.fmax) return;                                     // simulated no-show
+          queue.push({ arr: Math.max(now, t.appt + portalFinishQuantile(t.m.offsets, u / t.m.fmax) * MIN), z: t.z, m: t.m });
         });
-        queue.sort(function(a, b) { return a - b; });
-        queue.forEach(function(arr) {
+        queue.sort(function(a, b) { return a.arr - b.arr; });
+        queue.forEach(function(q) {
           const free = portalHeapPop(heap);
-          const f = Math.max(arr, free, now) + drawService() * MIN;
+          const f = Math.max(q.arr, free, now) + drawService(q.m) * MIN;
           portalHeapPush(heap, f); fins.push(f);
+          if (finZ) finZ.push(q.z);
         });
+        if (zones) {
+          const byZone = {};
+          fins.forEach(function(f, i) { (byZone[finZ[i]] = byZone[finZ[i]] || []).push(f); });
+          Object.keys(byZone).forEach(function(z) {
+            const a = byZone[z].sort(function(x, y) { return x - y; });
+            (zoneP95[z] = zoneP95[z] || []).push(Math.max(a[Math.min(a.length - 1, Math.floor(a.length * 0.95))], now));
+          });
+        }
         fins.sort(function(a, b) { return a - b; });
         const n = fins.length;
         p90s.push(Math.max(fins[Math.min(n - 1, Math.floor(n * 0.9))], now));
@@ -16997,12 +17084,24 @@
         p99s.push(Math.max(fins[Math.min(n - 1, Math.floor(n * 0.99))], now));
       }
       const median = function(a) { a.sort(function(x, y) { return x - y; }); return a[a.length >> 1]; };
+      let zonesOut = null;
+      if (zones) {
+        zonesOut = {};
+        Object.keys(zoneP95).forEach(function(z) {
+          zonesOut[z] = {
+            p95: median(zoneP95[z]),
+            remaining: (zoneRemaining[z] || 0)
+              + unloading.filter(function(t) { return t.z === z; }).length
+              + waiting.filter(function(t) { return t.z === z; }).length
+          };
+        });
+      }
       // p95 = when 95% of the night's trucks are done; p99 = when all but the last
       // straggler is (the very last truck is often one stuck for hours and can't be predicted).
       return {
         p90: median(p90s), p95: median(p95s), p99: median(p99s),
         expectedRemaining: unloading.length + waiting.length + comingExpected,
-        comingExpected: comingExpected, unlikely: unlikely, doors: doors
+        comingExpected: comingExpected, unlikely: unlikely, doors: doors, zones: zonesOut
       };
     }
 
@@ -17673,15 +17772,352 @@
       }).join("");
     }
 
+    // -- Cold / Dry zones --------------------------------------------------------------
+    // Groups the DMS area names into the two halves of the building and reports shift
+    // completion plus performance for each. Counts trucks the same way the Areas view
+    // does (every non-rejected scheduled truck; complete = unload or receiving finished).
+    const PORTAL_ZONE_GROUPS = [
+      { key: "freezer", title: "Freezer", areas: [
+        { key: "freezer", label: "Freezer", match: ["frz", "freezer"] }
+      ] },
+      { key: "chilled", title: "Cooler / Fresh Meat / Produce", areas: [
+        { key: "cooler", label: "Cooler", match: ["chl", "chill", "cooler", "eggs", "egg"] },
+        { key: "meat", label: "Fresh Meat", match: ["fresh meat", "meat"] },
+        { key: "produce", label: "Produce", match: ["produce"] }
+      ] },
+      { key: "dry", title: "Dry / Slip Sheet / Floor Load", areas: [
+        { key: "dry", label: "Dry", match: ["dry", "amb", "ambient"] },
+        { key: "slip", label: "Slip Sheet", match: ["slip sheet", "slip"] },
+        { key: "floor", label: "Floor Load", match: ["floor loaded", "floor load", "floor"] }
+      ] }
+    ];
+
+    function portalZoneLocate(area) {
+      const text = String(area || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      for (let g = 0; g < PORTAL_ZONE_GROUPS.length; g++) {
+        for (let a = 0; a < PORTAL_ZONE_GROUPS[g].areas.length; a++) {
+          if (PORTAL_ZONE_GROUPS[g].areas[a].match.indexOf(text) !== -1) return { group: g, area: a };
+        }
+      }
+      return null;
+    }
+
+    function portalZoneMetrics(trucks, now) {
+      const m = { scheduled: trucks.length, arrived: 0, completed: 0, onDock: 0, notArrived: 0, pallets: 0, palletsDone: 0,
+                  lastHour: 0, oldestMin: 0, unloadMins: [], dockMins: [], unloadPallets: 0, unloadHours: 0 };
+      trucks.forEach(function(t) {
+        const checkIn = portalIsoToMs(t.checkInIso);
+        // Same start point the door popup uses for "On dock": driver at door, else check-in.
+        const doorStart = portalIsoToMs(t.driverAtDoorIso) || checkIn;
+        const unloadStart = portalIsoToMs(t.unloadStartIso);
+        const unloadFinish = portalIsoToMs(t.unloadFinishIso);
+        const finish = unloadFinish || portalIsoToMs(t.receivingFinishIso);
+        const pallets = Number.isFinite(t.pallets) ? t.pallets : null;
+        if (pallets != null) m.pallets += pallets;
+        if (checkIn) m.arrived += 1;
+        if (finish) {
+          m.completed += 1;
+          if (pallets != null) m.palletsDone += pallets;
+          if (now - finish >= 0 && now - finish <= 3600000) m.lastHour += 1;
+          if (unloadStart && unloadFinish && unloadFinish > unloadStart) {
+            const mins = (unloadFinish - unloadStart) / 60000;
+            if (mins <= 480) {
+              m.unloadMins.push(mins);
+              if (pallets != null) { m.unloadPallets += pallets; m.unloadHours += mins / 60; }
+            }
+          }
+          if (doorStart && finish > doorStart && (finish - doorStart) / 60000 <= 720) m.dockMins.push((finish - doorStart) / 60000);
+        } else if (checkIn) {
+          m.onDock += 1;
+          const age = (now - doorStart) / 60000;
+          if (age >= 0 && age <= 720) m.oldestMin = Math.max(m.oldestMin, age);
+        }
+      });
+      m.notArrived = m.scheduled - m.arrived;
+      const mean = function(list) { return list.length ? list.reduce(function(s, v) { return s + v; }, 0) / list.length : null; };
+      m.avgUnload = mean(m.unloadMins);
+      m.avgDock = mean(m.dockMins);
+      m.palletsPerHour = m.unloadHours > 0 ? m.unloadPallets / m.unloadHours : null;
+      m.pct = m.scheduled ? Math.round(m.completed / m.scheduled * 100) : 0;
+      return m;
+    }
+
+    function portalZonesCompute(trucks, now) {
+      const groups = PORTAL_ZONE_GROUPS.map(function(g) {
+        return { def: g, trucks: [], areas: g.areas.map(function(a) { return { def: a, trucks: [] }; }) };
+      });
+      const other = [];
+      const otherNames = {};
+      trucks.forEach(function(t) {
+        const loc = portalZoneLocate(t.area);
+        if (!loc) {
+          other.push(t);
+          const label = String(t.area || "").trim() || "No area listed";
+          otherNames[label] = true;
+          return;
+        }
+        groups[loc.group].trucks.push(t);
+        groups[loc.group].areas[loc.area].trucks.push(t);
+      });
+      groups.forEach(function(g) {
+        g.metrics = portalZoneMetrics(g.trucks, now);
+        g.areas.forEach(function(a) { a.metrics = portalZoneMetrics(a.trucks, now); });
+      });
+      return { groups: groups, other: portalZoneMetrics(other, now), otherNames: Object.keys(otherNames), total: portalZoneMetrics(trucks, now) };
+    }
+
+    function portalZoneFmtMin(min) {
+      if (min == null) return "--";
+      const m = Math.round(min);
+      return m < 60 ? m + " min" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m";
+    }
+
+    // -- Zone pace status + finish estimate ---------------------------------------------
+    // "Behind schedule" = how many minutes behind the USUAL pace for this zone at this time of
+    // night (the median share-finished curve over ~120 real nights, PORTAL_ZONE_MODEL.pace).
+    //   green = on or ahead of the usual pace, yellow = under 30 min behind, red = 30+ min behind.
+    // Backtested: from ~10 PM on, zones 30+ min behind ended 30+ min past 4 AM roughly half the
+    // time, versus ~10-25% for zones ahead of pace. Before 10 PM the gap is mostly noise, so no
+    // status is shown. The finish estimate averages the shared-dock simulation with the pace
+    // estimate (held-out error ~40 min on 14 unseen nights, ~1 hour across all ~120 nights).
+    const PORTAL_ZONE_CHECKPOINTS = [240, 300, 360, 420, 480, 540];   // minutes after the 7 PM start
+    const PORTAL_ZONE_STATUS_FROM_MIN = 180;                          // 10 PM
+    let _portalZoneCache = { key: "", value: null };
+    let _portalZoneHold = {};
+    const _portalZoneFired = new Set();
+
+    // Minutes after 7 PM at which the usual curve reaches `share`.
+    function portalZoneTypicalMin(curve, share) {
+      let best = -1;
+      for (let k = 0; k < curve.length; k++) if (curve[k] <= share + 1e-9) best = k;
+      if (best < 0) return 0;
+      if (best === curve.length - 1) {
+        for (let k = 0; k < curve.length; k++) if (curve[k] >= share - 1e-9) return k * 15;
+      }
+      return best * 15;
+    }
+
+    // [a, b] for how a lag turns into a finish time, interpolated between the 11 PM..4 AM fits.
+    function portalZoneFitAt(fit, elapsedMin) {
+      const cps = PORTAL_ZONE_CHECKPOINTS;
+      if (elapsedMin <= cps[0]) return fit[0];
+      if (elapsedMin >= cps[cps.length - 1]) return fit[fit.length - 1];
+      const i = Math.floor((elapsedMin - cps[0]) / 60), f = (elapsedMin - cps[i]) / 60;
+      return [fit[i][0] + (fit[i + 1][0] - fit[i][0]) * f, fit[i][1] + (fit[i + 1][1] - fit[i][1]) * f];
+    }
+
+    function portalZoneEstimates(rows, now, shiftStartMs, model) {
+      model = model || PORTAL_ZONE_MODEL;
+      const elapsed = (now - shiftStartMs) / 60000;
+      if (!Array.isArray(rows) || !rows.length || !shiftStartMs || elapsed < 0 || elapsed > 14 * 60) return null;
+      const arrived = [], notArrived = [], counts = {};
+      rows.forEach(function(r) {
+        const loc = portalZoneLocate(r.area);
+        if (!loc) return;
+        const z = PORTAL_ZONE_GROUPS[loc.group].key;
+        const c = counts[z] || (counts[z] = { scheduled: 0, done: 0 });
+        c.scheduled += 1;
+        const ci = portalIsoToMs(r.checkInIso);
+        const us = portalIsoToMs(r.unloadStartIso);
+        const uf = portalIsoToMs(r.unloadFinishIso) || portalIsoToMs(r.receivingFinishIso);
+        if (uf) c.done += 1;
+        if (ci) arrived.push({ ci: ci, us: us || null, uf: uf || null, z: z });
+        else {
+          const appt = portalIsoToMs(r.appointmentIso);
+          if (appt) notArrived.push({ appt: appt, z: z });
+        }
+      });
+      const fc = portalFinishForecast("oks", arrived, notArrived, now, { models: model.models, doors: model.doors });
+      const out = {};
+      PORTAL_ZONE_GROUPS.forEach(function(g) {
+        const z = g.key, c = counts[z], pace = model.pace[z];
+        if (!c || c.scheduled < 3 || !pace) { out[z] = null; return; }
+        const share = c.done / c.scheduled;
+        const usual = pace.curve[Math.min(pace.curve.length - 1, Math.max(0, Math.floor(elapsed / 15)))];
+        const lag = elapsed - portalZoneTypicalMin(pace.curve, share);
+        const fit = portalZoneFitAt(pace.fit, elapsed);
+        const earned = shiftStartMs + (pace.finish + fit[0] + fit[1] * lag) * 60000;
+        const zf = fc && fc.zones && fc.zones[z];
+        const parts = zf ? [earned, zf.p95] : [earned];
+        const estMs = Math.max(now, parts.reduce(function(s, v) { return s + v; }, 0) / parts.length);
+        const remaining = zf ? zf.remaining : 0;
+        let status;
+        if (remaining < 0.5) status = "done";
+        else if (elapsed < PORTAL_ZONE_STATUS_FROM_MIN || usual < 0.03) status = "early";
+        else status = lag <= 0 ? "green" : lag < 30 ? "yellow" : "red";
+        out[z] = { key: z, status: status, lag: lag, usual: usual, share: share, scheduled: c.scheduled, done: c.done,
+                   remaining: remaining, estMs: estMs };
+      });
+      return out;
+    }
+
+    // Cached per minute / data refresh so the 15 s alert tick and the view don't each re-simulate.
+    function portalZoneEstimatesNow(now) {
+      const rows = state.portal.scheduledRows;
+      const start = portalShiftStartMs();
+      if (!Array.isArray(rows) || !start) return null;
+      const key = rows.length + "|" + Math.floor(now / 60000) + "|" + (state.portal.liveUpdatedAt || "") + "|" + start;
+      if (_portalZoneCache.key === key) return _portalZoneCache.value;
+      let value = null;
+      try { value = portalZoneEstimates(rows, now, start); } catch (err) { console.error("Zone estimate failed:", err); }
+      _portalZoneCache = { key: key, value: value };
+      return value;
+    }
+
+    function portalZoneStatusInfo(r) {
+      if (!r) return { cls: "none", label: "" };
+      if (r.status === "done") return { cls: "green", label: "Zone finished" };
+      if (r.status === "early") return { cls: "none", label: "Too early to judge pace" };
+      const min = Math.abs(Math.round(r.lag));
+      if (r.status === "green") return { cls: "green", label: r.lag <= -5 ? "Ahead of schedule by " + min + " min" : "On schedule" };
+      if (r.status === "yellow") return { cls: "yellow", label: "Slightly behind" + (min >= 5 ? ": " + min + " min" : "") };
+      return { cls: "red", label: min + " min behind schedule" };
+    }
+
+    function portalZoneFinishLine(r) {
+      if (!r || r.status === "done") return r && r.status === "done" ? "Finished for the night" : "";
+      const goal = portalShiftGoalMs();
+      let text = "Est. finish " + portalFinishClock(r.estMs);
+      if (goal) {
+        const d = Math.round((r.estMs - goal) / 60000);
+        text += Math.abs(d) < 5 ? " (right at the 4:00 AM goal)" : d < 0 ? " (" + portalZoneFmtMin(-d) + " before the 4:00 AM goal)" : " (" + portalZoneFmtMin(d) + " past the 4:00 AM goal)";
+      }
+      return text;
+    }
+
+    // Alerts for zones that have stayed yellow or red for 5+ minutes. They join the Alerts tab and
+    // fire the same desktop notification / sound as truck alerts, once per zone per status.
+    function portalZoneAlerts() {
+      const now = Date.now();
+      const est = portalZoneEstimatesNow(now);
+      const alerts = [];
+      if (!est || portalShiftClosedAfterMorning(now)) return alerts;
+      const date = state.portal.businessDate || "";
+      PORTAL_ZONE_GROUPS.forEach(function(g) {
+        const r = est[g.key];
+        if (!r) return;
+        const hold = _portalZoneHold[g.key];
+        if (!hold || hold.status !== r.status) _portalZoneHold[g.key] = { status: r.status, since: now };
+        if (r.status !== "yellow" && r.status !== "red") {
+          _portalZoneFired.delete("zone:" + g.key + ":yellow:" + date);
+          _portalZoneFired.delete("zone:" + g.key + ":red:" + date);
+          return;
+        }
+        if (now - _portalZoneHold[g.key].since < 5 * 60000) return;
+        const min = Math.round(r.lag);
+        const red = r.status === "red";
+        const usualCount = Math.round(r.usual * r.scheduled);
+        const detail = min + " min behind the usual pace for this time of night (" + r.done + " of " + r.scheduled + " trucks done vs about " + usualCount + " usual). " + portalZoneFinishLine(r) + ".";
+        alerts.push({
+          zoneKey: g.key, sev: red ? "zonered" : "zoneyellow", order: red ? 0 : 1, icon: red ? "CRITICAL" : "WARNING",
+          sevLabel: red ? "Zone Behind" : "Zone Slipping",
+          title: g.title + (red ? " is " + min + " min behind schedule" : " is slightly behind schedule"),
+          detail: detail,
+          notifyTitle: (red ? "[Critical] " : "[Warning] ") + g.title + (red ? " is " + min + " min behind schedule" : " is slightly behind schedule"),
+          notifyBody: detail,
+          tag: "zone:" + g.key + ":" + r.status + ":" + date
+        });
+      });
+      return alerts;
+    }
+
+    function renderPortalZonesView() {
+      const grid = document.getElementById("portalZonesGrid");
+      const meta = document.getElementById("portalZonesMeta");
+      const foot = document.getElementById("portalZonesFoot");
+      if (!grid) return;
+      const trucks = Array.isArray(state.portal.scheduledRows) ? state.portal.scheduledRows : [];
+      if (!trucks.length) {
+        grid.innerHTML = '<div class="door-empty">Waiting on DMS shift data...</div>';
+        if (meta) meta.textContent = "";
+        if (foot) foot.textContent = "";
+        return;
+      }
+      const nowMs = Date.now();
+      const z = portalZonesCompute(trucks, nowMs);
+      const est = portalZoneEstimatesNow(nowMs);
+      if (meta) meta.textContent = z.total.completed + " of " + z.total.scheduled + " trucks complete (" + z.total.pct + "%) across the whole shift";
+
+      const building = document.getElementById("portalZonesBuilding");
+      if (building) {
+        const goal = portalShiftGoalMs();
+        let line;
+        if (state.portal.estMs) {
+          const d = goal ? Math.round((state.portal.estMs - goal) / 60000) : null;
+          line = "Whole building: est. finish <b>" + escapeHtml(portalFinishClock(state.portal.estMs)) + "</b> (95% of trucks done)"
+            + (d == null ? "" : Math.abs(d) < 5 ? " &middot; right at the 4:00 AM goal" : d < 0 ? " &middot; " + escapeHtml(portalZoneFmtMin(-d)) + " before the 4:00 AM goal" : " &middot; " + escapeHtml(portalZoneFmtMin(d)) + " past the 4:00 AM goal");
+        } else {
+          line = "Whole building: est. finish appears once trucks are arriving and unloading.";
+        }
+        building.innerHTML = line;
+      }
+
+      const kpi = function(value, label, warn) {
+        return '<div class="zone-kpi' + (warn ? ' warn' : '') + '"><span class="v">' + escapeHtml(value) + '</span><span class="l">' + escapeHtml(label) + '</span></div>';
+      };
+      grid.innerHTML = z.groups.map(function(g) {
+        const m = g.metrics;
+        const palletLine = m.pallets ? " · " + formatNumber(m.palletsDone) + " of " + formatNumber(m.pallets) + " pallets" : "";
+        const rows = g.areas.map(function(a) {
+          const am = a.metrics;
+          return '<tr><td>' + escapeHtml(a.def.label) + '</td>'
+            + '<td class="num">' + am.completed + ' / ' + am.scheduled + '</td>'
+            + '<td class="num">' + (am.scheduled ? am.pct + '%' : '--') + '</td>'
+            + '<td class="num">' + am.onDock + '</td>'
+            + '<td class="num">' + portalZoneFmtMin(am.avgUnload) + '</td>'
+            + '<td class="num">' + (am.pallets ? formatNumber(am.palletsDone) + ' / ' + formatNumber(am.pallets) : '--') + '</td></tr>';
+        }).join("");
+        const zr = est ? est[g.def.key] : null;
+        const info = portalZoneStatusInfo(zr);
+        const finishLine = portalZoneFinishLine(zr);
+        return '<article class="zone-card zs-' + info.cls + '">'
+          + '<div class="zone-head"><h3>' + escapeHtml(g.def.title) + '</h3><div class="zone-pct">' + m.pct + '%</div></div>'
+          + (info.label ? '<div class="zone-status"><span class="zone-chip ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' : '')
+          + (finishLine ? '<div class="zone-finish">' + escapeHtml(finishLine) + '</div>' : '')
+          + '<div class="area-bar"><i style="width:' + (m.scheduled ? Math.max(3, m.pct) : 0) + '%;"></i></div>'
+          + '<div class="zone-sub">' + m.completed + ' of ' + m.scheduled + ' trucks complete' + palletLine
+          + (m.arrived ? ' · ' + Math.round(m.completed / m.arrived * 100) + '% of arrived trucks finished' : '') + '</div>'
+          + '<div class="zone-kpis">'
+          + kpi(String(m.onDock), "On dock now")
+          + kpi(String(m.notArrived), "Not arrived")
+          + kpi(String(m.lastHour), "Finished, last hour")
+          + kpi(m.onDock ? portalZoneFmtMin(m.oldestMin) : "--", "Oldest on dock", m.oldestMin >= 120)
+          + kpi(portalZoneFmtMin(m.avgUnload), "Avg unload")
+          + kpi(portalZoneFmtMin(m.avgDock), "Avg dock time")
+          + kpi(m.palletsPerHour != null ? m.palletsPerHour.toFixed(1) : "--", "Pallets / unload hr")
+          + kpi(String(m.unloadMins.length), "Unloads timed")
+          + '</div>'
+          + (g.areas.length > 1
+              ? '<div class="zone-table-wrap"><table class="zone-table"><thead><tr><th>Area</th><th class="num">Done</th><th class="num">%</th><th class="num">On dock</th><th class="num">Avg unload</th><th class="num">Pallets</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+              : '')
+          + '</article>';
+      }).join("");
+
+      if (foot) {
+        const o = z.other;
+        foot.innerHTML = (o.scheduled
+          ? 'Not in either group: ' + o.completed + ' of ' + o.scheduled + ' trucks complete (' + escapeHtml(z.otherNames.join(", ")) + '). They still count in the whole-shift total above.<br>'
+          : '')
+          + '<b>Status</b> compares each zone with its usual pace for this time of night (median of about 120 recent shifts): green = on schedule or ahead, yellow = slightly behind, red = 30+ minutes behind. It starts at 10 PM; earlier than that the gap is mostly noise. '
+          + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
+          + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
+          + 'Complete = unload finished. Avg unload = unload start to finish. '
+          + 'Avg dock time = driver at door (or check-in if there is no door stamp) to unload finished. '
+          + 'Pallets / unload hr = pallets on finished unloads divided by the hours spent unloading them (per door, not per person). '
+          + 'Oldest on dock = the longest a truck that has not finished has been on the dock, measured the same way.';
+      }
+    }
+
     function portalRenderActiveView(enriched) {
       const view = state.portal.portalView || "board";
       if (view === "doors") renderPortalDoorMap(enriched);
       if (view === "areas") renderPortalAreaView(enriched);
+      if (view === "zones") renderPortalZonesView();
       if (view === "vendors") renderPortalVendorView();
     }
 
     function portalSetView(view) {
-      view = ["doors","areas","vendors","chat","client"].includes(view) ? view : "board";
+      view = ["doors","areas","zones","vendors","chat","client"].includes(view) ? view : "board";
       state.portal.portalView = view;
       document.querySelectorAll("#portalViewSwitch .portal-view-btn").forEach(function(button) {
         button.classList.toggle("active", button.dataset.view === view);
@@ -17689,6 +18125,8 @@
       if (els.portalBoardView)  els.portalBoardView.style.display  = view === "board"   ? "" : "none";
       if (els.portalDoorView)   els.portalDoorView.style.display   = view === "doors"   ? "" : "none";
       if (els.portalAreaView)   els.portalAreaView.style.display   = view === "areas"   ? "" : "none";
+      const zonesView = document.getElementById("portalZonesView");
+      if (zonesView) zonesView.style.display = view === "zones" ? "" : "none";
       if (els.portalVendorView) els.portalVendorView.style.display = view === "vendors" ? "" : "none";
       if (els.portalChatView)   els.portalChatView.style.display   = view === "chat"    ? "" : "none";
       if (els.portalClientView) els.portalClientView.style.display = view === "client"  ? "" : "none";
@@ -18011,20 +18449,33 @@
     // Runs from renderPortalBoard, on tab open, and on a global interval so
     // alerts are "sent" even when the portal/alerts tab isn't being viewed.
     function renderAlertsTab() {
-      const alerts = portalGetAlerts();
+      const truckAlerts = portalGetAlerts();
       const badge = document.getElementById("alertsTabBadge");
       const list  = document.getElementById("alertsTabList");
       const meta  = document.getElementById("alertsTabMeta");
 
       // Fire notifications (deduped per kind+truck via _portalNotifiedTags).
-      alerts.forEach(function(a) { portalNotify(a.notifyTitle, a.notifyBody, a.tag); });
+      truckAlerts.forEach(function(a) { portalNotify(a.notifyTitle, a.notifyBody, a.tag); });
+
+      // Zones that have stayed behind pace: announced once per zone per status, then listed here.
+      let zoneAlerts = [];
+      try { zoneAlerts = portalZoneAlerts(); } catch (err) { console.error("Zone alerts failed:", err); }
+      zoneAlerts.forEach(function(a) {
+        if (_portalZoneFired.has(a.tag)) return;
+        _portalZoneFired.add(a.tag);
+        portalNotify(a.notifyTitle, a.notifyBody, a.tag);
+        portalBeep(a.sev === "zonered" ? "detention" : "urgent");
+        showToast(a.title);
+      });
+      zoneAlerts.sort(function(a, b) { return a.order - b.order; });
+      const alerts = zoneAlerts.concat(truckAlerts);
 
       // Tab badge  -  red if any detention, otherwise orange.
       if (badge) {
         if (alerts.length > 0) {
           badge.textContent = alerts.length;
           badge.style.display = "";
-          const hasRed = alerts.some(function(a) { return a.sev === "detention"; });
+          const hasRed = alerts.some(function(a) { return a.sev === "detention" || a.sev === "zonered"; });
           badge.className = "alerts-tab-badge" + (hasRed ? "" : " badge-orange");
         } else {
           badge.style.display = "none";
@@ -18043,11 +18494,11 @@
         return;
       }
       list.innerHTML = alerts.map(function(a) {
-        const ref = escapeHtml(String(a.truck.ref || "?"));
+        const who = a.truck ? ' (Truck ' + escapeHtml(String(a.truck.ref || "?")) + ')' : '';
         return '<div class="alert-card alert-' + a.sev + '">'
           + '<div class="alert-card-icon">' + a.icon + '</div>'
           + '<div class="alert-card-body">'
-          +   '<div class="alert-card-title">' + escapeHtml(a.title) + ' (Truck ' + ref + ')</div>'
+          +   '<div class="alert-card-title">' + escapeHtml(a.title) + who + '</div>'
           +   '<div class="alert-card-detail">' + escapeHtml(a.detail) + '</div>'
           + '</div>'
           + '<div class="alert-card-sev sev-' + a.sev + '">' + escapeHtml(a.sevLabel) + '</div>'
