@@ -820,6 +820,13 @@
     .presence-count b { font-size:1.3em; font-variant-numeric:tabular-nums; }
     .presence-logins { font-weight:600; color:var(--muted,#718096); }
     .presence-logins .me { color:var(--text,#2d3748); font-weight:800; }
+    .presence-today { color:var(--muted,#718096); font-weight:600; }
+    .presence-bar.clickable { cursor:pointer; }
+    .presence-history { flex:1 1 100%; margin-top:6px; padding-top:8px; border-top:1px solid var(--border,#e2e8f0); font-weight:600; font-size:0.95em; cursor:default; overflow-x:auto; }
+    .presence-table { width:100%; border-collapse:collapse; }
+    .presence-table th { text-align:left; font-size:0.78em; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); padding:3px 10px 3px 0; }
+    .presence-table td { padding:4px 10px 4px 0; border-top:1px solid var(--border,#e2e8f0); white-space:nowrap; }
+    .presence-table td.logins { white-space:normal; color:var(--muted,#718096); }
     .presence-bar.stale { opacity:.55; }
     .presence-bar.stale .presence-dot { background:#a0aec0; animation:none; }
     @media (prefers-reduced-motion: reduce) { .presence-dot { animation:none; } }
@@ -1009,11 +1016,6 @@
     .zone-sub { display:flex; flex-wrap:wrap; gap:6px 26px; margin:10px 0 14px; }
     .zs-stat b { display:block; font-size:clamp(1.55rem, 3.4vw, 2.05rem); font-weight:900; line-height:1.1; letter-spacing:-0.3px; color:var(--text,#1a202c); font-variant-numeric:tabular-nums; }
     .zs-stat span { display:block; font-size:1rem; font-weight:700; color:var(--muted,#4a5568); }
-    .zone-table-wrap { overflow-x:auto; }
-    .zone-table { width:100%; min-width:0; border-collapse:collapse; font-size:0.82em; }
-    .zone-table th { text-align:left; font-size:0.78em; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); padding:4px 6px; border-bottom:1px solid var(--border,#e2e8f0); }
-    .zone-table td { padding:6px 6px; border-bottom:1px solid var(--border,#e2e8f0); color:var(--text,#2d3748); }
-    .zone-table td.num, .zone-table th.num { text-align:right; white-space:nowrap; }   /* numbers never wrap letter by letter; the wrapper scrolls instead */
     .zone-building { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; font-size:0.92em; font-weight:600; color:var(--text,#2d3748); background:var(--card-bg,#fff); border:1px solid var(--border,#e2e8f0); border-radius:10px; padding:12px 16px; margin-bottom:12px; }
     :root.dark .zone-building { background:#17263f; border-color:#1e3a55; }
     .zone-card.zs-green  { border-left:6px solid #38a169; }
@@ -4542,15 +4544,15 @@
     :root.dark .zone-wait.has-items .zone-sec-head { color:#f6ad55; }
     .zone-long.has-long .zone-sec-head { color:#c53030; }
     :root.dark .zone-long.has-long .zone-sec-head { color:#fc8181; }
-    .zone-sec-head .n { display:inline-block; min-width:22px; padding:1px 7px; border-radius:999px; background:#e2e8f0; color:#2d3748; text-align:center; font-size:1.05em; }
+    .zone-sec-head .n { display:inline-block; flex:none; white-space:nowrap; min-width:22px; padding:1px 7px; border-radius:999px; background:#e2e8f0; color:#2d3748; text-align:center; font-size:1.05em; }
     .zone-wait.has-items .zone-sec-head .n { background:#d69e2e; color:#fff; }
     .zone-long.has-long .zone-sec-head .n { background:#e53e3e; color:#fff; }
     .zone-sec-none { font-size:0.92em; color:var(--muted,#718096); }
-    #myPortalPanel .zone-wide-map, #myPortalMnPanel .zone-wide-map { grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:8px; }
-    #myPortalPanel .zone-wide-map .door-tile, #myPortalMnPanel .zone-wide-map .door-tile { min-height:86px; padding:8px 10px; }
-    #myPortalPanel .zone-wide-map .door-tile .door-no, #myPortalMnPanel .zone-wide-map .door-tile .door-no { font-size:1.4rem; }
-    .zone-wide-map .door-tile .door-sup { font-size:0.82em; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-    .zone-wide-map .door-tile .door-dwell { font-size:0.82em; }
+    #myPortalPanel .zone-wide-map, #myPortalMnPanel .zone-wide-map { grid-template-columns:repeat(auto-fill,minmax(106px,1fr)); gap:8px; }
+    #myPortalPanel .zone-wide-map .door-tile, #myPortalMnPanel .zone-wide-map .door-tile { min-height:68px; padding:6px 8px; }
+    #myPortalPanel .zone-wide-map .door-tile .door-no, #myPortalMnPanel .zone-wide-map .door-tile .door-no { font-size:1.15rem; }
+    .zone-wide-map .door-tile .door-sup { font-size:0.74em; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+    .zone-wide-map .door-tile .door-dwell { font-size:0.72em; }
     .zone-alldoors { margin-top:14px; border-top:2px solid #e2e8f0; padding-top:8px; }
     :root.dark .zone-alldoors { border-top-color:#2d3748; }
     .zone-alldoors > summary { cursor:pointer; font-size:0.84em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); padding:4px 0 8px; }
@@ -4657,6 +4659,8 @@
       <span class="presence-dot" aria-hidden="true"></span>
       <span class="presence-count"><b id="presenceCount">0</b> <span id="presenceCountLabel">online now</span></span>
       <span class="presence-logins" id="presenceLogins"></span>
+      <span class="presence-today" id="presenceToday"></span>
+      <div class="presence-history" id="presenceHistory" hidden></div>
     </div>
     <header>
       <div>
@@ -7105,7 +7109,7 @@
             <span class="door-sortbox"><label for="portalDoorSort">Sort by</label>
               <select id="portalDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
               <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
-            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red">Not started: yellow after
+            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red. Nothing is flagged before 10 PM; trucks that got here earlier are counted from 10 PM.">Not started: yellow after
               <input id="portalNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
               <input id="portalNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
               <select id="portalNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
@@ -7601,7 +7605,7 @@
             <span class="door-sortbox"><label for="portalMnDoorSort">Sort by</label>
               <select id="portalMnDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
               <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
-            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red">Not started: yellow after
+            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red. Nothing is flagged before 10 PM; trucks that got here earlier are counted from 10 PM.">Not started: yellow after
               <input id="portalMnNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
               <input id="portalMnNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
               <select id="portalMnNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
@@ -10573,11 +10577,11 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalSetView("zones"); }, target: portalTourEl("portalZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the door 30+ minutes that have not started</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes that have not started</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
-          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment, and you can switch it to \"driver at the door\". The sort menu here works the same way as on Zones." },
+          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment (you can switch it to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck that got here before 10 PM is counted from 10 PM. The sort menu here works the same way as on Zones." },
         { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
           body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalTicker"),
@@ -10587,7 +10591,7 @@
         { title: "Also new: Performance by Name", body: "On the <b>Performance by Name</b> tab (if you have access), <b>Performance vs the Team</b> cards rate each unloader on pallets per hour, average unload time, downtime between loads, and loads per night, plus an overall bar. <b>100 is team pace</b> and higher is better. Speed is compared fairly by zone, and a measure needs at least 5 finished loads before it counts. Real targets per zone are coming later." },
         { title: "Also new: built for your phone", body: "Everything now fits an iPhone screen: no sideways scrolling, bigger buttons and menus that are easy to hit with a thumb, no zoom-in when you tap a field, and the bell and popups kept within thumb reach. In Safari, use <b>Add to Home Screen</b> for a full-screen version." },
         { title: "Much more accurate Projected Finish", target: portalTourEl("portalEstCard"),
-          body: "Projected Finish now simulates the rest of the night from each truck's appointment and how fast the dock really unloads, checked against past OKS shifts. It shows when <b>95% of trucks</b> will be done, plus when nearly all will be. Late trucks that probably won't show are left out, and rejected trucks no longer count twice." },
+          body: "Projected Finish now matches the <b>Zones</b> screen: it is the <b>latest of the zone estimates</b> (the building is done when its last zone is), and the note under it says when nearly all trucks should be done. Late trucks that probably won't show are left out, and rejected trucks no longer count twice." },
         { title: "Pace vs Usual", target: portalTourEl("portalUsualCard"),
           body: "The new <b>Pace vs Usual</b> card compares how many trucks are done right now with the same hour on recent OKS nights, so a slow night stands out early. It says whether you're behind, on pace, or ahead, and how many of the last 14 nights you're faster than." },
         { title: "Tap a door for the full picture", before: function() { portalSetView("doors"); }, target: portalTourEl("portalDoorMap"),
@@ -10622,11 +10626,11 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the door 30+ minutes that have not started</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes that have not started</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
-          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment, and you can switch it to \"driver at the door\". The sort menu here works the same way as on Zones." },
+          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment (you can switch it to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck that got here before 10 PM is counted from 10 PM. The sort menu here works the same way as on Zones." },
         { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
           body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalMnTicker"),
@@ -10640,7 +10644,7 @@
         { title: "Faster updates", target: portalTourEl("portalMnStatus"),
           body: "The board now refreshes from DMS every <b>30 seconds</b> and recalculates countdowns in between. This line shows when it last updated, and it catches up the moment you switch back to this tab." },
         { title: "Much more accurate Projected Finish", target: portalTourEl("portalMnEstCard"),
-          body: "Projected Finish now simulates the rest of the night from each truck's appointment and how fast the dock really unloads, checked against past Minnesota shifts. It shows when <b>95% of trucks</b> will be done, plus when nearly all will be. Late trucks that probably won't show are left out." },
+          body: "Projected Finish now matches the <b>Zones</b> screen: it is the <b>latest of the zone estimates</b> (the building is done when its last zone is), and the note under it says when nearly all trucks should be done. Late trucks that probably won't show are left out." },
         { title: "Pace vs Usual", target: portalTourEl("portalMnUsualCard"),
           body: "The new <b>Pace vs Usual</b> card compares how many trucks are done right now with the same hour on recent Minnesota nights, so a slow night stands out early. It says whether you're behind, on pace, or ahead, and how many of the last 14 nights you're faster than." },
         { title: "A smarter Door Map", before: function() { portalMnSetView("doors"); }, target: portalTourEl("portalMnDoorMap"),
@@ -16927,21 +16931,31 @@
       const noShowCount = Math.max(state.portalMn.noShowCount || 0, (state.portalMn.noShowTrucks || []).length);
       // The finish model (see portalFinishForecast) drives the projection when the
       // schedule is available; otherwise the older rate formula is used.
-      const finishFc = morningClosedNoOpenArrivals ? null : portalFinishFromRows("mn", enriched, state.portalMn.scheduledRows, now);
+      // From 2:30 AM every truck that has not arrived is dropped from the estimate completely (see portalNoShowCutoffPassed),
+      // the same rule OKS and the Zones screen use.
+      const dropNotArrived = !morningClosedNoOpenArrivals && portalNoShowCutoffPassed(now, shiftStartMs);
+      const finishFc = morningClosedNoOpenArrivals ? null : portalFinishFromRows("mn", enriched, state.portalMn.scheduledRows, now, dropNotArrived);
+      // The headline finish is the same time the Zones screen shows for the whole building (see portalBuildingFinishMs).
+      const zoneFinishMs = morningClosedNoOpenArrivals ? 0 : portalZonesFinishMs(portalZoneEstimatesNow(now, "mn"));
       const estimateScheduledTotal = Math.max(0, scheduledDmsTotal - noShowCount);
-      const estimateTotal = morningClosedNoOpenArrivals ? complete.length : Math.max(enriched.length, estimateScheduledTotal);
+      const estimateTotal = morningClosedNoOpenArrivals ? complete.length
+        : dropNotArrived ? enriched.filter(function(r) { return r.checkInMs || portalIsoToMs(r.checkInIso) || r.status === "complete"; }).length
+        : Math.max(enriched.length, estimateScheduledTotal);
       const scheduledNotOnBoard = morningClosedNoOpenArrivals ? 0 : finishFc ? Math.round(finishFc.comingExpected) : Math.max(0, estimateTotal - enriched.length);
       const stillRunning = morningClosedNoOpenArrivals ? 0 : finishFc ? Math.round(finishFc.expectedRemaining) : Math.max(0, estimateTotal - complete.length);
       let estMs = null;
       let projectedFinishText = "--";
       state.portalMn.estMs = null;
+      state.portalMn.simEstMs = null;
       if (stillRunning > 0) {
         const elapsedHoursForEstimate = Math.max(shiftElapsedMs / 3600000, 0.25);
         const actualRateForEstimate = complete.length > 0 ? complete.length / elapsedHoursForEstimate : 0;
         const plannedRateForEstimate = estimateTotal > 0 ? estimateTotal / shiftWindowHours : 0;
         const fallbackRateForEstimate = avgTurn > 0 ? 60 / avgTurn : 0.25;
         const effectiveRate = Math.max(actualRateForEstimate || 0, plannedRateForEstimate || 0, fallbackRateForEstimate || 0.25);
-        estMs = finishFc ? finishFc.p95 : now + (stillRunning / effectiveRate) * 3600000;
+        // rounded to 5 minutes like the Zones screen (the estimate is only good to a fraction of an hour), so both always read the same
+        estMs = zoneFinishMs ? Math.max(now, Math.round(zoneFinishMs / 300000) * 300000) : (finishFc ? finishFc.p95 : now + (stillRunning / effectiveRate) * 3600000);
+        state.portalMn.simEstMs = finishFc ? finishFc.p95 : null;
         state.portalMn.estMs = estMs;
         const ef = new Date(estMs);
         const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
@@ -16962,7 +16976,7 @@
           }
           if (finishFc) {
             if (finishFc.unlikely > 0) els.portalMnEstNote.textContent += " - " + finishFc.unlikely + " late/no-show not counted";
-            els.portalMnEstNote.textContent += " | 95% done" + (finishFc.p99 - finishFc.p95 >= 10 * 60000 ? ", nearly all by " + portalFinishClock(finishFc.p99) : "");
+            els.portalMnEstNote.textContent += " | 95% done" + (finishFc.p99 - estMs >= 10 * 60000 ? ", nearly all by " + portalFinishClock(finishFc.p99) : "");
           } else if (noShowCount > 0) {
             els.portalMnEstNote.textContent += " - excludes " + noShowCount + " late/no-show";
           }
@@ -17275,7 +17289,7 @@
       const nowMs = Date.now();
       const th = portalNsThresholds();
       const openCount = Math.max(0, allDoors.length - occ.length);
-      const aged = occ.filter(function(r) { return (portalDoorAgeMinutes(r, nowMs) || 0) >= 61; }).length;
+      const aged = occ.filter(function(r) { return (portalDoorWarnMinutes(r, nowMs) || 0) >= 61; }).length;
       const det = occ.filter(function(r) { return r.status === "detention"; }).length;
       const eyes = occ.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
       const nsList = occ.map(function(r) { return portalNotStartedInfo(r, nowMs, th); }).filter(Boolean);
@@ -17750,10 +17764,13 @@
       return "age-green";
     }
 
+    // How long a truck has been on the lot (counted from the driver reaching the door, else check-in): "37 min on lot",
+    // "2 hr 43 min on lot".
     function portalDoorAgeLabel(minutes) {
       if (minutes == null) return "";
-      if (minutes < 60) return minutes + " min on door";
-      return Math.floor(minutes / 60) + "h " + (minutes % 60) + "m on door";
+      if (minutes < 60) return minutes + " min on lot";
+      const h = Math.floor(minutes / 60), m = minutes % 60;
+      return h + " hr" + (m ? " " + m + " min" : "") + " on lot";
     }
 
     function portalBuildRiskForecast(rows, now, freeTimeMs, vendorAvgs) {
@@ -18149,11 +18166,28 @@
       return safeLocalStorageGet("portalNsClock") === "door" ? "door" : "ready";
     }
 
+    // Warnings about how long a truck has waited start at 10 PM. Trucks get to the lot well before the dock starts working, so
+    // nothing is flagged before 10 PM, and a truck that arrived earlier is counted from 10 PM (it is not "late" at 10:01).
+    // Returns 10 PM of the night that `now` falls in (before 7 PM it is still last night's shift).
+    const PORTAL_WARN_FROM_HOUR = 22;
+    function portalWarnFloorMs(now) {
+      const d = new Date(now);
+      const floor = new Date(d.getFullYear(), d.getMonth(), d.getDate(), PORTAL_WARN_FROM_HOUR, 0, 0, 0);
+      if (d.getHours() < 19) floor.setDate(floor.getDate() - 1);
+      return floor.getTime();
+    }
+    // Minutes a truck has been on the lot for warning purposes: the real time on the lot, but never counting before 10 PM.
+    function portalDoorWarnMinutes(row, now) {
+      const start = row.driverAtDoorMs || row.checkInMs || row.appointmentMs;
+      if (!start) return null;
+      return Math.max(0, Math.floor((now - Math.max(start, portalWarnFloorMs(now))) / 60000));
+    }
+
     function portalNotStartedInfo(r, now, th) {
       if (!r || r.status === "complete" || !r.driverAtDoorMs) return null;
       if (r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs) return null;
       const basis = portalNsClock();
-      const from = basis === "door" ? r.driverAtDoorMs : Math.max(r.driverAtDoorMs, r.appointmentMs || 0);
+      const from = Math.max(basis === "door" ? r.driverAtDoorMs : Math.max(r.driverAtDoorMs, r.appointmentMs || 0), portalWarnFloorMs(now));
       const mins = Math.floor((now - from) / 60000);
       if (mins < th.yellow || mins > PORTAL_NS_STALE_MIN) return null;
       return { mins: mins, level: mins >= th.red ? "red" : "yellow", basis: basis };
@@ -18170,13 +18204,13 @@
       return { mins: mins, spill: /spill/i.test(r.comments || "") };
     }
 
-    // A truck that has been on the door for 30 or more minutes (the "37 min on door" on its tile, counted from the driver
-    // reaching the door, else check-in) and has not started unloading. Unlike portalNotStartedInfo this ignores the
+    // A truck that has been on the lot for 30 or more minutes (the "37 min on lot" on its tile, counted from the driver
+    // reaching the door, else check-in, and never before 10 PM) and has not started unloading. Unlike portalNotStartedInfo this ignores the
     // appointment, so a truck that arrived early and has simply been sitting there still shows up.
     const PORTAL_WAITING_MIN = 30;
     function portalWaitingInfo(r, now) {
       if (!r || r.status === "complete" || r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs) return null;
-      const mins = portalDoorAgeMinutes(r, now);
+      const mins = portalDoorWarnMinutes(r, now);                           // nothing is listed before 10 PM; counted from 10 PM after
       if (mins == null || mins < PORTAL_WAITING_MIN || mins > PORTAL_NS_STALE_MIN) return null;
       return { mins: mins };
     }
@@ -18329,8 +18363,8 @@
       const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning")
         ? (r.countdownLabel || "") : "";
       const detail = stage ? (timeInfo ? stage + "  -  " + timeInfo : stage) : (r.countdownLabel || portalStatusLabel(r.status));
-      const ageMin = portalDoorAgeMinutes(r, now);
-      const ageClass = portalDoorAgeClass(ageMin);
+      const ageMin = portalDoorAgeMinutes(r, now);                          // what the label says: the real time on the lot
+      const ageClass = portalDoorAgeClass(portalDoorWarnMinutes(r, now));   // its colour: warnings only count from 10 PM
       const ageLabel = portalDoorAgeLabel(ageMin);
       const ns = portalNotStartedInfo(r, now, th);
       const lu = portalLongUnloadInfo(r, now);
@@ -18369,7 +18403,7 @@
       const occ = Object.keys(byDoor).map(function(d) { return byDoor[d]; });
       const det = occ.filter(function(r) { return r.status === "detention"; }).length;
       const eyes = occ.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
-      const aged = occ.filter(function(r) { return (portalDoorAgeMinutes(r, Date.now()) || 0) >= 61; }).length;
+      const aged = occ.filter(function(r) { return (portalDoorWarnMinutes(r, Date.now()) || 0) >= 61; }).length;
       const openCount = Math.max(0, allDoors.length - occ.length);
       const nowMs = Date.now();
       const th = portalNsThresholds();
@@ -18756,15 +18790,21 @@
     }
 
     // The building is finished when its last zone is, so its estimate is the latest zone estimate. The separate whole-dock
-    // simulation behind the Projected Finish card ran about an hour later than the zones early in the night on OKS (and
-    // often landed before its own last zone on Minnesota), so it is only the fallback when no zone has an estimate.
-    function portalBuildingFinishMs(site, est) {
+    // simulation ran about an hour later than the zones early in the night on OKS (and often landed before its own last zone
+    // on Minnesota), so it is only the fallback when no zone has an estimate. The Projected Finish card uses this too.
+    // The latest zone estimate, or 0 when no zone has one yet.
+    function portalZonesFinishMs(est) {
       let latest = 0;
       PORTAL_ZONE_GROUPS.forEach(function(g) {
         const r = est && est[g.key];
         if (r && r.status !== "done" && r.estMs > latest) latest = r.estMs;
       });
-      return latest || portalSt(site).estMs || null;
+      return latest;
+    }
+    // The whole-building finish: the zones' time (also what the Projected Finish card on My Portal shows), falling back to the
+    // whole-dock simulation (kept in simEstMs) only when no zone has an estimate.
+    function portalBuildingFinishMs(site, est) {
+      return portalZonesFinishMs(est) || portalSt(site).simEstMs || null;
     }
 
     // Where a projected finish sits against the goal: "ok" is before the goal or within 5 minutes after it, "close" is 5 to 29
@@ -18784,8 +18824,8 @@
       if (r.status === "done") return { cls: "green", label: "Zone finished" };
       if (r.status === "early") return { cls: "none", label: "Too early to judge pace" };
       const min = Math.abs(Math.round(r.lag));
-      if (r.status === "green") return { cls: "green", label: r.lag <= -5 ? min + " min faster than a usual night" : "Usual pace" };
-      const label = "Slower than a usual night" + (min >= 5 ? ": " + min + " min" : "");
+      if (r.status === "green") return { cls: "green", label: r.lag <= -5 ? portalZoneFmtMin(min) + " faster than a usual night" : "Usual pace" };
+      const label = "Slower than a usual night" + (min >= 5 ? ": " + portalZoneFmtMin(min) : "");
       const v = portalGoalVerdict(estMs || r.estMs, site);
       return { cls: !v ? r.status : v.level === "late" ? "red" : v.level === "close" ? "yellow" : "none", label: label };
     }
@@ -18854,7 +18894,7 @@
         }
         if (now - _portalZoneHold[hk].since < 5 * 60000) return;
         const red = level === "late";
-        const slower = r.lag > 0 ? " It is running " + Math.round(r.lag) + " min slower than a usual night (" + r.done + " of " + r.scheduled + " trucks done vs about " + Math.round(r.usual * r.scheduled) + " usual)." : "";
+        const slower = r.lag > 0 ? " It is running " + portalZoneFmtMin(r.lag) + " slower than a usual night (" + r.done + " of " + r.scheduled + " trucks done vs about " + Math.round(r.usual * r.scheduled) + " usual)." : "";
         const detail = portalZoneFinishLine(r, site) + "." + slower;
         const title = g.title + " is projected " + portalZoneFmtMin(v.d) + " past the " + portalSiteGoalText(site) + " goal";
         alerts.push({
@@ -18927,15 +18967,6 @@
           if (!mine(dn) && byDoor[dn]) return '<div class="door-tile open"><div class="door-no">' + dn + '</div><div class="door-dwell">In use by another zone</div></div>';
           return portalDoorTileHtml(dn, mine(dn), nowMs, th, site);
         }).join("");
-        const rows = g.areas.map(function(a) {
-          const am = a.metrics;
-          return '<tr><td>' + escapeHtml(a.def.label) + '</td>'
-            + '<td class="num">' + am.completed + ' / ' + am.scheduled + '</td>'
-            + '<td class="num">' + (am.scheduled ? am.pct + '%' : '--') + '</td>'
-            + '<td class="num">' + am.onDock + '</td>'
-            + '<td class="num">' + portalZoneFmtMin(am.avgUnload) + '</td>'
-            + '<td class="num">' + (am.pallets ? formatNumber(am.palletsDone) + ' / ' + formatNumber(am.pallets) : '--') + '</td></tr>';
-        }).join("");
         const tileOf = function(r) {
           const dn = parseInt(r.door, 10);
           return portalDoorTileHtml(isFinite(dn) ? dn : "?", r, nowMs, th, site);
@@ -18943,7 +18974,7 @@
         // What needs attention, as big tiles above the full map: on the door 30+ minutes and not started (longest first), and
         // started but still unloading after 45 minutes (longest first). Neither flashes.
         const waitRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalWaitingInfo(r, nowMs); })
-          .sort(function(a, b) { return portalDoorAgeMinutes(b, nowMs) - portalDoorAgeMinutes(a, nowMs); });
+          .sort(function(a, b) { return (portalDoorAgeMinutes(b, nowMs) || 0) - (portalDoorAgeMinutes(a, nowMs) || 0); });   // longest on the lot first (real time, not the 10 PM-capped warning time)
         const longRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalLongUnloadInfo(r, nowMs); })
           .sort(function(a, b) { return a.unloadStartMs - b.unloadStartMs; });
         const zr = est ? est[g.def.key] : null;
@@ -18956,7 +18987,7 @@
           + portalZonePctHtml(m)
           + '<div class="zone-sub"><div class="zs-stat"><b>' + m.completed + ' of ' + m.scheduled + '</b><span>trucks complete</span></div>'
           + (m.arrived ? '<div class="zs-stat"><b>' + Math.round(m.completed / m.arrived * 100) + '%</b><span>of arrived trucks finished</span></div>' : '') + '</div>'
-          + '<section class="zone-sec zone-wait' + (waitRows.length ? ' has-items' : '') + '"><div class="zone-sec-head">On the door ' + PORTAL_WAITING_MIN + '+ min, not started <span class="n">' + waitRows.length + '</span></div>'
+          + '<section class="zone-sec zone-wait' + (waitRows.length ? ' has-items' : '') + '"><div class="zone-sec-head">On the lot ' + PORTAL_WAITING_MIN + '+ min, not started <span class="n">' + waitRows.length + '</span></div>'
           + (waitRows.length ? '<div class="door-map zone-wide-map">' + waitRows.map(tileOf).join("") + '</div>' : '<div class="zone-sec-none">None right now</div>')
           + '</section>'
           + '<section class="zone-sec zone-long' + (longRows.length ? ' has-long' : '') + '"><div class="zone-sec-head">Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min <span class="n">' + longRows.length + '</span></div>'
@@ -18965,9 +18996,6 @@
           + '<details class="zone-alldoors" data-zone-map="' + escapeHtml(mapKey) + '"' + (_portalZoneMapOpen.has(mapKey) ? ' open' : '') + '><summary>All doors &middot; ' + zoneDoors.length + ' &middot; ' + escapeHtml(portalDoorSortLabel()) + '</summary>'
           + (zoneDoors.length ? '<div class="door-map zone-door-map">' + doorTiles + '</div>' : '<div class="door-empty">No doors known for this zone yet.</div>')
           + '</details>'
-          + (g.areas.length > 1
-              ? '<div class="zone-table-wrap"><table class="zone-table"><thead><tr><th>Area</th><th class="num">Done</th><th class="num">%</th><th class="num">On dock</th><th class="num">Avg unload</th><th class="num">Pallets</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
-              : '')
           + '</article>';
       }).join("");
 
@@ -18982,7 +19010,7 @@
           + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 29 minutes past the goal and red at 30 or more. It starts at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
           + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
-          + '<b>On the door ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks whose time on the door (the minutes on the tile, from the driver reaching the door, or check-in if there is no door stamp) has passed ' + PORTAL_WAITING_MIN + ' without unloading starting, longest first. '
+          + '<b>On the lot ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks whose time on the lot (the minutes on the tile, counted from the driver reaching the door, or check-in if there is no door stamp) has passed ' + PORTAL_WAITING_MIN + ' without unloading starting, longest first. Warnings start at 10 PM, so nothing is listed earlier and trucks that got here before 10 PM are counted from 10 PM. '
           + '<b>Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min</b> lists loads that started unloading and are still not finished, longest first (a spill noted in DMS shows amber). '
           + '<b>All doors</b> opens the zone\'s full door map; Sort doors by reorders it. '
           + '<b>Started</b> (green) = trucks whose unload has begun, finished ones included. <b>Unloaded &amp; finished</b> (blue) = trucks whose unload is done. Both are out of every truck scheduled for the zone tonight.';
@@ -20815,6 +20843,9 @@
       // portalNoShowCutoffPassed): only trucks already on the dock still count toward the finish time.
       const dropNotArrived = !morningClosedNoOpenArrivals && portalNoShowCutoffPassed(now, shiftStartMs);
       const finishFc = morningClosedNoOpenArrivals ? null : portalFinishFromRows("oks", enriched, state.portal.scheduledRows, now, dropNotArrived);
+      // The headline finish is the same time the Zones screen shows for the whole building (the latest zone estimate, see
+      // portalBuildingFinishMs); the whole-dock simulation is only the fallback while no zone has an estimate.
+      const zoneFinishMs = morningClosedNoOpenArrivals ? 0 : portalZonesFinishMs(portalZoneEstimatesNow(now, "oks"));
       const estimateScheduledDmsTotal = Math.max(0, scheduledDmsTotal - (state.portal.noShowCount || 0));
       const estimateTotal = morningClosedNoOpenArrivals ? complete.length
         : dropNotArrived ? enriched.filter(function(r) { return r.checkInMs || r.status === "complete"; }).length
@@ -20824,13 +20855,16 @@
       let estMs = null;
       let projectedFinishText = "--";
       state.portal.estMs = null;
+      state.portal.simEstMs = null;
       if (stillRunning > 0) {
         const elapsedHoursForEstimate = Math.max(shiftElapsedMs / 3600000, 0.25);
         const actualRateForEstimate = complete.length > 0 ? complete.length / elapsedHoursForEstimate : 0;
         const plannedRateForEstimate = estimateTotal > 0 ? estimateTotal / shiftWindowHours : 0;
         const fallbackRateForEstimate = avgTurn > 0 ? 60 / avgTurn : 0.25;
         const effectiveRate = Math.max(actualRateForEstimate || 0, plannedRateForEstimate || 0, fallbackRateForEstimate || 0.25);
-        estMs = finishFc ? finishFc.p95 : now + (stillRunning / effectiveRate) * 3600000;
+        // rounded to 5 minutes like the Zones screen (the estimate is only good to a fraction of an hour), so both always read the same
+        estMs = zoneFinishMs ? Math.max(now, Math.round(zoneFinishMs / 300000) * 300000) : (finishFc ? finishFc.p95 : now + (stillRunning / effectiveRate) * 3600000);
+        state.portal.simEstMs = finishFc ? finishFc.p95 : null;
         state.portal.estMs = estMs;
         const ef = new Date(estMs);
         const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
@@ -20851,7 +20885,7 @@
           }
           if (finishFc) {
             if (finishFc.unlikely > 0) els.portalEstNote.textContent += " - " + finishFc.unlikely + " late/no-show not counted";
-            els.portalEstNote.textContent += " | 95% done" + (finishFc.p99 - finishFc.p95 >= 10 * 60000 ? ", nearly all by " + portalFinishClock(finishFc.p99) : "");
+            els.portalEstNote.textContent += " | 95% done" + (finishFc.p99 - estMs >= 10 * 60000 ? ", nearly all by " + portalFinishClock(finishFc.p99) : "");
           } else if (state.portal.noShowCount > 0) {
             els.portalEstNote.textContent += " - excludes " + state.portal.noShowCount + " late/no-show";
           }
@@ -24669,17 +24703,23 @@
       bar.hidden = false; bar.classList.remove("stale");
       document.getElementById("presenceCount").textContent = String(d.total);
       const onlyMe = d.total === 1 && d.logins.length === 1 && d.logins[0].username === state.auth.username;
-      document.getElementById("presenceCountLabel").textContent = onlyMe ? "online now (just you)" : "online now";
+      const countLabel = (d.total === 1 ? "person" : "people") + " online now";
+      document.getElementById("presenceCountLabel").textContent = onlyMe ? countLabel + " (just you)" : countLabel;
+      // every login with how many people are on it, so three people on one login read as that login x 3
       document.getElementById("presenceLogins").innerHTML = d.logins.map(function(l) {
-        return '<span' + (l.username === state.auth.username ? ' class="me"' : '') + '>' + escapeHtml(l.username) + (l.count > 1 ? " \u00d7" + l.count : "") + '</span>';
+        return '<span' + (l.username === state.auth.username ? ' class="me"' : '') + '>' + escapeHtml(l.username) + ' <b>' + l.count + '</b></span>';
       }).join(" \u00b7 ");
+      document.getElementById("presenceToday").textContent = d.browsers_today ? "\u00b7 " + d.browsers_today + (d.browsers_today === 1 ? " browser" : " browsers") + " this shift" : "";
+      bar.classList.toggle("clickable", state.auth.role === "admin");
       let peak = "";
       if (d.peak && d.peak.count) {
         let at = "";
         try { at = " at " + new Date(d.peak.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); } catch (err) {}
         peak = " Busiest this shift: " + d.peak.count + at + ".";
       }
-      bar.title = "Browsers with this page open and on screen right now. A tab left in the background drops off after about a minute and a half." + peak;
+      bar.title = "Everyone signed in and active in the last minute and a half, counted per browser: three people on the same login count as three, two tabs in one browser count once." + peak
+        + (d.browsers_today ? " " + d.browsers_today + " different browsers have used the site this shift (saved, so a deploy does not reset it)." : "")
+        + (state.auth.role === "admin" ? " Click for the last 14 shifts." : "");
     }
     function portalPresenceBeat() {
       if (!state.auth.username || document.visibilityState !== "visible" || portalPresenceBusy) return Promise.resolve();
@@ -24698,6 +24738,36 @@
       else portalPresenceRender(null);
     }
     document.addEventListener("visibilitychange", function() { if (document.visibilityState === "visible") portalPresenceBeat(); });
+
+    // Admin only: click the strip for the saved history, one row per shift (the busiest moment, how many different browsers
+    // used the site, and how many on each login).
+    function portalPresenceToggleHistory() {
+      const panel = document.getElementById("presenceHistory");
+      if (!panel) return;
+      if (!panel.hidden) { panel.hidden = true; return; }
+      panel.hidden = false; panel.textContent = "Loading...";
+      fetch(apiUrl("/api/usage-history?days=14"), { credentials: "include" })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) {
+          if (!d || !d.ok) { panel.textContent = "Could not load the usage history."; return; }
+          if (!d.days.length) { panel.textContent = "Nothing saved yet. Shifts appear here as people use the site."; return; }
+          const clock = function(iso) { try { return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); } catch (err) { return ""; } };
+          const day = function(key) { try { return new Date(key + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }); } catch (err) { return key; } };
+          panel.innerHTML = '<table class="presence-table"><thead><tr><th>Shift</th><th>Busiest</th><th>Browsers</th><th>By login</th></tr></thead><tbody>'
+            + d.days.map(function(x) {
+              return '<tr><td>' + escapeHtml(day(x.date)) + '</td><td>' + (x.peak ? x.peak + (x.peak_at ? ' at ' + escapeHtml(clock(x.peak_at)) : '') : '--') + '</td><td>' + x.browsers + '</td>'
+                + '<td class="logins">' + x.logins.map(function(l) { return escapeHtml(l.username) + ' ' + l.browsers; }).join(' \u00b7 ') + '</td></tr>';
+            }).join("") + '</tbody></table>';
+        })
+        .catch(function() { panel.textContent = "Could not load the usage history."; });
+    }
+    (function() {
+      const bar = document.getElementById("presenceBar");
+      if (bar) bar.addEventListener("click", function(e) {
+        if (state.auth.role !== "admin" || e.target.closest("#presenceHistory")) return;
+        portalPresenceToggleHistory();
+      });
+    })();
 
     async function initAuth() {
       try {

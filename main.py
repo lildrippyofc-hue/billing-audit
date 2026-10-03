@@ -102,6 +102,7 @@ _sessions: Dict[str, str] = {}
 _presence: Dict[str, Dict[str, Any]] = {}
 _PRESENCE_TTL = 90
 _presence_peak: Dict[str, Any] = {"day": "", "count": 0, "at": ""}
+_usage_seen: set = set()          # browsers (token hashes) seen on the current business date, loaded from the database
 
 # ── App setup ─────────────────────────────────────────────────────────────────
 
@@ -256,6 +257,22 @@ def init_db():
         CREATE TABLE IF NOT EXISTS app_meta (
             key    TEXT PRIMARY KEY,
             value  TEXT NOT NULL
+        );
+
+        -- Who has been using the site: the busiest moment of each shift, and one row per browser per shift.
+        -- business_date is YYYY-MM-DD so it sorts. session_hash is a short hash of the login token, never the token.
+        CREATE TABLE IF NOT EXISTS usage_daily (
+            business_date TEXT PRIMARY KEY,
+            peak_count    INTEGER NOT NULL DEFAULT 0,
+            peak_at       TEXT
+        );
+        CREATE TABLE IF NOT EXISTS usage_sessions (
+            business_date TEXT NOT NULL,
+            session_hash  TEXT NOT NULL,
+            username      TEXT NOT NULL,
+            first_seen    TEXT NOT NULL,
+            last_seen     TEXT NOT NULL,
+            PRIMARY KEY (business_date, session_hash)
         );
     """)
     conn.execute("INSERT OR IGNORE INTO app_meta (key, value) VALUES ('db_created_at', ?)", (datetime.now(timezone.utc).isoformat(),))
@@ -915,10 +932,22 @@ def _storage_status() -> Dict[str, Any]:
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 
+def _presence_touch(token: str, username: str) -> None:
+    """Note that this signed-in browser is active right now. Every authenticated request counts, not only the page's own
+    check-in, so a phone or TV that is still running an older copy of the page (for example right after a deploy), or a page
+    that is only polling, is counted as online too."""
+    prev = _presence.get(token)
+    entry = {"username": username, "seen": time.time(), "db_at": prev.get("db_at", 0.0) if prev else 0.0}
+    _presence[token] = entry
+    _usage_record(token, username, entry)
+
+
 def require_auth(session: Optional[str] = Cookie(default=None)) -> str:
     if not session or session not in _sessions:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return _sessions[session]
+    username = _sessions[session]
+    _presence_touch(session, username)
+    return username
 
 
 def _require_roles(*roles: str):
@@ -979,8 +1008,77 @@ def logout(response: Response, session: Optional[str] = Cookie(default=None)):
     return {"ok": True}
 
 
+def _usage_day_key(day: str) -> str:
+    """The business date as YYYY-MM-DD (the usage tables sort on it)."""
+    d = _sr.parse_business_date(day)
+    return d.strftime("%Y-%m-%d") if d else day
+
+
+def _usage_load_day(day: str) -> None:
+    """Start tracking a business date: reload its busiest moment and the browsers already seen from the database, so a
+    deploy or restart in the middle of a shift loses nothing."""
+    _presence_peak.update(day=day, count=0, at="")
+    _usage_seen.clear()
+    try:
+        key = _usage_day_key(day)
+        conn = get_db()
+        row = conn.execute("SELECT peak_count, peak_at FROM usage_daily WHERE business_date=?", (key,)).fetchone()
+        if row:
+            _presence_peak.update(count=row[0] or 0, at=row[1] or "")
+        for (h,) in conn.execute("SELECT session_hash FROM usage_sessions WHERE business_date=?", (key,)).fetchall():
+            _usage_seen.add(h)
+        old = (datetime.now(timezone.utc) - timedelta(days=400)).strftime("%Y-%m-%d")
+        conn.execute("DELETE FROM usage_sessions WHERE business_date < ?", (old,))
+        conn.execute("DELETE FROM usage_daily WHERE business_date < ?", (old,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass                                          # the live counter keeps working without the history
+
+
+def _usage_record(token: str, username: str, entry: Dict[str, Any]) -> None:
+    """Note that this browser used the site on the current business date. The first check-in writes a row; after that it is
+    refreshed at most every two minutes, so the database sees a handful of writes a minute, not one per check-in."""
+    try:
+        day = _dms_business_date(None)
+        if _presence_peak["day"] != day:
+            _usage_load_day(day)
+        h = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]
+        now = time.time()
+        if h in _usage_seen and now - entry.get("db_at", 0.0) < 120:
+            return
+        iso = datetime.now(timezone.utc).isoformat()
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO usage_sessions (business_date, session_hash, username, first_seen, last_seen) VALUES (?,?,?,?,?) "
+            "ON CONFLICT(business_date, session_hash) DO UPDATE SET last_seen=excluded.last_seen",
+            (_usage_day_key(day), h, username, iso, iso),
+        )
+        conn.commit()
+        conn.close()
+        _usage_seen.add(h)
+        entry["db_at"] = now
+    except Exception:
+        pass
+
+
+def _usage_save_peak(day: str) -> None:
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO usage_daily (business_date, peak_count, peak_at) VALUES (?,?,?) "
+            "ON CONFLICT(business_date) DO UPDATE SET peak_count=excluded.peak_count, peak_at=excluded.peak_at",
+            (_usage_day_key(day), _presence_peak["count"], _presence_peak["at"]),
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 def _presence_summary(now: Optional[float] = None) -> Dict[str, Any]:
-    """Who is online right now: the total and a count per login, plus the busiest moment of the current business date."""
+    """Who is online right now: the total and a count per login, the busiest moment of the current business date and how
+    many different browsers have used the site on it (the last two come from the database, so they survive a deploy)."""
     now = time.time() if now is None else now
     for token in [t for t, p in _presence.items() if now - p["seen"] > _PRESENCE_TTL or t not in _sessions]:
         _presence.pop(token, None)
@@ -990,19 +1088,42 @@ def _presence_summary(now: Optional[float] = None) -> Dict[str, Any]:
     total = len(_presence)
     day = _dms_business_date(None)               # the shift's date, so the peak does not reset at midnight mid-shift
     if _presence_peak["day"] != day:
-        _presence_peak.update(day=day, count=0, at="")
+        _usage_load_day(day)
     if total > _presence_peak["count"]:
         _presence_peak.update(count=total, at=datetime.now(timezone.utc).isoformat())
+        _usage_save_peak(day)
     logins = [{"username": u, "role": _ROLES.get(u, "guest"), "count": c} for u, c in per_login.items()]
     logins.sort(key=lambda x: (-x["count"], x["username"]))
-    return {"ok": True, "total": total, "logins": logins, "peak": {"count": _presence_peak["count"], "at": _presence_peak["at"]}}
+    return {"ok": True, "total": total, "logins": logins, "browsers_today": len(_usage_seen),
+            "peak": {"count": _presence_peak["count"], "at": _presence_peak["at"]}}
 
 
 @app.post("/api/presence")
-def presence_beat(session: Optional[str] = Cookie(default=None), username: str = Depends(require_auth)):
-    """A signed-in page checks in and gets back who is online (any login)."""
-    _presence[session] = {"username": username, "seen": time.time()}
+def presence_beat(username: str = Depends(require_auth)):
+    """A signed-in page checks in (require_auth notes the session as active) and gets back who is online, any login."""
     return _presence_summary()
+
+
+@app.get("/api/usage-history")
+def usage_history(days: int = 14, username: str = Depends(_require_roles())):
+    """Admin only: for each recent business date, the busiest moment and how many different browsers used the site, per login."""
+    days = max(1, min(int(days), 120))
+    cutoff = (datetime.now(DMS_BUSINESS_TZ) - timedelta(days=days)).strftime("%Y-%m-%d")
+    conn = get_db()
+    peaks = {r[0]: (r[1], r[2] or "") for r in conn.execute(
+        "SELECT business_date, peak_count, peak_at FROM usage_daily WHERE business_date >= ?", (cutoff,)).fetchall()}
+    per: Dict[str, Dict[str, int]] = {}
+    for d, u, n in conn.execute(
+            "SELECT business_date, username, COUNT(*) FROM usage_sessions WHERE business_date >= ? GROUP BY business_date, username",
+            (cutoff,)).fetchall():
+        per.setdefault(d, {})[u] = n
+    conn.close()
+    out = []
+    for d in sorted(set(peaks) | set(per), reverse=True):
+        logins = sorted(per.get(d, {}).items(), key=lambda kv: (-kv[1], kv[0]))
+        out.append({"date": d, "peak": peaks.get(d, (0, ""))[0], "peak_at": peaks.get(d, (0, ""))[1],
+                    "browsers": sum(n for _, n in logins), "logins": [{"username": u, "browsers": n} for u, n in logins]})
+    return {"ok": True, "days": out}
 
 
 @app.get("/api/me")
@@ -4590,6 +4711,10 @@ def _compute_dock_alerts(trucks: List[Dict[str, Any]], business_date: str, free_
     MIN = 60000
     closed = _alert_shift_closed(business_date, now_ms)
     out: List[Dict[str, str]] = []
+    # "Unload start overdue" warnings start at 10 PM: trucks get to the lot well before the dock starts working, so a truck is
+    # never called overdue before 10 PM, and one that has been waiting since earlier is counted from 10 PM.
+    shift_start = _sr.shift_start(business_date, DMS_BUSINESS_TZ)
+    warn_from_ms = (shift_start.timestamp() * 1000 + 3 * 60 * MIN) if shift_start else 0.0
     for t in trucks:
         check_in = _alert_iso_ms(t.get("checkInIso"))
         if not check_in:
@@ -4631,7 +4756,9 @@ def _compute_dock_alerts(trucks: List[Dict[str, Any]], business_date: str, free_
         if status == "detention":
             out.append({"kind": "detention", "tid": tid, "text": f"[Critical] Detention threshold reached - {who} | {door} | Past the {free_minutes}-minute free-time window."})
         if needs_start:
-            out.append({"kind": "needstart", "tid": tid, "text": f"[Action] Unload start overdue - {who} | {door} | Driver at door {int((now_ms - appt) // MIN)} min past appointment."})
+            overdue_from = max(appt, warn_from_ms)
+            if now_ms >= overdue_from + 30 * MIN:
+                out.append({"kind": "needstart", "tid": tid, "text": f"[Action] Unload start overdue - {who} | {door} | Driver at door {int((now_ms - overdue_from) // MIN)} min past appointment."})
         if un_start and now_ms >= un_start + 45 * MIN:
             out.append({"kind": "unloaderdelay", "tid": tid, "text": f"[Action] Unloader delay - {who} | {door} | Unloading {int((now_ms - un_start) // MIN)} min with no unload-finish stamp."})
         if status == "urgent":
