@@ -982,7 +982,9 @@
     .zone-bar > i { position:absolute; left:0; top:0; bottom:0; display:block; border-radius:6px; }
     .zone-bar > i.started { background:#2f855a; }
     .zone-bar > i.finished { background:#2b6cb0; }
-    .zone-sub { font-size:0.82em; color:var(--muted,#718096); margin:6px 0 12px; }
+    .zone-sub { font-size:1.08rem; line-height:1.5; font-weight:500; color:var(--text,#2d3748); margin:8px 0 14px; }
+    .zone-sub b { font-weight:800; color:var(--text,#1a202c); font-variant-numeric:tabular-nums; }
+    .zone-sub .zs-sep { color:var(--muted,#718096); margin:0 4px; }
     .zone-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px 10px; margin-bottom:14px; }
     .zone-kpi .v { display:block; font-weight:800; font-size:1.05em; color:var(--text,#1a202c); }
     .zone-kpi .l { display:block; font-size:0.7em; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); }
@@ -4492,6 +4494,39 @@
         margin-top: 8px;
         box-shadow: none;
       }
+    }
+
+    /* -- Loads started but still unloading after 45 minutes: flashing red tile + a second column per zone -- */
+    .door-tile.long-unload { border:2px solid #e53e3e; border-top:6px solid #e53e3e; animation:longUnloadFlash 1.2s ease-in-out infinite; }
+    .door-tile .door-long { display:inline-block; margin-top:3px; padding:1px 6px; border-radius:4px; background:#e53e3e; color:#fff; font-size:0.68em; font-weight:800; letter-spacing:.03em; }
+    .door-tile.long-unload.long-spill { animation:none; background:#fffaf0; border-color:#dd6b20; }
+    .door-tile.long-spill .door-long { background:#dd6b20; }
+    :root.dark .door-tile.long-unload.long-spill { background:#3d2a12; }
+    @keyframes longUnloadFlash { 0%, 100% { background:#fff1f0; box-shadow:0 0 0 2px rgba(229,62,62,.25); } 50% { background:#feb2b2; box-shadow:0 0 0 5px rgba(229,62,62,.55); } }
+    @keyframes longUnloadFlashDark { 0%, 100% { background:#4a1d1d; box-shadow:0 0 0 2px rgba(252,129,129,.25); } 50% { background:#822727; box-shadow:0 0 0 5px rgba(252,129,129,.6); } }
+    :root.dark .door-tile.long-unload:not(.long-spill) { animation-name:longUnloadFlashDark; }
+    @media (prefers-reduced-motion: reduce) {
+      .door-tile.long-unload:not(.long-spill) { animation:none; background:#fed7d7; box-shadow:0 0 0 3px rgba(229,62,62,.5); }
+      :root.dark .door-tile.long-unload:not(.long-spill) { background:#742a2a; }
+    }
+    .zone-doors-cols { display:grid; grid-template-columns:minmax(0, 1fr) 120px; gap:10px; align-items:start; }
+    .zone-doors-main { min-width:0; }
+    .zone-long { border-left:2px solid #e2e8f0; padding-left:8px; min-width:0; }
+    .zone-long.has-long { border-left-color:#fc8181; }
+    .zone-long-head { font-size:0.7em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); margin-bottom:6px; }
+    .zone-long.has-long .zone-long-head { color:#c53030; }
+    :root.dark .zone-long.has-long .zone-long-head { color:#fc8181; }
+    .zone-long-head .n { display:inline-block; min-width:18px; padding:0 5px; border-radius:999px; background:#e2e8f0; color:#2d3748; text-align:center; }
+    .zone-long.has-long .zone-long-head .n { background:#e53e3e; color:#fff; }
+    .zone-long-list { display:flex; flex-direction:column; gap:6px; }
+    .zone-long-list .door-tile { min-height:58px; padding:6px 7px; }
+    .zone-long-none { font-size:0.78em; color:var(--muted,#718096); }
+    @media (max-width: 700px) {
+      .zone-doors-cols { grid-template-columns:minmax(0, 1fr); gap:8px; }
+      .zone-long { border-left:0; border-top:2px solid #e2e8f0; padding:8px 0 0; }
+      .zone-long.has-long { border-top-color:#fc8181; }
+      .zone-long-list { flex-direction:row; flex-wrap:wrap; }
+      .zone-long-list .door-tile { width:calc(50% - 3px); }
     }
 
     /* -- End-of-shift report preview -- */
@@ -10498,6 +10533,8 @@
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "A door map for each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-door-map"),
           body: "Each zone card has its own door map: the zone's usual doors plus any door one of its trucks is on. <b>Tap an occupied door</b> for the full popup. Use <b>Sort doors by</b> at the top of the page to reorder every zone's map (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+        { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
+          body: "A load that <b>started unloading and is still not finished after 45 minutes</b> flashes <b>red</b> on every door map, and is listed in the <b>second column beside each zone's door map</b> (longest first). A spill noted in DMS stays steady amber, since spills legitimately take longer. The door map itself keeps its order." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
           body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment, and you can switch it to \"driver at the door\". The sort menu here works the same way as on Zones." },
         { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
@@ -10545,6 +10582,8 @@
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "A door map for each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-door-map"),
           body: "Each zone card has its own door map: the zone's usual doors plus any door one of its trucks is on. <b>Tap an occupied door</b> for the full popup. Use <b>Sort doors by</b> at the top of the page to reorder every zone's map (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+        { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
+          body: "A load that <b>started unloading and is still not finished after 45 minutes</b> flashes <b>red</b> on every door map, and is listed in the <b>second column beside each zone's door map</b> (longest first). A spill noted in DMS stays steady amber, since spills legitimately take longer. The door map itself keeps its order." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
           body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment, and you can switch it to \"driver at the door\". The sort menu here works the same way as on Zones." },
         { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
@@ -18006,6 +18045,17 @@
       return { mins: mins, level: mins >= th.red ? "red" : "yellow", basis: basis };
     }
 
+    // A load that started unloading and is still not finished after 45 minutes (the same line the "Unloader delay"
+    // alert uses). Its door tile flashes red, and the zone's second column lists it. A spill noted in the DMS comments
+    // legitimately takes longer, so those stay listed but steady (amber) instead of flashing.
+    let PORTAL_LONG_UNLOAD_MIN = 45;
+    function portalLongUnloadInfo(r, now) {
+      if (!r || !r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs || r.status === "complete") return null;
+      const mins = Math.floor((now - r.unloadStartMs) / 60000);
+      if (mins < PORTAL_LONG_UNLOAD_MIN || mins > PORTAL_NS_STALE_MIN) return null;
+      return { mins: mins, spill: /spill/i.test(r.comments || "") };
+    }
+
     // Higher = more urgent. Tier first, then the longer wait within a tier.
     function portalDoorPriority(r, now, th) {
       if (!r) return -1;
@@ -18158,11 +18208,13 @@
       const ageClass = portalDoorAgeClass(ageMin);
       const ageLabel = portalDoorAgeLabel(ageMin);
       const ns = portalNotStartedInfo(r, now, th);
-      return '<div class="door-tile ' + cls + ' ' + ageClass + (ns ? ' ns-' + ns.level : '') + ' occupied" data-door="' + dn + '" title="Tap for details">'
+      const lu = portalLongUnloadInfo(r, now);
+      return '<div class="door-tile ' + cls + ' ' + ageClass + (ns ? ' ns-' + ns.level : '') + (lu ? ' long-unload' + (lu.spill ? ' long-spill' : '') : '') + ' occupied" data-door="' + dn + '" title="Tap for details">'
         + '<div class="door-no">' + dn + '</div>'
         + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
         + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
         + (ns ? '<div class="door-ns">NOT STARTED ' + ns.mins + ' min</div>' : '')
+        + (lu ? '<div class="door-long">' + (lu.spill ? 'SPILL &middot; ' : 'UNLOADING ') + lu.mins + ' min</div>' : '')
         + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
         + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '')
         + portalDoorNoteBadge(site, r, dn)
@@ -18724,7 +18776,7 @@
           if (!mine(dn) && byDoor[dn]) return '<div class="door-tile open"><div class="door-no">' + dn + '</div><div class="door-dwell">In use by another zone</div></div>';
           return portalDoorTileHtml(dn, mine(dn), nowMs, th, site);
         }).join("");
-        const palletLine = m.pallets ? " · " + formatNumber(m.palletsDone) + " of " + formatNumber(m.pallets) + " pallets" : "";
+        const palletLine = m.pallets ? '<span class="zs-sep">&middot;</span><b>' + formatNumber(m.palletsDone) + '</b> of <b>' + formatNumber(m.pallets) + '</b> pallets' : "";
         const rows = g.areas.map(function(a) {
           const am = a.metrics;
           return '<tr><td>' + escapeHtml(a.def.label) + '</td>'
@@ -18734,6 +18786,12 @@
             + '<td class="num">' + portalZoneFmtMin(am.avgUnload) + '</td>'
             + '<td class="num">' + (am.pallets ? formatNumber(am.palletsDone) + ' / ' + formatNumber(am.pallets) : '--') + '</td></tr>';
         }).join("");
+        const longRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalLongUnloadInfo(r, nowMs); })
+          .sort(function(a, b) { return a.unloadStartMs - b.unloadStartMs; });
+        const longTiles = longRows.map(function(r) {
+          const dn = parseInt(r.door, 10);
+          return portalDoorTileHtml(isFinite(dn) ? dn : "?", r, nowMs, th, site);
+        }).join("");
         const zr = est ? est[g.def.key] : null;
         const info = portalZoneStatusInfo(zr);
         return '<article class="zone-card zs-' + info.cls + '">'
@@ -18741,8 +18799,8 @@
           + (info.label ? '<div class="zone-status"><span class="zone-chip ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' : '')
           + portalZoneEtaHtml(zr, site)
           + portalZonePctHtml(m)
-          + '<div class="zone-sub">' + m.completed + ' of ' + m.scheduled + ' trucks complete' + palletLine
-          + (m.arrived ? ' · ' + Math.round(m.completed / m.arrived * 100) + '% of arrived trucks finished' : '') + '</div>'
+          + '<div class="zone-sub"><b>' + m.completed + '</b> of <b>' + m.scheduled + '</b> trucks complete' + palletLine
+          + (m.arrived ? '<span class="zs-sep">&middot;</span><b>' + Math.round(m.completed / m.arrived * 100) + '%</b> of arrived trucks finished' : '') + '</div>'
           + '<div class="zone-kpis">'
           + kpi(String(m.onDock), "On dock now")
           + (cutoff ? '' : kpi(String(m.notArrived), "Not arrived"))
@@ -18758,8 +18816,11 @@
           + kpi(inUse + " of " + zoneDoors.length, "Doors in use")
           + '</div>'
           + '<div class="zone-doors"><div class="zone-doors-head">Door map &middot; ' + zoneDoors.length + ' doors &middot; ' + escapeHtml(portalDoorSortLabel()) + '</div>'
+          + '<div class="zone-doors-cols"><div class="zone-doors-main">'
           + (zoneDoors.length ? '<div class="door-map zone-door-map">' + doorTiles + '</div>' : '<div class="door-empty">No doors known for this zone yet.</div>')
-          + '</div>'
+          + '</div><aside class="zone-long' + (longRows.length ? ' has-long' : '') + '"><div class="zone-long-head">Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min <span class="n">' + longRows.length + '</span></div>'
+          + (longTiles ? '<div class="zone-long-list">' + longTiles + '</div>' : '<div class="zone-long-none">None right now</div>')
+          + '</aside></div></div>'
           + (g.areas.length > 1
               ? '<div class="zone-table-wrap"><table class="zone-table"><thead><tr><th>Area</th><th class="num">Done</th><th class="num">%</th><th class="num">On dock</th><th class="num">Avg unload</th><th class="num">Pallets</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
               : '')
@@ -18777,6 +18838,7 @@
           + '<b>Status</b> compares each zone with its usual pace for this time of night (median of about 120 recent shifts): green = on schedule or ahead, yellow = slightly behind, red = 30+ minutes behind. It starts at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
           + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
+          + '<b>Flashing red</b> door tiles, and the column beside each zone\'s door map, are loads that started unloading and are still not finished after ' + PORTAL_LONG_UNLOAD_MIN + ' minutes (loads with a spill noted stay steady amber). '
           + '<b>Started</b> (green) = trucks whose unload has begun, finished ones included. <b>Unloaded &amp; finished</b> (blue) = trucks whose unload is done. Both are out of every truck scheduled for the zone tonight. '
           + 'Complete = unload finished. Avg unload = unload start to finish. '
           + 'Avg dock time = driver at door (or check-in if there is no door stamp) to unload finished. '
