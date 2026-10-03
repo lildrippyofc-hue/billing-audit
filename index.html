@@ -1047,7 +1047,9 @@
     .zone-eta-label { font-size:0.72em; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted,#718096); }
     .zone-eta-time { font-size:clamp(2.1rem, 4.6vw, 3rem); font-weight:900; line-height:1.05; letter-spacing:-0.5px; font-variant-numeric:tabular-nums; color:var(--text,#1a202c); margin:2px 0; }
     .zone-eta-time.inline { font-size:clamp(1.7rem, 3.6vw, 2.3rem); margin:0; }
-    .zone-eta.done .zone-eta-time { color:#2f855a; }
+    .zone-eta.done .zone-eta-time { color:#2f855a; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:0.4em; }
+    .zone-eta-at { font-size:0.62em; font-weight:900; letter-spacing:0; white-space:nowrap; }
+    @media (max-width:520px) { .zone-eta.done .zone-eta-time { column-gap:0.3em; } .zone-eta-at { font-size:0.5em; } }
     :root.dark .zone-eta.done .zone-eta-time { color:#68d391; }
     .zone-eta-delta { font-size:1.3em; font-weight:900; line-height:1.25; margin-top:4px; color:var(--muted,#718096); }
     .zone-eta-delta.early { color:#2f855a; } .zone-eta-delta.close { color:#b7791f; } .zone-eta-delta.late { color:#c53030; }
@@ -8897,7 +8899,7 @@
     const ROLE_TABS = {
       admin: ["*"],
       oks: ["myPortal", "unloaderPerformance", "overview", "data", "help"],
-      minnesota: ["myPortalMn", "unloaderPerformance", "mnScheduleUploader", "mnBillingAudit", "guardShackMn", "overview", "data"],
+      minnesota: ["myPortalMn", "unloaderPerformance", "mnScheduleUploader", "mnBillingAudit", "guardShackMn", "guardShack", "overview", "data"],
       manager: ["myPortal", "unloaderPerformance", "alerts", "dmsStamp", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       teamlead: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "help"],
       clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
@@ -10583,7 +10585,7 @@
         { title: "New Zones tab", before: function() { portalSetView("zones"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load / Plants</b> (plant loads count with the dry zone). Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
-          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about an hour." },
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. When a zone is done, its big number says <b>Finished</b> with the time its last truck finished unloading. It is a guide, not a promise: usually within about an hour." },
         { title: "On track, running late, behind", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-status"),
           body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 20 minutes past the goal, and <b>red</b> when it is more than 20 minutes past. The <b>whole zone</b> takes the same colour (light green, yellow or red) from 10 PM on. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
         { title: "Started and finished percentages", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-pcts"),
@@ -10632,7 +10634,7 @@
         { title: "New Zones tab", before: function() { portalMnSetView("zones"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load / Plants</b> (plant loads count with the dry zone). Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-eta"),
-          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. When a zone is done, its big number says <b>Finished</b> with the time its last truck finished unloading. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
         { title: "On track, running late, behind", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-status"),
           body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 20 minutes past the goal, and <b>red</b> when it is more than 20 minutes past. The <b>whole zone</b> takes the same colour (light green, yellow or red) from 10 PM on. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
         { title: "Started and finished percentages", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-pcts"),
@@ -18788,7 +18790,7 @@
       // booked loads never finish. Counting only arrived trucks lifts tonight's share by that same
       // amount, so scale it back by the curve's own ceiling to compare like with like.
       const calShare = function(curve, share) { return dropNoShows ? share * curve[curve.length - 1] : share; };
-      const arrived = [], notArrived = [], counts = {};
+      const arrived = [], notArrived = [], counts = {}, lastFin = {};
       let allScheduled = 0, allDone = 0;
       rows.forEach(function(r) {
         allScheduled += 1;
@@ -18801,7 +18803,7 @@
         const ci = portalIsoToMs(r.checkInIso);
         const us = portalIsoToMs(r.unloadStartIso);
         const uf = portalIsoToMs(r.unloadFinishIso) || portalIsoToMs(r.receivingFinishIso);
-        if (uf) c.done += 1;
+        if (uf) { c.done += 1; if (!lastFin[z] || uf > lastFin[z]) lastFin[z] = uf; }
         if (ci) arrived.push({ ci: ci, us: us || null, uf: uf || null, z: z });
         else {
           const appt = portalIsoToMs(r.appointmentIso);
@@ -18827,7 +18829,7 @@
         else if (elapsed < PORTAL_ZONE_STATUS_FROM_MIN || usual < 0.03) status = "early";
         else status = lag <= 0 ? "green" : lag < 30 ? "yellow" : "red";
         out[z] = { key: z, status: status, lag: lag, usual: usual, share: share, scheduled: c.scheduled, done: c.done,
-                   remaining: remaining, estMs: estMs, earnedMs: earned, simMs: zf ? zf.p95 : null };
+                   remaining: remaining, estMs: estMs, earnedMs: earned, simMs: zf ? zf.p95 : null, finishedMs: lastFin[z] || null };
       });
 
       // The whole building against its own average pace (same rule, no separate finish model:
@@ -18923,7 +18925,11 @@
 
     function portalZoneEtaHtml(r, site) {
       if (!r) return "";
-      if (r.status === "done") return '<div class="zone-eta done"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">Finished</div></div>';
+      if (r.status === "done") {
+        // the zone is done: say when its last truck finished unloading, right beside the word
+        const at = r.finishedMs ? '<span class="zone-eta-at" title="When the last truck in this zone finished unloading">' + escapeHtml(portalFinishClock(r.finishedMs)) + '</span>' : "";
+        return '<div class="zone-eta done"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">Finished' + (at ? " " + at : "") + '</div></div>';
+      }
       const p = portalEtaParts(r.estMs, site);
       return '<div class="zone-eta"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">' + escapeHtml(p.time) + '</div>'
         + (p.delta ? '<div class="zone-eta-delta ' + p.cls + '">' + escapeHtml(p.delta) + '</div>' : '') + '</div>';
