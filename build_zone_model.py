@@ -41,7 +41,8 @@ CHECKPOINTS = [240, 300, 360, 420, 480, 540]   # minutes after the 7 PM start: 1
 ZONES = [
     ("freezer", ["frz", "freezer"]),
     ("chilled", ["chl", "chill", "cooler", "eggs", "egg", "fresh meat", "meat", "produce"]),
-    ("dry", ["dry", "amb", "ambient", "slip sheet", "slip", "floor loaded", "floor load", "floor"]),
+    ("dry", ["dry", "amb", "ambient", "slip sheet", "slip", "floor loaded", "floor load", "floor",
+             "plant", "plants", "plants flowers", "cold plant", "cold plants", "plant load", "plant loads", "floral", "flowers"]),
 ]
 
 
@@ -50,6 +51,8 @@ def zone_of(area):
     for name, keys in ZONES:
         if text in keys:
             return name
+    if re.search(r"\bplants?\b", text):        # any other plant area name still belongs to the dry zone
+        return "dry"
     return None
 
 

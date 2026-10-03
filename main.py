@@ -5,12 +5,14 @@ import sqlite3
 import json
 import re
 import time
+import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, List, Any, Dict, Callable
 from zoneinfo import ZoneInfo
 from io import BytesIO
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
 import requests as req_lib
 from requests import Session as ReqSession
@@ -1390,6 +1392,70 @@ def delete_decision(truck_key: str, _: str = Depends(require_auth)):
 # ── Frontend ──────────────────────────────────────────────────────────────────
 
 
+def _dms_fetch_pair(session: Dict[str, Any], base_payload: Dict[str, Any]):
+    """The two DMS reads behind a board (load details and stamps), made at the same time instead of one after the other, so a
+    refresh takes as long as the slower call, not both."""
+    config = session["config"]
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        loads_f = pool.submit(_dms_json_request, "api/load/getloaddetails", base_payload, config)
+        stamps_f = pool.submit(_dms_json_request, "api/stamp/getStamps", base_payload, config)
+        return loads_f.result(), stamps_f.result()
+
+
+# One shared copy of each dock's board. Every open page polls, and each used to make its own pair of DMS calls (OKS had no sharing
+# at all), so more people watching meant more load on DMS and no fresher data. Now at most one refresh per dock per
+# _PORTAL_CACHE_SECONDS reaches DMS however many pages are open; a page that asks while a refresh is already running is handed the
+# copy we have instead of queueing behind a slow DMS call; and the alert worker uses the same copy.
+_PORTAL_CACHE_SECONDS = 8
+_PORTAL_STALE_OK_SECONDS = 60          # a copy this old may still be handed out while a refresh is running
+_PORTAL_CACHE_KEEP = 12                # business dates kept (people can browse other dates)
+_portal_cache: Dict[str, Dict[str, Any]] = {}
+_portal_cache_locks: Dict[str, "threading.Lock"] = {}
+_portal_cache_guard = threading.Lock()
+_portal_cache_gen = [0]                # bumped by every clear, so a refresh that started before a DMS write is not kept after it
+
+
+def _portal_cached(site: str, date: Optional[str], force: bool, build: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
+    key = f"{site}|{_dms_business_date(date)}"
+    with _portal_cache_guard:
+        lock = _portal_cache_locks.setdefault(key, threading.Lock())
+        entry = _portal_cache.get(key)
+    now = time.monotonic()
+    if not force and entry and now - entry["at"] < _PORTAL_CACHE_SECONDS:
+        return entry["payload"]
+    if not force and entry and lock.locked() and now - entry["at"] < _PORTAL_STALE_OK_SECONDS:
+        return entry["payload"]                      # someone is already refreshing: use what we have rather than wait
+    with lock:                                       # a refresh is needed; callers arriving together share one
+        entry = _portal_cache.get(key)
+        if not force and entry and time.monotonic() - entry["at"] < _PORTAL_CACHE_SECONDS:
+            return entry["payload"]
+        gen = _portal_cache_gen[0]
+        payload = build()
+        with _portal_cache_guard:
+            if gen != _portal_cache_gen[0]:
+                return payload                       # something was written to DMS while we were reading: do not keep this copy
+            _portal_cache[key] = {"at": time.monotonic(), "payload": payload}
+            if len(_portal_cache) > _PORTAL_CACHE_KEEP:
+                for old in sorted(_portal_cache, key=lambda k: _portal_cache[k]["at"])[: len(_portal_cache) - _PORTAL_CACHE_KEEP]:
+                    _portal_cache.pop(old, None)
+                    _portal_cache_locks.pop(old, None)
+        return payload
+
+
+def _portal_cache_clear() -> None:
+    """Drop the shared copies, after something has been written to DMS, so the next poll shows it straight away."""
+    with _portal_cache_guard:
+        _portal_cache_gen[0] += 1
+        _portal_cache.clear()
+
+
+def _portal_payload_for(site: str, date: Optional[str] = None, force: bool = False) -> Dict[str, Any]:
+    """The board for a dock from the shared copy (building it from DMS only when the copy is old)."""
+    if site == "MN":
+        return _portal_cached("MN", date, force, lambda: _build_dms_portal_payload(_ensure_dms_mn_session(force=force), date))
+    return _portal_cached("OKS", date, force, lambda: _build_oks_portal_payload(_ensure_dms_session(force=force), date))
+
+
 def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> Dict[str, Any]:
     info = _dms_business_date(date)
     base_payload = {
@@ -1398,8 +1464,7 @@ def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
         "userinfo": session["userinfo"],
         "buck": session.get("buck") or {},
     }
-    loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
-    stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
+    loads_response, stamps_response = _dms_fetch_pair(session, base_payload)
     loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
     stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
     all_trucks = _merge_dms_portal_rows(loads, stamps)
@@ -1506,24 +1571,12 @@ def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_dms)
     }
 
 
-_MN_PORTAL_CACHE_SECONDS = 10
-_mn_portal_cache: Dict[str, Any] = {"key": None, "at": 0.0, "payload": None}
-
-
 @app.get("/api/dms/mn/portal")
 def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depends(_require_mn_dms)):
     """Read Minnesota DMS load/stamp rows for the MN My Portal. This route never writes to DMS."""
-    # Every open Minnesota portal polls this route; a few seconds of sharing keeps
-    # extra viewers from multiplying the load on DMS. The Sync button (force) skips it.
-    key = _dms_business_date(date)
-    now = time.monotonic()
-    cached = _mn_portal_cache
-    if not force and cached["key"] == key and cached["payload"] is not None and now - cached["at"] < _MN_PORTAL_CACHE_SECONDS:
-        return cached["payload"]
-    session = _ensure_dms_mn_session(force=force)
-    payload = _build_dms_portal_payload(session, date)
-    _mn_portal_cache.update({"key": key, "at": now, "payload": payload})
-    return payload
+    # Every open Minnesota portal polls this route; the shared copy (see _portal_cached) keeps extra viewers from multiplying the
+    # load on DMS. The Sync button (force) skips it.
+    return _portal_payload_for("MN", date, force)
 
 
 @app.get("/api/dms/portal")
@@ -1566,7 +1619,12 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         })
         return {"ok": True, "debug": dbg}
 
-    session = _ensure_dms_session(force=force)
+    # Every open OKS portal polls this route; the shared copy (see _portal_cached) means one refresh serves them all. The Sync
+    # button (force) skips it.
+    return _portal_payload_for("OKS", date, force)
+
+
+def _build_oks_portal_payload(session: Dict[str, Any], date: Optional[str]) -> Dict[str, Any]:
     info = _dms_business_date(date)
     base_payload = {
         "info": info,
@@ -1574,8 +1632,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
         "userinfo": session["userinfo"],
         "buck": session.get("buck") or {},
     }
-    loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
-    stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
+    loads_response, stamps_response = _dms_fetch_pair(session, base_payload)
     loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
     stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
     all_trucks = _merge_dms_portal_rows(loads, stamps)
@@ -2363,6 +2420,7 @@ def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn,
                 })
                 continue
             inserted += 1
+            _portal_cache_clear()
             for key in po_keys:
                 existing_keys.add(f"po:{key}")
             results.append({"row": row_id, "status": "Inserted", "message": "Created in DMS.", "reference": row.reference, "po": row.po, "truck_number": truck_number})
@@ -3608,6 +3666,8 @@ def dms_stamp(body: DmsStampIn, _: str = Depends(_require_oks_dms)):
             ok_flag = True
             if isinstance(result, dict):
                 ok_flag = result.get("ok") or result.get("success") or result.get("result") or not result.get("error")
+            if ok_flag:
+                _portal_cache_clear()
             return {"ok": bool(ok_flag), "endpoint": path, "stamp_type": stamp_key, "stamp_time": stamp_time, "response": result}
         except Exception as e:
             last_err = str(e)
@@ -3902,7 +3962,8 @@ def save_unloader(body: UnloaderIn, username: str = Depends(_require_unloader_wr
 _PERF_ZONES = [
     ("freezer", ("frz", "freezer")),
     ("chilled", ("chl", "chill", "cooler", "eggs", "egg", "fresh meat", "meat", "produce")),
-    ("dry", ("dry", "amb", "ambient", "slip sheet", "slip", "floor loaded", "floor load", "floor")),
+    ("dry", ("dry", "amb", "ambient", "slip sheet", "slip", "floor loaded", "floor load", "floor",
+             "plant", "plants", "plants flowers", "cold plant", "cold plants", "plant load", "plant loads", "floral", "flowers")),
 ]
 _PERF_MIN_SAMPLE = 5                    # finished loads / gaps needed before a measure is rated
 _PERF_RATIO_CAP = (0.25, 2.0)           # one wild measure cannot swamp the overall score
@@ -3913,6 +3974,8 @@ def _perf_zone(area: str) -> str:
     for key, names in _PERF_ZONES:
         if text in names:
             return key
+    if re.search(r"\bplants?\b", text):        # any other plant area name still belongs to the dry zone
+        return "dry"
     return "other"
 
 
@@ -4205,8 +4268,9 @@ def _rejected_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, Any]]) ->
 def _fetch_dms_night(session: Dict[str, Any], info: str):
     """Read-only pull of one business date from DMS: (merged non-rejected trucks, rejected count, rejected loads)."""
     payload = {"info": info, "loc": session["loc"], "userinfo": session["userinfo"], "buck": session.get("buck") or {}}
-    loads = [x for x in _first_list(_dms_json_request("api/load/getloaddetails", payload, session["config"])) if isinstance(x, dict)]
-    stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
+    loads_response, stamps_response = _dms_fetch_pair(session, payload)
+    loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
+    stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
     rejected = sum(1 for st in stamps if str(st.get("drstat") or "").strip().lower() == "rejected")
     return _merge_dms_portal_rows(loads, stamps), rejected, _rejected_rows(loads, stamps)
 
@@ -4859,6 +4923,7 @@ def _compute_dock_alerts(trucks: List[Dict[str, Any]], business_date: str, free_
         if _alert_exempt(t, appt):
             continue
         door_ms = _alert_iso_ms(t.get("driverAtDoorIso"))
+        clerk_ms = _alert_iso_ms(t.get("clerkCheckInIso"))
         un_start = _alert_iso_ms(t.get("unloadStartIso"))
         un_fin = _alert_iso_ms(t.get("unloadFinishIso"))
         rec_start = _alert_iso_ms(t.get("receivingStartIso"))
@@ -4891,10 +4956,13 @@ def _compute_dock_alerts(trucks: List[Dict[str, Any]], business_date: str, free_
             continue
         if status == "detention":
             out.append({"kind": "detention", "tid": tid, "text": f"[Critical] Detention threshold reached - {who} | {door} | Past the {free_minutes}-minute free-time window."})
-        if needs_start:
-            overdue_from = max(appt, warn_from_ms)
-            if now_ms >= overdue_from + 30 * MIN:
-                out.append({"kind": "needstart", "tid": tid, "text": f"[Action] Unload start overdue - {who} | {door} | Driver at door {int((now_ms - overdue_from) // MIN)} min past appointment."})
+        # Same clock as the page: counted from 5 minutes before the clerk's check-in stamp, never before 10 PM. A truck the clerk
+        # has not checked in yet has no clock, so there is no alert until they do.
+        if door_ms and clerk_ms and not un_start:
+            overdue_from = max(clerk_ms - 5 * MIN, warn_from_ms)
+            waited = (now_ms - overdue_from) / MIN
+            if 30 <= waited <= 720:
+                out.append({"kind": "needstart", "tid": tid, "text": f"[Action] Unload start overdue - {who} | {door} | Driver on dock {int(waited)} min since the clerk check-in and the unload has not started."})
         if un_start and now_ms >= un_start + 45 * MIN:
             out.append({"kind": "unloaderdelay", "tid": tid, "text": f"[Action] Unloader delay - {who} | {door} | Unloading {int((now_ms - un_start) // MIN)} min with no unload-finish stamp."})
         if status == "urgent":
@@ -4919,11 +4987,8 @@ def _run_alert_cycle() -> None:
         if not url:
             continue
         try:
-            session = cfg["session"]()
-            payload = {"info": business_date, "loc": session["loc"], "userinfo": session["userinfo"], "buck": session.get("buck") or {}}
-            loads = [x for x in _first_list(_dms_json_request("api/load/getloaddetails", payload, session["config"])) if isinstance(x, dict)]
-            stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
-            trucks = _merge_dms_portal_rows(loads, stamps)
+            # the same shared copy the portals use (at most a few seconds old), so the alert worker adds no DMS calls of its own
+            trucks = _portal_payload_for(site)["scheduled_trucks"]
             fresh = []
             for a in _compute_dock_alerts(trucks, business_date, free_minutes, now_ms):
                 dedupe = f"{site}|{business_date}|{a['kind']}|{a['tid']}"

@@ -7007,10 +7007,10 @@
         <div class="portal-zone-label">Drill-down views</div>
         <!-- View switcher: Board / Doors / Areas / Vendors -->
         <div class="portal-view-switch" id="portalViewSwitch">
-          <button type="button" class="portal-view-btn active" data-view="board">Board</button>
+          <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
+          <button type="button" class="portal-view-btn" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
-          <button type="button" class="portal-view-btn" data-view="zones">Zones</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
           <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalChatBadge" style="display:none;">0</span></button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
@@ -7049,7 +7049,7 @@
         </section>
 
         <!-- Operations board -->
-        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="margin-top:10px;" id="portalBoardView">
+        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="display:none; margin-top:10px;" id="portalBoardView">
           <div class="table-toolbar">
             <div>
               <div class="table-title" id="portalBoardTitle">Live Dock Board</div>
@@ -7121,6 +7121,7 @@
               <input id="portalNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
               <input id="portalNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
               <select id="portalNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
+                <option value="clerk">5 minutes before the clerk check-in</option>
                 <option value="ready">the later of door arrival and appointment</option>
                 <option value="door">driver at the door</option>
               </select></span>
@@ -7173,7 +7174,7 @@
         </section>
 
         <!-- Cold vs Dry zones view -->
-        <section id="portalZonesView" style="display:none; margin-top:10px;">
+        <section id="portalZonesView" style="margin-top:10px;">
           <div class="portal-vendor-toolbar">
             <div class="table-title">Shift Completion &amp; Performance by Zone</div>
             <span id="portalZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
@@ -7511,10 +7512,10 @@
 
         <div class="portal-zone-label">Drill-down views</div>
         <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
-          <button type="button" class="portal-view-btn active" data-view="board">Board</button>
+          <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
+          <button type="button" class="portal-view-btn" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
-          <button type="button" class="portal-view-btn" data-view="zones">Zones</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
           <button type="button" class="portal-view-btn" data-view="performance" id="portalMnPerfBtn" title="Performance by Name: how each unloader is doing against the team">Performance</button>
           <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalMnChatBadge" style="display:none;">0</span></button>
@@ -7539,7 +7540,7 @@
         </section>
 
         <!-- Cold vs Dry zones view (Minnesota) -->
-        <section id="portalMnZonesView" style="display:none; margin-top:10px;">
+        <section id="portalMnZonesView" style="margin-top:10px;">
           <div class="portal-vendor-toolbar">
             <div class="table-title">Shift Completion &amp; Performance by Zone</div>
             <span id="portalMnZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
@@ -7586,7 +7587,7 @@
           </div>
         </section>
 
-        <section id="portalMnBoardView" style="margin-top:10px;">
+        <section id="portalMnBoardView" style="display:none; margin-top:10px;">
           <section class="table-wrap" aria-labelledby="portalMnBoardTitle">
             <div class="table-toolbar">
               <div>
@@ -7617,6 +7618,7 @@
               <input id="portalMnNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
               <input id="portalMnNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
               <select id="portalMnNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
+                <option value="clerk">5 minutes before the clerk check-in</option>
                 <option value="ready">the later of door arrival and appointment</option>
                 <option value="door">driver at the door</option>
               </select></span>
@@ -8627,8 +8629,8 @@
         businessDate: "",
         selectedBusinessDate: safeLocalStorageGet("portalBusinessDate") || "",
         selectedBusinessDateManual: safeLocalStorageGet("portalBusinessDateManual") === "1",
-        portalView: "board",
-        livePollMs: 30000,
+        portalView: "zones",
+        livePollMs: 10000,
         credentialBlocked: false,
         uiTickInterval: null,
         liveClockInterval: null,
@@ -8652,7 +8654,7 @@
       },
       portalMn: {
         refreshInterval: null,
-        view: "board",
+        view: "zones",
         liveRows: [],
         scheduledRows: [],
         liveUpdatedAt: "",
@@ -8661,7 +8663,7 @@
         liveAttempted: false,
         businessDate: "",
         selectedBusinessDate: safeLocalStorageGet("portalMnBusinessDate") || "",
-        livePollMs: 30000,
+        livePollMs: 10000,
         credentialBlocked: false,
         freeTimeMinutes: 120,
         totalExpected: 0,
@@ -10575,7 +10577,7 @@
         { title: "Charts, comparison and unloaders", target: portalTourEl("portalShiftReportPageBtn"),
           body: "It is packed with data: trucks finished and trucks <b>on the dock</b> through the night (and how many were waiting), where a truck's time goes, waits and unload times by hour, appointment punctuality, pallets, zones, doors, suppliers and carriers, the longest dock times, no-shows and rejected loads, receiving delays, and an hour-by-hour table. Every number is set against the average of the earlier nights, and against the same weekday when there are enough. If unloader names were entered, <b>Performance by unloader</b> adds a timeline of who unloaded what and when, pace against the team (by zone too) and each person's own recent nights (only for logins that can see Performance by Name). Use <b>Download report</b> to save it as a file, or <b>Print / Save as PDF</b>." },
         { title: "New Zones tab", before: function() { portalSetView("zones"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="zones"]'); },
-          body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
+          body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load / Plants</b> (plant loads count with the dry zone). Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
           body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about an hour." },
         { title: "On track, running late, behind", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-status"),
@@ -10589,7 +10591,7 @@
         { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
-          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment (you can switch it to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck that got here before 10 PM is counted from 10 PM. The sort menu here works the same way as on Zones." },
+          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts 5 minutes before the clerk's check-in stamp, the same clock as <b>Driver on dock for</b> on each tile (you can switch it to the later of door arrival and appointment, or to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck checked in before 10 PM is counted from 10 PM. A truck the clerk has not checked in yet is not flagged. The sort menu here works the same way as on Zones." },
         { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
           body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalTicker"),
@@ -10624,7 +10626,7 @@
         { title: "Charts, comparison and unloaders", target: portalTourEl("portalMnShiftReportPageBtn"),
           body: "It is packed with data: trucks finished and trucks <b>on the dock</b> through the night (and how many were waiting), where a truck's time goes, waits and unload times by hour, appointment punctuality, pallets, zones, doors, suppliers and carriers, the longest dock times, no-shows and rejected loads, receiving delays, and an hour-by-hour table. Every number is set against the average of the earlier nights, and against the same weekday when there are enough. If unloader names were entered, <b>Performance by unloader</b> adds a timeline of who unloaded what and when, pace against the team (by zone too) and each person's own recent nights. Use <b>Download report</b> to save it as a file, or <b>Print / Save as PDF</b>." },
         { title: "New Zones tab", before: function() { portalMnSetView("zones"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="zones"]'); },
-          body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
+          body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load / Plants</b> (plant loads count with the dry zone). Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-eta"),
           body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
         { title: "On track, running late, behind", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-status"),
@@ -10638,7 +10640,7 @@
         { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
-          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment (you can switch it to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck that got here before 10 PM is counted from 10 PM. The sort menu here works the same way as on Zones." },
+          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts 5 minutes before the clerk's check-in stamp, the same clock as <b>Driver on dock for</b> on each tile (you can switch it to the later of door arrival and appointment, or to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck checked in before 10 PM is counted from 10 PM. A truck the clerk has not checked in yet is not flagged. The sort menu here works the same way as on Zones." },
         { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
           body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalMnTicker"),
@@ -10650,7 +10652,7 @@
         { title: "Areas tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="areas"]'); },
           body: "<b>Areas</b> shows every dock area with how many trucks are scheduled, arrived, and finished, plus a progress bar for each. Use it to see which area is falling behind." },
         { title: "Faster updates", target: portalTourEl("portalMnStatus"),
-          body: "The board now refreshes from DMS every <b>30 seconds</b> and recalculates countdowns in between. This line shows when it last updated, and it catches up the moment you switch back to this tab." },
+          body: "The board now refreshes from DMS every <b>10 seconds</b> and recalculates countdowns in between. This line shows when it last updated, and it catches up the moment you switch back to this tab." },
         { title: "Much more accurate Projected Finish", target: portalTourEl("portalMnEstCard"),
           body: "Projected Finish now matches the <b>Zones</b> screen: it is the <b>latest of the zone estimates</b> (the building is done when its last zone is), and the note under it says when nearly all trucks should be done. Late trucks that probably won't show are left out." },
         { title: "Pace vs Usual", target: portalTourEl("portalMnUsualCard"),
@@ -16078,7 +16080,7 @@
         if (els.portalDmsStatus) {
           const loc = data.location || {};
           const locName = loc.name || loc.locName || loc.cCode || "ALDIOKS";
-          const everySec = Math.round((state.portal.livePollMs || 30000) / 1000);
+          const everySec = Math.round((state.portal.livePollMs || 10000) / 1000);
           const everyStr = everySec >= 60 ? Math.round(everySec / 60) + " min" : everySec + " sec";
           els.portalDmsStatus.dataset.live = "1";
           els.portalDmsStatus.dataset.count = state.portal.liveRows.length;
@@ -17340,7 +17342,7 @@
       if (!state.portalMn.refreshInterval) {
         state.portalMn.refreshInterval = setInterval(function() {
           if (portalMnPanelIsActive()) portalMnPullLive(false, { quiet: true });
-        }, state.portalMn.livePollMs || 30000);
+        }, state.portalMn.livePollMs || 10000);
       }
       // Between DMS pulls, recompute countdowns / time on door from the rows we
       // already have so the board doesn't sit frozen for a whole poll cycle.
@@ -18191,12 +18193,15 @@
       return { yellow: yellow, red: Math.max(yellow + 1, read("portalNsRed", 30, 2, 480)) };
     }
 
-    // Where the not-started clock begins: "ready" = the later of the driver reaching the door and
-    // the appointment time (a truck that is hours early is not overdue), "door" = driver at the
-    // door. On 9,251 real loads, 76% of drivers reach the door before their appointment, so the
-    // "door" clock makes 65% of trucks go red at some point against 29% for "ready".
+    // Where the not-started clock begins. "clerk" (the default) = 5 minutes before the clerk's check-in stamp, the same moment
+    // "Driver on dock for ..." counts from, so the red NOT STARTED minutes and the dock time agree; a truck the clerk has not
+    // checked in yet has no clock. "ready" = the later of the driver reaching the door and the appointment time (a truck that
+    // is hours early is not overdue), "door" = driver at the door. On 9,251 real loads, 76% of drivers reach the door before
+    // their appointment, so the "door" clock makes 65% of trucks go red at some point against 29% for "ready". Saved under a
+    // new key so an old pick of "ready" does not hide the new default.
     function portalNsClock() {
-      return safeLocalStorageGet("portalNsClock") === "door" ? "door" : "ready";
+      const v = safeLocalStorageGet("portalNsClockV2");
+      return v === "door" || v === "ready" ? v : "clerk";
     }
 
     // Warnings about how long a truck has waited start at 10 PM. Trucks get to the lot well before the dock starts working, so
@@ -18226,8 +18231,14 @@
       if (!r || r.status === "complete" || !r.driverAtDoorMs) return null;
       if (r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs) return null;
       const basis = portalNsClock();
-      const from = Math.max(basis === "door" ? r.driverAtDoorMs : Math.max(r.driverAtDoorMs, r.appointmentMs || 0), portalWarnFloorMs(now));
-      const mins = Math.floor((now - from) / 60000);
+      let mins;
+      if (basis === "clerk") {
+        mins = portalDoorWarnMinutes(r, now);                               // 5 min before the clerk stamp, never before 10 PM
+        if (mins == null) return null;                                      // not checked in by the clerk yet: no clock
+      } else {
+        const from = Math.max(basis === "door" ? r.driverAtDoorMs : Math.max(r.driverAtDoorMs, r.appointmentMs || 0), portalWarnFloorMs(now));
+        mins = Math.floor((now - from) / 60000);
+      }
       if (mins < th.yellow || mins > PORTAL_NS_STALE_MIN) return null;
       return { mins: mins, level: mins >= th.red ? "red" : "yellow", basis: basis };
     }
@@ -18576,10 +18587,11 @@
         { key: "meat", label: "Fresh Meat", match: ["fresh meat", "meat"] },
         { key: "produce", label: "Produce", match: ["produce"] }
       ] },
-      { key: "dry", title: "Dry / Slip Sheet / Floor Load", areas: [
+      { key: "dry", title: "Dry / Slip Sheet / Floor Load / Plants", areas: [
         { key: "dry", label: "Dry", match: ["dry", "amb", "ambient"] },
         { key: "slip", label: "Slip Sheet", match: ["slip sheet", "slip"] },
-        { key: "floor", label: "Floor Load", match: ["floor loaded", "floor load", "floor"] }
+        { key: "floor", label: "Floor Load", match: ["floor loaded", "floor load", "floor"] },
+        { key: "plants", label: "Plant Loads", match: ["plant", "plants", "plants flowers", "cold plant", "cold plants", "plant load", "plant loads", "floral", "flowers"] }
       ] }
     ];
 
@@ -18589,6 +18601,12 @@
         for (let a = 0; a < PORTAL_ZONE_GROUPS[g].areas.length; a++) {
           if (PORTAL_ZONE_GROUPS[g].areas[a].match.indexOf(text) !== -1) return { group: g, area: a };
         }
+      }
+      // any other plant area name still belongs to the dry zone
+      if (/\bplants?\b/.test(text)) {
+        const dry = PORTAL_ZONE_GROUPS.findIndex(function(g) { return g.key === "dry"; });
+        const pl = PORTAL_ZONE_GROUPS[dry].areas.findIndex(function(a) { return a.key === "plants"; });
+        return { group: dry, area: pl };
       }
       return null;
     }
@@ -19054,7 +19072,7 @@
           : '')
           + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 20 minutes past the goal and red when it is more than 20 past. The whole zone card takes the same colour: light green when the zone will finish on or before the goal, yellow 5 to 20 minutes past it, red more than 20 past. Colours start at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
-          + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
+          + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry, Amb, Slip Sheet, Floor Loaded and Plants/Flowers. '
           + '<b>Driver on dock ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in whose driver has been on the dock ' + PORTAL_WAITING_MIN + ' minutes or more without unloading starting, longest first. <b>Driver on dock for</b> on each tile counts from 5 minutes before the clerk check-in stamp; a truck the clerk has not checked in shows <b>Waiting on clerk</b> instead and is not listed. Warnings (the colours and this list) start at 10 PM, so nothing is flagged earlier and trucks checked in before 10 PM are counted from 10 PM. '
           + '<b>Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min</b> lists loads that started unloading and are still not finished, longest first (a spill noted in DMS shows amber). '
           + '<b>All doors</b> opens the zone\'s full door map; Sort doors by reorders it. '
@@ -19136,7 +19154,7 @@
       });
       ["portalNsClock", "portalMnNsClock"].forEach(function(id) {
         const clock = document.getElementById(id);
-        if (clock) clock.addEventListener("change", function() { safeLocalStorageSet("portalNsClock", clock.value); portalDoorControlsChanged(); });
+        if (clock) clock.addEventListener("change", function() { safeLocalStorageSet("portalNsClockV2", clock.value); portalDoorControlsChanged(); });
       });
       portalSyncDoorControls();
     })();
@@ -19179,7 +19197,7 @@
           kind: "ns", site: site, level: ns.level, door: isFinite(dn) ? dn : null, mins: ns.mins, where: where, who: who, truck: r, truckId: String(r.id || r.ref || ""),
           sev: red ? "notstartedred" : "notstartedyellow", order: red ? 1 : 3, icon: red ? "CRITICAL" : "WARNING", sevLabel: red ? "Not Started" : "Start Soon",
           title: where + (red ? " is overdue to start" : " needs to be started soon"),
-          detail: who + " | " + ns.mins + " min " + (ns.basis === "door" ? "at the door" : "since it was ready (at the door and past its appointment time)") + " and the unload has not started. Start it" + (red ? " now." : " soon."),
+          detail: who + " | " + ns.mins + " min " + (ns.basis === "door" ? "at the door" : ns.basis === "clerk" ? "on the dock since the clerk check-in" : "since it was ready (at the door and past its appointment time)") + " and the unload has not started. Start it" + (red ? " now." : " soon."),
           tag: pre + "ns:" + (r.id || r.ref || where) + ":" + ns.level + ":" + date
         });
       });
@@ -19559,7 +19577,7 @@
     // with. This builds ONE self-contained HTML document (inline SVG charts, no outside files). The
     // preview shows it, and Download / Print (Save as PDF) use exactly the same document.
     const SHIFT_RPT = { days: 7, data: null, doc: "", busy: false, site: "oks" };
-    const SHIFT_RPT_ZONES = { freezer: "Freezer", chilled: "Cooler / Fresh Meat / Produce", dry: "Dry / Slip Sheet / Floor Load", other: "Other areas" };
+    const SHIFT_RPT_ZONES = { freezer: "Freezer", chilled: "Cooler / Fresh Meat / Produce", dry: "Dry / Slip Sheet / Floor Load / Plants", other: "Other areas" };
     const SHIFT_RPT_DOCK_LABELS = ["Under 30 min", "30-60 min", "1-1.5 h", "1.5-2 h", "2-3 h", "3-4 h", "4 h+"];
     const SHIFT_RPT_PUNCT_LABELS = ["2 h+ early", "1-2 h early", "30-60 min early", "15-30 min early", "On time (within 15)", "15-30 min late", "30-60 min late", "1-2 h late", "2 h+ late"];
     const SHIFT_RPT_PALLET_LABELS = ["1-10", "11-20", "21-30", "31-40", "41+"];
