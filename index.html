@@ -10585,7 +10585,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalSetView("zones"); }, target: portalTourEl("portalZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes after the clerk's check-in without starting</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>driver on the dock 30+ minutes (counted from 5 minutes before the clerk's check-in) without starting</b>, longest first, as big tiles. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> if the clerk has not checked the truck in yet. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
@@ -10634,7 +10634,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes after the clerk's check-in without starting</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>driver on the dock 30+ minutes (counted from 5 minutes before the clerk's check-in) without starting</b>, longest first, as big tiles. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> if the clerk has not checked the truck in yet. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
@@ -11212,6 +11212,10 @@
 
       const ageStart = r.driverAtDoorMs || r.checkInMs;
       const unloadMs = r.unloadStartMs ? ((r.unloadFinishMs || now) - r.unloadStartMs) : null;
+      // how long the driver has been on the dock, counted from 5 minutes before the clerk check-in stamp (or, before the clerk has
+      // checked the truck in, how long the driver has been waiting on the clerk)
+      const dockMin = portalDockMinutes(r, now);
+      const dockText = dockMin != null ? dur(dockMin * 60000) : (ageStart ? "waiting on clerk " + dur(now - ageStart) : "");
       const poParts = String(r.po || "").split(/[,;]/).map(function(p) { return p.trim(); }).filter(Boolean);
       const fields = [
         { k: 'Supplier', v: r.supplier },
@@ -11220,7 +11224,7 @@
         { k: 'Carrier', v: r.carrier },
         { k: 'Area', v: r.area },
         { k: 'Appt', v: fmt(r.appointmentIso) },
-        { k: 'On dock', v: ageStart ? dur(now - ageStart) : "" },
+        { k: 'Driver on dock', v: dockText },
         { k: r.unloadFinishMs ? 'Unload took' : 'Unloading', v: unloadMs != null ? dur(unloadMs) : "" }
       ];
       document.getElementById('doorDetailGrid').innerHTML = fields
@@ -11232,6 +11236,7 @@
       const steps = [
         { label: 'Check-In',        iso: r.checkInIso },
         { label: 'Driver at Door',  iso: r.driverAtDoorIso },
+        { label: 'Clerk Check-In',  iso: r.clerkCheckInIso },
         { label: 'Unload Start',    iso: r.unloadStartIso },
         { label: 'Unload Done',     iso: r.unloadFinishIso },
         { label: 'Receiving Start', iso: r.receivingStartIso },
@@ -11367,7 +11372,7 @@
           poParts.length ? "PO: " + poParts.join(", ") : "",
           r.carrier ? "Carrier: " + r.carrier : "",
           r.appointmentIso ? "Appt: " + fmt(r.appointmentIso) : "",
-          ageStart ? "On dock: " + dur(now - ageStart) : "",
+          dockText ? "Driver on dock: " + dockText : "",
           noteEl.value.trim() ? "Note: " + noteEl.value.trim() : ""
         ].filter(Boolean).join("\n");
         const btn = document.getElementById('doorDetailCopyBtn');
@@ -16793,7 +16798,7 @@
         const title = portalTruckName(r);
         const lvl = f.level === "high" ? "forecast-high" : f.level === "watch" ? "forecast-watch" : "";
         const lateText = f.projectedLateBy > 0 ? "Projected " + f.projectedLateBy + " min late" : f.minsLeft + " min left";
-        const ageText = f.ageMin != null ? " | " + portalDoorAgeLabel(f.ageMin) : "";
+        const ageText = f.dockLabel ? " | " + f.dockLabel : "";
         return '<div class="portal-forecast-item ' + lvl + '">'
           + '<div class="portal-forecast-top"><span>' + escapeHtml(title) + '</span><span>' + f.score + '% risk</span></div>'
           + '<div class="portal-forecast-meta">' + escapeHtml(lateText + " | " + f.reason + ageText) + '</div>'
@@ -17774,13 +17779,30 @@
       return "age-green";
     }
 
-    // How long a truck has been on the lot (counted from the driver reaching the door, else check-in): "37 min on lot",
-    // "2 hr 43 min on lot".
-    function portalDoorAgeLabel(minutes) {
-      if (minutes == null) return "";
-      if (minutes < 60) return minutes + " min on lot";
+    // "37 min", "2 hr 43 min".
+    // The spaces inside a duration are non-breaking, so on a narrow tile it wraps as "Driver on dock for" / "3 hr 55 min" and
+    // never splits a duration in the middle.
+    function portalFmtDuration(minutes) {
+      if (minutes < 60) return minutes + " min";
       const h = Math.floor(minutes / 60), m = minutes % 60;
-      return h + " hr" + (m ? " " + m + " min" : "") + " on lot";
+      return h + " hr" + (m ? " " + m + " min" : "");
+    }
+
+    // How long the driver has been on the dock: counted from 5 minutes before the clerk's check-in stamp (the same start as the
+    // warning clock behind the colours and the "driver on dock 30+ min" list, but not held back to 10 PM, so it is the real
+    // time). null until the clerk has checked the truck in.
+    function portalDockMinutes(row, now) {
+      const stamp = row.clerkCheckInMs || portalIsoToMs(row.clerkCheckInIso);
+      if (!stamp) return null;
+      return Math.max(0, Math.floor((now - (stamp - PORTAL_CLERK_LEAD_MIN * 60000)) / 60000));
+    }
+    // The label on a tile: "Driver on dock for 2 hr 43 min". A truck the clerk has not checked in yet shows how long the driver
+    // has been waiting on the clerk instead (from reaching the door, else check-in).
+    function portalDockLabel(row, now) {
+      const dock = portalDockMinutes(row, now);
+      if (dock != null) return "Driver on dock for " + portalFmtDuration(dock);
+      const waited = portalDoorAgeMinutes(row, now);
+      return waited != null ? "Waiting on clerk " + portalFmtDuration(waited) : "";
     }
 
     function portalBuildRiskForecast(rows, now, freeTimeMs, vendorAvgs) {
@@ -17832,7 +17854,8 @@
           minsLeft,
           projectedLateBy,
           reason: reason.join(" | ") || "live pace risk",
-          ageMin
+          ageMin,
+          dockLabel: portalDockLabel(r, now)
         });
       });
       return out.sort(function(a, b) {
@@ -17855,7 +17878,7 @@
         const title = portalTruckName(r);
         const lvl = f.level === "high" ? "forecast-high" : f.level === "watch" ? "forecast-watch" : "";
         const lateText = f.projectedLateBy > 0 ? "Projected " + f.projectedLateBy + " min late" : f.minsLeft + " min left";
-        const ageText = f.ageMin != null ? " | " + portalDoorAgeLabel(f.ageMin) : "";
+        const ageText = f.dockLabel ? " | " + f.dockLabel : "";
         return '<div class="portal-forecast-item ' + lvl + '">'
           + '<div class="portal-forecast-top"><span>' + escapeHtml(title) + '</span><span>' + f.score + '% risk</span></div>'
           + '<div class="portal-forecast-meta">' + escapeHtml(lateText + " | " + f.reason + ageText) + '</div>'
@@ -18188,8 +18211,9 @@
     }
     // Minutes a truck has been waiting on the lot for warning purposes. The clock starts at the clerk's check-in stamp, counted from
     // 5 minutes before it, and never before 10 PM. A truck the clerk has not checked in yet has no clock running (null), so
-    // nothing is flagged until the clerk has it. The "N min on lot" label on a tile still shows the real time since the driver
-    // reached the door; this is only the clock behind the colours, the 61+ counters and the "on the lot 30+ min" band.
+    // nothing is flagged until the clerk has it. The "Driver on dock for ..." label on a tile counts from the same moment
+    // (portalDockMinutes) but is the real time; this is the clock behind the colours, the 61+ counters and the "driver on
+    // dock 30+ min" band, held back to 10 PM.
     const PORTAL_CLERK_LEAD_MIN = 5;
     function portalDoorWarnMinutes(row, now) {
       const stamp = row.clerkCheckInMs || portalIsoToMs(row.clerkCheckInIso);
@@ -18378,9 +18402,8 @@
       const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning")
         ? (r.countdownLabel || "") : "";
       const detail = stage ? (timeInfo ? stage + "  -  " + timeInfo : stage) : (r.countdownLabel || portalStatusLabel(r.status));
-      const ageMin = portalDoorAgeMinutes(r, now);                          // what the label says: the real time on the lot
-      const ageClass = portalDoorAgeClass(portalDoorWarnMinutes(r, now));   // its colour: warnings only count from 10 PM
-      const ageLabel = portalDoorAgeLabel(ageMin);
+      const ageClass = portalDoorAgeClass(portalDoorWarnMinutes(r, now));   // the colour: warnings only count from 10 PM
+      const ageLabel = portalDockLabel(r, now);                             // "Driver on dock for 2 hr 43 min" (from 5 min before the clerk check-in)
       const ns = portalNotStartedInfo(r, now, th);
       const lu = portalLongUnloadInfo(r, now);
       return '<div class="door-tile ' + cls + ' ' + ageClass + (ns ? ' ns-' + ns.level : '') + (lu ? ' long-unload' + (lu.spill ? ' long-spill' : '') : '') + ' occupied" data-door="' + dn + '"' + (r.id ? ' data-row="' + escapeHtml(String(r.id)) + '"' : '') + ' title="Tap for details">'
@@ -18992,7 +19015,7 @@
         // What needs attention, as big tiles above the full map: on the door 30+ minutes and not started (longest first), and
         // started but still unloading after 45 minutes (longest first). Neither flashes.
         const waitRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalWaitingInfo(r, nowMs); })
-          .sort(function(a, b) { return (portalDoorAgeMinutes(b, nowMs) || 0) - (portalDoorAgeMinutes(a, nowMs) || 0); });   // longest on the lot first (real time, not the 10 PM-capped warning time)
+          .sort(function(a, b) { return (portalDockMinutes(b, nowMs) || 0) - (portalDockMinutes(a, nowMs) || 0); });   // longest on the dock first (the time each tile shows, not the 10 PM-capped warning time)
         const longRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalLongUnloadInfo(r, nowMs); })
           .sort(function(a, b) { return a.unloadStartMs - b.unloadStartMs; });
         const zr = est ? est[g.def.key] : null;
@@ -19009,7 +19032,7 @@
           + portalZonePctHtml(m)
           + '<div class="zone-sub"><div class="zs-stat"><b>' + m.completed + ' of ' + m.scheduled + '</b><span>trucks complete</span></div>'
           + (m.arrived ? '<div class="zs-stat"><b>' + Math.round(m.completed / m.arrived * 100) + '%</b><span>of arrived trucks finished</span></div>' : '') + '</div>'
-          + '<section class="zone-sec zone-wait' + (waitRows.length ? ' has-items' : '') + '"><div class="zone-sec-head">On the lot ' + PORTAL_WAITING_MIN + '+ min, not started <span class="n">' + waitRows.length + '</span></div>'
+          + '<section class="zone-sec zone-wait' + (waitRows.length ? ' has-items' : '') + '"><div class="zone-sec-head">Driver on dock ' + PORTAL_WAITING_MIN + '+ min, not started <span class="n">' + waitRows.length + '</span></div>'
           + (waitRows.length ? '<div class="door-map zone-wide-map">' + waitRows.map(tileOf).join("") + '</div>' : '<div class="zone-sec-none">None right now</div>')
           + '</section>'
           + '<section class="zone-sec zone-long' + (longRows.length ? ' has-long' : '') + '"><div class="zone-sec-head">Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min <span class="n">' + longRows.length + '</span></div>'
@@ -19032,7 +19055,7 @@
           + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 20 minutes past the goal and red when it is more than 20 past. The whole zone card takes the same colour: light green when the zone will finish on or before the goal, yellow 5 to 20 minutes past it, red more than 20 past. Colours start at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
           + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
-          + '<b>On the lot ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in that have waited ' + PORTAL_WAITING_MIN + ' minutes without unloading starting, counted from 5 minutes before the clerk check-in stamp, longest first (the minutes on each tile are the real time since the driver reached the door). A truck is not counted until the clerk has checked it in. Warnings start at 10 PM, so nothing is listed earlier and trucks checked in before 10 PM are counted from 10 PM. '
+          + '<b>Driver on dock ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in whose driver has been on the dock ' + PORTAL_WAITING_MIN + ' minutes or more without unloading starting, longest first. <b>Driver on dock for</b> on each tile counts from 5 minutes before the clerk check-in stamp; a truck the clerk has not checked in shows <b>Waiting on clerk</b> instead and is not listed. Warnings (the colours and this list) start at 10 PM, so nothing is flagged earlier and trucks checked in before 10 PM are counted from 10 PM. '
           + '<b>Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min</b> lists loads that started unloading and are still not finished, longest first (a spill noted in DMS shows amber). '
           + '<b>All doors</b> opens the zone\'s full door map; Sort doors by reorders it. '
           + '<b>Started</b> (green) = trucks whose unload has begun, finished ones included. <b>Unloaded &amp; finished</b> (blue) = trucks whose unload is done. Both are out of every truck scheduled for the zone tonight.';
