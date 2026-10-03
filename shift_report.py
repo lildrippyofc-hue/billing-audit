@@ -12,7 +12,7 @@ field so old cached nights are rebuilt instead of showing gaps.
 from datetime import datetime, time, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
-SUMMARY_VERSION = 2
+SUMMARY_VERSION = 3
 
 STEP_MIN = 15
 STEPS = 57                 # 7 PM .. 9 AM inclusive, in 15-minute steps
@@ -21,6 +21,7 @@ GOAL_MIN = 540             # 4 AM (OKS); Minnesota passes 600 for its 5 AM goal
 UNLOAD_CAP_MIN = 480       # an unload longer than this is a stamping error, not a real unload
 DOCK_CAP_MIN = 720
 OVER_MIN = 120             # "over 2 hours on the dock" (the default free time)
+LONG_UNLOAD_MIN = 45       # an unload longer than this is flagged "unloading over 45 min" on the live Zones screen
 MIN_NIGHT_ARRIVALS = 10    # a night with fewer arrivals is treated as "no shift" and kept out of baselines
 ZONE_KEYS = ("freezer", "chilled", "dry", "other")
 
@@ -40,6 +41,16 @@ _BASELINE_METRICS = (
     "last_finish_min", "peak_unloading", "avg_yard_wait_min", "avg_door_wait_min", "pallets_per_truck",
     "p25_finish_min", "p75_finish_min", "p90_finish_min", "first_start_min", "first_arrival_min",
     "doors_used", "avg_rec_lag_min", "rec_delays_45", "pallets_scheduled", "peak_on_dock", "avg_on_dock", "pre_shift_arrivals",
+)
+
+
+_ZONE_BASELINE_METRICS = (
+    "scheduled", "arrived", "completed", "open", "never_arrived", "rejected", "pallets", "pallets_scheduled", "pallets_per_truck",
+    "first_arrival_min", "first_start_min", "p50_finish_min", "p90_finish_min", "p95_finish_min", "last_finish_min", "finished_by_goal", "pct_by_goal",
+    "avg_unload_min", "p50_unload_min", "p90_unload_min", "max_unload_min", "long_unloads", "pph",
+    "avg_wait_min", "p90_wait_min", "max_wait_min", "waited_30", "waited_60", "avg_yard_wait_min", "avg_door_wait_min",
+    "avg_dock_min", "p90_dock_min", "longest_dock_min", "over_2h", "over_3h", "avg_rec_lag_min", "rec_delays_45",
+    "on_time_pct", "early_pct", "late_pct", "avg_offset_min", "peak_on_dock", "avg_on_dock", "peak_unloading", "doors_used",
 )
 
 
@@ -118,28 +129,158 @@ def _curve(times: List[float], weights: Optional[List[float]] = None) -> List[fl
     return out
 
 
-def _zone_block(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _zone_block(items: List[Dict[str, Any]], goal_min: int = GOAL_MIN) -> Dict[str, Any]:
+    """Everything one zone's end-of-shift scorecard needs. `items` are that zone's truck rows (see summarize_night)."""
     fins = sorted(i["fin"] for i in items if i["fin"] is not None)
     unload = [i["unload"] for i in items if i["unload"] is not None]
     waits = [i["wait"] for i in items if i["wait"] is not None]
     docks = [i["dock"] for i in items if i["dock"] is not None]
+    yards = [i["yard"] for i in items if i["yard"] is not None]
+    dwaits = [i["dwait"] for i in items if i["dwait"] is not None]
+    reclags = [i["reclag"] for i in items if i["reclag"] is not None]
+    offsets = [i["offset"] for i in items if i["offset"] is not None]
     pal_h = sum(i["unload"] / 60 for i in items if i["unload"] is not None and i["pallets"])
     pal_n = sum(i["pallets"] for i in items if i["unload"] is not None and i["pallets"])
-    arr = sorted(i["ci"] for i in items if i["ci"] is not None)
+    arrived = [i for i in items if i["ci"] is not None]
+    arr = sorted(i["ci"] for i in arrived)
+    starts = sorted(i["us"] for i in items if i["us"] is not None)
+    by_goal = sum(1 for f in fins if f <= goal_min)
+    un_sorted, wait_sorted, dock_sorted = sorted(unload), sorted(waits), sorted(docks)
+
+    # The zone's trucks on the dock at each 15-minute mark, how many of them were waiting to start, and the most unloading at once.
+    on_dock, waiting_now, unloading_now = [], [], []
+    for k in range(STEPS):
+        t = k * STEP_MIN
+        od = sum(1 for r in arrived if r["ci"] <= t and (r["fin"] is None or r["fin"] > t))
+        un = sum(1 for r in arrived if r["us"] is not None and r["us"] <= t and (r["fin"] is None or r["fin"] > t))
+        on_dock.append(od)
+        unloading_now.append(un)
+        waiting_now.append(max(0, od - un))
+    events: List[Any] = []
+    for r in items:
+        if r["unload"] is not None:
+            events.append((r["us"], 1))
+            events.append((r["uf"], -1))
+    events.sort(key=lambda e: (e[0], e[1]))
+    live = peak_unloading = 0
+    for _, step in events:
+        live += step
+        peak_unloading = max(peak_unloading, live)
+    peak_on_dock = max(on_dock) if on_dock else 0
+
+    hourly = []
+    for h in range(HOURS):
+        lo, hi = h * 60, (h + 1) * 60
+        in_h = [r for r in items if r["ci"] is not None and lo <= r["ci"] < hi]
+        fin_h = [r for r in items if r["fin"] is not None and lo <= r["fin"] < hi]
+        hourly.append({"arrivals": len(in_h), "finishes": len(fin_h), "pallets_out": sum(r["pallets"] or 0 for r in fin_h)})
+
+    punct = [0] * len(PUNCT_LABELS)
+    for o in offsets:
+        punct[_punct_bucket(o)] += 1
+
+    door_acc: Dict[int, Dict[str, float]] = {}
+    for r in items:
+        if r["door"] is None or (r["us"] is None and r["fin"] is None):
+            continue
+        d = door_acc.setdefault(r["door"], {"trucks": 0, "pallets": 0, "busy": 0.0, "n": 0})
+        d["trucks"] += 1
+        d["pallets"] += r["pallets"] or 0
+        if r["unload"] is not None:
+            d["busy"] += r["unload"]
+            d["n"] += 1
+    doors = sorted(({"door": k, "trucks": int(v["trucks"]), "pallets": int(v["pallets"]),
+                     "avg_unload_min": _r(v["busy"] / v["n"]) if v["n"] else None} for k, v in door_acc.items()),
+                   key=lambda x: (-x["trucks"], x["door"]))
+
+    sup_acc: Dict[str, Dict[str, Any]] = {}
+    for r in items:
+        if r["supplier"] and (r["fin"] is not None or r["ci"] is not None):
+            sp = sup_acc.setdefault(r["supplier"], {"name": r["supplier"], "trucks": 0, "pallets": 0, "dock_total": 0.0, "n_dock": 0})
+            sp["trucks"] += 1
+            sp["pallets"] += r["pallets"] or 0
+            if r["dock"] is not None:
+                sp["dock_total"] += r["dock"]
+                sp["n_dock"] += 1
+    suppliers = sorted(({"supplier": v["name"], "trucks": v["trucks"], "pallets": v["pallets"],
+                         "avg_dock_min": _r(v["dock_total"] / v["n_dock"]) if v["n_dock"] else None} for v in sup_acc.values()),
+                       key=lambda x: (-x["pallets"], -x["trucks"], x["supplier"]))[:6]
+    longest = sorted((r for r in items if r["dock"] is not None), key=lambda r: -r["dock"])[:5]
+    longest_docks = [{"supplier": r["supplier"], "door": r["door"], "dock_min": _r(r["dock"]), "wait_min": _r(r["wait"]),
+                      "unload_min": _r(r["unload"]), "pallets": r["pallets"]} for r in longest]
+    slowest = sorted((r for r in items if r["unload"] is not None), key=lambda r: -r["unload"])[:5]
+    slowest_unloads = [{"supplier": r["supplier"], "door": r["door"], "unload_min": _r(r["unload"]), "pallets": r["pallets"]} for r in slowest]
+
     return {
+        # volume
         "scheduled": len(items),
         "arrived": len(arr),
         "completed": len(fins),
-        "p95_finish_min": _r(_pct(fins, 0.95)),
-        "avg_unload_min": _r(_mean(unload)),
-        "avg_wait_min": _r(_mean(waits)),
-        "avg_dock_min": _r(_mean(docks)),
-        "over_2h": sum(1 for d in docks if d > OVER_MIN),
-        "pph": _r(pal_n / pal_h) if pal_h > 0 else None,
+        "open": sum(1 for i in items if i["ci"] is not None and i["fin"] is None),
+        "never_arrived": sum(1 for i in items if i["ci"] is None and i["fin"] is None),
+        "rejected": 0,                                  # filled in by summarize_night (rejected loads are not in `items`)
         "pallets": sum(i["pallets"] or 0 for i in items if i["fin"] is not None),
         "pallets_scheduled": sum(i["pallets"] or 0 for i in items),
+        "pallets_per_truck": _r(sum(i["pallets"] or 0 for i in arrived) / len([i for i in arrived if i["pallets"]])) if any(i["pallets"] for i in arrived) else None,
+        # when the zone finished
+        "first_arrival_min": _r(arr[0]) if arr else None,
+        "first_start_min": _r(starts[0]) if starts else None,
+        "p50_finish_min": _r(_pct(fins, 0.5)),
+        "p90_finish_min": _r(_pct(fins, 0.9)),
+        "p95_finish_min": _r(_pct(fins, 0.95)),
+        "last_finish_min": _r(fins[-1]) if fins else None,
+        "finished_by_goal": by_goal,
+        "pct_by_goal": _r(100.0 * by_goal / len(arr)) if arr else None,
+        # unloading speed
+        "avg_unload_min": _r(_mean(unload)),
+        "p50_unload_min": _r(_pct(un_sorted, 0.5)),
+        "p90_unload_min": _r(_pct(un_sorted, 0.9)),
+        "max_unload_min": _r(un_sorted[-1]) if un_sorted else None,
+        "long_unloads": sum(1 for u in unload if u > LONG_UNLOAD_MIN),
+        "pph": _r(pal_n / pal_h) if pal_h > 0 else None,
+        "timed_unloads": len(unload),
+        # waiting
+        "avg_wait_min": _r(_mean(waits)),
+        "p90_wait_min": _r(_pct(wait_sorted, 0.9)),
+        "max_wait_min": _r(wait_sorted[-1]) if wait_sorted else None,
+        "waited_30": sum(1 for w in waits if w > 30),
+        "waited_60": sum(1 for w in waits if w > 60),
+        "avg_yard_wait_min": _r(_mean(yards)),
+        "avg_door_wait_min": _r(_mean(dwaits)),
+        # time on the dock
+        "avg_dock_min": _r(_mean(docks)),
+        "p90_dock_min": _r(_pct(dock_sorted, 0.9)),
+        "longest_dock_min": _r(dock_sorted[-1]) if dock_sorted else None,
+        "over_2h": sum(1 for d in docks if d > OVER_MIN),
+        "over_3h": sum(1 for d in docks if d > 180),
+        # receiving after the unload
+        "avg_rec_lag_min": _r(_mean(reclags)),
+        "rec_delays_45": sum(1 for x in reclags if x > 45),
+        "rec_open": sum(1 for i in items if i["uf"] is not None and i["rf"] is None),
+        # arrivals against the appointment
+        "punct_n": len(offsets),
+        "on_time_pct": _r(100.0 * punct[4] / len(offsets)) if offsets else None,
+        "early_pct": _r(100.0 * sum(punct[:4]) / len(offsets)) if offsets else None,
+        "late_pct": _r(100.0 * sum(punct[5:]) / len(offsets)) if offsets else None,
+        "avg_offset_min": _r(_mean(offsets)),
+        # load on the zone's doors
+        "peak_on_dock": peak_on_dock,
+        "peak_on_dock_at_min": on_dock.index(peak_on_dock) * STEP_MIN if peak_on_dock else None,
+        "avg_on_dock": _r(_mean(on_dock[:49])),
+        "peak_unloading": peak_unloading,
+        "doors_used": len(doors),
+        # through the night
         "curve_fin": [int(v) for v in _curve(fins)],
-        "curve_arr": [int(v) for v in _curve(arr)],
+        "curve_arr": [int(v) for v in _curve(sorted(i["ci"] for i in arrived))],
+        "on_dock": on_dock,
+        "waiting": waiting_now,
+        "unloading": unloading_now,
+        "hourly": hourly,
+        # who and what
+        "doors": doors[:6],
+        "suppliers": suppliers,
+        "longest_docks": longest_docks,
+        "slowest_unloads": slowest_unloads,
     }
 
 
@@ -270,7 +411,7 @@ def summarize_night(trucks: List[Dict[str, Any]], business_date: str, tz,
     for key in ZONE_KEYS:
         items = [r for r in rows if r["zone"] == key]
         if items:
-            zones[key] = _zone_block(items)
+            zones[key] = _zone_block(items, goal_min)
 
     # Doors: how many trucks and pallets each door handled and how long it spent unloading.
     door_acc: Dict[int, Dict[str, float]] = {}
@@ -314,6 +455,10 @@ def summarize_night(trucks: List[Dict[str, Any]], business_date: str, tz,
     longest_docks = [{"supplier": r["supplier"], "door": r["door"], "area": r["area"], "dock_min": _r(r["dock"]),
                       "wait_min": _r(r["wait"]), "unload_min": _r(r["unload"]), "pallets": r["pallets"]} for r in longest]
     rej_rows = rejected_rows or []
+    for x in rej_rows:                                  # rejected loads are not in `rows`, so count them per zone here
+        k = zone_of(x.get("area"))
+        if k in zones:
+            zones[k]["rejected"] += 1
     rejected_detail = [{"supplier": str(x.get("supplier") or "").strip(), "area": str(x.get("area") or "").strip(),
                         "pallets": x.get("pallets") if isinstance(x.get("pallets"), (int, float)) else None}
                        for x in rej_rows[:30]]
@@ -428,8 +573,13 @@ def build_baseline(previous: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         have = [s["zones"][key] for s in use if key in s["zones"]]
         if have:
             z = {m: _r(_mean([x[m] for x in have if x.get(m) is not None]))
-                 for m in ("scheduled", "arrived", "completed", "p95_finish_min", "avg_unload_min", "avg_wait_min", "avg_dock_min", "over_2h", "pph", "pallets", "pallets_scheduled")}
-            z["curve_fin"] = _mean_list([x["curve_fin"] for x in have if x.get("curve_fin")])
+                 for m in _ZONE_BASELINE_METRICS}
+            for arr_key in ("curve_fin", "curve_arr", "on_dock", "waiting", "unloading"):
+                lists = [x[arr_key] for x in have if x.get(arr_key)]
+                if lists:
+                    z[arr_key] = _mean_list(lists)
+            z["hourly"] = [{f: _r(_mean([x["hourly"][h][f] for x in have if x.get("hourly") and x["hourly"][h].get(f) is not None]))
+                            for f in ("arrivals", "finishes", "pallets_out")} for h in range(HOURS)]
             zones[key] = z
     out["zones"] = zones
     return out

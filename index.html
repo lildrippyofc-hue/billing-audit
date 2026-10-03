@@ -4545,9 +4545,13 @@
        then the zone's full door map on demand. Nothing in the cards flashes. */
     .zone-sec { margin-top:26px; padding-top:16px; border-top:5px solid #e2e8f0; min-width:0; }
     :root.dark .zone-sec { border-top-color:#2d3748; }
+    .zone-clerk.has-clerk { border-top-color:#9f7aea; }
     .zone-wait.has-items { border-top-color:#f6ad55; }
     .zone-long.has-long { border-top-color:#fc8181; }
     .zone-sec-head { display:flex; align-items:center; gap:8px; font-size:0.84em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); margin-bottom:8px; }
+    .zone-clerk.has-clerk .zone-sec-head { color:#6b46c1; }
+    :root.dark .zone-clerk.has-clerk .zone-sec-head { color:#b794f4; }
+    .zone-clerk.has-clerk .zone-sec-head .n { background:#805ad5; color:#fff; }
     .zone-wait.has-items .zone-sec-head { color:#b7791f; }
     :root.dark .zone-wait.has-items .zone-sec-head { color:#f6ad55; }
     .zone-long.has-long .zone-sec-head { color:#c53030; }
@@ -8900,7 +8904,7 @@
       client: ["overview", "data", "trends", "help"],
       work: ["overview", "data", "ddp", "truckFinder", "audit", "turnTracker", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       guest: ["overview", "data", "help"],
-      azaudit: ["azTimeAudit"]
+      azaudit: ["myPortal", "myPortalMn", "unloaderPerformance", "azTimeAudit"]
     };
     // PowerView-style billing audit site config — declared here (not down by
     // its render code) so the file-input/run-button wiring that runs at page
@@ -10587,7 +10591,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalSetView("zones"); }, target: portalTourEl("portalZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>driver on the dock 30+ minutes (counted from 5 minutes before the clerk's check-in) without starting</b>, longest first, as big tiles. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> if the clerk has not checked the truck in yet. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you, as big tiles, longest first. First <b>Waiting for the clerk 30+ min</b>: the driver is on the dock but the clerk has not checked the truck in yet (counted from the driver reaching the door, never before 10 PM). Then <b>Driver on dock 30+ min, not started</b>: counted from 5 minutes before the clerk's check-in. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> while the clerk has not checked it in. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
@@ -10636,7 +10640,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>driver on the dock 30+ minutes (counted from 5 minutes before the clerk's check-in) without starting</b>, longest first, as big tiles. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> if the clerk has not checked the truck in yet. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you, as big tiles, longest first. First <b>Waiting for the clerk 30+ min</b>: the driver is on the dock but the clerk has not checked the truck in yet (counted from the driver reaching the door, never before 10 PM). Then <b>Driver on dock 30+ min, not started</b>: counted from 5 minutes before the clerk's check-in. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> while the clerk has not checked it in. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
@@ -18265,6 +18269,20 @@
       return { mins: mins };
     }
 
+    // A truck whose driver has reached the dock but that the clerk has not checked in yet (no clerk stamp) and that has not started
+    // unloading. It has no "driver on dock" clock until the clerk stamps it, so this is the list that keeps those trucks from going
+    // unwatched. Counted from the driver reaching the door (else check-in), never before 10 PM, like the other warnings.
+    const PORTAL_CLERK_WAIT_MIN = 30;
+    function portalClerkWaitInfo(r, now) {
+      if (!r || r.status === "complete" || r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs) return null;
+      if (r.clerkCheckInMs || portalIsoToMs(r.clerkCheckInIso)) return null;           // the clerk already has it
+      const arrived = r.driverAtDoorMs || r.checkInMs;
+      if (!arrived) return null;
+      const mins = Math.floor((now - Math.max(arrived, portalWarnFloorMs(now))) / 60000);
+      if (mins < PORTAL_CLERK_WAIT_MIN || mins > PORTAL_NS_STALE_MIN) return null;
+      return { mins: mins };
+    }
+
     // Higher = more urgent. Tier first, then the longer wait within a tier.
     function portalDoorPriority(r, now, th) {
       if (!r) return -1;
@@ -19034,6 +19052,8 @@
         // started but still unloading after 45 minutes (longest first). Neither flashes.
         const waitRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalWaitingInfo(r, nowMs); })
           .sort(function(a, b) { return (portalDockMinutes(b, nowMs) || 0) - (portalDockMinutes(a, nowMs) || 0); });   // longest on the dock first (the time each tile shows, not the 10 PM-capped warning time)
+        const clerkRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalClerkWaitInfo(r, nowMs); })
+          .sort(function(a, b) { return (portalDoorAgeMinutes(b, nowMs) || 0) - (portalDoorAgeMinutes(a, nowMs) || 0); });   // longest waiting first (the time each tile shows)
         const longRows = liveRows.filter(function(r) { return zoneOf(r) === gi && portalLongUnloadInfo(r, nowMs); })
           .sort(function(a, b) { return a.unloadStartMs - b.unloadStartMs; });
         const zr = est ? est[g.def.key] : null;
@@ -19050,6 +19070,9 @@
           + portalZonePctHtml(m)
           + '<div class="zone-sub"><div class="zs-stat"><b>' + m.completed + ' of ' + m.scheduled + '</b><span>trucks complete</span></div>'
           + (m.arrived ? '<div class="zs-stat"><b>' + Math.round(m.completed / m.arrived * 100) + '%</b><span>of arrived trucks finished</span></div>' : '') + '</div>'
+          + '<section class="zone-sec zone-clerk' + (clerkRows.length ? ' has-clerk' : '') + '"><div class="zone-sec-head">Waiting for the clerk ' + PORTAL_CLERK_WAIT_MIN + '+ min <span class="n">' + clerkRows.length + '</span></div>'
+          + (clerkRows.length ? '<div class="door-map zone-wide-map">' + clerkRows.map(tileOf).join("") + '</div>' : '<div class="zone-sec-none">None right now</div>')
+          + '</section>'
           + '<section class="zone-sec zone-wait' + (waitRows.length ? ' has-items' : '') + '"><div class="zone-sec-head">Driver on dock ' + PORTAL_WAITING_MIN + '+ min, not started <span class="n">' + waitRows.length + '</span></div>'
           + (waitRows.length ? '<div class="door-map zone-wide-map">' + waitRows.map(tileOf).join("") + '</div>' : '<div class="zone-sec-none">None right now</div>')
           + '</section>'
@@ -20157,6 +20180,168 @@
       });
       const zonesTable = shiftRptTable([{ t: "Zone" }, { t: "Scheduled", num: 1 }, { t: "Arrived", num: 1 }, { t: "Unloaded", num: 1 }, { t: "95% done", num: 1 }, { t: "Avg wait", num: 1 }, { t: "Avg on dock", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Pallets", num: 1 }, { t: "Over 2 h", num: 1 }], zoneRows, "wide");
 
+      // --- zone scorecards: one card per zone with the night's verdict, every number against that zone's own earlier-night average,
+      // four charts, six night-by-night trends and the zone's longest, slowest, busiest and top items ---
+      const scFinal = !!status.final;
+      const scOrder = ["freezer", "chilled", "dry", "other"].filter(function(z) { const a = (t.zones || {})[z]; return a && (z !== "other" || a.scheduled >= 3); });
+      const scName = function(z) { return SHIFT_RPT_ZONES[z] || z; };
+      const scN0 = function(x) { return x == null ? "--" : shiftRptNum(x, 0); };
+      const scN1 = function(x) { return x == null ? "--" : shiftRptNum(x, 1); };
+      const scPct = function(x) { return x == null ? "--" : shiftRptNum(x, 0) + "%"; };
+      const scDur = function(x) { return x == null ? "--" : shiftRptDur(x); };
+      const scClk = function(x) { return x == null ? "--" : shiftRptClock(x); };
+      const scOff = function(x) { return x == null ? "--" : (x < 0 ? shiftRptDur(-x) + " early" : shiftRptDur(x) + " late"); };
+      // The verdict uses the live Zones screen's own lines on the zone's 95%-done time: on goal = at or before the goal or up to 5 minutes
+      // after it, close = 5 to 20 minutes past, past goal = more than 20 minutes past.
+      const scVerdict = function(a) {
+        if (a.completed < 3 || a.p95_finish_min == null) return { cls: "none", chip: "", label: "Too few finished", detail: "" };
+        const d = a.p95_finish_min - goal;
+        const level = d <= 5 ? "ok" : d <= 20 ? "close" : "late";
+        const detail = Math.abs(d) < 0.5 ? "right on the " + goalShort + " goal" : d < 0 ? shiftRptDur(-d) + " before the " + goalShort + " goal" : shiftRptDur(d) + " past the " + goalShort + " goal";
+        const label = !scFinal ? "In progress" : level === "ok" ? "On goal" : level === "close" ? "Close" : "Past goal";
+        return { cls: scFinal ? level : "none", chip: !scFinal ? "" : level === "ok" ? "band-green" : level === "close" ? "band-yellow" : "band-red", label: label, detail: detail };
+      };
+      const scTile = function(label, value, sub, cls) {
+        return '<div class="zt"><div class="zt-l">' + shiftRptEsc(label) + '</div><div class="zt-v">' + value + '</div>' + (sub ? '<div class="zt-s ' + (cls || "") + '">' + sub + '</div>' : '') + '</div>';
+      };
+      // A tile showing tonight's number and, underneath, how it compares with the zone's average over the earlier nights.
+      const scCmp = function(label, cur, bv, cfg, fmt, extra) {
+        const dd = cur != null && bv != null ? shiftRptDelta(cur, bv, cfg) : null;
+        const sub = (dd ? dd.text.replace(" than the average", "") + ' <span class="muted">(avg ' + shiftRptEsc(fmt(bv)) + ')</span>' : "") + (extra ? (dd ? "<br>" : "") + '<span class="muted">' + extra + '</span>' : "");
+        return scTile(label, shiftRptEsc(fmt(cur)), sub, dd ? dd.cls : "flat");
+      };
+      const scDn = function(words, fmt, tol) { return { better: "down", words: words, fmt: fmt, tol: tol }; };
+      const scUp = function(words, fmt, tol) { return { better: "up", words: words, fmt: fmt, tol: tol }; };
+      const scNeutral = function(fmt, tol) { return { words: ["more", "fewer"], fmt: fmt, tol: tol == null ? 1 : tol }; };
+      const scLater = ["later", "earlier"], scLonger = ["longer", "shorter"], scMore = ["more", "fewer"], scSlower = ["slower", "faster"];
+      const scGroup = function(title, tiles) { return '<h3 class="kg">' + shiftRptEsc(title) + '</h3><div class="zg">' + tiles.join("") + '</div>'; };
+      const scTrendMini = function(z, title, key, yFmt, opts) {
+        opts = opts || {};
+        const items = nightsAsc.map(function(n, i) {
+          const zz = n.zones && n.zones[z];
+          return { label: shiftRptDay(n.business_date).replace(/^\w+ /, ""), value: n.has_data && zz && zz[key] != null ? zz[key] : null, hi: i === nightsAsc.length - 1 };
+        });
+        return '<div class="card"><h3>' + shiftRptEsc(title) + '</h3>' + shiftRptSvgTrend({ items: items, yFmt: yFmt, goal: opts.goal, label: scName(z) + ": " + title + ", by night" }) + '</div>';
+      };
+      const scCard = function(z) {
+        const a = t.zones[z], base = b && b.zones ? b.zones[z] : null, col = SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other, v = scVerdict(a);
+        const bv = function(k) { return base ? base[k] : null; };
+        const finishTiles = [
+          scCmp("Zone done (95%)", a.p95_finish_min, bv("p95_finish_min"), scDn(scLater, scDur, 5), scClk),
+          scCmp("Last truck out", a.last_finish_min, bv("last_finish_min"), scDn(scLater, scDur, 5), scClk),
+          scCmp("Median truck done", a.p50_finish_min, bv("p50_finish_min"), scDn(scLater, scDur, 5), scClk),
+          scCmp("90% of trucks done", a.p90_finish_min, bv("p90_finish_min"), scDn(scLater, scDur, 5), scClk),
+          scCmp("Finished by " + goalShort, a.pct_by_goal, bv("pct_by_goal"), { better: "up", words: ["higher", "lower"], fmt: function(x) { return shiftRptNum(x, 0) + " pts"; }, tol: 2 }, scPct, scN0(a.finished_by_goal) + " of " + scN0(a.arrived) + " arrived"),
+          scCmp("First truck in", a.first_arrival_min, bv("first_arrival_min"), { words: scLater, fmt: scDur, tol: 10 }, scClk),
+          scCmp("First unload started", a.first_start_min, bv("first_start_min"), { words: scLater, fmt: scDur, tol: 10 }, scClk)
+        ];
+        const truckTiles = [
+          scCmp("Trucks unloaded", a.completed, bv("completed"), scNeutral(scN0), scN0, "of " + scN0(a.arrived) + " that arrived"),
+          scCmp("Scheduled", a.scheduled, bv("scheduled"), scNeutral(scN0), scN0),
+          scCmp("Never arrived", a.never_arrived, bv("never_arrived"), scDn(scMore, scN1, 1), scN0, "Rejected loads: " + scN0(a.rejected)),
+          scTile("Still open", scN0(a.open), a.open ? "arrived, not finished" : "nothing left open", a.open ? "bad" : "good"),
+          scCmp("Pallets unloaded", a.pallets, bv("pallets"), scNeutral(scN0, 5), scN0, "of " + scN0(a.pallets_scheduled) + " scheduled"),
+          scCmp("Pallets per truck", a.pallets_per_truck, bv("pallets_per_truck"), scNeutral(scN1, 1), scN1)
+        ];
+        const speedTiles = [
+          scCmp("Average unload", a.avg_unload_min, bv("avg_unload_min"), scDn(scSlower, scDur, 2), scDur),
+          scCmp("Typical (median) unload", a.p50_unload_min, bv("p50_unload_min"), scDn(scSlower, scDur, 2), scDur),
+          scCmp("Slowest 10% took over", a.p90_unload_min, bv("p90_unload_min"), scDn(scSlower, scDur, 3), scDur),
+          scCmp("Longest unload", a.max_unload_min, bv("max_unload_min"), scDn(scSlower, scDur, 5), scDur),
+          scCmp("Pallets per unload hour", a.pph, bv("pph"), scUp(["higher", "lower"], scN1, 0.5), scN1),
+          scCmp("Unloads over 45 min", a.long_unloads, bv("long_unloads"), scDn(scMore, scN1, 1), scN0, "of " + scN0(a.timed_unloads) + " timed unloads")
+        ];
+        const waitTiles = [
+          scCmp("Average wait to start", a.avg_wait_min, bv("avg_wait_min"), scDn(scLonger, scDur, 5), scDur),
+          scCmp("Slowest 10% waited over", a.p90_wait_min, bv("p90_wait_min"), scDn(scLonger, scDur, 5), scDur),
+          scCmp("Longest wait", a.max_wait_min, bv("max_wait_min"), scDn(scLonger, scDur, 10), scDur),
+          scCmp("Waited over 30 min", a.waited_30, bv("waited_30"), scDn(scMore, scN1, 1), scN0, "trucks, check-in to start"),
+          scCmp("Waited over 60 min", a.waited_60, bv("waited_60"), scDn(scMore, scN1, 1), scN0, "trucks, check-in to start"),
+          scCmp("Waiting for a door", a.avg_yard_wait_min, bv("avg_yard_wait_min"), scDn(scLonger, scDur, 3), scDur, "check-in to driver at the door"),
+          scCmp("Waiting at the door", a.avg_door_wait_min, bv("avg_door_wait_min"), scDn(scLonger, scDur, 3), scDur, "door to unload start")
+        ];
+        const dockTiles = [
+          scCmp("Average time on dock", a.avg_dock_min, bv("avg_dock_min"), scDn(scLonger, scDur, 5), scDur),
+          scCmp("Slowest 10% were over", a.p90_dock_min, bv("p90_dock_min"), scDn(scLonger, scDur, 5), scDur),
+          scCmp("Longest on the dock", a.longest_dock_min, bv("longest_dock_min"), scDn(scLonger, scDur, 10), scDur),
+          scCmp("Over 2 hours on dock", a.over_2h, bv("over_2h"), scDn(scMore, scN1, 1), scN0),
+          scCmp("Over 3 hours on dock", a.over_3h, bv("over_3h"), scDn(scMore, scN1, 1), scN0)
+        ];
+        const afterTiles = [
+          scCmp("Receiving started after", a.avg_rec_lag_min, bv("avg_rec_lag_min"), scDn(scLater, scDur, 3), scDur, "average, unload finish to receiving"),
+          scCmp("Receiving 45+ min late", a.rec_delays_45, bv("rec_delays_45"), scDn(scMore, scN1, 1), scN0),
+          scTile("Receiving still open", scN0(a.rec_open), a.rec_open ? "unloaded, no receiving finish" : "none", a.rec_open ? "bad" : "good"),
+          scCmp("Arrived on time", a.on_time_pct, bv("on_time_pct"), scUp(["higher", "lower"], function(x) { return shiftRptNum(x, 0) + " pts"; }, 2), scPct, "within 15 min of the appointment"),
+          scCmp("Arrived early", a.early_pct, bv("early_pct"), { words: ["higher", "lower"], fmt: function(x) { return shiftRptNum(x, 0) + " pts"; }, tol: 2 }, scPct),
+          scCmp("Arrived late", a.late_pct, bv("late_pct"), scDn(["higher", "lower"], function(x) { return shiftRptNum(x, 0) + " pts"; }, 2), scPct),
+          scCmp("Average arrival", a.avg_offset_min, bv("avg_offset_min"), { words: scLater, fmt: scDur, tol: 10 }, scOff, "against the appointment")
+        ];
+        const loadTiles = [
+          scCmp("Most trucks on the dock", a.peak_on_dock, bv("peak_on_dock"), scNeutral(scN1, 1), scN0, a.peak_on_dock_at_min != null ? "at " + shiftRptClock(a.peak_on_dock_at_min) : ""),
+          scCmp("Most unloading at once", a.peak_unloading, bv("peak_unloading"), scNeutral(scN1, 1), scN0),
+          scCmp("Average on the dock", a.avg_on_dock, bv("avg_on_dock"), scNeutral(scN1, 0.5), scN1, "7 PM to 7 AM"),
+          scCmp("Doors used", a.doors_used, bv("doors_used"), scNeutral(scN1, 1), scN0)
+        ];
+        // charts
+        const curve = shiftRptBoth(shiftRptSvgLines, { n: 57, series: (base && base.curve_fin ? [{ data: base.curve_fin, color: SR_C.avg, width: 2.2, dash: "6 4" }] : []).concat([{ data: cut(a.curve_fin), color: col, width: 3.2 }]),
+          xTicks: ticks, vlines: goalLine, label: scName(z) + ": trucks finished through the night" }, 230);
+        const hourlyBars = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: a.hourly.map(function(h) { return h.arrivals; }), color: SR_C.light }, { data: a.hourly.map(function(h) { return h.finishes; }), color: col }],
+          line: base && base.hourly ? { data: base.hourly.map(function(h) { return h.finishes; }), color: SR_C.avg } : null, label: scName(z) + ": trucks arriving and finishing each hour" }, 230);
+        const queue = shiftRptBoth(shiftRptSvgStacked, { n: 57, upto: upto, layers: [{ data: a.unloading, color: col }, { data: a.waiting, color: "#f6ad55" }],
+          line: base && base.on_dock ? { data: base.on_dock, color: SR_C.avg } : null, vlines: goalLine, label: scName(z) + ": trucks on the dock through the night" }, 230);
+        const clockTrend = scTrendMini(z, "When 95% were done", "p95_finish_min", shiftRptClock, { goal: { value: goal, label: goalShort } });
+        // tables
+        const none = function(text) { return '<div class="empty">' + text + '</div>'; };
+        const longTbl = (a.longest_docks || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Door", num: 1 }, { t: "On dock", num: 1 }, { t: "Wait", num: 1 }, { t: "Unload", num: 1 }, { t: "Pallets", num: 1 }],
+          a.longest_docks.map(function(x) { return { cells: [shiftRptEsc(x.supplier || "--"), x.door != null ? x.door : "--", scDur(x.dock_min), scDur(x.wait_min), scDur(x.unload_min), x.pallets != null ? shiftRptNum(x.pallets) : "--"] }; })) : none("No finished trucks.");
+        const slowTbl = (a.slowest_unloads || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Door", num: 1 }, { t: "Unload", num: 1 }, { t: "Pallets", num: 1 }],
+          a.slowest_unloads.map(function(x) { return { cells: [shiftRptEsc(x.supplier || "--"), x.door != null ? x.door : "--", scDur(x.unload_min), x.pallets != null ? shiftRptNum(x.pallets) : "--"] }; })) : none("No timed unloads.");
+        const doorTbl = (a.doors || []).length ? shiftRptTable([{ t: "Door" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg unload", num: 1 }],
+          a.doors.map(function(x) { return { cells: ['<b>' + x.door + '</b>', shiftRptNum(x.trucks), shiftRptNum(x.pallets), scDur(x.avg_unload_min)] }; })) : none("No door data.");
+        const supTbl = (a.suppliers || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg on dock", num: 1 }],
+          a.suppliers.map(function(x) { return { cells: [shiftRptEsc(x.supplier), shiftRptNum(x.trucks), shiftRptNum(x.pallets), scDur(x.avg_dock_min)] }; })) : none("No supplier data.");
+        // who unloaded here (only when names were entered and this login may see them)
+        const people = data.unloaders && data.unloaders.people ? data.unloaders.people : [];
+        const whoRows = [];
+        people.forEach(function(p) { (p.zone_table || []).forEach(function(zt) { if (zt.zone === z) whoRows.push({ name: p.name, zt: zt }); }); });
+        whoRows.sort(function(x, y) { return y.zt.loads - x.zt.loads; });
+        const whoCard = whoRows.length ? '<div class="card"><h3>Who unloaded here</h3>' + shiftRptTable([{ t: "Unloader" }, { t: "Loads", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Team, this zone", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Team pallets/hr", num: 1 }],
+          whoRows.map(function(r) { return { cells: ['<b>' + shiftRptEsc(r.name) + '</b>', shiftRptNum(r.zt.loads), scDur(r.zt.avg_unload_min), scDur(r.zt.team_avg_unload_min), r.zt.pph != null ? shiftRptNum(r.zt.pph, 1) : "--", r.zt.team_pph != null ? shiftRptNum(r.zt.team_pph, 1) : "--"] }; })) + '</div>' : "";
+        const legendCurve = legendLine(col, "This shift") + (base ? legendLine(SR_C.avg, "Zone average, " + nAvg + " night" + (nAvg === 1 ? "" : "s"), true) : "") + legendLine(SR_C.red, goalShort + " goal", true);
+        return '<div class="zcard zc-' + v.cls + '" id="zone-' + z + '">'
+          + '<div class="zhead"><h3><i class="zdot" style="background:' + col + '"></i>' + shiftRptEsc(scName(z)) + '</h3>'
+          + (v.cls === "none" && !v.label ? "" : '<span class="chip ' + v.chip + '">' + shiftRptEsc(v.label) + '</span>') + '</div>'
+          + '<div class="zbig">' + (a.p95_finish_min != null ? shiftRptEsc(shiftRptClock(a.p95_finish_min)) : "--") + ' <span class="zbig-l">95% of the zone done</span></div>'
+          + '<div class="zbig-s ' + (v.cls === "ok" ? "good" : v.cls === "late" ? "bad" : v.cls === "close" ? "amber" : "flat") + '">' + shiftRptEsc(v.detail) + (scFinal ? "" : " (shift still in progress, so far)") + '</div>'
+          + scGroup("When the zone finished", finishTiles) + scGroup("Trucks and pallets", truckTiles) + scGroup("Unloading speed", speedTiles)
+          + scGroup("Waiting to start", waitTiles) + scGroup("Time on the dock", dockTiles) + scGroup("After the unload, and arrivals", afterTiles) + scGroup("Load on the zone", loadTiles)
+          + '<h3 class="kg">Through the night</h3>'
+          + '<div class="two"><div class="card"><h3>Trucks finished</h3>' + curve + '<div class="legend">' + legendCurve + '</div></div>'
+          + '<div class="card"><h3>Arrivals and finishes by hour</h3>' + hourlyBars + '<div class="legend">' + legendBar(SR_C.light, "Trucks arriving") + legendBar(col, "Trucks finishing") + (base ? legendLine(SR_C.avg, "Zone average finishes", true) : "") + '</div></div></div>'
+          + '<div class="two"><div class="card"><h3>Trucks on the dock</h3>' + queue + '<div class="legend">' + legendBar(col, "Being unloaded") + legendBar("#f6ad55", "Waiting to start") + (base ? legendLine(SR_C.avg, "Zone average, all on dock", true) : "") + '</div></div>' + clockTrend + '</div>'
+          + '<h3 class="kg">Night by night</h3>'
+          + '<div class="three">' + scTrendMini(z, "Finished by " + goalShort + " (%)", "pct_by_goal", function(x) { return shiftRptNum(x, 0) + "%"; })
+            + scTrendMini(z, "Trucks unloaded", "completed", scN0) + scTrendMini(z, "Pallets per unload hour", "pph", scN0) + '</div>'
+          + '<div class="three">' + scTrendMini(z, "Average unload time", "avg_unload_min", function(x) { return shiftRptNum(x, 0) + "m"; })
+            + scTrendMini(z, "Average wait to start", "avg_wait_min", function(x) { return shiftRptNum(x, 0) + "m"; })
+            + scTrendMini(z, "Over 2 hours on dock", "over_2h", scN0) + '</div>'
+          + '<h3 class="kg">The trucks behind the numbers</h3>'
+          + '<div class="two"><div class="card"><h3>Longest times on the dock</h3>' + longTbl + '</div><div class="card"><h3>Slowest unloads</h3>' + slowTbl + '</div></div>'
+          + '<div class="two"><div class="card"><h3>Busiest doors</h3>' + doorTbl + '</div><div class="card"><h3>Suppliers by pallets</h3>' + supTbl + '</div></div>'
+          + whoCard
+          + '</div>';
+      };
+      const scSummary = scOrder.length ? '<div class="zsum">' + scOrder.map(function(z) {
+        const v = scVerdict(t.zones[z]);
+        return '<a class="chip ' + v.chip + '" href="#zone-' + z + '" style="text-decoration:none">' + shiftRptEsc(scName(z)) + ': ' + shiftRptEsc(v.label) + (v.detail ? " &middot; " + shiftRptEsc(v.detail) : "") + '</a>';
+      }).join("") + '</div>' : "";
+      const scorecards = scOrder.length
+        ? scSummary + scOrder.map(scCard).join("")
+          + '<p class="note"><b>The verdict</b> uses the same lines as the live Zones screen on the time 95% of the zone\'s trucks were done: <b>on goal</b> is at or before the ' + shiftRptEsc(shiftRptGoalFull(t)) + ' goal or up to 5 minutes after it, <b>close</b> is 5 to 20 minutes past, <b>past goal</b> is more than 20 minutes past. '
+          + 'Small coloured lines compare a number with <b>that zone\'s own average over the earlier nights</b> shown in this report (green is better, red is worse, grey is neutral). Trucks that never arrived are left out of every time and percentage. '
+          + 'Plant loads (PLANTS/FLOWERS) count in the dry zone.</p>'
+        : '<div class="empty">No zone data for this shift.</div>';
+
       // --- doors ---
       const doorItems = (t.doors || []).slice(0, 15).map(function(d) { return { label: "Door " + d.door, value: d.trucks }; });
       const doorChart = doorItems.length ? shiftRptSvgHBars({ items: doorItems, fmt: function(v) { return shiftRptNum(v) + " trucks"; }, label: "Trucks handled by door" }) : '<div class="empty">No door data.</div>';
@@ -20234,7 +20419,7 @@
       const unloaderNote = data.unloaders_hidden ? "" : (data.unloaders ? "" : '<p class="note">No unloader names were entered on this shift, so there is no per-unloader section.</p>');
       const sec = function(id, title, body) { return '<section class="sec" id="' + id + '"><h2>' + title + '</h2>' + body + '</section>'; };
       const card = function(title, body, legend) { return '<div class="card"><h3>' + title + '</h3>' + body + (legend ? '<div class="legend">' + legend + '</div>' : '') + '</div>'; };
-      const toc = [["sec-glance", "At a glance"], ["sec-flow", "Flow"], ["sec-waiting", "Waiting and speed"], ["sec-appts", "Appointments"], ["sec-zones", "Zones"], ["sec-doors", "Doors"], ["sec-suppliers", "Suppliers and carriers"], ["sec-exceptions", "Exceptions"], ["sec-nights", "Night by night"]]
+      const toc = [["sec-glance", "At a glance"], ["sec-scorecards", "Zone scorecards"], ["sec-flow", "Flow"], ["sec-waiting", "Waiting and speed"], ["sec-appts", "Appointments"], ["sec-zones", "Zones"], ["sec-doors", "Doors"], ["sec-suppliers", "Suppliers and carriers"], ["sec-exceptions", "Exceptions"], ["sec-nights", "Night by night"]]
         .concat(unloaderHtml ? [["sec-unloaders", "Unloaders"]] : []).concat([["sec-hours", "Hour by hour"]])
         .map(function(x) { return '<a href="#' + x[0] + '">' + x[1] + '</a>'; }).join(" &middot; ");
       const css = ':root{--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--blue:#2b6cb0;--green:#2f855a;--red:#c53030;--amber:#b7791f}'
@@ -20258,6 +20443,15 @@
         + '.empty{color:var(--muted);font-size:.84rem;padding:14px 4px}.wide{font-size:.8rem}.defs{font-size:.78rem;color:var(--muted)}.defs li{margin:3px 0}'
         + '.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.cn{display:none}.top{font-size:.78rem}.top a{color:var(--blue);text-decoration:none}'
         + '@media(max-width:640px){.cw{display:none}.cn{display:block}.page{padding:16px 12px 30px}.two,.three{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-v{font-size:1.4rem}.tw table{min-width:460px}.tw table.wide{min-width:760px}}'
+        + '.zsum{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}.zsum .chip{font-size:.8rem;padding:3px 12px}'
+        + '.zcard{border:1px solid var(--line);border-left:8px solid #94a3b8;border-radius:10px;padding:12px 16px 14px;margin:14px 0}.zcard.zc-ok{border-left-color:#2f855a;background:#f6fcf8}.zcard.zc-close{border-left-color:#b7791f;background:#fffcf2}.zcard.zc-late{border-left-color:#c53030;background:#fff7f7}'
+        + '.zhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px}.zhead h3{font-size:1.15rem;margin:0}.zdot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px}.zhead .chip{font-size:.85rem;padding:3px 14px}'
+        + '.zbig{font-size:2.1rem;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:4px}.zbig-l{font-size:.85rem;font-weight:700;color:var(--muted)}.zbig-s{font-size:.95rem;font-weight:800}.amber{color:var(--amber)}'
+        + '.zg{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin:4px 0 2px}.zt{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;break-inside:avoid;min-width:0}'
+        + '.zt-l{font-size:.64rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.zt-v{font-size:1.2rem;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.25}.zt-s{font-size:.7rem;color:var(--muted);line-height:1.3}'
+        + '.zt-s.good{color:var(--green)}.zt-s.bad{color:var(--red)}.zt-s.flat{color:var(--muted)}'
+        + '@media(max-width:640px){.zg{grid-template-columns:repeat(2,minmax(0,1fr))}.zbig{font-size:1.7rem}.zcard{padding:10px 12px 12px}}'
+        + '@media print{.zg{grid-template-columns:repeat(4,minmax(0,1fr))}.zcard{break-inside:auto}.zhead{break-after:avoid}}'
         + '.card,.kpi{min-width:0}'
         + '@media print{.cw{display:block!important}.cn{display:none!important}body{background:#fff}.page{max-width:none;padding:0}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}h2{break-after:avoid;break-before:auto}.card,.kpi,tr{break-inside:avoid}.tw{overflow:visible}.tw table,.tw table.wide{min-width:0}table.wide{font-size:.66rem}th,td{padding:4px 4px}th{font-size:.6rem}.nw,.chip{white-space:normal}.toc,.top{display:none}@page{size:letter;margin:12mm}}';
       return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + shiftRptEsc(shiftRptSiteName(data)) + ' End-of-Shift Report ' + shiftRptEsc(t.business_date) + '</title><style>' + css + '</style></head><body><div class="page">'
@@ -20265,6 +20459,7 @@
         + '<div class="meta">Business date <b>' + shiftRptEsc(shiftRptLongDate(t.business_date)) + '</b> &middot; shift 7:00 PM to 9:00 AM &middot; generated ' + shiftRptEsc(generated) + '</div>'
         + banner + '<p class="meta">' + compare + '</p>' + missing + '<div class="toc">' + toc + '</div>'
         + sec("sec-glance", "The night at a glance", (insights.length ? '<ul class="insights">' + insights.map(function(s) { return '<li>' + s + '</li>'; }).join("") + '</ul>' : '') + shiftRptKpiGroups(data))
+        + sec("sec-scorecards", "Zone scorecards", scorecards)
         + sec("sec-flow", "Flow through the night",
             card("Trucks finished through the night", curveSvg, legendLine(SR_C.tonight, "This shift") + (b ? legendLine(SR_C.avg, avgText(), true) : "") + legendLine(SR_C.gray, "Each earlier night") + legendLine(SR_C.red, goalShort + " goal", true))
           + card("Trucks on the dock", queueSvg, legendBar(SR_C.tonight, "Being unloaded") + legendBar("#f6ad55", "Waiting to start") + (b ? legendLine(SR_C.avg, avgText("all on dock"), true) : ""))
@@ -24694,7 +24889,7 @@
       // Performance by Name has one menu entry per site: Minnesota's login sees only its own, the admin sees both, and
       // everyone else sees OKS's.
       document.querySelectorAll(".tab-button[data-perf-site]").forEach((button) => {
-        const mine = button.dataset.perfSite === "MN" ? (role === "minnesota" || role === "admin") : role !== "minnesota";
+        const mine = button.dataset.perfSite === "MN" ? (role === "minnesota" || portalBothSites(role)) : role !== "minnesota";
         if (!mine) { button.classList.add("role-hidden"); button.disabled = true; }
       });
       document.querySelectorAll(".menu-group").forEach((group) => {
@@ -24953,17 +25148,19 @@
     }
 
     // Performance by Name shows one site at a time: Minnesota's login sees Minnesota, the admin login can pick, everyone else OKS.
+    // The admin login and the Arizona-audit login can look at either site.
+    function portalBothSites(role) { role = role || state.auth.role; return role === "admin" || role === "azaudit"; }
     function portalPerfSite() {
       const role = state.auth.role;
       if (role === "minnesota") return "MN";
-      if (role === "admin") { const sel = document.getElementById("unloaderPerfSite"); return sel && sel.value === "MN" ? "MN" : "OKS"; }
+      if (portalBothSites(role)) { const sel = document.getElementById("unloaderPerfSite"); return sel && sel.value === "MN" ? "MN" : "OKS"; }
       return "OKS";
     }
     function portalPerfSiteLabel() { return portalPerfSite() === "MN" ? "Minnesota" : "OKS"; }
     // The admin login can show either site; this sets the Site picker (a no-op for every other login, which has one site).
     function portalPerfChooseSite(site) {
       const sel = document.getElementById("unloaderPerfSite");
-      if (sel && state.auth.role === "admin") sel.value = site === "MN" ? "MN" : "OKS";
+      if (sel && portalBothSites()) sel.value = site === "MN" ? "MN" : "OKS";
     }
     // Where the Back button goes: Minnesota's login always returns to its My Portal; the admin only when they came from a
     // My Portal's Performance tab (the section menu has no "back").
@@ -24986,7 +25183,7 @@
       const intro = document.getElementById("unloaderPerfIntro");
       if (intro) intro.innerHTML = "Built from the optional <b>Unloader</b> name added on a load's door popup in My Portal (" + label + "). Pallets and unload time fill in automatically as DMS records them, so a load only counts toward time and pallets-per-hour once its unload has finished.";
       const panel = document.getElementById("unloaderPerformancePanel"); if (panel) panel.setAttribute("aria-label", "Performance by Name (" + site + ")");
-      const wrap = document.getElementById("unloaderPerfSiteWrap"); if (wrap) wrap.style.display = state.auth.role === "admin" ? "inline-flex" : "none";
+      const wrap = document.getElementById("unloaderPerfSiteWrap"); if (wrap) wrap.style.display = portalBothSites() ? "inline-flex" : "none";
       if (panel && panel.classList.contains("active")) {
         document.querySelectorAll(".tab-button[data-perf-site]").forEach(function(b) { b.setAttribute("aria-selected", String(b.dataset.perfSite === site)); });
         if (els.sectionMenuCurrent) els.sectionMenuCurrent.textContent = "Live: Performance by Name (" + site + ")";

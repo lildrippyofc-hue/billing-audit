@@ -61,7 +61,7 @@ _APP_PASSWORD = os.environ.get("APP_PASSWORD", "N3747P9R")
 # clerk   -> live board, DMS stamp, clerk support
 # client  -> clean read-only reporting
 # guest   -> basic read-only reporting
-# azaudit -> Arizona Time Audit tab only
+# azaudit -> Arizona Time Audit tab, plus both My Portals and Performance by Name (view only; see _require_oks_view)
 _USERS: Dict[str, str] = {
     "james":   _hash(_APP_PASSWORD),
     "aldioks": _hash(os.environ.get("ALDIOKS_PASSWORD", os.environ.get("APP_PASSWORD", "N3747P9R"))),
@@ -1064,6 +1064,11 @@ def _require_roles(*roles: str):
 # that can open My Portal or DMS Stamp; Minnesota routes serve only minnesota.
 _require_oks_dms = _require_roles("oks", "manager", "teamlead", "clerk")
 _require_mn_dms = _require_roles("minnesota")
+# The Arizona-audit login (patrick) can also open both My Portals and Performance by Name. It reads the live boards and can take
+# part in team chat and door notes, but it is kept out of everything that writes to DMS (stamps, schedule upload), assigns unloader
+# names or posts announcements, so those routes stay on _require_oks_dms / _require_mn_dms / _require_unloader_write.
+_require_oks_view = _require_roles("oks", "manager", "teamlead", "clerk", "azaudit")
+_require_mn_view = _require_roles("minnesota", "azaudit")
 
 
 # ── Auth routes ───────────────────────────────────────────────────────────────
@@ -1542,7 +1547,7 @@ def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
 
 
 @app.get("/api/dms/session")
-def dms_session_status(_: str = Depends(_require_oks_dms)):
+def dms_session_status(_: str = Depends(_require_oks_view)):
     session = _ensure_dms_session()
     loc = session.get("loc") or {}
     return {
@@ -1557,7 +1562,7 @@ def dms_session_status(_: str = Depends(_require_oks_dms)):
 
 
 @app.get("/api/dms/mn/session")
-def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_dms)):
+def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_view)):
     session = _ensure_dms_mn_session(force=force)
     loc = session.get("loc") or {}
     return {
@@ -1572,7 +1577,7 @@ def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_dms)
 
 
 @app.get("/api/dms/mn/portal")
-def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depends(_require_mn_dms)):
+def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depends(_require_mn_view)):
     """Read Minnesota DMS load/stamp rows for the MN My Portal. This route never writes to DMS."""
     # Every open Minnesota portal polls this route; the shared copy (see _portal_cached) keeps extra viewers from multiplying the
     # load on DMS. The Sync button (force) skips it.
@@ -1580,7 +1585,7 @@ def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depe
 
 
 @app.get("/api/dms/portal")
-def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False, _: str = Depends(_require_oks_dms)):
+def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False, _: str = Depends(_require_oks_view)):
     """Read DMS load/stamp rows for My Portal. This route never writes to DMS."""
     # In debug mode, never 500 — capture and return whatever we can learn.
     if debug:
@@ -1715,14 +1720,14 @@ def _build_oks_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
 
 
 @app.post("/api/portal/learn-history")
-def portal_learn_history(days: int = 7, _: str = Depends(_require_oks_dms)):
+def portal_learn_history(days: int = 7, _: str = Depends(_require_oks_view)):
     """Backfill vendor learning from the last N days of real DMS shifts so the
     completion estimate is accurate right away instead of only over time."""
     return _learn_history(_ensure_dms_session(), days, "OKS")
 
 
 @app.post("/api/portal/mn/learn-history")
-def portal_mn_learn_history(days: int = 7, _: str = Depends(_require_mn_dms)):
+def portal_mn_learn_history(days: int = 7, _: str = Depends(_require_mn_view)):
     """Same backfill for Minnesota's Vendors tab."""
     return _learn_history(_ensure_dms_mn_session(), days, "MN")
 
@@ -3753,7 +3758,7 @@ def portal_learn(body: VendorLearnIn, _: str = Depends(_require_oks_dms)):
     conn.close()
     return {"ok": True, "inserted": inserted}
 
-_require_vendor_stats = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota")
+_require_vendor_stats = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota", "azaudit")
 
 
 def _site_param(site: str) -> str:
@@ -3761,9 +3766,9 @@ def _site_param(site: str) -> str:
 
 
 def _check_site_role(username: str, site: str) -> None:
-    """Each site's data is only readable/writable by that site's roles (admin sees either)."""
+    """Each site's data is only readable/writable by that site's roles (admin and the Arizona-audit login see either)."""
     role = _ROLES.get(username, "guest")
-    if role != "admin" and (role == "minnesota") != (site == "MN"):
+    if role not in ("admin", "azaudit") and (role == "minnesota") != (site == "MN"):
         raise HTTPException(status_code=403, detail="Not allowed for this login.")
 
 
@@ -3866,7 +3871,8 @@ def save_door_note(body: DoorNoteIn, site: str = "OKS", username: str = Depends(
 # My Portal sees it; Performance by Name aggregates it per person.
 
 _require_unloader_write = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota")
-_require_performance_read = _require_roles("oks", "manager", "teamlead", "minnesota")
+_require_unloader_read = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota", "azaudit")     # the boards show the names; only the others may change them
+_require_performance_read = _require_roles("oks", "manager", "teamlead", "minnesota", "azaudit")
 
 
 def _clean_unloader_name(raw: str) -> str:
@@ -3896,7 +3902,7 @@ class UnloaderIn(BaseModel):
 
 
 @app.get("/api/portal/unloaders")
-def get_unloaders(business_date: str = "", site: str = "OKS", username: str = Depends(_require_unloader_write)):
+def get_unloaders(business_date: str = "", site: str = "OKS", username: str = Depends(_require_unloader_read)):
     site = _site_param(site)
     _check_site_role(username, site)
     business_date = business_date.strip()
@@ -4235,7 +4241,7 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, site: str = "OKS
 
 # ── End-of-shift report ───────────────────────────────────────────────────────
 
-_REPORT_PERF_ROLES = {"oks", "manager", "teamlead", "minnesota", "admin"}     # same people who can open Performance by Name
+_REPORT_PERF_ROLES = {"oks", "manager", "teamlead", "minnesota", "admin", "azaudit"}     # same people who can open Performance by Name
 _REPORT_GOAL_MIN = {"OKS": 540, "MN": 600}                                     # 4 AM and 5 AM, minutes after the 7 PM start
 
 
