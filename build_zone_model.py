@@ -22,6 +22,7 @@ JSON file per night holding the load and stamp lists):
 `--hold-out FROM:TO` leaves those business dates out, to validate on them. The constant printed is
 PORTAL_ZONE_MODEL for OKS and PORTAL_ZONE_MODEL_MN for Minnesota.
 """
+import bisect
 import glob
 import json
 import os
@@ -147,6 +148,56 @@ def load_nights(path):
     return out
 
 
+# How each zone is modelled in the finish simulation: its own pool of `cap` servers (a percentile of "trucks being unloaded
+# at once" while the zone is active) and a minimum wait of `lag` minutes (a percentile of check-in -> unload start, the wait
+# that exists even when a door is free). (capacity percentile, start-lag percentile) per site and zone.
+#
+# Chosen by cross-validation on saved nights (each night scored by a model trained without it, error = estimate minus when 95%
+# of the zone's trucks really finished), then confirmed on nights the choice never saw. Without this, every zone shared one pool
+# of `doors` servers and started a truck the moment it checked in, which made the simulation finish far too early: Freezer and
+# Chilled really unload one to three trucks at a time.
+#   Minnesota: average error 49 -> 45 minutes on the confirmation nights (45.5 -> 41.4 on all 119), better at every hour of
+#   the night, Chilled 47 -> 35, and the typical estimate no longer runs early (median -20 -> -7).
+#   OKS: 68.2 -> 67.4, which is within the noise, so OKS keeps the old whole-dock pool (None = off).
+# Re-check after a large change in how either dock runs (staffing, door layout).
+STRUCTURE_PCT = {
+    "MN":  {"freezer": (75, 25), "chilled": (50, 10), "dry": (75, 10)},
+    "OKS": None,
+}
+CONC_STEP_MIN = 5
+
+
+def _pct(values, p):
+    values = sorted(values)
+    return values[min(len(values) - 1, int(len(values) * p / 100))]
+
+
+def zone_structure(nights, zone):
+    """(lags, concurrency) samples for one zone, from trucks with real check-in, unload start and unload finish stamps.
+
+    `lags` are check-in -> unload start in minutes. `concurrency` is how many of the zone's trucks were being unloaded at the
+    same moment, sampled every few minutes while at least one was (so quiet hours do not drag it down).
+    """
+    lags, conc = [], []
+    for night in nights:
+        ts = [t for t in zone_trucks(night, zone) if t["ci"] and t["us"] and t["uf"] and t["uf"] >= t["us"]]
+        for t in ts:
+            lag = (t["us"] - t["ci"]) / MIN
+            if 0 <= lag <= 600:
+                lags.append(lag)
+        if not ts:
+            continue
+        starts = sorted(t["us"] for t in ts)
+        fins = sorted(t["uf"] for t in ts)
+        at = starts[0]
+        while at <= fins[-1]:
+            c = bisect.bisect_right(starts, at) - bisect.bisect_right(fins, at)
+            if c > 0:
+                conc.append(c)
+            at += CONC_STEP_MIN * MIN
+    return lags, conc
+
+
 def zone_trucks(night, zone):
     """Trucks in one zone; zone=None means the whole building (including unzoned trucks)."""
     if zone is None:
@@ -206,7 +257,7 @@ def build(path, doors, keep_last=False):
     return build_from_nights(nights, doors)
 
 
-def build_from_nights(nights, doors):
+def build_from_nights(nights, doors, site="OKS", structure=True):
     models, pace = {}, {}
     for zone, _ in ZONES:
         sched = arrived = 0
@@ -221,6 +272,16 @@ def build_from_nights(nights, doors):
                 if t["ci"] and t["us"] and t["uf"] and t["uf"] >= t["us"]:
                     service.append((t["uf"] - t["us"]) / MIN)
         models[zone] = {"fmax": round(arrived / sched, 3), "offsets": percentiles(offsets), "service": percentiles(service)}
+        # Capacity and start lag. Without them the finish simulation lets every zone share one pool of `doors` servers and
+        # start a truck the moment it checks in, which made Freezer and Chilled finish far too early (they really unload one
+        # to three trucks at a time) and every zone too early by the wait that exists even on a quiet dock.
+        if structure and STRUCTURE_PCT.get(site):
+            cap_pct, lag_pct = STRUCTURE_PCT[site][zone]
+            lags, conc = zone_structure(nights, zone)
+            if conc:
+                models[zone]["cap"] = max(1, _pct(conc, cap_pct))
+            if lags:
+                models[zone]["lag"] = round(_pct(lags, lag_pct), 1)
 
         curves = [c for c in (curve(n, zone) for n in nights) if c]
         typical = [round(st.median(c[k] for c in curves), 3) for k in range(STEPS + 1)]
@@ -285,7 +346,7 @@ if __name__ == "__main__":
     if opt("--history"):
         site = (opt("--site") or "MN").upper()
         hold = tuple(opt("--hold-out").split(":")) if opt("--hold-out") else None
-        model = build_from_nights(load_nights_history(opt("--history"), site, hold), doors)
+        model = build_from_nights(load_nights_history(opt("--history"), site, hold), doors, site)
         const = "PORTAL_ZONE_MODEL_MN" if site == "MN" else "PORTAL_ZONE_MODEL"
     else:
         args = [a for a in sys.argv[1:] if not a.startswith("--") and a != str(opt("--doors"))]

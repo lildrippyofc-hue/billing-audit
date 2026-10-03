@@ -95,6 +95,14 @@ _ROLES: Dict[str, str] = {
 # In-memory session store (fine for a single-process server)
 _sessions: Dict[str, str] = {}
 
+# Who is online: every signed-in page checks in every 30 s while it is on screen. A browser that has not checked in for
+# _PRESENCE_TTL seconds stops counting, so closing the tab or locking the phone drops off within about a minute and a half.
+# One session is one browser: two tabs count once, two people on the same login count twice. Kept in memory like _sessions,
+# so it starts empty after a restart and refills within half a minute.
+_presence: Dict[str, Dict[str, Any]] = {}
+_PRESENCE_TTL = 90
+_presence_peak: Dict[str, Any] = {"day": "", "count": 0, "at": ""}
+
 # ── App setup ─────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="Billing Audit API")
@@ -965,8 +973,36 @@ def login(creds: LoginIn, response: Response):
 def logout(response: Response, session: Optional[str] = Cookie(default=None)):
     if session and session in _sessions:
         del _sessions[session]
+    if session:
+        _presence.pop(session, None)
     response.delete_cookie("session")
     return {"ok": True}
+
+
+def _presence_summary(now: Optional[float] = None) -> Dict[str, Any]:
+    """Who is online right now: the total and a count per login, plus the busiest moment of the current business date."""
+    now = time.time() if now is None else now
+    for token in [t for t, p in _presence.items() if now - p["seen"] > _PRESENCE_TTL or t not in _sessions]:
+        _presence.pop(token, None)
+    per_login: Dict[str, int] = {}
+    for p in _presence.values():
+        per_login[p["username"]] = per_login.get(p["username"], 0) + 1
+    total = len(_presence)
+    day = _dms_business_date(None)               # the shift's date, so the peak does not reset at midnight mid-shift
+    if _presence_peak["day"] != day:
+        _presence_peak.update(day=day, count=0, at="")
+    if total > _presence_peak["count"]:
+        _presence_peak.update(count=total, at=datetime.now(timezone.utc).isoformat())
+    logins = [{"username": u, "role": _ROLES.get(u, "guest"), "count": c} for u, c in per_login.items()]
+    logins.sort(key=lambda x: (-x["count"], x["username"]))
+    return {"ok": True, "total": total, "logins": logins, "peak": {"count": _presence_peak["count"], "at": _presence_peak["at"]}}
+
+
+@app.post("/api/presence")
+def presence_beat(session: Optional[str] = Cookie(default=None), username: str = Depends(require_auth)):
+    """A signed-in page checks in and gets back who is online (any login)."""
+    _presence[session] = {"username": username, "seen": time.time()}
+    return _presence_summary()
 
 
 @app.get("/api/me")
