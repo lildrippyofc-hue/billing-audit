@@ -13,15 +13,24 @@ The newest business date in the file is skipped unless you pass --keep-last (exp
 usually pulled before that night has finished). Paste the printed object over
 PORTAL_ZONE_MODEL in index.html. Rerun every month or two.
 The zone grouping below must match PORTAL_ZONE_GROUPS in index.html.
+
+Minnesota has no Ranged Report export, so its model is built from saved read-only DMS pulls (one
+JSON file per night holding the load and stamp lists):
+
+    py build_zone_model.py --history <folder> --site MN [--doors N] [--hold-out 2026-09-11:2026-09-24]
+
+`--hold-out FROM:TO` leaves those business dates out, to validate on them. The constant printed is
+PORTAL_ZONE_MODEL for OKS and PORTAL_ZONE_MODEL_MN for Minnesota.
 """
+import glob
 import json
+import os
 import re
 import statistics as st
 import sys
-from datetime import datetime, timedelta
+import tempfile
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-
-import openpyxl
 
 TZ = ZoneInfo("America/Chicago")
 MIN = 60000.0
@@ -62,7 +71,52 @@ def percentiles(values):
     return table
 
 
+def _iso_ms(value):
+    if not value:
+        return None
+    d = datetime.fromisoformat(str(value))
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    return d.timestamp() * 1000
+
+
+def load_nights_history(folder, site, hold_out=None, min_trucks=20, max_trucks=300):
+    """Nights from saved DMS pulls (`<SITE>_YYYY-MM-DD.json`), in the same shape load_nights() returns.
+
+    Trucks are the portal's own merged rows (rejected loads dropped), so a night here is exactly what
+    My Portal sees. Nights with fewer than `min_trucks` are not real shifts; nights with more than
+    `max_trucks` are a pull that spilled over several dates, not one shift. `hold_out` is an optional
+    ("YYYY-MM-DD", "YYYY-MM-DD") business-date range to leave out.
+    """
+    os.environ.setdefault("DATA_DIR", tempfile.mkdtemp(prefix="zone_model_"))
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import main                                            # only for _merge_dms_portal_rows
+    out = []
+    for path in sorted(glob.glob(os.path.join(folder, site + "_*.json"))):
+        d = json.load(open(path, encoding="utf-8"))
+        m, day, y = (int(x) for x in d["info"].split("/"))
+        if hold_out and hold_out[0] <= "%04d-%02d-%02d" % (y, m, day) <= hold_out[1]:
+            continue
+        trucks = []
+        for t in main._merge_dms_portal_rows(d["loads"], d["stamps"]):
+            door = str(t.get("door") or "").strip()
+            trucks.append({
+                "door": int(door) if door.isdigit() and int(door) > 0 else None,
+                "z": zone_of(t.get("area")),
+                "appt": _iso_ms(t.get("appointmentIso")),
+                "ci": _iso_ms(t.get("checkInIso")),
+                "us": _iso_ms(t.get("unloadStartIso")),
+                "uf": _iso_ms(t.get("unloadFinishIso")) or _iso_ms(t.get("receivingFinishIso")),
+            })
+        if not (min_trucks <= len(trucks) <= max_trucks):
+            continue
+        start = (datetime(y, m, day, 19, 0, tzinfo=TZ) - timedelta(days=1)).timestamp() * 1000
+        out.append({"start": start, "trucks": trucks, "date": "%04d-%02d-%02d" % (y, m, day)})
+    return out
+
+
 def load_nights(path):
+    import openpyxl
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     rows = list(wb.worksheets[0].iter_rows(values_only=True))
     header = [str(h).strip() for h in rows[0]]
@@ -149,6 +203,10 @@ def build(path, doors, keep_last=False):
     # teach the model that nights end early. Drop that last night unless told it is complete.
     if not keep_last and len(nights) > 1:
         nights = nights[:-1]
+    return build_from_nights(nights, doors)
+
+
+def build_from_nights(nights, doors):
     models, pace = {}, {}
     for zone, _ in ZONES:
         sched = arrived = 0
@@ -221,12 +279,19 @@ def zone_doors(nights, min_loads=10, min_share=0.6, max_door=200):
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    doors = int(sys.argv[sys.argv.index("--doors") + 1]) if "--doors" in sys.argv else 6
-    if "--doors" in sys.argv:
-        args = [a for a in args if a != str(doors)]
-    if not args:
-        sys.exit(__doc__)
-    model = build(args[0], doors, keep_last="--keep-last" in sys.argv)
+    def opt(name):
+        return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else None
+    doors = int(opt("--doors") or 6)
+    if opt("--history"):
+        site = (opt("--site") or "MN").upper()
+        hold = tuple(opt("--hold-out").split(":")) if opt("--hold-out") else None
+        model = build_from_nights(load_nights_history(opt("--history"), site, hold), doors)
+        const = "PORTAL_ZONE_MODEL_MN" if site == "MN" else "PORTAL_ZONE_MODEL"
+    else:
+        args = [a for a in sys.argv[1:] if not a.startswith("--") and a != str(opt("--doors"))]
+        if not args:
+            sys.exit(__doc__)
+        model = build(args[0], doors, keep_last="--keep-last" in sys.argv)
+        const = "PORTAL_ZONE_MODEL"
     print("// built from %d nights" % model["nights"], file=sys.stderr)
-    print("const PORTAL_ZONE_MODEL = " + json.dumps(model, separators=(",", ":")) + ";")
+    print("const " + const + " = " + json.dumps(model, separators=(",", ":")) + ";")

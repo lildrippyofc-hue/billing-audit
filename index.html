@@ -802,10 +802,10 @@
     .door-tile.open .door-no { color:var(--muted,#a0aec0); font-weight:700; }
     .door-open-label { font-size:0.74em; font-weight:700; color:#38a169; margin-top:auto; }
     /* A truck at the door whose unload has not started: yellow after the first threshold, red after the second. */
-    #myPortalPanel .door-tile.ns-yellow { background:#fffbea; border:2px solid #d69e2e; border-top:6px solid #d69e2e; box-shadow:0 0 0 3px rgba(214,158,46,.28); }
-    #myPortalPanel .door-tile.ns-red    { background:#fff1f0; border:2px solid #e53e3e; border-top:6px solid #e53e3e; box-shadow:0 0 0 3px rgba(229,62,62,.32); }
-    :root.dark #myPortalPanel .door-tile.ns-yellow { background:#3a3012; }
-    :root.dark #myPortalPanel .door-tile.ns-red    { background:#4a1d1d; }
+    #myPortalPanel .door-tile.ns-yellow, #myPortalMnPanel .door-tile.ns-yellow { background:#fffbea; border:2px solid #d69e2e; border-top:6px solid #d69e2e; box-shadow:0 0 0 3px rgba(214,158,46,.28); }
+    #myPortalPanel .door-tile.ns-red, #myPortalMnPanel .door-tile.ns-red    { background:#fff1f0; border:2px solid #e53e3e; border-top:6px solid #e53e3e; box-shadow:0 0 0 3px rgba(229,62,62,.32); }
+    :root.dark #myPortalPanel .door-tile.ns-yellow, :root.dark #myPortalMnPanel .door-tile.ns-yellow { background:#3a3012; }
+    :root.dark #myPortalPanel .door-tile.ns-red, :root.dark #myPortalMnPanel .door-tile.ns-red    { background:#4a1d1d; }
     .door-tile .door-ns { font-size:0.7em; font-weight:800; margin-top:2px; }
     .door-tile.ns-yellow .door-ns { color:#975a16; }
     .door-tile.ns-red .door-ns { color:#c53030; }
@@ -856,8 +856,8 @@
     .perf-empty { font-size:0.84em; color:var(--muted,#718096); }
     .zone-doors { margin-top:14px; }
     .zone-doors-head { font-size:0.78em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); margin-bottom:6px; }
-    #myPortalPanel .zone-door-map { grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:6px; }
-    #myPortalPanel .zone-door-map .door-tile { min-height:58px; padding:6px 7px; }
+    #myPortalPanel .zone-door-map, #myPortalMnPanel .zone-door-map { grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); gap:6px; }
+    #myPortalPanel .zone-door-map .door-tile, #myPortalMnPanel .zone-door-map .door-tile { min-height:58px; padding:6px 7px; }
     .portal-notif-dock { position:fixed; top:56px; right:14px; z-index:9999; display:flex; flex-direction:column; align-items:flex-end; }
     .portal-notif-bell { display:inline-flex; align-items:center; gap:8px; border:0; border-radius:999px; padding:7px 14px; background:#1e3a5f; color:#fff; font:inherit; font-weight:800; font-size:0.84em; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.35); }
     .portal-notif-dock.has-red .portal-notif-bell { background:#c53030; }
@@ -4889,7 +4889,7 @@
             <h2 id="unloaderPerfTitle">Performance by Name <span style="font-weight:600;font-size:0.6em;opacity:.7;">OKS</span></h2>
             <span class="panel-kicker" id="unloaderPerfKicker">Loading...</span>
           </div>
-          <div class="friendly-note" style="margin:-2px 0 10px;">Built from the optional <b>Unloader</b> name added on a load's door popup in My Portal (OKS). Pallets and unload time fill in automatically as DMS records them, so a load only counts toward time and pallets-per-hour once its unload has finished.</div>
+          <div class="friendly-note" id="unloaderPerfIntro" style="margin:-2px 0 10px;">Built from the optional <b>Unloader</b> name added on a load's door popup in My Portal (OKS). Pallets and unload time fill in automatically as DMS records them, so a load only counts toward time and pallets-per-hour once its unload has finished.</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
             <label for="unloaderPerfRange" style="font-weight:700;font-size:0.85em;">Period</label>
             <select id="unloaderPerfRange" class="lookup-input" style="width:auto;min-width:150px;">
@@ -4905,6 +4905,10 @@
               <option value="90">90 min</option>
               <option value="120">120 min</option>
             </select>
+            <span id="unloaderPerfSiteWrap" style="display:none; align-items:center; gap:6px;">
+              <label for="unloaderPerfSite" style="font-weight:700;font-size:0.85em;margin-left:6px;">Site</label>
+              <select id="unloaderPerfSite" class="lookup-input" style="width:auto;min-width:110px;"><option value="OKS">OKS</option><option value="MN">Minnesota</option></select>
+            </span>
             <button type="button" id="unloaderPerfRefreshBtn" class="secondary-btn">Refresh</button>
           </div>
           <div class="summary-grid" id="unloaderPerfSummary"></div>
@@ -7198,6 +7202,12 @@
           <button type="button" id="portalMnAnnounceSendBtn" class="secondary-btn">Announce</button>
         </div>
 
+        <!-- Pace ticker: building and zones vs the average night, with estimated finish times -->
+        <div class="portal-ticker" id="portalMnTicker" style="display:none;" aria-label="Pace compared with the average night">
+          <div class="portal-ticker-tag">PACE</div>
+          <div class="portal-ticker-window"><div class="portal-ticker-track" id="portalMnTickerTrack"></div></div>
+        </div>
+
         <div class="portal-command-bar">
           <div class="portal-dms-titlebar">
             <div class="portal-dms-title-main">
@@ -7216,6 +7226,7 @@
                 <span id="portalMnSyncLabel">Sync MN DMS</span>
               </button>
               <button id="portalMnAlertsBtn" type="button" class="portal-sync-btn" title="Get desktop popups for detention risk, overdue unload starts, and unloader delays">Enable alerts</button>
+              <button id="portalMnShiftReportPageBtn" type="button" class="portal-sync-btn" title="Charts and a comparison with earlier nights, ready to download or save as a PDF">&#x1F4CA; Shift Report</button>
               <label for="portalMnBusinessDate">DMS date</label>
               <input id="portalMnBusinessDate" type="date" class="lookup-input" title="Choose the Minnesota DMS business date to load" style="max-width:150px;">
             </div>
@@ -7419,6 +7430,7 @@
           <button type="button" class="portal-view-btn active" data-view="board">Board</button>
           <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
+          <button type="button" class="portal-view-btn" data-view="zones">Zones</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
           <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalMnChatBadge" style="display:none;">0</span></button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
@@ -7439,6 +7451,20 @@
         <section id="portalMnAreaView" style="display:none; margin-top:10px;">
           <div class="dms-scorecard" id="portalMnScorecardAreas"></div>
           <div class="area-grid" id="portalMnAreaGrid"></div>
+        </section>
+
+        <!-- Cold vs Dry zones view (Minnesota) -->
+        <section id="portalMnZonesView" style="display:none; margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Shift Completion &amp; Performance by Zone</div>
+            <span id="portalMnZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+            <span class="door-sortbox" title="Sorts every zone's door map (shared with the Door Map tab)"><label for="portalMnZonesSort">Sort doors by</label>
+              <select id="portalMnZonesSort" class="door-sort-select" aria-label="Sort the zone door maps"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
+          </div>
+          <div class="zone-building" id="portalMnZonesBuilding"></div>
+          <div class="zone-grid" id="portalMnZonesGrid"></div>
+          <div class="zone-foot" id="portalMnZonesFoot"></div>
         </section>
 
         <!-- Vendor Performance History view (Minnesota) -->
@@ -7498,6 +7524,19 @@
             <input id="portalMnDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = default 1-120)" autocomplete="off" style="max-width:260px;">
             <span class="door-range-hint">Based on the door zones seen in Minnesota's DMS ranged report.</span>
           </div>
+          <div class="door-controls">
+            <span class="door-sortbox"><label for="portalMnDoorSort">Sort by</label>
+              <select id="portalMnDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
+            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red">Not started: yellow after
+              <input id="portalMnNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
+              <input id="portalMnNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
+              <select id="portalMnNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
+                <option value="ready">the later of door arrival and appointment</option>
+                <option value="door">driver at the door</option>
+              </select></span>
+          </div>
+          <div class="door-sort-note" id="portalMnDoorSortNote"></div>
           <div class="dms-scorecard" id="portalMnScorecardDoors"></div>
           <div class="door-map" id="portalMnDoorMap"></div>
         </section>
@@ -8767,7 +8806,7 @@
     const ROLE_TABS = {
       admin: ["*"],
       oks: ["myPortal", "unloaderPerformance", "overview", "data", "help"],
-      minnesota: ["myPortalMn", "mnScheduleUploader", "mnBillingAudit", "guardShackMn", "overview", "data"],
+      minnesota: ["myPortalMn", "unloaderPerformance", "mnScheduleUploader", "mnBillingAudit", "guardShackMn", "overview", "data"],
       manager: ["myPortal", "unloaderPerformance", "alerts", "dmsStamp", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
       teamlead: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "help"],
       clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
@@ -9896,6 +9935,9 @@
         if (now.getSeconds() % 15 === 0 && typeof renderAlertsTab === "function") {
           try { renderAlertsTab(); } catch (e) {}
         }
+        if (now.getSeconds() % 15 === 0 && typeof portalMnAttentionTick === "function" && state.portalMn && state.portalMn.liveAttempted) {
+          try { portalMnAttentionTick(); } catch (e) {}
+        }
 
         // If the menu says My Portal but the panel was left hidden, repair it.
         if (now.getSeconds() % 10 === 0 && typeof repairMyPortalPanel === "function") {
@@ -10427,20 +10469,23 @@
     // step, replayable from the "What's new" button. Bump the version (and edit
     // the steps) when there is something new worth showing again.
     // Per-site so a change to one site's tour doesn't re-show the other's.
-    const PORTAL_TOUR_VERSIONS = { oks: "2026-10-02-2", mn: "2026-09-28" };
+    const PORTAL_TOUR_VERSIONS = { oks: "2026-10-02-2", mn: "2026-10-02-2" };
     const portalTourEl = function(id) { return function() { return document.getElementById(id); }; };
     // Zone cards only exist once DMS data is in, so a zone step points at the card piece when it is
     // there and at the whole grid when it is not.
     const portalTourZonePart = function(selector) {
       return function() { return document.querySelector("#portalZonesGrid " + selector) || document.getElementById("portalZonesGrid"); };
     };
+    const portalTourZonePartMn = function(selector) {
+      return function() { return document.querySelector("#portalMnZonesGrid " + selector) || document.getElementById("portalMnZonesGrid"); };
+    };
     const PORTAL_TOUR_STEPS = {
       oks: [
         { title: "What's new in My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that pop up and then tuck into a bell, a pace ticker, unloader performance bars, and a layout that works on a phone. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
         { title: "New: end-of-shift report", target: portalTourEl("portalShiftReportPageBtn"),
-          body: "<b>Shift Report</b> builds a full report for the night: the numbers that matter, charts of how the shift ran, and a comparison with the <b>last 7 nights</b> (you can pick 3 or 14). Press it when the shift is done. It says <b>Final</b> once every truck is finished and nothing is left to arrive, or <b>still in progress</b> if you open it early. The first one takes a bit because it reads the earlier nights from DMS, then it is quick." },
+          body: "<b>Shift Report</b> builds a full report for the night: dozens of numbers, charts of how the shift ran, and a comparison with the <b>last 7 nights</b> (you can pick 3 or 14). Press it when the shift is done. It says <b>Final</b> once every truck is finished and nothing is left to arrive, or <b>still in progress</b> if you open it early. The first one takes a bit because it reads the earlier nights from DMS, then it is quick." },
         { title: "Charts, comparison and unloaders", target: portalTourEl("portalShiftReportPageBtn"),
-          body: "The report shows trucks finished through the night against the average, arrivals and finishes by hour, and trend lines for when 95% were done, pallets per hour and wait time. It also breaks the night down by zone and supplier. If unloader names were entered, a <b>Performance by unloader</b> section ranks each person against the team and their own recent pace (only for logins that can see Performance by Name). Use <b>Download report</b> to save it as a file, or <b>Print / Save as PDF</b>." },
+          body: "It is packed with data: trucks finished and trucks <b>on the dock</b> through the night (and how many were waiting), where a truck's time goes, waits and unload times by hour, appointment punctuality, pallets, zones, doors, suppliers and carriers, the longest dock times, no-shows and rejected loads, receiving delays, and an hour-by-hour table. Every number is set against the average of the earlier nights, and against the same weekday when there are enough. If unloader names were entered, <b>Performance by unloader</b> adds a timeline of who unloaded what and when, pace against the team (by zone too) and each person's own recent nights (only for logins that can see Performance by Name). Use <b>Download report</b> to save it as a file, or <b>Print / Save as PDF</b>." },
         { title: "New Zones tab", before: function() { portalSetView("zones"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
@@ -10483,7 +10528,31 @@
           body: "You can replay this any time with the <b>What's new</b> button." }
       ],
       mn: [
-        { title: "What's new in Minnesota My Portal", body: "A quick tour of what changed: a new Areas tab, faster updates, a more accurate projected finish, plus the door map, popup, and alerts from before. It takes about a minute, and you can skip any time." },
+        { title: "What's new in Minnesota My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that pop up and then tuck into a bell, a pace ticker, and unloader performance. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
+        { title: "New: end-of-shift report", target: portalTourEl("portalMnShiftReportPageBtn"),
+          body: "<b>Shift Report</b> builds a full report for the night: dozens of numbers, charts of how the shift ran, and a comparison with the <b>last 7 nights</b> (you can pick 3 or 14). Press it when the shift is done. It says <b>Final</b> once every truck is finished and nothing is left to arrive, or <b>still in progress</b> if you open it early. The first one takes a bit because it reads the earlier nights from DMS, then it is quick." },
+        { title: "Charts, comparison and unloaders", target: portalTourEl("portalMnShiftReportPageBtn"),
+          body: "It is packed with data: trucks finished and trucks <b>on the dock</b> through the night (and how many were waiting), where a truck's time goes, waits and unload times by hour, appointment punctuality, pallets, zones, doors, suppliers and carriers, the longest dock times, no-shows and rejected loads, receiving delays, and an hour-by-hour table. Every number is set against the average of the earlier nights, and against the same weekday when there are enough. If unloader names were entered, <b>Performance by unloader</b> adds a timeline of who unloaded what and when, pace against the team (by zone too) and each person's own recent nights. Use <b>Download report</b> to save it as a file, or <b>Print / Save as PDF</b>." },
+        { title: "New Zones tab", before: function() { portalMnSetView("zones"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="zones"]'); },
+          body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
+        { title: "Estimated finish: building and each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-eta"),
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is when 95% of the trucks should be done, rounded to 5 minutes. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
+        { title: "Green, yellow, red", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-status"),
+          body: "Each zone compares itself with the usual Minnesota pace for this time of night. <b>Green</b> means on schedule or ahead. <b>Yellow</b> means slightly behind, and it sends you a notification. <b>Red</b> means <b>30 minutes or more</b> behind schedule. The comparison starts at 10 PM, because earlier than that the gap is mostly noise." },
+        { title: "Started and finished percentages", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-pcts"),
+          body: "Two numbers on every zone: <b>green is Started</b> (trucks whose unload has begun) and <b>blue is Unloaded &amp; finished</b>. The bar under them shows both, green behind and blue in front. Both are out of the zone's trucks tonight." },
+        { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
+          body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
+        { title: "A door map for each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-door-map"),
+          body: "Each zone card has its own door map: the zone's usual doors plus any door one of its trucks is on. <b>Tap an occupied door</b> for the full popup. Use <b>Sort doors by</b> at the top of the page to reorder every zone's map (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+        { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
+          body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts at the later of door arrival and appointment, and you can switch it to \"driver at the door\". The sort menu here works the same way as on Zones." },
+        { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
+          body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
+        { title: "Pace ticker", target: portalTourEl("portalMnTicker"),
+          body: "The <b>ticker</b> under the announcements scrolls whether the whole building and each zone are ahead of or behind the average night, with an estimated finish for each. It appears once live data is flowing." },
+        { title: "Also new: Unloader names and Performance by Name", body: "Tap any occupied door and you can type who is unloading that load in the new <b>Unloader</b> field (optional). The <b>Performance by Name</b> tab then rates each unloader on pallets per hour, average unload time, downtime between loads, and loads per night, against the team. <b>100 is team pace</b> and higher is better. Speed is compared fairly by zone, and a measure needs at least 5 finished loads before it counts." },
+        { title: "Also new: built for your phone", body: "Everything now fits an iPhone screen: no sideways scrolling, bigger buttons and menus that are easy to hit with a thumb, no zoom-in when you tap a field, and the bell and popups kept within thumb reach. In Safari, use <b>Add to Home Screen</b> for a full-screen version." },
         { title: "Areas tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="areas"]'); },
           body: "<b>Areas</b> shows every dock area with how many trucks are scheduled, arrived, and finished, plus a progress bar for each. Use it to see which area is falling behind." },
         { title: "Faster updates", target: portalTourEl("portalMnStatus"),
@@ -10710,66 +10779,72 @@
       });
     }
 
-    // -- Unloader names (OKS only) ---------------------------------------------------
+    // -- Unloader names (OKS and Minnesota, kept apart by site) -----------------------
     // Optional name attached to a load from the door popup. Stored server-side per
     // (business date, truck) so everyone sees it; Performance by Name aggregates it.
     let portalPendingUnloaderFlush = null;
 
-    function portalUnloaderBadge(r, dn) {
-      const info = (state.portal.unloaders || {})[String(r.ref || r.po || dn)];
+    function portalUnloaderBadge(r, dn, site) {
+      const info = (portalSt(site).unloaders || {})[String(r.ref || r.po || dn)];
       if (!info || !info.unloader) return "";
       return '<div class="door-unloader-flag" title="Unloader: ' + escapeHtml(info.unloader) + '">👷 ' + escapeHtml(info.unloader) + '</div>';
     }
 
     // Keeps door-map tiles in step with the unloader list without waiting for the next full render.
-    function portalRefreshUnloaderBadges() {
-      const map = els.portalDoorMap;
+    function portalRefreshUnloaderBadges(site) {
+      site = site === "mn" ? "mn" : "oks";
+      const map = site === "mn" ? els.portalMnDoorMap : els.portalDoorMap;
       if (!map) return;
       map.querySelectorAll(".door-tile.occupied").forEach(function(tile) {
         const dn = tile.getAttribute("data-door");
-        const r = (state.portal.byDoor || {})[dn];
+        const r = (portalSt(site).byDoor || {})[dn];
         const old = tile.querySelector(".door-unloader-flag");
         if (old) old.remove();
         if (!r) return;
-        const html = portalUnloaderBadge(r, dn);
+        const html = portalUnloaderBadge(r, dn, site);
         if (html) tile.insertAdjacentHTML("beforeend", html);
       });
     }
 
-    function portalFetchUnloaders() {
-      const bizDate = state.portal.businessDate;
+    function portalFetchUnloaders(site) {
+      site = site === "mn" ? "mn" : "oks";
+      const st = portalSt(site);
+      const bizDate = st.businessDate;
       if (!bizDate) return;
-      fetch(apiUrl("/api/portal/unloaders?business_date=" + encodeURIComponent(bizDate)))
+      fetch(apiUrl("/api/portal/unloaders?business_date=" + encodeURIComponent(bizDate) + "&site=" + (site === "mn" ? "MN" : "OKS")))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (!data || !data.ok) return;
-          state.portal.unloaders = data.unloaders || {};
-          state.portal.unloaderRoster = data.roster || [];
-          portalRefreshUnloaderBadges();
+          st.unloaders = data.unloaders || {};
+          st.unloaderRoster = data.roster || [];
+          portalRefreshUnloaderBadges(site);
         })
         .catch(function() {});
     }
 
-    function portalSaveUnloader(bizDate, truckKey, doorNum, name, r) {
+    function portalSaveUnloader(site, bizDate, truckKey, doorNum, name, r) {
+      site = site === "mn" ? "mn" : "oks";
+      const st = portalSt(site);
       return fetch(apiUrl("/api/portal/unloaders"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          site: site === "mn" ? "MN" : "OKS",
           business_date: bizDate, truck_key: truckKey, unloader: name, door: String(doorNum || ""),
           supplier: (r && r.supplier) || "", area: (r && r.area) || ""
         })
       }).then(function(resp) {
         return resp.json().then(function(data) {
           if (!resp.ok || !data.ok) throw new Error((data && data.detail) || "Save failed");
-          state.portal.unloaders = state.portal.unloaders || {};
+          st.unloaders = st.unloaders || {};
           if (data.unloader) {
-            state.portal.unloaders[truckKey] = { unloader: data.unloader, updated_by: data.updated_by, updated_at: data.updated_at };
-            const roster = state.portal.unloaderRoster = state.portal.unloaderRoster || [];
+            st.unloaders[truckKey] = { unloader: data.unloader, updated_by: data.updated_by, updated_at: data.updated_at };
+            const roster = st.unloaderRoster = st.unloaderRoster || [];
             if (roster.indexOf(data.unloader) === -1) roster.unshift(data.unloader);
           } else {
-            delete state.portal.unloaders[truckKey];
+            delete st.unloaders[truckKey];
           }
-          portalRefreshUnloaderBadges();
+          portalRefreshUnloaderBadges(site);
           return data.unloader || "";
         });
       });
@@ -11054,12 +11129,12 @@
       const bizDate = siteState.businessDate || "";
       const existingNote = (siteState.doorNotes || {})[truckKey];
       const actions = document.getElementById('doorDetailActions');
-      const existingUnloader = site === "oks" ? (state.portal.unloaders || {})[truckKey] : null;
-      const unloaderHtml = site !== "oks" ? "" :
+      const existingUnloader = (siteState.unloaders || {})[truckKey] || null;
+      const unloaderHtml =
         '<div class="unloader-field-label">Unloader <span>(optional — tracked in Performance by Name)</span></div>'
         + '<input id="doorDetailUnloader" type="text" list="doorDetailUnloaderList" maxlength="40" autocomplete="off" placeholder="Who is unloading this load?" '
         + 'style="width:100%;box-sizing:border-box;border:1px solid var(--border,#e2e8f0);border-radius:6px;padding:6px 8px;font:inherit;background:transparent;color:inherit;">'
-        + '<datalist id="doorDetailUnloaderList">' + (state.portal.unloaderRoster || []).map(function(n) { return '<option value="' + escapeHtml(n) + '"></option>'; }).join("") + '</datalist>'
+        + '<datalist id="doorDetailUnloaderList">' + (siteState.unloaderRoster || []).map(function(n) { return '<option value="' + escapeHtml(n) + '"></option>'; }).join("") + '</datalist>'
         + '<div id="doorDetailUnloaderStatus" style="font-size:0.74em;color:var(--muted,#64748b);margin:3px 0 12px;min-height:1.2em;"></div>';
       actions.innerHTML = unloaderHtml +
         '<div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:6px;">Shift note <span style="font-weight:400;text-transform:none;letter-spacing:0;">(shared — everyone on My Portal sees this)</span></div>'
@@ -11114,7 +11189,7 @@
           if (value === savedUnloader) return;
           if (!bizDate) { unloaderStatusEl.textContent = "Could not save — no business date loaded."; return; }
           unloaderStatusEl.textContent = "Saving...";
-          portalSaveUnloader(bizDate, truckKey, doorNum, value, r).then(function(saved) {
+          portalSaveUnloader(site, bizDate, truckKey, doorNum, value, r).then(function(saved) {
             savedUnloader = saved;
             if (unloaderEl.value.trim() === value) {
               unloaderEl.value = saved;
@@ -16368,6 +16443,7 @@
         state.portalMn.liveError = "";
         state.portalMn.credentialBlocked = false;
         portalFetchDoorNotes("mn");
+        portalFetchUnloaders("mn");
         portalFetchAnnouncement("mn");
         if (state.portalMn.view !== "chat") portalChatPoll("mn").then(function() { portalChatUpdateBadge("mn"); });
         state.portalMn.totalExpected = (typeof data.total_expected === "number")
@@ -17017,6 +17093,8 @@
       renderPortalMnDashboard();
       renderPortalMnDoorMap();
       if (state.portalMn.view === "areas") renderPortalMnAreaView();
+      if (state.portalMn.view === "zones") renderPortalZonesView("mn");
+      try { portalRenderTicker("mn"); } catch (err) { console.error("Minnesota ticker failed:", err); }
     }
 
     function portalMnSetView(view) {
@@ -17030,30 +17108,21 @@
       if (els.portalMnAreaView) els.portalMnAreaView.style.display = view === "areas" ? "" : "none";
       if (els.portalMnVendorView) els.portalMnVendorView.style.display = view === "vendors" ? "" : "none";
       if (els.portalMnChatView) els.portalMnChatView.style.display = view === "chat" ? "" : "none";
+      const mnZonesView = document.getElementById("portalMnZonesView");
+      if (mnZonesView) mnZonesView.style.display = view === "zones" ? "" : "none";
+      if (view === "zones") renderPortalZonesView("mn");
       if (view === "doors") renderPortalMnDoorMap();
       if (view === "areas") renderPortalMnAreaView();
       if (view === "vendors") renderPortalMnVendorView();
       if (view === "chat") portalChatViewOpened("mn"); else portalChatViewClosed("mn");
     }
 
-    // Door map for Minnesota -- built from the same door-zone shape found in
-    // the DMS ranged report (see the MN Dock Cheat Sheet tab): doors 1-120,
-    // with in-progress arrived trucks occupying, completed trucks freeing.
+    // Door map for Minnesota -- built from the same door-zone shape found in the DMS ranged report
+    // (see the MN Dock Cheat Sheet tab): doors 1-120, with in-progress arrived trucks occupying and
+    // completed trucks freeing. Uses the same not-started colours, priority and sorting as OKS.
     function renderPortalMnDoorMap() {
       if (!els.portalMnDoorMap) return;
-      const rows = portalMnEnrichedRows();
-      const rank = { detention: 0, startsoon: 1, urgent: 2, warning: 3, active: 4, waiting: 5 };
-      const byDoor = {};
-      rows.forEach(function(r) {
-        const dn = parseInt(r.door, 10);
-        if (!isFinite(dn)) return;
-        if (r.status === "complete") return;
-        const cur = byDoor[dn];
-        const rr = rank[r.status] == null ? 9 : rank[r.status];
-        const cr = cur ? (rank[cur.status] == null ? 9 : rank[cur.status]) : 99;
-        if (!cur || rr < cr) byDoor[dn] = r;
-      });
-
+      const byDoor = portalBuildByDoor(portalMnEnrichedRows());
       const universe = {};
       const explicitDoorRange = portalParseDoorRange(els.portalMnDoorRange ? els.portalMnDoorRange.value : "");
       if (explicitDoorRange.length) {
@@ -17065,11 +17134,15 @@
       const allDoors = Object.keys(universe).map(Number).filter(isFinite).sort(function(a, b) { return a - b; });
 
       const occ = Object.keys(byDoor).map(function(d) { return byDoor[d]; });
+      const nowMs = Date.now();
+      const th = portalNsThresholds();
       const openCount = Math.max(0, allDoors.length - occ.length);
-      const now = Date.now();
-      const aged = occ.filter(function(r) { return (portalDoorAgeMinutes(r, now) || 0) >= 61; }).length;
+      const aged = occ.filter(function(r) { return (portalDoorAgeMinutes(r, nowMs) || 0) >= 61; }).length;
       const det = occ.filter(function(r) { return r.status === "detention"; }).length;
       const eyes = occ.filter(function(r) { return r.status === "urgent" || r.status === "startsoon" || r.status === "warning"; }).length;
+      const nsList = occ.map(function(r) { return portalNotStartedInfo(r, nowMs, th); }).filter(Boolean);
+      const nsRed = nsList.filter(function(n) { return n.level === "red"; }).length;
+      const nsYellow = nsList.length - nsRed;
 
       // Store for click handler lookups (mirrors OKS's renderPortalDoorMap).
       state.portalMn.byDoor = byDoor;
@@ -17078,6 +17151,8 @@
         portalFillScorecard(els.portalMnScorecardDoors, [
           { value: openCount, label: "Open doors", sub: "Available now", color: "green" },
           { value: occ.length, label: "Occupied", sub: "Truck in progress", color: "blue" },
+          { value: nsRed, label: "Not started " + th.red + "+ min", sub: "At the door, red", color: nsRed ? "red" : "green" },
+          { value: nsYellow, label: "Not started " + th.yellow + "+ min", sub: "At the door, yellow", color: nsYellow ? "yellow" : "green" },
           { value: eyes, label: "Needs review", sub: "Start soon / warning", color: "yellow" },
           { value: aged, label: "61+ min doors", sub: "Aging on dock", color: aged ? "red" : "green" },
           { value: det, label: "Detention", sub: "Past receiving clock", color: "red" }
@@ -17088,28 +17163,10 @@
         els.portalMnDoorMap.innerHTML = '<div class="door-empty">No doors yet. Sync Minnesota DMS, or set a door range above.</div>';
         return;
       }
-      const classByStatus = { detention: "red", urgent: "yellow", startsoon: "yellow", warning: "yellow", active: "green", waiting: "yellow" };
-      els.portalMnDoorMap.innerHTML = allDoors.map(function(dn) {
-        const r = byDoor[dn];
-        if (!r) {
-          return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
-            + '<div class="door-open-label">Open</div><div class="door-dwell">&nbsp;</div></div>';
-        }
-        const cls = classByStatus[r.status] || "blue";
-        const stage = portalMnTruckStatus(r);
-        const timeInfo = (r.status === "detention" || r.status === "urgent" || r.status === "warning") ? (r.countdownLabel || "") : "";
-        const detail = timeInfo ? stage + "  -  " + timeInfo : stage;
-        const ageMin = portalDoorAgeMinutes(r, now);
-        const ageClass = portalDoorAgeClass(ageMin);
-        const ageLabel = portalDoorAgeLabel(ageMin);
-        return '<div class="door-tile ' + cls + ' ' + ageClass + ' occupied" data-door="' + dn + '" title="Tap for details">'
-          + '<div class="door-no">' + dn + '</div>'
-          + '<div class="door-sup">' + escapeHtml(r.supplier || r.ref || "Truck") + '</div>'
-          + '<div class="door-dwell">' + escapeHtml(detail) + '</div>'
-          + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
-          + portalDoorNoteBadge("mn", r, dn)
-          + '</div>';
-      }).join("");
+      const ordered = portalSortDoors(allDoors, function(dn) { return byDoor[dn]; }, nowMs, th, "mn");
+      const sortNote = document.getElementById("portalMnDoorSortNote");
+      if (sortNote) sortNote.textContent = portalDoorSortNoteText();
+      els.portalMnDoorMap.innerHTML = ordered.map(function(dn) { return portalDoorTileHtml(dn, byDoor[dn], nowMs, th, "mn"); }).join("");
     }
 
     function portalMnStartPolling() {
@@ -17127,6 +17184,8 @@
             renderPortalMnDashboard();
             renderPortalMnDoorMap();
             if (state.portalMn.view === "areas") renderPortalMnAreaView();
+            if (state.portalMn.view === "zones") renderPortalZonesView("mn");
+            portalMnAttentionTick();
           } catch (e) {}
         }, 15000);
       }
@@ -17252,6 +17311,8 @@
     // `pace` holds the usual share-finished curve (15-min steps from 7 PM) and how a gap to that
     // curve maps to a finish time. Rerun the script every month or two.
     const PORTAL_ZONE_MODEL = {"doors":6,"nights":120,"models":{"freezer":{"fmax":0.837,"offsets":[-532,-532,-486,-447,-422,-395,-371,-352,-336,-321,-311,-294,-283,-269,-253,-241,-230,-222,-215,-210,-205,-199,-191,-184,-177,-173,-168,-166,-163,-159,-156,-152,-149,-144,-143,-135,-130,-127,-123,-120,-117,-114,-111,-107,-104,-99,-95,-93,-90,-87,-84,-80,-78,-76,-75,-73,-70,-67,-66,-64,-62,-60,-59,-56,-54,-52,-50,-48,-46,-44,-41,-38,-35,-34,-32,-29,-25,-22,-20,-18,-16,-12,-9,-6,-3,0,5,7,12,15,20,24,27,31,35,41,49,56,65,81,81],"service":[0,0,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,23,24,24,24,25,25,26,26,27,27,28,28,28,29,29,30,30,31,31,32,32,32,33,33,34,35,35,35,36,37,37,38,38,39,39,40,41,41,42,43,44,45,47,48,49,50,53,54,57,58,62,68,75,90,117,117]},"chilled":{"fmax":0.874,"offsets":[-631,-631,-548,-490,-448,-410,-381,-353,-335,-314,-296,-283,-270,-260,-251,-242,-232,-222,-213,-206,-199,-194,-187,-182,-177,-171,-167,-163,-158,-152,-148,-144,-140,-135,-130,-127,-122,-120,-116,-112,-110,-105,-101,-98,-94,-92,-88,-86,-83,-80,-76,-73,-70,-68,-65,-63,-61,-59,-57,-55,-52,-50,-48,-46,-43,-41,-39,-36,-34,-31,-29,-27,-25,-23,-21,-19,-17,-15,-12,-10,-7,-5,-2,0,5,7,11,15,21,27,34,40,46,55,65,73,85,102,127,162,162],"service":[0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,3,4,5,5,6,6,7,7,8,8,9,9,10,10,10,11,11,12,12,12,13,13,14,14,15,15,16,16,17,17,17,18,18,19,19,20,20,20,21,21,21,22,22,23,24,24,25,25,26,26,27,27,28,29,29,30,31,31,32,33,33,34,35,36,36,37,39,40,41,42,43,45,47,48,51,53,56,61,66,72,81,94,109,130,221,221]},"dry":{"fmax":0.811,"offsets":[-561,-561,-510,-464,-429,-402,-381,-362,-342,-324,-309,-296,-286,-276,-264,-257,-250,-241,-235,-227,-222,-215,-209,-203,-196,-191,-185,-180,-175,-171,-167,-162,-158,-152,-149,-145,-141,-137,-132,-129,-125,-121,-117,-114,-111,-107,-103,-100,-97,-94,-90,-87,-84,-81,-78,-76,-73,-71,-68,-65,-62,-58,-55,-53,-50,-47,-43,-41,-39,-36,-33,-31,-29,-25,-23,-20,-17,-15,-13,-10,-7,-4,-2,0,4,9,13,17,21,26,30,36,43,50,57,67,75,90,106,147,147],"service":[0,0,0,0,0,0,2,4,5,6,7,8,9,9,10,11,11,12,12,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23,24,24,25,25,26,27,27,28,28,29,29,30,31,31,32,33,33,34,35,36,37,38,38,39,40,41,42,43,44,45,46,48,49,50,51,53,54,56,57,59,61,63,65,68,71,75,77,80,84,88,93,98,104,112,125,137,152,183,231,317,317]}},"pace":{"freezer":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.087,0.105,0.125,0.167,0.2,0.231,0.267,0.3,0.333,0.375,0.4,0.438,0.462,0.5,0.5,0.545,0.571,0.6,0.615,0.667,0.667,0.7,0.706,0.727,0.75,0.778,0.8,0.8,0.812,0.833,0.833,0.833,0.833,0.833,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846,0.846],"finish":519.0,"fit":[[11.81,0.718],[17.66,0.432],[20.89,0.454],[37.98,0.227],[67.64,0.081],[114.65,-0.22]]},"chilled":{"curve":[0.0,0.0,0.0,0.0,0.021,0.024,0.027,0.047,0.069,0.09,0.115,0.13,0.163,0.195,0.217,0.253,0.283,0.31,0.341,0.363,0.395,0.435,0.47,0.495,0.534,0.568,0.594,0.628,0.667,0.691,0.71,0.741,0.767,0.793,0.806,0.81,0.833,0.844,0.851,0.865,0.868,0.874,0.874,0.875,0.877,0.877,0.88,0.88,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882,0.882],"finish":536.0,"fit":[[4.9,0.941],[3.55,1.049],[4.66,0.916],[4.83,0.886],[22.62,0.306],[66.35,0.094]]},"dry":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.031,0.052,0.069,0.092,0.111,0.131,0.167,0.198,0.223,0.252,0.292,0.316,0.358,0.388,0.417,0.448,0.473,0.51,0.533,0.561,0.592,0.623,0.644,0.675,0.704,0.723,0.729,0.75,0.759,0.769,0.774,0.778,0.792,0.792,0.796,0.802,0.804,0.804,0.806,0.807,0.807,0.807,0.809,0.809,0.811,0.811,0.811,0.811,0.811,0.811],"finish":525.0,"fit":[[34.61,0.321],[33.71,0.449],[36.26,0.216],[41.66,0.167],[67.84,-0.08],[155.15,-0.446]]},"all":{"curve":[0.0,0.0,0.0,0.008,0.009,0.013,0.02,0.037,0.058,0.08,0.102,0.122,0.15,0.176,0.207,0.234,0.272,0.308,0.333,0.362,0.392,0.425,0.454,0.488,0.521,0.551,0.584,0.609,0.642,0.662,0.69,0.716,0.736,0.759,0.776,0.784,0.799,0.808,0.82,0.828,0.831,0.835,0.836,0.836,0.837,0.838,0.838,0.838,0.838,0.839,0.839,0.839,0.839,0.839,0.839,0.839,0.839],"finish":536.0}},"zoneDoors":{"freezer":[95,96,97,98,99,100,101,103],"chilled":[69,70,71,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94],"dry":[1,15,17,18,21,25,26,27,28,29,30,31,32,33,46,47,48,49,50,51,52,53,54,55,56,61,62,63,64,65,66,67,73,74]}};
+    // Minnesota's own zone model, built from 119 saved Minnesota shifts (python build_zone_model.py --history <folder> --site MN --doors 9).
+    const PORTAL_ZONE_MODEL_MN = {"doors":9,"nights":119,"models":{"freezer":{"fmax":0.855,"offsets":[-186,-186,-170,-158,-150,-138,-125,-120,-112,-103,-95,-88,-82,-77,-70,-66,-62,-57,-54,-51,-47,-46,-44,-42,-41,-38,-36,-35,-34,-33,-32,-30,-29,-28,-27,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,4,5,6,7,9,10,12,13,14,16,17,19,20,23,24,26,29,31,34,37,39,43,46,52,56,58,62,66,73,80,86,97,109,117,117],"service":[0,0,0,0,1,2,3,4,5,6,6,7,8,8,8,9,9,10,10,11,11,12,12,12,13,13,14,14,14,14,15,15,15,15,16,16,16,16,17,17,17,17,17,18,18,18,19,19,19,19,20,20,20,20,21,21,21,21,22,22,22,23,23,23,23,24,24,24,24,25,25,25,26,26,27,27,28,28,29,29,30,30,31,31,32,33,34,35,36,37,38,39,41,43,45,48,57,66,78,94,94]},"chilled":{"fmax":0.898,"offsets":[-213,-213,-188,-170,-157,-143,-131,-123,-117,-110,-104,-98,-94,-88,-82,-77,-72,-68,-64,-61,-57,-54,-51,-49,-46,-44,-42,-40,-38,-37,-35,-34,-32,-31,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-9,-8,-7,-6,-5,-4,-2,-1,0,1,2,4,5,6,8,9,11,13,14,16,18,19,21,23,25,27,29,32,35,39,42,45,48,52,56,61,67,73,81,90,100,113,135,172,172],"service":[0,0,0,0,0,0,0,0,0,0,1,2,3,3,4,5,5,6,6,7,7,8,8,9,9,9,10,10,11,11,11,11,12,12,12,13,13,13,13,14,14,14,15,15,15,15,16,16,16,17,17,17,17,18,18,18,19,19,19,19,20,20,20,21,21,21,22,22,22,23,23,23,24,24,25,25,26,27,28,28,29,29,30,31,32,33,34,35,37,39,40,43,45,48,53,59,66,75,88,117,117]},"dry":{"fmax":0.868,"offsets":[-180,-180,-163,-145,-130,-119,-112,-106,-100,-92,-84,-79,-74,-69,-63,-60,-57,-54,-51,-48,-45,-43,-41,-39,-37,-36,-34,-33,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,10,11,12,14,15,17,19,21,23,25,27,29,31,33,36,38,41,44,47,50,54,57,61,67,71,80,87,99,117,139,139],"service":[0,0,0,0,2,4,4,5,6,7,8,8,9,9,10,10,10,11,11,12,12,12,13,13,13,14,14,14,15,15,16,16,16,17,17,17,18,18,18,19,19,20,20,21,21,22,22,23,23,24,24,25,26,27,28,28,29,30,31,32,33,34,35,36,38,39,40,43,44,47,49,51,53,55,58,60,62,64,67,70,73,75,78,80,83,86,89,94,98,102,107,112,118,124,131,139,147,157,174,208,208]}},"pace":{"freezer":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.028,0.091,0.143,0.167,0.205,0.25,0.273,0.29,0.333,0.333,0.4,0.444,0.483,0.5,0.551,0.571,0.583,0.615,0.647,0.667,0.667,0.714,0.75,0.757,0.789,0.826,0.833,0.833,0.857,0.857,0.857,0.857,0.865,0.865,0.865,0.865,0.867,0.867,0.867,0.867,0.867,0.867,0.867,0.867],"finish":545.0,"fit":[[21.01,-0.137],[19.52,0.179],[19.75,0.533],[19.38,0.466],[36.72,-0.169],[88.78,-0.213]]},"chilled":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.022,0.037,0.068,0.094,0.121,0.152,0.175,0.196,0.231,0.257,0.286,0.324,0.37,0.4,0.435,0.467,0.5,0.531,0.562,0.595,0.63,0.655,0.688,0.714,0.765,0.788,0.821,0.846,0.857,0.87,0.88,0.885,0.886,0.887,0.889,0.892,0.892,0.892,0.892,0.894,0.894,0.894,0.894,0.895,0.895,0.895],"finish":573.0,"fit":[[1.73,0.523],[-0.75,0.832],[2.82,1.003],[0.88,0.907],[-0.3,0.859],[16.46,0.476]]},"dry":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.023,0.066,0.102,0.129,0.156,0.186,0.219,0.25,0.29,0.319,0.351,0.381,0.422,0.449,0.49,0.535,0.574,0.623,0.66,0.702,0.741,0.767,0.78,0.8,0.82,0.833,0.849,0.857,0.862,0.865,0.867,0.867,0.87,0.872,0.872,0.872,0.872,0.872,0.872,0.872,0.872,0.872,0.872,0.872,0.872],"finish":536.0,"fit":[[-0.93,0.616],[-2.22,0.601],[-2.35,0.77],[-4.04,0.845],[12.85,0.213],[43.7,0.106]]},"all":{"curve":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.007,0.013,0.039,0.06,0.097,0.131,0.154,0.182,0.206,0.241,0.274,0.306,0.341,0.373,0.409,0.444,0.481,0.517,0.559,0.585,0.626,0.664,0.692,0.722,0.741,0.768,0.791,0.812,0.832,0.844,0.856,0.86,0.862,0.866,0.87,0.872,0.874,0.874,0.874,0.874,0.874,0.874,0.874,0.874,0.874,0.874,0.874],"finish":569.0}},"zoneDoors":{"freezer":[109,110,111,112,113,114],"chilled":[86,87,88,89,90,91,92,93,95,96,98,99,100,101,102,103,104,105,106,107,115],"dry":[1,2,3,4,5,7,10,12,16,22,24,25,27,30,31,32,33,35,36,38,39,40,41,42,43,44,45,50,52,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,76,77,78,79,119,120]}};
     // Seeded so the projection only moves when the inputs do, not on every redraw.
     function portalFinishRng(seed) {
       let a = seed >>> 0;
@@ -18001,12 +18062,13 @@
     }
 
     // Orders door numbers for the chosen sort. `truckFor(dn)` returns the truck on that door or null.
-    function portalSortDoors(doors, truckFor, now, th) {
+    function portalSortDoors(doors, truckFor, now, th, site) {
       const mode = portalDoorSortMode(), reverse = portalDoorSortReverse();
+      const unloaders = portalSt(site).unloaders || {};
       const items = doors.map(function(dn) { return { dn: dn, r: truckFor(dn) || null }; });
       const supplier = function(x) { return String((x.r && (x.r.supplier || x.r.ref)) || ""); };
       const unloader = function(x) {
-        const info = x.r && (state.portal.unloaders || {})[String(x.r.ref || x.r.po || x.dn)];
+        const info = x.r && unloaders[String(x.r.ref || x.r.po || x.dn)];
         return info && info.unloader ? info.unloader : "";
       };
       const age = function(x) { return portalDoorAgeMinutes(x.r, now) || 0; };
@@ -18070,9 +18132,10 @@
     }
 
     // One door tile, shared by the whole-dock map and the per-zone maps.
-    function portalDoorTileHtml(dn, r, now, th) {
-      // Clerk assignment from Google Sheet (door number keyed as string)
-      const clerkReq = state.portal.sheetAssignments[String(dn)] || "";
+    function portalDoorTileHtml(dn, r, now, th, site) {
+      site = site === "mn" ? "mn" : "oks";
+      // Clerk assignment from Google Sheet (door number keyed as string; OKS only)
+      const clerkReq = site === "mn" ? "" : (state.portal.sheetAssignments[String(dn)] || "");
       if (!r) {
         return '<div class="door-tile open"><div class="door-no">' + dn + '</div>'
           + '<div class="door-open-label">Open</div>'
@@ -18102,8 +18165,8 @@
         + (ns ? '<div class="door-ns">NOT STARTED ' + ns.mins + ' min</div>' : '')
         + (ageLabel ? '<div class="door-age">' + escapeHtml(ageLabel) + '</div>' : '')
         + (clerkReq ? '<div class="clerk-badge">Clerk: ' + escapeHtml(clerkReq) + '</div>' : '')
-        + portalDoorNoteBadge("oks", r, dn)
-        + portalUnloaderBadge(r, dn)
+        + portalDoorNoteBadge(site, r, dn)
+        + portalUnloaderBadge(r, dn, site)
         + '</div>';
     }
 
@@ -18391,7 +18454,20 @@
       if (!Array.isArray(rows) || !portalNoShowCutoffPassed(now, shiftStartMs)) return rows;
       return rows.filter(function(r) { return portalIsoToMs(r.checkInIso); });
     }
-    let _portalZoneCache = { key: "", value: null };
+
+    // Which site a shared feature is working on: "oks" (My Portal) or "mn" (Minnesota My Portal). The zone,
+    // alert, popup, ticker and door-map code is written once and asks these helpers for the site's own data.
+    function portalSt(site) { return site === "mn" ? state.portalMn : state.portal; }
+    function portalSiteStartMs(site) { return site === "mn" ? portalMnShiftStartMs() : portalShiftStartMs(); }
+    function portalSiteGoalMs(site) { return site === "mn" ? portalMnShiftGoalMs() : portalShiftGoalMs(); }
+    function portalSiteGoalText(site) { return site === "mn" ? "5:00 AM" : "4:00 AM"; }
+    function portalSiteClosed(site, now) { return site === "mn" ? portalMnShiftClosedAfterMorning(now) : portalShiftClosedAfterMorning(now); }
+    function portalSiteRows(site) { return site === "mn" ? portalMnEnrichedRows() : portalEnrichedTrucks(); }
+    function portalSiteModel(site) { return site === "mn" ? PORTAL_ZONE_MODEL_MN : PORTAL_ZONE_MODEL; }
+    function portalSiteEl(site, name) { return document.getElementById((site === "mn" ? "portalMn" : "portal") + name); }
+    function portalSiteTab(site) { return site === "mn" ? "myPortalMn" : "myPortal"; }
+    function portalSiteSetView(site, view) { return site === "mn" ? portalMnSetView(view) : portalSetView(view); }
+    let _portalZoneCache = {};                                        // per site: { key, value }
     let _portalZoneHold = {};
     const _portalZoneFired = new Set();
 
@@ -18415,8 +18491,8 @@
       return [fit[i][0] + (fit[i + 1][0] - fit[i][0]) * f, fit[i][1] + (fit[i + 1][1] - fit[i][1]) * f];
     }
 
-    function portalZoneEstimates(rows, now, shiftStartMs, model) {
-      model = model || PORTAL_ZONE_MODEL;
+    function portalZoneEstimates(rows, now, shiftStartMs, model, site) {
+      model = model || portalSiteModel(site);
       const elapsed = (now - shiftStartMs) / 60000;
       // From 2:30 AM, trucks that never arrived are dropped completely (see portalNoShowCutoffPassed).
       const dropNoShows = portalNoShowCutoffPassed(now, shiftStartMs);
@@ -18486,15 +18562,18 @@
     }
 
     // Cached per minute / data refresh so the 15 s alert tick and the view don't each re-simulate.
-    function portalZoneEstimatesNow(now) {
-      const rows = state.portal.scheduledRows;
-      const start = portalShiftStartMs();
+    function portalZoneEstimatesNow(now, site) {
+      site = site === "mn" ? "mn" : "oks";
+      const st = portalSt(site);
+      const rows = st.scheduledRows;
+      const start = portalSiteStartMs(site);
       if (!Array.isArray(rows) || !start) return null;
-      const key = rows.length + "|" + Math.floor(now / 60000) + "|" + (state.portal.liveUpdatedAt || "") + "|" + start;
-      if (_portalZoneCache.key === key) return _portalZoneCache.value;
+      const key = rows.length + "|" + Math.floor(now / 60000) + "|" + (st.liveUpdatedAt || "") + "|" + start;
+      const cached = _portalZoneCache[site];
+      if (cached && cached.key === key) return cached.value;
       let value = null;
-      try { value = portalZoneEstimates(rows, now, start); } catch (err) { console.error("Zone estimate failed:", err); }
-      _portalZoneCache = { key: key, value: value };
+      try { value = portalZoneEstimates(rows, now, start, null, site); } catch (err) { console.error("Zone estimate failed:", err); }
+      _portalZoneCache[site] = { key: key, value: value };
       return value;
     }
 
@@ -18510,84 +18589,89 @@
 
     // Estimated finish as a big, glanceable block. The estimate is only good to about an hour, so the
     // time is rounded to 5 minutes and marked with "~"; the line under it says how it sits against 4 AM.
-    function portalEtaParts(estMs) {
+    function portalEtaParts(estMs, site) {
       const rounded = Math.round(estMs / 300000) * 300000;
-      const goal = portalShiftGoalMs();
+      const goal = portalSiteGoalMs(site), goalText = portalSiteGoalText(site);
       let delta = "", cls = "even";
       if (goal) {
         const d = Math.round((rounded - goal) / 60000);
-        if (Math.abs(d) < 5) delta = "Right at the 4:00 AM goal";
-        else if (d < 0) { delta = portalZoneFmtMin(-d) + " before the 4:00 AM goal"; cls = "early"; }
-        else { delta = portalZoneFmtMin(d) + " past the 4:00 AM goal"; cls = d >= 30 ? "late" : "close"; }
+        if (Math.abs(d) < 5) delta = "Right at the " + goalText + " goal";
+        else if (d < 0) { delta = portalZoneFmtMin(-d) + " before the " + goalText + " goal"; cls = "early"; }
+        else { delta = portalZoneFmtMin(d) + " past the " + goalText + " goal"; cls = d >= 30 ? "late" : "close"; }
       }
       return { time: "~" + portalFinishClock(rounded), delta: delta, cls: cls };
     }
 
-    function portalZoneEtaHtml(r) {
+    function portalZoneEtaHtml(r, site) {
       if (!r) return "";
       if (r.status === "done") return '<div class="zone-eta done"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">Finished</div></div>';
-      const p = portalEtaParts(r.estMs);
+      const p = portalEtaParts(r.estMs, site);
       return '<div class="zone-eta"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">' + escapeHtml(p.time) + '</div>'
         + (p.delta ? '<div class="zone-eta-delta ' + p.cls + '">' + escapeHtml(p.delta) + '</div>' : '') + '</div>';
     }
 
-    function portalZoneFinishLine(r) {
+    function portalZoneFinishLine(r, site) {
       if (!r || r.status === "done") return r && r.status === "done" ? "Finished for the night" : "";
-      const goal = portalShiftGoalMs();
+      const goal = portalSiteGoalMs(site), goalText = portalSiteGoalText(site);
       let text = "Est. finish " + portalFinishClock(r.estMs);
       if (goal) {
         const d = Math.round((r.estMs - goal) / 60000);
-        text += Math.abs(d) < 5 ? " (right at the 4:00 AM goal)" : d < 0 ? " (" + portalZoneFmtMin(-d) + " before the 4:00 AM goal)" : " (" + portalZoneFmtMin(d) + " past the 4:00 AM goal)";
+        text += Math.abs(d) < 5 ? " (right at the " + goalText + " goal)" : d < 0 ? " (" + portalZoneFmtMin(-d) + " before the " + goalText + " goal)" : " (" + portalZoneFmtMin(d) + " past the " + goalText + " goal)";
       }
       return text;
     }
 
     // Alerts for zones that have stayed yellow or red for 5+ minutes. They join the Alerts tab and
     // fire the same desktop notification / sound as truck alerts, once per zone per status.
-    function portalZoneAlerts() {
+    function portalZoneAlerts(site) {
+      site = site === "mn" ? "mn" : "oks";
+      const pre = site === "mn" ? "mn:" : "";                    // keeps the two sites' alert ids apart
       const now = Date.now();
-      const est = portalZoneEstimatesNow(now);
+      const est = portalZoneEstimatesNow(now, site);
       const alerts = [];
-      if (!est || portalShiftClosedAfterMorning(now) || !portalLiveDataFresh(now)) return alerts;
-      const date = state.portal.businessDate || "";
+      if (!est || portalSiteClosed(site, now) || !portalLiveDataFresh(now, site)) return alerts;
+      const date = portalSt(site).businessDate || "";
       PORTAL_ZONE_GROUPS.forEach(function(g) {
         const r = est[g.key];
         if (!r) return;
-        const hold = _portalZoneHold[g.key];
-        if (!hold || hold.status !== r.status) _portalZoneHold[g.key] = { status: r.status, since: now };
+        const hk = pre + g.key;
+        const hold = _portalZoneHold[hk];
+        if (!hold || hold.status !== r.status) _portalZoneHold[hk] = { status: r.status, since: now };
         if (r.status !== "yellow" && r.status !== "red") {
-          _portalZoneFired.delete("zone:" + g.key + ":yellow:" + date);
-          _portalZoneFired.delete("zone:" + g.key + ":red:" + date);
+          _portalZoneFired.delete(pre + "zone:" + g.key + ":yellow:" + date);
+          _portalZoneFired.delete(pre + "zone:" + g.key + ":red:" + date);
           return;
         }
-        if (now - _portalZoneHold[g.key].since < 5 * 60000) return;
+        if (now - _portalZoneHold[hk].since < 5 * 60000) return;
         const min = Math.round(r.lag);
         const red = r.status === "red";
         const usualCount = Math.round(r.usual * r.scheduled);
-        const detail = min + " min behind the usual pace for this time of night (" + r.done + " of " + r.scheduled + " trucks done vs about " + usualCount + " usual). " + portalZoneFinishLine(r) + ".";
+        const detail = min + " min behind the usual pace for this time of night (" + r.done + " of " + r.scheduled + " trucks done vs about " + usualCount + " usual). " + portalZoneFinishLine(r, site) + ".";
         alerts.push({
-          zoneKey: g.key, sev: red ? "zonered" : "zoneyellow", order: red ? 0 : 1, icon: red ? "CRITICAL" : "WARNING",
+          zoneKey: g.key, site: site, sev: red ? "zonered" : "zoneyellow", order: red ? 0 : 1, icon: red ? "CRITICAL" : "WARNING",
           sevLabel: red ? "Zone Behind" : "Zone Slipping",
           title: g.title + (red ? " is " + min + " min behind schedule" : " is slightly behind schedule"),
           detail: detail,
           notifyTitle: (red ? "[Critical] " : "[Warning] ") + g.title + (red ? " is " + min + " min behind schedule" : " is slightly behind schedule"),
           notifyBody: detail,
-          tag: "zone:" + g.key + ":" + r.status + ":" + date
+          tag: pre + "zone:" + g.key + ":" + r.status + ":" + date
         });
       });
       return alerts;
     }
 
-    function renderPortalZonesView() {
-      const grid = document.getElementById("portalZonesGrid");
-      const meta = document.getElementById("portalZonesMeta");
-      const foot = document.getElementById("portalZonesFoot");
+    function renderPortalZonesView(site) {
+      site = site === "mn" ? "mn" : "oks";
+      const st = portalSt(site);
+      const grid = portalSiteEl(site, "ZonesGrid");
+      const meta = portalSiteEl(site, "ZonesMeta");
+      const foot = portalSiteEl(site, "ZonesFoot");
       if (!grid) return;
-      const allTrucks = Array.isArray(state.portal.scheduledRows) ? state.portal.scheduledRows : [];
+      const allTrucks = Array.isArray(st.scheduledRows) ? st.scheduledRows : [];
       const nowMs = Date.now();
       // After 2:30 AM trucks that never arrived are left out of every count and estimate on this screen.
-      const cutoff = portalNoShowCutoffPassed(nowMs, portalShiftStartMs());
-      const trucks = cutoff ? portalCountedRows(allTrucks, nowMs, portalShiftStartMs()) : allTrucks;
+      const cutoff = portalNoShowCutoffPassed(nowMs, portalSiteStartMs(site));
+      const trucks = cutoff ? portalCountedRows(allTrucks, nowMs, portalSiteStartMs(site)) : allTrucks;
       const droppedCount = allTrucks.length - trucks.length;
       if (!trucks.length) {
         grid.innerHTML = '<div class="door-empty">Waiting on DMS shift data...</div>';
@@ -18596,19 +18680,19 @@
         return;
       }
       const z = portalZonesCompute(trucks, nowMs);
-      const est = portalZoneEstimatesNow(nowMs);
-      const liveRows = portalEnrichedTrucks();
+      const est = portalZoneEstimatesNow(nowMs, site);
+      const liveRows = portalSiteRows(site);
       const byDoor = portalBuildByDoor(liveRows);
-      state.portal.byDoor = byDoor;
+      st.byDoor = byDoor;
       const th = portalNsThresholds();
       const zoneOf = function(r) { const loc = portalZoneLocate(r && r.area); return loc ? loc.group : -1; };
       if (meta) meta.textContent = z.total.completed + " of " + z.total.scheduled + " trucks complete (" + z.total.pct + "%) across the whole shift";
 
-      const building = document.getElementById("portalZonesBuilding");
+      const building = portalSiteEl(site, "ZonesBuilding");
       if (building) {
         let line;
-        if (state.portal.estMs) {
-          const p = portalEtaParts(state.portal.estMs);
+        if (st.estMs) {
+          const p = portalEtaParts(st.estMs, site);
           line = '<span class="zone-eta-label">Whole building &middot; estimated finish</span>'
             + '<span class="zone-eta-time inline">' + escapeHtml(p.time) + '</span>'
             + (p.delta ? '<span class="zone-eta-delta ' + p.cls + '">' + escapeHtml(p.delta) + '</span>' : '')
@@ -18627,10 +18711,10 @@
       grid.innerHTML = z.groups.map(function(g, gi) {
         const m = g.metrics;
         // This zone's doors: its usual home doors plus any door one of its trucks is on right now.
-        const doorSet = new Set(((PORTAL_ZONE_MODEL.zoneDoors || {})[g.def.key] || []).slice());
+        const doorSet = new Set(((portalSiteModel(site).zoneDoors || {})[g.def.key] || []).slice());
         Object.keys(byDoor).forEach(function(d) { if (zoneOf(byDoor[d]) === gi) doorSet.add(Number(d)); });
         const mine = function(dn) { return byDoor[dn] && zoneOf(byDoor[dn]) === gi ? byDoor[dn] : null; };
-        const zoneDoors = portalSortDoors(Array.from(doorSet), mine, nowMs, th);
+        const zoneDoors = portalSortDoors(Array.from(doorSet), mine, nowMs, th, site);
         const nsInfos = zoneDoors.map(function(dn) { return portalNotStartedInfo(mine(dn), nowMs, th); }).filter(Boolean);
         const nsRedN = nsInfos.filter(function(n) { return n.level === "red"; }).length;
         const nsYellowN = nsInfos.length - nsRedN;
@@ -18638,7 +18722,7 @@
         const waitingForDoor = liveRows.filter(function(r) { return zoneOf(r) === gi && r.checkInMs && r.status !== "complete" && !isFinite(parseInt(r.door, 10)); }).length;
         const doorTiles = zoneDoors.map(function(dn) {
           if (!mine(dn) && byDoor[dn]) return '<div class="door-tile open"><div class="door-no">' + dn + '</div><div class="door-dwell">In use by another zone</div></div>';
-          return portalDoorTileHtml(dn, mine(dn), nowMs, th);
+          return portalDoorTileHtml(dn, mine(dn), nowMs, th, site);
         }).join("");
         const palletLine = m.pallets ? " · " + formatNumber(m.palletsDone) + " of " + formatNumber(m.pallets) + " pallets" : "";
         const rows = g.areas.map(function(a) {
@@ -18655,7 +18739,7 @@
         return '<article class="zone-card zs-' + info.cls + '">'
           + '<div class="zone-head"><h3>' + escapeHtml(g.def.title) + '</h3></div>'
           + (info.label ? '<div class="zone-status"><span class="zone-chip ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' : '')
-          + portalZoneEtaHtml(zr)
+          + portalZoneEtaHtml(zr, site)
           + portalZonePctHtml(m)
           + '<div class="zone-sub">' + m.completed + ' of ' + m.scheduled + ' trucks complete' + palletLine
           + (m.arrived ? ' · ' + Math.round(m.completed / m.arrived * 100) + '% of arrived trucks finished' : '') + '</div>'
@@ -18702,19 +18786,19 @@
     }
 
     // Tapping a door on a zone's map opens the same detail popup as the main Door Map.
-    (function() {
-      const zonesGrid = document.getElementById("portalZonesGrid");
+    ["oks", "mn"].forEach(function(site) {
+      const zonesGrid = portalSiteEl(site, "ZonesGrid");
       if (!zonesGrid) return;
       zonesGrid.addEventListener("click", function(e) {
         const tile = e.target.closest(".door-tile.occupied");
         if (!tile) return;
         const dn = parseInt(tile.getAttribute("data-door"), 10);
-        const r = (state.portal.byDoor || {})[dn];
+        const r = (portalSt(site).byDoor || {})[dn];
         if (!r || !els.portalDoorDetailModal) return;
-        portalRenderDoorDetail("oks", dn, r);
+        portalRenderDoorDetail(site, dn, r);
         els.portalDoorDetailModal.style.display = "flex";
       });
-    })();
+    });
 
     // Door Map sort buttons and the not-started thresholds.
     function portalSyncDoorControls() {
@@ -18732,12 +18816,20 @@
       if (r && document.activeElement !== r) r.value = th.red;
       const c = document.getElementById("portalNsClock");
       if (c) c.value = portalNsClock();
+      const my = document.getElementById("portalMnNsYellow"), mr = document.getElementById("portalMnNsRed");
+      if (my && document.activeElement !== my) my.value = th.yellow;
+      if (mr && document.activeElement !== mr) mr.value = th.red;
+      const mc = document.getElementById("portalMnNsClock");
+      if (mc) mc.value = portalNsClock();
     }
     function portalDoorControlsChanged() {
       portalSyncDoorControls();
       try { renderPortalDoorMap(); } catch (err) { console.error("Door map render failed:", err); }
       if (state.portal.portalView === "zones") renderPortalZonesView();
       try { renderAlertsTab(); } catch (err) { console.error(err); }
+      try { renderPortalMnDoorMap(); } catch (err) { console.error("Minnesota door map render failed:", err); }
+      if (state.portalMn.view === "zones") renderPortalZonesView("mn");
+      if (state.portalMn.liveAttempted) { try { portalMnAttentionTick(); } catch (err) { console.error(err); } }
     }
     // The Door Map tab and the Zones tab each have a sort box; both drive the same saved setting.
     document.addEventListener("change", function(e) {
@@ -18752,12 +18844,14 @@
       portalDoorControlsChanged();
     });
     (function() {
-      [["portalNsYellow", "portalNsYellow"], ["portalNsRed", "portalNsRed"]].forEach(function(p) {
+      [["portalNsYellow", "portalNsYellow"], ["portalNsRed", "portalNsRed"], ["portalMnNsYellow", "portalNsYellow"], ["portalMnNsRed", "portalNsRed"]].forEach(function(p) {
         const input = document.getElementById(p[0]);
         if (input) input.addEventListener("change", function() { safeLocalStorageSet(p[1], input.value); portalDoorControlsChanged(); });
       });
-      const clock = document.getElementById("portalNsClock");
-      if (clock) clock.addEventListener("change", function() { safeLocalStorageSet("portalNsClock", clock.value); portalDoorControlsChanged(); });
+      ["portalNsClock", "portalMnNsClock"].forEach(function(id) {
+        const clock = document.getElementById(id);
+        if (clock) clock.addEventListener("change", function() { safeLocalStorageSet("portalNsClock", clock.value); portalDoorControlsChanged(); });
+      });
       portalSyncDoorControls();
     })();
 
@@ -18765,7 +18859,7 @@
     // Live data only refreshes while My Portal is the open tab, so nothing is raised from data
     // more than 5 minutes old (leaving the tab would otherwise make every truck look overdue).
     const _portalNsFired = new Set();           // "ns:<truck>:<level>:<date>" already announced
-    const _portalNsLastNotify = { red: 0, yellow: 0 };
+    const _portalNsLastNotify = { oks: { red: 0, yellow: 0 }, mn: { red: 0, yellow: 0 } };
     const _portalPopupDismissed = new Set();
     const _portalPopupSeen = new Set();
     const _portalPopupFirstShown = new Map();   // id -> when its popup first appeared
@@ -18773,18 +18867,21 @@
     let _portalPopupTimer = null;
     let _portalMenuOpen = false;
     let _portalPopupItems = [];
+    const _portalPopupItemsBySite = { oks: [], mn: [] };
 
-    function portalLiveDataFresh(now) {
-      const t = Date.parse(state.portal.liveUpdatedAt || "");
+    function portalLiveDataFresh(now, site) {
+      const t = Date.parse(portalSt(site).liveUpdatedAt || "");
       return isFinite(t) && now - t <= 5 * 60000;
     }
 
-    function portalNotStartedAlerts(now) {
+    function portalNotStartedAlerts(now, site) {
+      site = site === "mn" ? "mn" : "oks";
+      const pre = site === "mn" ? "mn:" : "";
       const out = [];
-      if (!portalLiveDataFresh(now) || portalShiftClosedAfterMorning(now)) return out;
+      if (!portalLiveDataFresh(now, site) || portalSiteClosed(site, now)) return out;
       const th = portalNsThresholds();
-      const date = state.portal.businessDate || "";
-      portalEnrichedTrucks().forEach(function(r) {
+      const date = portalSt(site).businessDate || "";
+      portalSiteRows(site).forEach(function(r) {
         if (!r.checkInMs) return;
         const ns = portalNotStartedInfo(r, now, th);
         if (!ns) return;
@@ -18793,11 +18890,11 @@
         const red = ns.level === "red";
         const who = r.supplier || r.ref || "Truck";
         out.push({
-          kind: "ns", level: ns.level, door: isFinite(dn) ? dn : null, mins: ns.mins, where: where, who: who, truck: r, truckId: String(r.id || r.ref || ""),
+          kind: "ns", site: site, level: ns.level, door: isFinite(dn) ? dn : null, mins: ns.mins, where: where, who: who, truck: r, truckId: String(r.id || r.ref || ""),
           sev: red ? "notstartedred" : "notstartedyellow", order: red ? 1 : 3, icon: red ? "CRITICAL" : "WARNING", sevLabel: red ? "Not Started" : "Start Soon",
           title: where + (red ? " is overdue to start" : " needs to be started soon"),
           detail: who + " | " + ns.mins + " min " + (ns.basis === "door" ? "at the door" : "since it was ready (at the door and past its appointment time)") + " and the unload has not started. Start it" + (red ? " now." : " soon."),
-          tag: "ns:" + (r.id || r.ref || where) + ":" + ns.level + ":" + date
+          tag: pre + "ns:" + (r.id || r.ref || where) + ":" + ns.level + ":" + date
         });
       });
       out.sort(function(a, b) { return a.order - b.order || b.mins - a.mins; });
@@ -18805,13 +18902,14 @@
     }
 
     function portalPopupGoDoor(item) {
-      selectTab("myPortal");
-      portalSetView("doors");
-      const byDoor = portalBuildByDoor(portalEnrichedTrucks());
-      state.portal.byDoor = byDoor;
+      const site = item.site === "mn" ? "mn" : "oks";
+      selectTab(portalSiteTab(site));
+      portalSiteSetView(site, "doors");
+      const byDoor = portalBuildByDoor(portalSiteRows(site));
+      portalSt(site).byDoor = byDoor;
       const r = item.door != null ? byDoor[item.door] : null;
       if (r && els.portalDoorDetailModal) {
-        portalRenderDoorDetail("oks", item.door, r);
+        portalRenderDoorDetail(site, item.door, r);
         els.portalDoorDetailModal.style.display = "flex";
       }
     }
@@ -18928,19 +19026,21 @@
     // grouped, rate-limited desktop notification per colour) and keeps the on-screen popups current.
     // `alreadyNotified` holds trucks the older per-truck "Unload start overdue" alert notifies about
     // itself, so they are not announced twice (they still get a popup and an Alerts-tab card).
-    function portalAttentionTick(now, nsAlerts, zoneAlerts, alreadyNotified) {
+    function portalAttentionTick(now, nsAlerts, zoneAlerts, alreadyNotified, site) {
+      site = site === "mn" ? "mn" : "oks";
+      const last = _portalNsLastNotify[site];
       ["red", "yellow"].forEach(function(level) {
         const due = nsAlerts.filter(function(a) { return a.level === level && !_portalNsFired.has(a.tag); });
-        if (!due.length || now - _portalNsLastNotify[level] < 5 * 60000) return;
+        if (!due.length || now - last[level] < 5 * 60000) return;
         due.forEach(function(a) { _portalNsFired.add(a.tag); });
         const pending = due.filter(function(a) { return !(alreadyNotified && alreadyNotified.has(a.truckId)); });
         if (!pending.length) return;
-        _portalNsLastNotify[level] = now;
+        last[level] = now;
         const names = pending.slice(0, 5).map(function(a) { return a.where + " (" + a.who + ", " + a.mins + " min)"; });
         const more = pending.length > 5 ? " +" + (pending.length - 5) + " more" : "";
         const title = (level === "red" ? "[Critical] " : "[Warning] ")
           + (pending.length === 1 ? pending[0].title : pending.length + " doors " + (level === "red" ? "are overdue to start" : "need to be started soon"));
-        portalNotify(title, names.join(", ") + more, "ns-group:" + level + ":" + now);
+        portalNotify(title, names.join(", ") + more, (site === "mn" ? "mn-" : "") + "ns-group:" + level + ":" + now);
         portalBeep(level === "red" ? "detention" : "urgent");
       });
       const items = [];
@@ -18950,19 +19050,22 @@
       });
       zoneAlerts.forEach(function(a) {
         items.push({ id: a.tag, level: a.sev === "zonered" ? "red" : "yellow", order: a.order * 2, mins: 0, title: a.title,
-          text: a.detail, actionLabel: "View zones", onAction: function() { selectTab("myPortal"); portalSetView("zones"); } });
+          text: a.detail, actionLabel: "View zones", onAction: function() { selectTab(portalSiteTab(site)); portalSiteSetView(site, "zones"); } });
       });
-      items.sort(function(a, b) { return a.order - b.order || b.mins - a.mins; });
-      _portalPopupItems = items;
+      const byUrgency = function(a, b) { return a.order - b.order || b.mins - a.mins; };
+      items.sort(byUrgency);
+      _portalPopupItemsBySite[site] = items;                 // each site keeps its own list; the bell shows both
+      _portalPopupItems = _portalPopupItemsBySite.oks.concat(_portalPopupItemsBySite.mn).sort(byUrgency);
       portalAttentionRender();
     }
 
     // -- Pace ticker --------------------------------------------------------------------
     // Scrolls along the top of My Portal (and the TV/kiosk screen): is the building, and each
     // zone, ahead of or behind the average night, plus its estimated finish time.
-    function portalTickerItems(now) {
-      if (!portalLiveDataFresh(now) || portalShiftClosedAfterMorning(now)) return null;
-      const est = portalZoneEstimatesNow(now);
+    function portalTickerItems(now, site) {
+      site = site === "mn" ? "mn" : "oks";
+      if (!portalLiveDataFresh(now, site) || portalSiteClosed(site, now)) return null;
+      const est = portalZoneEstimatesNow(now, site);
       if (!est) return null;
       const items = [];
       const describe = function(label, r, estMs) {
@@ -18979,19 +19082,22 @@
         const finish = r.status !== "done" && estMs && estMs > now ? "est. finish " + portalFinishClock(estMs) : "";
         items.push({ label: label, cls: cls, state: text, finish: finish });
       };
-      describe("WHOLE BUILDING", est.all, state.portal.estMs);
+      describe("WHOLE BUILDING", est.all, portalSt(site).estMs);
       PORTAL_ZONE_GROUPS.forEach(function(g) { describe(g.title.toUpperCase(), est[g.key], est[g.key] && est[g.key].estMs); });
       return items;
     }
 
-    let _portalTickerShape = "";
-    function portalRenderTicker() {
-      const targets = [[document.getElementById("portalTicker"), document.getElementById("portalTickerTrack")],
-                       [document.getElementById("kioskTicker"), document.getElementById("kioskTickerTrack")]];
+    const _portalTickerShapes = {};
+    function portalRenderTicker(site) {
+      site = site === "mn" ? "mn" : "oks";
+      const targets = site === "mn"
+        ? [[document.getElementById("portalMnTicker"), document.getElementById("portalMnTickerTrack")]]
+        : [[document.getElementById("portalTicker"), document.getElementById("portalTickerTrack")],
+           [document.getElementById("kioskTicker"), document.getElementById("kioskTickerTrack")]];
       let items = null;
-      try { items = portalTickerItems(Date.now()); } catch (err) { console.error("Ticker failed:", err); }
+      try { items = portalTickerItems(Date.now(), site); } catch (err) { console.error("Ticker failed:", err); }
       if (!items || !items.length) {
-        _portalTickerShape = "";
+        _portalTickerShapes[site] = "";
         targets.forEach(function(p) { if (p[0]) p[0].style.display = "none"; });
         return;
       }
@@ -19004,7 +19110,7 @@
         const wrap = p[0], track = p[1];
         if (!wrap || !track) return;
         wrap.style.display = "";
-        if (_portalTickerShape !== shape || !track.firstChild) {
+        if (_portalTickerShapes[site] !== shape || !track.firstChild) {
           const set = '<span class="portal-ticker-set">' + items.map(itemHtml).join("") + '</span>';
           track.innerHTML = set + set;                      // doubled so the scroll loops without a gap
           const chars = items.reduce(function(s, it) { return s + it.label.length + it.state.length + it.finish.length + 10; }, 0);
@@ -19019,7 +19125,7 @@
           });
         }
       });
-      _portalTickerShape = shape;
+      _portalTickerShapes[site] = shape;
     }
 
     // The Late Truck Separation panel belongs to the Board view: it is hidden on the Door Map, Zones
@@ -19165,8 +19271,11 @@
     // The server (/api/portal/shift-report) sends one night's numbers plus the nights it is compared
     // with. This builds ONE self-contained HTML document (inline SVG charts, no outside files). The
     // preview shows it, and Download / Print (Save as PDF) use exactly the same document.
-    const SHIFT_RPT = { days: 7, data: null, doc: "", busy: false };
+    const SHIFT_RPT = { days: 7, data: null, doc: "", busy: false, site: "oks" };
     const SHIFT_RPT_ZONES = { freezer: "Freezer", chilled: "Cooler / Fresh Meat / Produce", dry: "Dry / Slip Sheet / Floor Load", other: "Other areas" };
+    const SHIFT_RPT_DOCK_LABELS = ["Under 30 min", "30-60 min", "1-1.5 h", "1.5-2 h", "2-3 h", "3-4 h", "4 h+"];
+    const SHIFT_RPT_PUNCT_LABELS = ["2 h+ early", "1-2 h early", "30-60 min early", "15-30 min early", "On time (within 15)", "15-30 min late", "30-60 min late", "1-2 h late", "2 h+ late"];
+    const SHIFT_RPT_PALLET_LABELS = ["1-10", "11-20", "21-30", "31-40", "41+"];
     const SHIFT_RPT_GOAL_MIN = 540;                      // 4 AM, in minutes after the 7 PM start
 
     // Minutes after 7 PM -> clock text ("4:05 AM").
@@ -19195,6 +19304,11 @@
       if (!m) return String(businessDate || "");
       return new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2])).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
     }
+    // Each site has its own goal time (OKS 4 AM, Minnesota 5 AM); the server sends it as goal_min.
+    function shiftRptGoal(t) { return (t && t.goal_min) || SHIFT_RPT_GOAL_MIN; }
+    function shiftRptGoalFull(t) { return shiftRptClock(shiftRptGoal(t)); }                 // "4:00 AM"
+    function shiftRptGoalShort(t) { return shiftRptGoalFull(t).replace(":00", ""); }        // "4 AM"
+    function shiftRptSiteName(data) { return data && data.site === "MN" ? "Minnesota" : "OKS"; }
     function shiftRptHourLabel(h) { return shiftRptClock(h * 60).replace(":00", ""); }
     function shiftRptNiceStep(max, ticks) {
       const raw = Math.max(max, 1e-9) / (ticks || 5), pow = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / pow;
@@ -19337,40 +19451,185 @@
       return '<div class="cw">' + fn(Object.assign({}, o)) + '</div><div class="cn">' + fn(Object.assign({}, o, { w: 300, h: narrowH, narrow: true })) + '</div>';
     }
 
-    function shiftRptKpis(t, b) {
-      const n1 = function(a) { return shiftRptNum(a, 1); };
+    // ---- palette ----
+    const SR_C = { tonight: "#2b6cb0", avg: "#dd6b20", gray: "#94a3b8", green: "#2f855a", red: "#c53030", amber: "#b7791f", light: "#90cdf4", ink: "#1a202c", muted: "#64748b" };
+    const SR_ZONE_COLOR = { freezer: "#3182ce", chilled: "#38a169", dry: "#d69e2e", other: "#718096" };
+    const SR_PEOPLE_COLORS = ["#2b6cb0", "#dd6b20", "#2f855a", "#805ad5", "#c53030", "#0987a0", "#b7791f", "#d53f8c", "#4a5568", "#319795"];
+
+    function shiftRptXTicks(narrow) {
+      const all = [[0, "7 PM"], [8, "9 PM"], [16, "11 PM"], [24, "1 AM"], [32, "3 AM"], [40, "5 AM"], [48, "7 AM"], [56, "9 AM"]];
+      return narrow ? all.filter(function(t, i) { return i % 2 === 0; }) : all;
+    }
+    function shiftRptXTicksSvg(P, W, H, X, ticks) {
+      let g = "";
+      ticks.forEach(function(t) {
+        g += '<line x1="' + X(t[0]).toFixed(1) + '" x2="' + X(t[0]).toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="#f1f5f9"/>'
+          + '<text x="' + X(t[0]).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="11" fill="#64748b">' + shiftRptEsc(t[1]) + '</text>';
+      });
+      return g;
+    }
+
+    // Stacked areas over the night (the dock queue). o: { n, upto, layers:[{data,color}], line:{data,color}, vlines, label, w, h }
+    function shiftRptSvgStacked(o) {
+      const W = o.w || 720, H = o.h || 250, P = { l: 46, r: 16, t: 14, b: 30 }, iw = W - P.l - P.r, ih = H - P.t - P.b, n = o.n, m = Math.min(o.upto || n, n);
+      const cum = []; let ymax = 1;
+      o.layers.forEach(function(L, li) { cum[li] = L.data.map(function(v, k) { return (v || 0) + (li ? cum[li - 1][k] : 0); }); });
+      cum[cum.length - 1].slice(0, m).forEach(function(v) { if (v > ymax) ymax = v; });
+      if (o.line) o.line.data.forEach(function(v) { if (v != null && v > ymax) ymax = v; });
+      const step = shiftRptNiceStep(ymax, 5); ymax = Math.ceil(ymax / step) * step;
+      const X = function(i) { return P.l + iw * (i / (n - 1)); }, Y = function(v) { return P.t + ih * (1 - v / ymax); };
+      let g = shiftRptAxis(P, W, H, ymax, step) + shiftRptXTicksSvg(P, W, H, X, shiftRptXTicks(o.narrow));
+      o.layers.forEach(function(L, li) {
+        let top = "", bot = "";
+        for (let k = 0; k < m; k++) top += (k ? "L" : "M") + X(k).toFixed(1) + " " + Y(cum[li][k]).toFixed(1) + " ";
+        for (let k = m - 1; k >= 0; k--) bot += "L" + X(k).toFixed(1) + " " + Y(li ? cum[li - 1][k] : 0).toFixed(1) + " ";
+        g += '<path d="' + top + bot + 'Z" fill="' + L.color + '" fill-opacity="0.8"/>';
+      });
+      if (o.line) {
+        let d = ""; o.line.data.forEach(function(v, k) { if (v != null) d += (d ? "L" : "M") + X(k).toFixed(1) + " " + Y(v).toFixed(1) + " "; });
+        g += '<path d="' + d + '" fill="none" stroke="' + o.line.color + '" stroke-width="2.2" stroke-dasharray="6 4"/>';
+      }
+      (o.vlines || []).forEach(function(v) {
+        g += '<line x1="' + X(v.i).toFixed(1) + '" x2="' + X(v.i).toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="' + v.color + '" stroke-width="1.5" stroke-dasharray="5 4"/>'
+          + '<text x="' + (X(v.i) + 5).toFixed(1) + '" y="' + (P.t + 11) + '" font-size="11" font-weight="700" fill="' + v.color + '">' + shiftRptEsc(v.label) + '</text>';
+      });
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+
+    // Horizontal bars for a few categories, tonight against the earlier-night average. o: { items:[{label,value,avg,color}], fmt, label, w, narrow }
+    function shiftRptSvgHist(o) {
+      const narrow = !!o.narrow, rowH = 28, W = o.w || 520, P = { l: narrow ? 112 : 150, r: narrow ? 78 : 104, t: 8, b: 8 };
+      const n = o.items.length, H = P.t + P.b + rowH * n, iw = W - P.l - P.r;
+      let max = 1; o.items.forEach(function(i) { max = Math.max(max, i.value || 0, i.avg || 0); }); max *= 1.05;
+      let g = "";
+      o.items.forEach(function(it, i) {
+        const y = P.t + rowH * i, w = it.value ? Math.max(2, iw * it.value / max) : 0;
+        g += '<text x="' + (P.l - 8) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-size="11" fill="#1a202c">' + shiftRptEsc(it.label) + '</text>'
+          + '<rect x="' + P.l + '" y="' + (y + 6) + '" width="' + w.toFixed(1) + '" height="' + (rowH - 12) + '" rx="3" fill="' + (it.color || SR_C.tonight) + '"/>';
+        if (it.avg != null) { const x = P.l + iw * it.avg / max; g += '<line x1="' + x.toFixed(1) + '" x2="' + x.toFixed(1) + '" y1="' + (y + 3) + '" y2="' + (y + rowH - 3) + '" stroke="' + SR_C.avg + '" stroke-width="2.5"/>'; }
+        g += '<text x="' + (P.l + iw + 8) + '" y="' + (y + rowH / 2 + 4) + '" font-size="11" font-weight="700" fill="#1a202c">' + shiftRptEsc(o.fmt(it.value || 0))
+          + (it.avg != null ? '<tspan fill="#64748b" font-weight="400"> (avg ' + shiftRptEsc(o.fmt(it.avg)) + ')</tspan>' : '') + '</text>';
+      });
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+
+    // Who worked when: one row per person, one bar per load across the night. o: { rows:[{label, bars:[{s,f,color}]}], goal, w, narrow }
+    function shiftRptSvgGantt(o) {
+      const narrow = !!o.narrow, W = o.w || 720, rowH = narrow ? 22 : 26, P = { l: narrow ? 76 : 112, r: 12, t: 8, b: 26 };
+      const n = Math.max(1, o.rows.length), H = P.t + P.b + rowH * n, iw = W - P.l - P.r;
+      const X = function(m) { return P.l + iw * (Math.max(0, Math.min(840, m)) / 840); };
+      let g = "";
+      for (let h = 0; h <= 14; h += narrow ? 4 : 2) {
+        g += '<line x1="' + X(h * 60).toFixed(1) + '" x2="' + X(h * 60).toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="#e2e8f0"/>'
+          + '<text x="' + X(h * 60).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="10.5" fill="#64748b">' + shiftRptEsc(shiftRptClock(h * 60).replace(":00", "")) + '</text>';
+      }
+      o.rows.forEach(function(r, i) {
+        const y = P.t + rowH * i, cap = narrow ? 10 : 14;
+        if (i % 2 === 0) g += '<rect x="' + P.l + '" y="' + y + '" width="' + iw + '" height="' + rowH + '" fill="#f8fafc"/>';
+        g += '<text x="' + (P.l - 6) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-size="11" fill="#1a202c">' + shiftRptEsc(r.label.length > cap ? r.label.slice(0, cap - 1) + "…" : r.label) + '</text>';
+        r.bars.forEach(function(b) {
+          if (b.s == null || b.f == null || b.f <= b.s) return;
+          g += '<rect x="' + X(b.s).toFixed(1) + '" y="' + (y + 4) + '" width="' + Math.max(1.5, X(b.f) - X(b.s)).toFixed(1) + '" height="' + (rowH - 8) + '" rx="2" fill="' + b.color + '" stroke="#fff" stroke-width="0.8"/>';
+        });
+      });
+      if (o.goal != null) g += '<line x1="' + X(o.goal).toFixed(1) + '" x2="' + X(o.goal).toFixed(1) + '" y1="' + P.t + '" y2="' + (H - P.b) + '" stroke="#c53030" stroke-width="1.5" stroke-dasharray="5 4"/>';
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+
+    // Stacked horizontal bars: where a truck's time goes. o: { rows:[{label, parts:[{v,color}]}], fmt, w, narrow }
+    function shiftRptSvgBreakdown(o) {
+      const narrow = !!o.narrow, rowH = 40, W = o.w || 520, P = { l: narrow ? 74 : 96, r: 60, t: 8, b: 8 };
+      const H = P.t + P.b + rowH * o.rows.length, iw = W - P.l - P.r;
+      let max = 1; o.rows.forEach(function(r) { max = Math.max(max, r.parts.reduce(function(s, p) { return s + (p.v || 0); }, 0)); });
+      let g = "";
+      o.rows.forEach(function(r, i) {
+        const y = P.t + rowH * i; let x = P.l;
+        g += '<text x="' + (P.l - 8) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-size="11" fill="#1a202c">' + shiftRptEsc(r.label) + '</text>';
+        r.parts.forEach(function(p) {
+          const w = (p.v || 0) / max * iw;
+          if (w <= 0) return;
+          g += '<rect x="' + x.toFixed(1) + '" y="' + (y + 8) + '" width="' + w.toFixed(1) + '" height="' + (rowH - 16) + '" fill="' + p.color + '"/>';
+          if (w > 30) g += '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="#fff">' + shiftRptEsc(o.fmt(p.v)) + '</text>';
+          x += w;
+        });
+        g += '<text x="' + (x + 6).toFixed(1) + '" y="' + (y + rowH / 2 + 4) + '" font-size="11" font-weight="700" fill="#1a202c">' + shiftRptEsc(o.fmt(r.parts.reduce(function(s, p) { return s + (p.v || 0); }, 0))) + '</text>';
+      });
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+
+    // Tiles, grouped. Each tile: tonight, how it compares with the earlier nights' average, and the same weekday when there are 2+.
+    function shiftRptKpiGroups(data) {
+      const t = data.tonight, b = data.baseline, prev = data.previous || [];
+      const gs = shiftRptGoalShort(t), gf = shiftRptGoalFull(t);
+      const n0 = function(v) { return shiftRptNum(v); }, n1 = function(v) { return shiftRptNum(v, 1); }, pc = function(v) { return shiftRptNum(v) + "%"; };
+      const cnt = function(w) { return function(a) { return shiftRptNum(a, 1) + " " + w; }; };
+      const P = function(f) { return function(x) { return x.punctuality ? x.punctuality[f] : null; }; };
       const defs = [
-        { k: "completed", label: "Trucks unloaded", val: function(v) { return shiftRptNum(v); }, sub: "of " + shiftRptNum(t.arrived) + " that arrived", better: "up", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 },
-        { k: "pct_by_goal", label: "Finished by 4 AM", val: function(v) { return shiftRptNum(v) + "%"; }, sub: shiftRptNum(t.finished_by_goal) + " of " + shiftRptNum(t.arrived) + " arrived", better: "up", words: ["higher", "lower"], fmt: function(a) { return shiftRptNum(a) + " pts"; }, tol: 1 },
-        { k: "p95_finish_min", label: "95% of trucks done", val: shiftRptClock, sub: "goal is 4:00 AM", better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
-        { k: "last_finish_min", label: "Last truck finished", val: shiftRptClock, sub: "the very last one is often a straggler", better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
-        { k: "avg_unload_min", label: "Average unload time", val: shiftRptDur, sub: "unload start to finish", better: "down", words: ["slower", "faster"], fmt: shiftRptDur, tol: 2 },
-        { k: "avg_wait_min", label: "Average wait to start", val: shiftRptDur, sub: "check-in to unload start", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
-        { k: "avg_dock_min", label: "Average time on dock", val: shiftRptDur, sub: "check-in to unload finish", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
-        { k: "pallets_total", label: "Pallets unloaded", val: function(v) { return shiftRptNum(v); }, sub: "on finished trucks", better: "up", words: ["more", "fewer"], fmt: function(a) { return shiftRptNum(a) + " pallets"; }, tol: 10 },
-        { k: "pph", label: "Pallets per unload hour", val: function(v) { return shiftRptNum(v, 1); }, sub: "per door, not per person", better: "up", words: ["higher", "lower"], fmt: n1, tol: 0.5 },
-        { k: "over_2h", label: "Over 2 hours on dock", val: function(v) { return shiftRptNum(v); }, sub: "check-in to finish", better: "down", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 },
-        { k: "never_arrived", label: "Scheduled, never arrived", val: function(v) { return shiftRptNum(v); }, sub: "no check-in all night", better: "down", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 },
-        { k: "rejected", label: "Rejected loads", val: function(v) { return shiftRptNum(v); }, sub: "not counted as scheduled", better: "down", words: ["more", "fewer"], fmt: function(a) { return n1(a) + " loads"; }, tol: 1 },
-        { k: "peak_unloading", label: "Most unloading at once", val: function(v) { return shiftRptNum(v); }, sub: "trucks at the same moment", better: null, words: ["more", "fewer"], fmt: function(a) { return n1(a) + " trucks"; }, tol: 1 }
+        ["Throughput", [
+          { k: "completed", label: "Trucks unloaded", val: n0, sub: "of " + n0(t.arrived) + " that arrived", better: "up", words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "arrived", label: "Trucks arrived", val: n0, sub: "of " + n0(t.scheduled) + " scheduled", better: "up", words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "pct_by_goal", label: "Finished by " + gs, val: pc, sub: n0(t.finished_by_goal) + " of " + n0(t.arrived) + " arrived", better: "up", words: ["higher", "lower"], fmt: function(a) { return shiftRptNum(a) + " pts"; }, tol: 1 },
+          { k: "p95_finish_min", label: "95% of trucks done", val: shiftRptClock, sub: "goal is " + gf, better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+          { k: "p50_finish_min", label: "Half the trucks done", val: shiftRptClock, sub: "the median finish time", better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+          { k: "last_finish_min", label: "Last truck finished", val: shiftRptClock, sub: "the last one is often a straggler", better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+          { k: "first_start_min", label: "First unload started", val: shiftRptClock, sub: "when the dock got going", better: null, words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+          { k: "pallets_total", label: "Pallets unloaded", val: n0, sub: "on finished trucks", better: "up", words: ["more", "fewer"], fmt: cnt("pallets"), tol: 10 },
+          { k: "pallets_per_truck", label: "Pallets per truck", val: n1, sub: "on trucks that arrived", better: null, words: ["more", "fewer"], fmt: n1, tol: 0.5 }
+        ]],
+        ["Speed", [
+          { k: "avg_unload_min", label: "Average unload time", val: shiftRptDur, sub: "unload start to finish", better: "down", words: ["slower", "faster"], fmt: shiftRptDur, tol: 2 },
+          { k: "pph", label: "Pallets per unload hour", val: n1, sub: "per door, not per person", better: "up", words: ["higher", "lower"], fmt: n1, tol: 0.5 },
+          { k: "peak_unloading", label: "Most unloading at once", val: n0, sub: "trucks at the same moment", better: null, words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "doors_used", label: "Doors used", val: n0, sub: "doors that handled a truck", better: null, words: ["more", "fewer"], fmt: cnt("doors"), tol: 1 }
+        ]],
+        ["Waiting", [
+          { k: "avg_wait_min", label: "Average wait to start", val: shiftRptDur, sub: "check-in to unload start", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+          { k: "avg_yard_wait_min", label: "Wait for a door", val: shiftRptDur, sub: "check-in to driver at the door", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+          { k: "avg_door_wait_min", label: "Wait at the door", val: shiftRptDur, sub: "at the door to unload start", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+          { k: "avg_dock_min", label: "Average time on dock", val: shiftRptDur, sub: "check-in to unload finish", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+          { k: "over_2h", label: "Over 2 hours on dock", val: n0, sub: "check-in to finish", better: "down", words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "peak_on_dock", label: "Most trucks on the dock", val: n0, sub: "at one moment", better: null, words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "avg_on_dock", label: "Average trucks on the dock", val: n1, sub: "7 PM to 7 AM", better: null, words: ["more", "fewer"], fmt: n1, tol: 1 }
+        ]],
+        ["Appointments", [
+          { k: "ontime", get: P("on_time_pct"), label: "Arrived on time", val: pc, sub: "within 15 minutes of the appointment", better: "up", words: ["higher", "lower"], fmt: function(a) { return shiftRptNum(a) + " pts"; }, tol: 2 },
+          { k: "early", get: P("early_pct"), label: "Arrived early", val: pc, sub: "more than 15 minutes early", better: null, words: ["higher", "lower"], fmt: function(a) { return shiftRptNum(a) + " pts"; }, tol: 2 },
+          { k: "late", get: P("late_pct"), label: "Arrived late", val: pc, sub: "more than 15 minutes late", better: "down", words: ["higher", "lower"], fmt: function(a) { return shiftRptNum(a) + " pts"; }, tol: 2 },
+          { k: "offset", get: P("avg_offset_min"), label: "Average arrival vs appointment", val: function(v) { return v == null ? "--" : (v < 0 ? shiftRptDur(-v) + " early" : shiftRptDur(v) + " late"); }, sub: "negative is early", better: null, words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 },
+          { k: "pre_shift_arrivals", label: "Checked in before 7 PM", val: n0, sub: "ahead of the shift", better: null, words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 }
+        ]],
+        ["Exceptions and receiving", [
+          { k: "never_arrived", label: "Scheduled, never arrived", val: n0, sub: "no check-in all night", better: "down", words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "rejected", label: "Rejected loads", val: n0, sub: "not counted as scheduled", better: "down", words: ["more", "fewer"], fmt: cnt("loads"), tol: 1 },
+          { k: "avg_rec_lag_min", label: "Unload done to receiving start", val: shiftRptDur, sub: "average", better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 },
+          { k: "rec_delays_45", label: "Receiving started 45+ min late", val: n0, sub: "after the unload finished", better: "down", words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 },
+          { k: "rec_open", label: "Receiving not finished", val: n0, sub: "unloaded, receiving still open", better: null, words: ["more", "fewer"], fmt: cnt("trucks"), tol: 1 }
+        ]]
       ];
-      return defs.map(function(d) {
-        const cur = t[d.k], base = b ? b[d.k] : null, delta = shiftRptDelta(cur, base, d);
-        return '<div class="kpi"><div class="kpi-l">' + shiftRptEsc(d.label) + '</div><div class="kpi-v">' + shiftRptEsc(d.val(cur)) + '</div>'
-          + '<div class="kpi-s">' + shiftRptEsc(d.sub) + '</div>'
-          + '<div class="kpi-d ' + delta.cls + '">' + shiftRptEsc(delta.text) + '</div>'
-          + (b && base != null ? '<div class="kpi-b">Average of ' + b.nights + ' nights: ' + shiftRptEsc(d.val(base)) + '</div>' : '') + '</div>';
+      const sameDay = prev.filter(function(p) { return p.has_data && p.weekday === t.weekday; });
+      return defs.map(function(grp) {
+        return '<h3 class="kg">' + shiftRptEsc(grp[0]) + '</h3><div class="kpis">' + grp[1].map(function(d) {
+          const get = d.get || function(x) { return x[d.k]; };
+          const cur = get(t), base = b ? get(b) : null, delta = shiftRptDelta(cur, base, d);
+          const sv = sameDay.map(get).filter(function(v) { return v != null; });
+          const sw = sv.length >= 2 ? sv.reduce(function(s, v) { return s + v; }, 0) / sv.length : null;
+          return '<div class="kpi"><div class="kpi-l">' + shiftRptEsc(d.label) + '</div><div class="kpi-v">' + shiftRptEsc(d.val(cur)) + '</div>'
+            + '<div class="kpi-s">' + shiftRptEsc(d.sub) + '</div>'
+            + '<div class="kpi-d ' + delta.cls + '">' + shiftRptEsc(delta.text) + '</div>'
+            + (b && base != null ? '<div class="kpi-b">Average of ' + b.nights + ' nights: ' + shiftRptEsc(d.val(base)) + '</div>' : '')
+            + (sw != null ? '<div class="kpi-b">Same weekday (' + sv.length + ' nights): ' + shiftRptEsc(d.val(sw)) + '</div>' : '') + '</div>';
+        }).join("") + '</div>';
       }).join("");
     }
 
-    // A few plain-language lines about what stood out. Only says what the numbers support.
+    // Plain-language lines about what stood out. Only says what the numbers support.
     function shiftRptInsights(data) {
       const t = data.tonight, b = data.baseline, out = [];
       const nights = b ? b.nights + "-night average" : null;
       if (t.p95_finish_min != null) {
-        const vs = t.p95_finish_min - SHIFT_RPT_GOAL_MIN;
+        const vs = t.p95_finish_min - shiftRptGoal(t);
         let s = "95% of trucks were unloaded by <b>" + shiftRptClock(t.p95_finish_min) + "</b>, "
-          + (vs <= 0 ? shiftRptDur(-vs) + " ahead of the 4:00 AM goal" : shiftRptDur(vs) + " past the 4:00 AM goal");
+          + (vs <= 0 ? shiftRptDur(-vs) + " ahead of the " + shiftRptGoalFull(t) + " goal" : shiftRptDur(vs) + " past the " + shiftRptGoalFull(t) + " goal");
         if (b && b.p95_finish_min != null) {
           const diff = t.p95_finish_min - b.p95_finish_min;
           s += Math.abs(diff) < 5 ? ", right on the " + nights : ", " + shiftRptDur(Math.abs(diff)) + (diff > 0 ? " later" : " earlier") + " than the " + nights;
@@ -19381,8 +19640,16 @@
         const pct = Math.round((t.completed - b.completed) / b.completed * 100);
         out.push("<b>" + shiftRptNum(t.completed) + "</b> trucks were unloaded, " + (Math.abs(pct) < 3 ? "about the same as" : Math.abs(pct) + "% " + (pct > 0 ? "more than" : "fewer than")) + " the " + nights + " (" + shiftRptNum(b.completed, 1) + ").");
       }
-      if (b && t.avg_wait_min != null && b.avg_wait_min != null && Math.abs(t.avg_wait_min - b.avg_wait_min) >= 10) {
-        out.push("Trucks waited <b>" + shiftRptDur(t.avg_wait_min) + "</b> on average between check-in and the start of unloading, " + shiftRptDur(Math.abs(t.avg_wait_min - b.avg_wait_min)) + (t.avg_wait_min > b.avg_wait_min ? " longer" : " shorter") + " than the " + nights + ".");
+      if (t.avg_wait_min != null) {
+        let s = "Trucks waited <b>" + shiftRptDur(t.avg_wait_min) + "</b> on average between check-in and the start of unloading";
+        if (t.avg_yard_wait_min != null && t.avg_door_wait_min != null) s += " (" + shiftRptDur(t.avg_yard_wait_min) + " to reach a door, then " + shiftRptDur(t.avg_door_wait_min) + " at the door)";
+        if (b && b.avg_wait_min != null && Math.abs(t.avg_wait_min - b.avg_wait_min) >= 10) s += ", " + shiftRptDur(Math.abs(t.avg_wait_min - b.avg_wait_min)) + (t.avg_wait_min > b.avg_wait_min ? " longer" : " shorter") + " than the " + nights;
+        out.push(s + ".");
+      }
+      const q = t.queue;
+      if (q && q.on_dock) {
+        const peak = Math.max.apply(null, q.on_dock), k = q.on_dock.indexOf(peak);
+        if (peak > 0) out.push("The dock was fullest at <b>" + shiftRptClock(k * 15) + "</b> with <b>" + peak + "</b> trucks on it, " + q.waiting[k] + " of them still waiting to start" + (b && b.peak_on_dock ? " (usual busiest moment: " + shiftRptNum(b.peak_on_dock, 1) + " trucks)" : "") + ".");
       }
       if (b) {
         let worst = null, best = null;
@@ -19396,14 +19663,22 @@
         if (worst && worst.diff >= 20) out.push("<b>" + shiftRptEsc(SHIFT_RPT_ZONES[worst.z]) + "</b> finished " + shiftRptDur(worst.diff) + " later than its own " + nights + ".");
         if (best && best.diff <= -20 && (!worst || best.z !== worst.z)) out.push("<b>" + shiftRptEsc(SHIFT_RPT_ZONES[best.z]) + "</b> finished " + shiftRptDur(-best.diff) + " earlier than its own " + nights + ".");
       }
+      const pu = t.punctuality;
+      if (pu && pu.n >= 10) out.push("<b>" + shiftRptNum(pu.on_time_pct) + "%</b> of trucks arrived within 15 minutes of their appointment, " + shiftRptNum(pu.early_pct) + "% were more than 15 minutes early and " + shiftRptNum(pu.late_pct) + "% more than 15 minutes late.");
       const arr = (t.hourly || []).map(function(h) { return h.arrivals; });
-      const peak = Math.max.apply(null, arr.concat([0]));
-      if (peak > 0) {
-        const h = arr.indexOf(peak);
-        out.push("Arrivals peaked in the <b>" + shiftRptHourLabel(h) + " hour</b> with " + peak + " trucks" + (b && b.hourly && b.hourly[h] ? " (usual for that hour: " + shiftRptNum(b.hourly[h].arrivals, 1) + ")" : "") + ".");
+      const peakArr = Math.max.apply(null, arr.concat([0]));
+      if (peakArr > 0) {
+        const h = arr.indexOf(peakArr);
+        out.push("Arrivals peaked in the <b>" + shiftRptHourLabel(h) + " hour</b> with " + peakArr + " trucks" + (b && b.hourly && b.hourly[h] ? " (usual for that hour: " + shiftRptNum(b.hourly[h].arrivals, 1) + ")" : "") + ".");
       }
-      if (t.never_arrived || t.rejected) out.push(shiftRptNum(t.never_arrived) + " scheduled trucks never checked in and " + shiftRptNum(t.rejected) + " loads were rejected.");
-      return out.slice(0, 6);
+      if (t.doors && t.doors.length) out.push("<b>" + shiftRptNum(t.doors_used) + "</b> doors handled trucks. Door <b>" + t.doors[0].door + "</b> was the busiest with " + t.doors[0].trucks + " trucks.");
+      const bits = [];
+      if (t.never_arrived) bits.push(shiftRptNum(t.never_arrived) + " scheduled trucks never checked in");
+      if (t.rejected) bits.push(shiftRptNum(t.rejected) + " loads were rejected");
+      if (t.rec_delays_45) bits.push(shiftRptNum(t.rec_delays_45) + " trucks waited 45+ minutes for receiving to start");
+      if (t.pre_shift_arrivals) bits.push(shiftRptNum(t.pre_shift_arrivals) + " checked in before 7 PM");
+      if (bits.length) out.push(bits.join(", ").replace(/^./, function(c) { return c.toUpperCase(); }) + ".");
+      return out.slice(0, 10);
     }
 
     function shiftRptTable(headers, rows, cls) {
@@ -19412,41 +19687,82 @@
         + '</tbody></table></div>';
     }
 
-    function shiftRptUnloaderHtml(u, chartId) {
+    // Unloader section: who worked when, pace against the team and their own recent nights, by zone.
+    function shiftRptUnloaderHtml(u, t) {
       if (!u || !u.people || !u.people.length) return "";
-      const team = u.team || {};
+      const team = u.team || {}, people = u.people;
       const pct = function(v, base) { return v != null && base ? Math.round((v / base - 1) * 100) : null; };
       const sgn = function(p, better) {
         if (p == null) return '<span class="muted">--</span>';
         return '<span class="' + (Math.abs(p) < 3 ? "flat" : ((p > 0) === (better !== "down") ? "good" : "bad")) + '">' + (p > 0 ? "+" : "") + p + "%</span>";
       };
       const time = function(iso) { return iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "--"; };
-      const people = u.people;
+      const zoneName = function(z) { return SHIFT_RPT_ZONES[z] || z; };
       const rows = people.map(function(p) {
         const r = p.rating, e = p.earlier;
         const vsTeam = people.length > 1 ? sgn(pct(p.pallets_per_hour, team.pallets_per_hour)) : '<span class="muted">--</span>';
         const vsOwn = e && e.pallets_per_hour != null && p.pallets_per_hour != null ? sgn(pct(p.pallets_per_hour, e.pallets_per_hour)) : '<span class="muted">first night</span>';
         const chip = r && r.ready ? '<span class="chip band-' + shiftRptEsc(r.band) + '">' + r.index + ' &middot; ' + shiftRptEsc(r.label) + '</span>' : '<span class="muted">still building</span>';
+        const span = p.first_start && p.last_finish ? Math.max(1, (Date.parse(p.last_finish) - Date.parse(p.first_start)) / 60000) : null;
         return { cells: [
           '<b>' + shiftRptEsc(p.name) + '</b><div class="sub">' + shiftRptEsc(Object.keys(p.areas || {}).join(", ")) + '</div>',
           shiftRptNum(p.loads), shiftRptNum(p.pallets), shiftRptNum(p.pallets_per_hour, 1), vsTeam,
           shiftRptDur(p.avg_unload_min), p.avg_gap_min != null ? shiftRptDur(p.avg_gap_min) : "--",
-          '<span class="nw">' + time(p.first_start) + " &ndash; " + time(p.last_finish) + '</span>', vsOwn, chip] };
+          p.idle_total_min ? shiftRptDur(p.idle_total_min) : "--", p.idle_pct != null ? shiftRptNum(p.idle_pct) + "%" : "--", p.longest_gap_min != null ? shiftRptDur(p.longest_gap_min) : "--",
+          '<span class="nw">' + time(p.first_start) + " &ndash; " + time(p.last_finish) + '</span>',
+          span ? shiftRptNum(p.loads / (span / 60), 1) : "--", vsOwn, chip] };
       });
-      const hb = shiftRptSvgHBars({ items: people.filter(function(p) { return p.pallets_per_hour != null; }).map(function(p) { return { label: p.name, value: p.pallets_per_hour }; }).sort(function(a, b) { return b.value - a.value; }),
-        ref: people.length > 1 && team.pallets_per_hour ? { value: team.pallets_per_hour, label: "team " + shiftRptNum(team.pallets_per_hour, 1) } : null, fmt: function(v) { return shiftRptNum(v, 1); }, label: "Pallets per unload hour by unloader" });
+      const ppl = people.filter(function(p) { return p.pallets_per_hour != null; });
+      const mkH = function(items, ref, fmt, better, label) { return shiftRptSvgHBars({ items: items, better: better, ref: ref, fmt: fmt, label: label }); };
+      const teamRef = function(v, text) { return people.length > 1 && v != null ? { value: v, label: text } : null; };
+      const pphChart = ppl.length ? mkH(ppl.map(function(p) { return { label: p.name, value: p.pallets_per_hour }; }).sort(function(a, b) { return b.value - a.value; }), teamRef(team.pallets_per_hour, "team " + shiftRptNum(team.pallets_per_hour, 1)), function(v) { return shiftRptNum(v, 1); }, "up", "Pallets per unload hour by unloader") : '<div class="empty">No timed loads with pallet counts yet.</div>';
+      const timeItems = people.filter(function(p) { return p.avg_unload_min != null; }).map(function(p) { return { label: p.name, value: p.avg_unload_min }; }).sort(function(a, b) { return a.value - b.value; });
+      const timeChart = timeItems.length ? mkH(timeItems, teamRef(team.avg_unload_min, "team " + shiftRptNum(team.avg_unload_min, 0) + " min"), function(v) { return shiftRptNum(v, 0) + " min"; }, "down", "Average unload time by unloader") : '<div class="empty">No timed unloads yet.</div>';
       const gapItems = people.filter(function(p) { return p.avg_gap_min != null; }).map(function(p) { return { label: p.name, value: p.avg_gap_min }; }).sort(function(a, b) { return a.value - b.value; });
-      const gb = gapItems.length ? shiftRptSvgHBars({ items: gapItems, better: "down", ref: people.length > 1 && team.avg_gap_min != null ? { value: team.avg_gap_min, label: "team " + shiftRptNum(team.avg_gap_min, 1) + " min" } : null, fmt: function(v) { return shiftRptNum(v, 1) + " min"; }, label: "Average downtime between loads by unloader" }) : '<div class="empty">Not enough back-to-back loads to measure downtime.</div>';
-      const hasPph = people.some(function(p) { return p.pallets_per_hour != null; });
-      return '<section class="sec"><h2>Performance by unloader</h2>'
+      const gapChart = gapItems.length ? mkH(gapItems, teamRef(team.avg_gap_min, "team " + shiftRptNum(team.avg_gap_min, 1) + " min"), function(v) { return shiftRptNum(v, 1) + " min"; }, "down", "Average downtime between loads by unloader") : '<div class="empty">Not enough back-to-back loads to measure downtime.</div>';
+      const loadItems = people.map(function(p) { return { label: p.name, value: p.loads }; }).sort(function(a, b) { return b.value - a.value; });
+      const loadChart = mkH(loadItems, null, function(v) { return shiftRptNum(v) + " loads"; }, "up", "Loads handled by unloader");
+      // who worked when
+      const ganttRows = people.map(function(p) { return { label: p.name, bars: (p.timeline || []).map(function(x) { return { s: x.s, f: x.f, color: SR_ZONE_COLOR[x.zone] || SR_ZONE_COLOR.other }; }) }; });
+      const gantt = shiftRptBoth(shiftRptSvgGantt, { rows: ganttRows, goal: shiftRptGoal(t), label: "Who unloaded what, and when" }, null);
+      const usedZones = {}; people.forEach(function(p) { (p.timeline || []).forEach(function(x) { usedZones[x.zone] = 1; }); });
+      const ganttLegend = '<div class="legend">' + Object.keys(usedZones).map(function(z) { return '<span><i class="bar" style="background:' + (SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other) + '"></i>' + shiftRptEsc(zoneName(z)) + '</span>'; }).join("") + '<span><i style="border-color:#c53030;border-top-style:dashed"></i>' + shiftRptEsc(shiftRptGoalShort(t)) + ' goal</span></div>';
+      // pace by night
+      const hist = (team.history || []);
+      let trend = "";
+      if (hist.length >= 2) {
+        const dates = hist.map(function(h) { return h.date; });
+        const series = people.map(function(p, i) {
+          return { data: dates.map(function(d) { const h = (p.history || []).filter(function(x) { return x.date === d; })[0]; return h ? h.pallets_per_hour : null; }), color: SR_PEOPLE_COLORS[i % SR_PEOPLE_COLORS.length], width: 2.2 };
+        });
+        series.push({ data: hist.map(function(h) { return h.pallets_per_hour; }), color: "#1a202c", width: 2.6, dash: "6 4" });
+        const ticks = dates.map(function(d, i) { const m = /^\d{4}-(\d+)-(\d+)$/.exec(d); return [i, m ? Number(m[1]) + "/" + Number(m[2]) : d]; });
+        const legend = '<div class="legend">' + people.map(function(p, i) { return '<span><i style="border-color:' + SR_PEOPLE_COLORS[i % SR_PEOPLE_COLORS.length] + '"></i>' + shiftRptEsc(p.name) + '</span>'; }).join("") + '<span><i style="border-color:#1a202c;border-top-style:dashed"></i>Team</span></div>';
+        trend = '<div class="card"><h3>Pallets per unload hour, night by night <span class="muted">(lines break on nights someone did not work)</span></h3>'
+          + shiftRptBoth(shiftRptSvgLines, { n: dates.length, series: series, xTicks: ticks, vlines: [], label: "Pallets per unload hour by night" }, 230) + legend + '</div>';
+      }
+      const zRows = [];
+      people.forEach(function(p) {
+        (p.zone_table || []).forEach(function(z) {
+          const dt = pct(z.avg_unload_min, z.team_avg_unload_min);
+          zRows.push({ cells: ['<b>' + shiftRptEsc(p.name) + '</b>', shiftRptEsc(zoneName(z.zone)), shiftRptNum(z.loads), shiftRptDur(z.avg_unload_min), z.team_avg_unload_min != null ? shiftRptDur(z.team_avg_unload_min) : "--",
+            people.length > 1 && dt != null ? sgn(dt, "down") : "--", z.pph != null ? shiftRptNum(z.pph, 1) : "--", z.team_pph != null ? shiftRptNum(z.team_pph, 1) : "--"] });
+        });
+      });
+      const zoneTable = zRows.length ? shiftRptTable([{ t: "Unloader" }, { t: "Zone" }, { t: "Loads", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Team, same zone", num: 1 }, { t: "vs team", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Team pallets/hr", num: 1 }], zRows, "wide") : "";
+      return '<section class="sec" id="sec-unloaders"><h2>Performance by unloader</h2>'
         + '<p class="lead">' + people.length + ' unloader' + (people.length === 1 ? "" : "s") + ' recorded on this shift, ' + shiftRptNum(team.loads) + ' loads and ' + shiftRptNum(team.pallets) + ' pallets. Team pace: '
         + (team.pallets_per_hour != null ? shiftRptNum(team.pallets_per_hour, 1) + ' pallets per hour' : 'not enough timed loads yet') + (team.avg_unload_min != null ? ', ' + shiftRptDur(team.avg_unload_min) + ' average unload' : '') + '.</p>'
-        + '<div class="two">'
-        + '<div class="card"><h3>Pallets per unload hour <span class="muted">(higher is better)</span></h3>' + (hasPph ? hb : '<div class="empty">No timed loads with pallet counts yet.</div>') + '</div>'
-        + '<div class="card"><h3>Downtime between loads <span class="muted">(lower is better)</span></h3>' + gb + '</div></div>'
-        + shiftRptTable([{ t: "Unloader" }, { t: "Loads", num: 1 }, { t: "Pallets", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "vs team", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Avg downtime", num: 1 }, { t: "Worked" }, { t: "vs own recent pace", num: 1 }, { t: "30-day rating" }], rows, "wide")
-        + '<p class="note">Pallets per hour counts only loads that have both a pallet count and unload start and finish times. Downtime is the gap between one load finishing and that person\'s next load starting, ignoring gaps over 60 minutes (breaks). '
-        + '"vs own recent pace" compares pallets per hour with that person\'s average over the earlier nights shown in this report. The 30-day rating compares them with the team over the last 30 days, adjusted for which zones they worked.</p></section>';
+        + '<div class="card"><h3>Who unloaded what, and when</h3>' + gantt + ganttLegend + '<div class="note">Each bar is one load, from unload start to finish. Gaps between bars are downtime; a person who never overlaps their own bars was working one load at a time.</div></div>'
+        + '<div class="two"><div class="card"><h3>Pallets per unload hour <span class="muted">(higher is better)</span></h3>' + pphChart + '</div>'
+        + '<div class="card"><h3>Average unload time <span class="muted">(lower is better)</span></h3>' + timeChart + '</div></div>'
+        + '<div class="two"><div class="card"><h3>Downtime between loads <span class="muted">(lower is better)</span></h3>' + gapChart + '</div>'
+        + '<div class="card"><h3>Loads handled</h3>' + loadChart + '</div></div>'
+        + trend
+        + shiftRptTable([{ t: "Unloader" }, { t: "Loads", num: 1 }, { t: "Pallets", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "vs team", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Avg downtime", num: 1 }, { t: "Total idle", num: 1 }, { t: "Idle share", num: 1 }, { t: "Longest gap", num: 1 }, { t: "Worked" }, { t: "Loads / active hr", num: 1 }, { t: "vs own recent pace", num: 1 }, { t: "30-day rating" }], rows, "wide")
+        + (zoneTable ? '<h3 class="kg">By zone</h3>' + zoneTable : '')
+        + '<p class="note">Pallets per hour counts only loads that have both a pallet count and unload start and finish times. Downtime is the gap between one load finishing and that person\'s next load starting, ignoring gaps over 60 minutes (breaks); idle share is downtime as a share of downtime plus unloading. '
+        + '"vs own recent pace" compares pallets per hour with that person\'s average over the earlier nights shown in this report. The 30-day rating compares them with the team over the last 30 days, adjusted for which zones they worked. "Team, same zone" is what the whole team averaged in that zone tonight.</p></section>';
     }
 
     function shiftRptDoc(data) {
@@ -19454,64 +19770,174 @@
       const stepOf = function(min) { return Math.min(56, Math.max(0, Math.floor(min / 15))); };
       const shiftStartMs = Date.parse(t.shift_start);
       const nowStep = status.final ? 56 : stepOf((Date.parse(data.generated_at) - shiftStartMs) / 60000);
-      const tonightCurve = t.curve_fin.map(function(v, i) { return i <= nowStep ? v : null; });
+      const upto = nowStep + 1;                                       // points to draw for tonight when the shift is still running
+      const cut = function(arr) { return arr.map(function(v, i) { return i <= nowStep ? v : null; }); };
+      const goal = shiftRptGoal(t), goalStep = Math.round(goal / 15), goalShort = shiftRptGoalShort(t);
       const ticks = [[0, "7 PM"], [8, "9 PM"], [16, "11 PM"], [24, "1 AM"], [32, "3 AM"], [40, "5 AM"], [48, "7 AM"], [56, "9 AM"]];
-      const goalLine = [{ i: 36, label: "4 AM goal", color: "#c53030" }];
-      const prevLines = prev.filter(function(p) { return p.has_data; }).map(function(p) { return { data: p.curve_fin, color: "#94a3b8", width: 1.2, opacity: 0.45 }; });
-      const curveSeries = prevLines.concat(b ? [{ data: b.curve_fin, color: "#dd6b20", width: 2.4, dash: "6 4" }] : [], [{ data: tonightCurve, color: "#2b6cb0", width: 3.2 }]);
-      const curveSvg = shiftRptBoth(shiftRptSvgLines, { n: 57, series: curveSeries, xTicks: ticks, vlines: goalLine, label: "Trucks finished through the night" }, 250);
+      const goalLine = [{ i: goalStep, label: goalShort + " goal", color: SR_C.red }];
       const hourLabels = []; for (let h = 0; h < 14; h++) hourLabels.push(shiftRptHourLabel(h));
-      const flowSvg = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.arrivals; }), color: "#90cdf4" }, { data: t.hourly.map(function(h) { return h.finishes; }), color: "#2b6cb0" }],
-        line: b ? { data: b.hourly.map(function(h) { return h.finishes; }), color: "#dd6b20" } : null, label: "Trucks arriving and finishing each hour" }, 240);
       const nightsAsc = prev.concat([t]);
-      const trendItems = function(key) { return nightsAsc.map(function(n, i) { return { label: shiftRptDay(n.business_date).replace(/^\w+ /, ""), value: n.has_data ? n[key] : null, hi: i === nightsAsc.length - 1 }; }); };
-      const trend1 = shiftRptSvgTrend({ items: trendItems("p95_finish_min"), yFmt: shiftRptClock, goal: { value: SHIFT_RPT_GOAL_MIN, label: "4 AM" }, label: "Time 95% of trucks were done, by night" });
-      const trend2 = shiftRptSvgTrend({ items: trendItems("pph"), yFmt: function(v) { return shiftRptNum(v, 0); }, label: "Pallets per unload hour, by night" });
-      const trend3 = shiftRptSvgTrend({ items: trendItems("avg_wait_min"), yFmt: function(v) { return shiftRptNum(v, 0) + "m"; }, label: "Average wait to start unloading, by night" });
+      const trendItems = function(key, get) { return nightsAsc.map(function(n, i) { return { label: shiftRptDay(n.business_date).replace(/^\w+ /, ""), value: n.has_data ? (get ? get(n) : n[key]) : null, hi: i === nightsAsc.length - 1 }; }); };
+      const legendLine = function(color, text, dashed) { return '<span><i style="border-color:' + color + (dashed ? ';border-top-style:dashed' : '') + '"></i>' + shiftRptEsc(text) + '</span>'; };
+      const legendBar = function(color, text) { return '<span><i class="bar" style="background:' + color + '"></i>' + shiftRptEsc(text) + '</span>'; };
+      const nAvg = b ? b.nights : 0;
+      const avgText = function(what) { return 'Average of ' + nAvg + ' nights' + (what ? ' (' + what + ')' : ''); };
 
+      // --- flow ---
+      const prevHas = prev.filter(function(p) { return p.has_data; });
+      const curveSeries = prevHas.map(function(p) { return { data: p.curve_fin, color: SR_C.gray, width: 1.2, opacity: 0.45 }; })
+        .concat(b ? [{ data: b.curve_fin, color: SR_C.avg, width: 2.4, dash: "6 4" }] : [], [{ data: cut(t.curve_fin), color: SR_C.tonight, width: 3.2 }]);
+      const curveSvg = shiftRptBoth(shiftRptSvgLines, { n: 57, series: curveSeries, xTicks: ticks, vlines: goalLine, label: "Trucks finished through the night" }, 250);
+      const flowSvg = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.arrivals; }), color: SR_C.light }, { data: t.hourly.map(function(h) { return h.finishes; }), color: SR_C.tonight }],
+        line: b ? { data: b.hourly.map(function(h) { return h.finishes; }), color: SR_C.avg } : null, label: "Trucks arriving and finishing each hour" }, 240);
+      const queueSvg = shiftRptBoth(shiftRptSvgStacked, { n: 57, upto: upto, layers: [{ data: t.queue.unloading, color: SR_C.tonight }, { data: t.queue.waiting, color: "#f6ad55" }],
+        line: b ? { data: b.queue.on_dock, color: SR_C.avg } : null, vlines: goalLine, label: "Trucks on the dock through the night" }, 250);
+      const palletCurve = shiftRptBoth(shiftRptSvgLines, { n: 57, series: (b ? [{ data: b.pallets_curve, color: SR_C.avg, width: 2.4, dash: "6 4" }] : []).concat([{ data: cut(t.pallets_curve), color: SR_C.tonight, width: 3.2 }]), xTicks: ticks, vlines: goalLine, label: "Pallets unloaded through the night" }, 240);
+      const palletFlow = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.pallets_in; }), color: SR_C.light }, { data: t.hourly.map(function(h) { return h.pallets_out; }), color: SR_C.tonight }],
+        line: b ? { data: b.hourly.map(function(h) { return h.pallets_out; }), color: SR_C.avg } : null, label: "Pallets arriving and finishing each hour" }, 240);
+
+      // --- waiting and speed ---
+      const waitSvg = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.wait_avg; }), color: "#f6ad55" }],
+        line: b ? { data: b.hourly.map(function(h) { return h.wait_avg; }), color: SR_C.avg } : null, label: "Average wait to start, by hour of check-in" }, 240);
+      const unloadSvg = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.unload_avg; }), color: SR_C.tonight }],
+        line: b ? { data: b.hourly.map(function(h) { return h.unload_avg; }), color: SR_C.avg } : null, label: "Average unload time, by hour the unload started" }, 240);
+      const part = function(x, k, c) { return { v: x ? x[k] : null, color: c }; };
+      const breakdown = function(narrow) {
+        const rows = [{ label: "This shift", parts: [part(t, "avg_yard_wait_min", "#fbd38d"), part(t, "avg_door_wait_min", "#f6ad55"), part(t, "avg_unload_min", SR_C.tonight)] }];
+        if (b) rows.push({ label: "Average", parts: [part(b, "avg_yard_wait_min", "#fbd38d"), part(b, "avg_door_wait_min", "#f6ad55"), part(b, "avg_unload_min", "#63b3ed")] });
+        return shiftRptSvgBreakdown({ rows: rows, fmt: function(v) { return shiftRptNum(v, 0) + "m"; }, w: narrow ? 300 : 520, narrow: narrow, label: "Where a truck's time goes" });
+      };
+      const dockHist = function(narrow) {
+        return shiftRptSvgHist({ items: SHIFT_RPT_DOCK_LABELS.map(function(l, i) { return { label: l, value: t.dock_hist[i], avg: b ? b.dock_hist[i] : null, color: i >= 4 ? SR_C.red : SR_C.tonight }; }),
+          fmt: function(v) { return shiftRptNum(v, v % 1 ? 1 : 0); }, w: narrow ? 300 : 520, narrow: narrow, label: "Trucks by time on the dock" });
+      };
+
+      // --- appointments ---
+      const apptSvg = shiftRptBoth(shiftRptSvgBars, { labels: hourLabels, groups: [{ data: t.hourly.map(function(h) { return h.appts; }), color: "#cbd5e0" }, { data: t.hourly.map(function(h) { return h.arrivals; }), color: SR_C.tonight }],
+        line: b ? { data: b.hourly.map(function(h) { return h.arrivals; }), color: SR_C.avg } : null, label: "Appointments and arrivals by hour" }, 240);
+      const punctHist = function(narrow) {
+        const pu = t.punctuality, bp = b && b.punctuality;
+        return shiftRptSvgHist({ items: SHIFT_RPT_PUNCT_LABELS.map(function(l, i) { return { label: l, value: pu.counts[i], avg: bp ? bp.counts[i] : null, color: i === 4 ? SR_C.green : (i < 4 ? SR_C.tonight : SR_C.amber) }; }),
+          fmt: function(v) { return shiftRptNum(v, v % 1 ? 1 : 0); }, w: narrow ? 300 : 520, narrow: narrow, label: "Arrival time against the appointment" });
+      };
+      const palletHist = function(narrow) {
+        const items = SHIFT_RPT_PALLET_LABELS.map(function(l, i) { return { label: l + " pallets", value: t.pallet_hist[i], avg: b ? b.pallet_hist[i] : null }; });
+        return shiftRptSvgHist({ items: items, fmt: function(v) { return shiftRptNum(v, v % 1 ? 1 : 0); }, w: narrow ? 300 : 520, narrow: narrow, label: "Trucks by load size" });
+      };
+      const bothW = function(fn) { return '<div class="cw">' + fn(false) + '</div><div class="cn">' + fn(true) + '</div>'; };
+
+      // --- zones ---
+      const zoneKeys = Object.keys(t.zones || {}).filter(function(z) { return t.zones[z].completed >= 3; });
+      const zoneSeries = [];
+      zoneKeys.forEach(function(z) {
+        if (b && b.zones && b.zones[z] && b.zones[z].curve_fin) zoneSeries.push({ data: b.zones[z].curve_fin, color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other, width: 1.8, dash: "6 4", opacity: 0.8 });
+      });
+      zoneKeys.forEach(function(z) { zoneSeries.push({ data: cut(t.zones[z].curve_fin), color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other, width: 3 }); });
+      const zoneCurves = shiftRptBoth(shiftRptSvgLines, { n: 57, series: zoneSeries, xTicks: ticks, vlines: goalLine, label: "Trucks finished through the night, by zone" }, 250);
+      const zoneLegend = '<div class="legend">' + zoneKeys.map(function(z) { return legendLine(SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other, SHIFT_RPT_ZONES[z] + " (tonight)"); }).join("") + (b ? legendLine("#64748b", "Dashed: each zone's " + nAvg + "-night average", true) : "") + '</div>';
       const zoneRows = Object.keys(t.zones || {}).map(function(z) {
         const a = t.zones[z], base = b && b.zones ? b.zones[z] : null;
         const cell = function(cur, bv, cfg, fmt) {
           const d = shiftRptDelta(cur, bv, cfg);
           return shiftRptEsc(fmt(cur)) + (base && bv != null ? '<div class="sub ' + d.cls + '">' + shiftRptEsc(d.text.replace(" than the average", "")) + '</div>' : '');
         };
+        const dur = function(v) { return v == null ? "--" : shiftRptDur(v); };
         return { cells: ['<b>' + shiftRptEsc(SHIFT_RPT_ZONES[z] || z) + '</b>', shiftRptNum(a.scheduled), shiftRptNum(a.arrived), shiftRptNum(a.completed),
           cell(a.p95_finish_min, base && base.p95_finish_min, { better: "down", words: ["later", "earlier"], fmt: shiftRptDur, tol: 5 }, shiftRptClock),
-          cell(a.avg_unload_min, base && base.avg_unload_min, { better: "down", words: ["slower", "faster"], fmt: shiftRptDur, tol: 2 }, shiftRptDur),
-          cell(a.pph, base && base.pph, { better: "up", words: ["higher", "lower"], fmt: function(v) { return shiftRptNum(v, 1); }, tol: 0.5 }, function(v) { return shiftRptNum(v, 1); })] };
+          cell(a.avg_wait_min, base && base.avg_wait_min, { better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 }, dur),
+          cell(a.avg_dock_min, base && base.avg_dock_min, { better: "down", words: ["longer", "shorter"], fmt: shiftRptDur, tol: 5 }, dur),
+          cell(a.avg_unload_min, base && base.avg_unload_min, { better: "down", words: ["slower", "faster"], fmt: shiftRptDur, tol: 2 }, dur),
+          cell(a.pph, base && base.pph, { better: "up", words: ["higher", "lower"], fmt: function(v) { return shiftRptNum(v, 1); }, tol: 0.5 }, function(v) { return shiftRptNum(v, 1); }),
+          shiftRptNum(a.pallets), shiftRptNum(a.over_2h)] };
       });
-      const zonesTable = shiftRptTable([{ t: "Zone" }, { t: "Scheduled", num: 1 }, { t: "Arrived", num: 1 }, { t: "Unloaded", num: 1 }, { t: "95% done", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Pallets/hr", num: 1 }], zoneRows);
-      const supRows = function(list, key) {
-        return (list || []).map(function(s) { return { cells: [shiftRptEsc(s.supplier), shiftRptNum(s.trucks), key === "slow" ? shiftRptDur(s.avg_dock_min) : shiftRptNum(s.pallets), key === "slow" ? shiftRptDur(s.max_dock_min) : shiftRptDur(s.avg_dock_min)] }; });
+      const zonesTable = shiftRptTable([{ t: "Zone" }, { t: "Scheduled", num: 1 }, { t: "Arrived", num: 1 }, { t: "Unloaded", num: 1 }, { t: "95% done", num: 1 }, { t: "Avg wait", num: 1 }, { t: "Avg on dock", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Pallets", num: 1 }, { t: "Over 2 h", num: 1 }], zoneRows, "wide");
+
+      // --- doors ---
+      const doorItems = (t.doors || []).slice(0, 15).map(function(d) { return { label: "Door " + d.door, value: d.trucks }; });
+      const doorChart = doorItems.length ? shiftRptSvgHBars({ items: doorItems, fmt: function(v) { return shiftRptNum(v) + " trucks"; }, label: "Trucks handled by door" }) : '<div class="empty">No door data.</div>';
+      const doorTable = shiftRptTable([{ t: "Door" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Time unloading", num: 1 }, { t: "Avg unload", num: 1 }],
+        (t.doors || []).slice(0, 12).map(function(d) { return { cells: ['<b>' + d.door + '</b>', shiftRptNum(d.trucks), shiftRptNum(d.pallets), d.busy_min != null ? shiftRptDur(d.busy_min) : "--", d.avg_unload_min != null ? shiftRptDur(d.avg_unload_min) : "--"] }; }));
+
+      // --- suppliers and carriers ---
+      const supRows = function(list, key, nameKey) {
+        return (list || []).map(function(s) { return { cells: [shiftRptEsc(s[nameKey]), shiftRptNum(s.trucks), key === "slow" ? shiftRptDur(s.avg_dock_min) : (key === "pal" ? shiftRptNum(s.pallets) : shiftRptNum(s.pallets)), key === "slow" ? shiftRptDur(s.max_dock_min) : shiftRptDur(s.avg_dock_min)] }; });
       };
-      const slowTable = (t.suppliers.slowest || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Avg time on dock", num: 1 }, { t: "Longest", num: 1 }], supRows(t.suppliers.slowest, "slow")) : '<div class="empty">No supplier had two or more finished trucks.</div>';
-      const busyTable = (t.suppliers.busiest || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg time on dock", num: 1 }], supRows(t.suppliers.busiest, "busy")) : '<div class="empty">No supplier data.</div>';
+      const tableOr = function(list, key, nameKey, headers, empty) { return (list || []).length ? shiftRptTable(headers, supRows(list, key, nameKey)) : '<div class="empty">' + empty + '</div>'; };
+      const slowH = [{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Avg time on dock", num: 1 }, { t: "Longest", num: 1 }];
+      const busyH = [{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg time on dock", num: 1 }];
+      const palH = [{ t: "Supplier" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg time on dock", num: 1 }];
+      const carSlowH = [{ t: "Carrier" }, { t: "Trucks", num: 1 }, { t: "Avg time on dock", num: 1 }, { t: "Longest", num: 1 }];
+      const carBusyH = [{ t: "Carrier" }, { t: "Trucks", num: 1 }, { t: "Pallets", num: 1 }, { t: "Avg time on dock", num: 1 }];
+
+      // --- exceptions ---
+      const apptClock = function(m) { return m == null ? "--" : shiftRptClock(m); };
+      const noShowTable = (t.no_shows || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Area" }, { t: "Appointment", num: 1 }, { t: "Pallets", num: 1 }], t.no_shows.map(function(x) { return { cells: [shiftRptEsc(x.supplier || "--"), shiftRptEsc(x.area || "--"), apptClock(x.appt_min), x.pallets != null ? shiftRptNum(x.pallets) : "--"] }; })) : '<div class="empty">Every scheduled truck arrived.</div>';
+      const rejTable = (t.rejected_detail || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Area" }, { t: "Pallets", num: 1 }], t.rejected_detail.map(function(x) { return { cells: [shiftRptEsc(x.supplier || "--"), shiftRptEsc(x.area || "--"), x.pallets != null ? shiftRptNum(x.pallets) : "--"] }; })) : '<div class="empty">No rejected loads.</div>';
+      const longTable = (t.longest_docks || []).length ? shiftRptTable([{ t: "Supplier" }, { t: "Door", num: 1 }, { t: "Area" }, { t: "Time on dock", num: 1 }, { t: "Wait", num: 1 }, { t: "Unload", num: 1 }, { t: "Pallets", num: 1 }], t.longest_docks.map(function(x) { return { cells: [shiftRptEsc(x.supplier || "--"), x.door != null ? x.door : "--", shiftRptEsc(x.area || "--"), shiftRptDur(x.dock_min), x.wait_min != null ? shiftRptDur(x.wait_min) : "--", x.unload_min != null ? shiftRptDur(x.unload_min) : "--", x.pallets != null ? shiftRptNum(x.pallets) : "--"] }; })) : '<div class="empty">No timed trucks.</div>';
+
+      // --- night by night ---
+      const dm = function(v) { return shiftRptNum(v, 0) + "m"; };
+      const mini = function(title, key, yFmt, opts) {
+        opts = opts || {};
+        return '<div class="card"><h3>' + shiftRptEsc(title) + '</h3>' + shiftRptSvgTrend({ items: trendItems(key, opts.get), yFmt: yFmt, goal: opts.goal, label: title + ", by night" }) + '</div>';
+      };
+      const trends = '<div class="three">'
+        + mini("Trucks unloaded", "completed", function(v) { return shiftRptNum(v, 0); })
+        + mini("When 95% were done", "p95_finish_min", shiftRptClock, { goal: { value: goal, label: goalShort } })
+        + mini("Finished by " + goalShort + " (%)", "pct_by_goal", function(v) { return shiftRptNum(v, 0) + "%"; })
+        + mini("Pallets per unload hour", "pph", function(v) { return shiftRptNum(v, 0); })
+        + mini("Average unload time", "avg_unload_min", dm)
+        + mini("Average wait to start", "avg_wait_min", dm)
+        + mini("Average time on dock", "avg_dock_min", dm)
+        + mini("Over 2 hours on dock", "over_2h", function(v) { return shiftRptNum(v, 0); })
+        + mini("Scheduled, never arrived", "never_arrived", function(v) { return shiftRptNum(v, 0); })
+        + mini("Arrived on time (%)", "ontime", function(v) { return shiftRptNum(v, 0) + "%"; }, { get: function(n) { return n.punctuality ? n.punctuality.on_time_pct : null; } })
+        + mini("Pallets unloaded", "pallets_total", function(v) { return shiftRptNum(v, 0); })
+        + mini("Most trucks on the dock", "peak_on_dock", function(v) { return shiftRptNum(v, 0); })
+        + '</div>';
       const histRows = nightsAsc.map(function(n, i) {
         const me = i === nightsAsc.length - 1;
-        if (!n.has_data) return { hi: me, cells: ['<b>' + shiftRptEsc(shiftRptDay(n.business_date)) + '</b>', '<span class="muted" colspan="8">no shift</span>', "", "", "", "", "", "", ""] };
-        return { hi: me, cells: ['<b>' + shiftRptEsc(shiftRptDay(n.business_date)) + (me ? ' (this report)' : '') + '</b>', shiftRptNum(n.completed), shiftRptNum(n.pct_by_goal) + "%", shiftRptClock(n.p95_finish_min), shiftRptDur(n.avg_unload_min),
-          shiftRptDur(n.avg_wait_min), shiftRptNum(n.pph, 1), shiftRptNum(n.over_2h), shiftRptNum(n.never_arrived) + " / " + shiftRptNum(n.rejected)] };
+        if (!n.has_data) return { hi: me, cells: ['<b>' + shiftRptEsc(shiftRptDay(n.business_date)) + '</b>', '<span class="muted">no shift</span>', "", "", "", "", "", "", "", "", "", ""] };
+        return { hi: me, cells: ['<b>' + shiftRptEsc(shiftRptDay(n.business_date)) + (me ? ' (this report)' : '') + '</b>', shiftRptNum(n.scheduled), shiftRptNum(n.completed), shiftRptNum(n.pct_by_goal) + "%", shiftRptClock(n.p95_finish_min), shiftRptDur(n.avg_unload_min),
+          shiftRptDur(n.avg_wait_min), shiftRptDur(n.avg_dock_min), shiftRptNum(n.pph, 1), shiftRptNum(n.pallets_total), shiftRptNum(n.over_2h), shiftRptNum(n.never_arrived) + " / " + shiftRptNum(n.rejected)] };
       });
-      const histTable = shiftRptTable([{ t: "Night" }, { t: "Unloaded", num: 1 }, { t: "By 4 AM", num: 1 }, { t: "95% done", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Avg wait", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Over 2 h", num: 1 }, { t: "No-show / rej.", num: 1 }], histRows, "wide");
+      const histTable = shiftRptTable([{ t: "Night" }, { t: "Scheduled", num: 1 }, { t: "Unloaded", num: 1 }, { t: "By " + goalShort, num: 1 }, { t: "95% done", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Avg wait", num: 1 }, { t: "Avg on dock", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Pallets", num: 1 }, { t: "Over 2 h", num: 1 }, { t: "No-show / rej.", num: 1 }], histRows, "wide");
+
+      // --- hour by hour ---
+      const withAvg = function(cur, base, places) { return shiftRptNum(cur, places || 0) + (b && base != null ? ' <span class="muted">(' + shiftRptNum(base, 1) + ')</span>' : ''); };
+      const hourRows = t.hourly.map(function(h, i) {
+        const bh = b && b.hourly ? b.hourly[i] : {};
+        const k = Math.min(56, (i + 1) * 4);
+        return { cells: ['<b>' + shiftRptEsc(shiftRptHourLabel(i)) + '</b>', withAvg(h.appts, bh.appts), withAvg(h.arrivals, bh.arrivals), withAvg(h.starts, bh.starts), withAvg(h.finishes, bh.finishes),
+          shiftRptNum(t.queue.on_dock[k]) + ' <span class="muted">(' + shiftRptNum(t.queue.waiting[k]) + ' waiting)</span>', h.wait_avg != null ? shiftRptDur(h.wait_avg) : "--", h.unload_avg != null ? shiftRptDur(h.unload_avg) : "--",
+          shiftRptNum(h.pallets_in), shiftRptNum(h.pallets_out)] };
+      });
+      const hourTable = shiftRptTable([{ t: "Hour" }, { t: "Appointments", num: 1 }, { t: "Arrived", num: 1 }, { t: "Started", num: 1 }, { t: "Finished", num: 1 }, { t: "On dock at hour end", num: 1 }, { t: "Avg wait", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Pallets in", num: 1 }, { t: "Pallets out", num: 1 }], hourRows, "wide");
 
       const final = !!status.final;
       const banner = !t.scheduled
         ? '<div class="banner warn"><b>No trucks found.</b> DMS has no loads for this business date, so there is nothing to report.</div>'
         : final
-        ? '<div class="banner ok"><b>Final.</b> Every truck that checked in has been unloaded and nothing is left to arrive.</div>'
-        : '<div class="banner warn"><b>Shift still in progress.</b> ' + shiftRptNum(status.open) + ' truck' + (status.open === 1 ? " is" : "s are") + ' still open and ' + shiftRptNum(status.pending) + ' scheduled truck' + (status.pending === 1 ? "" : "s") + ' ha' + (status.pending === 1 ? "s" : "ve") + ' not arrived yet, so these numbers are partial.</div>';
+          ? '<div class="banner ok"><b>Final.</b> Every truck that checked in has been unloaded and nothing is left to arrive.</div>'
+          : '<div class="banner warn"><b>Shift still in progress.</b> ' + shiftRptNum(status.open) + ' truck' + (status.open === 1 ? " is" : "s are") + ' still open and ' + shiftRptNum(status.pending) + ' scheduled truck' + (status.pending === 1 ? "" : "s") + ' ha' + (status.pending === 1 ? "s" : "ve") + ' not arrived yet, so these numbers are partial.</div>';
       const compare = b ? 'Compared with the average of the previous <b>' + b.nights + '</b> night' + (b.nights === 1 ? "" : "s") + ' (' + b.dates.map(function(d) { return shiftRptEsc(shiftRptDay(d)); }).join(", ") + ').'
         : 'No earlier nights were available to compare with.';
       const missing = (data.missing || []).length ? '<p class="note">Could not read ' + data.missing.map(function(d) { return shiftRptEsc(shiftRptDay(d)); }).join(", ") + ' from DMS, so ' + (data.missing.length === 1 ? "it is" : "they are") + ' left out of the comparison.</p>' : '';
       const insights = shiftRptInsights(data);
       const generated = new Date(data.generated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
-      const unloaderHtml = shiftRptUnloaderHtml(data.unloaders);
+      const unloaderHtml = shiftRptUnloaderHtml(data.unloaders, t);
       const unloaderNote = data.unloaders_hidden ? "" : (data.unloaders ? "" : '<p class="note">No unloader names were entered on this shift, so there is no per-unloader section.</p>');
+      const sec = function(id, title, body) { return '<section class="sec" id="' + id + '"><h2>' + title + '</h2>' + body + '</section>'; };
+      const card = function(title, body, legend) { return '<div class="card"><h3>' + title + '</h3>' + body + (legend ? '<div class="legend">' + legend + '</div>' : '') + '</div>'; };
+      const toc = [["sec-glance", "At a glance"], ["sec-flow", "Flow"], ["sec-waiting", "Waiting and speed"], ["sec-appts", "Appointments"], ["sec-zones", "Zones"], ["sec-doors", "Doors"], ["sec-suppliers", "Suppliers and carriers"], ["sec-exceptions", "Exceptions"], ["sec-nights", "Night by night"]]
+        .concat(unloaderHtml ? [["sec-unloaders", "Unloaders"]] : []).concat([["sec-hours", "Hour by hour"]])
+        .map(function(x) { return '<a href="#' + x[0] + '">' + x[1] + '</a>'; }).join(" &middot; ");
       const css = ':root{--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--blue:#2b6cb0;--green:#2f855a;--red:#c53030;--amber:#b7791f}'
-        + '*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:var(--ink);font:14px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
-        + '.page{max-width:920px;margin:0 auto;background:#fff;padding:26px 24px 40px}'
-        + 'h1{font-size:1.65rem;margin:0 0 2px;color:#0f2f4d}h2{font-size:1.18rem;margin:26px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--line);color:#0f2f4d}h3{font-size:.92rem;margin:0 0 6px}'
+        + '*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eef2f7;color:var(--ink);font:14px/1.5 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}'
+        + '.page{max-width:960px;margin:0 auto;background:#fff;padding:26px 24px 40px}'
+        + 'h1{font-size:1.65rem;margin:0 0 2px;color:#0f2f4d}h2{font-size:1.18rem;margin:28px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--line);color:#0f2f4d}h3{font-size:.92rem;margin:0 0 6px}h3.kg{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:16px 0 6px}'
         + '.meta{color:var(--muted);font-size:.86rem}.lead{margin:4px 0 12px}.muted{color:var(--muted);font-weight:400}.note{color:var(--muted);font-size:.8rem;margin:8px 0 0}'
+        + '.toc{margin:12px 0 0;font-size:.82rem;color:var(--muted)}.toc a{color:var(--blue);text-decoration:none;font-weight:600}'
         + '.banner{border-radius:8px;padding:9px 12px;margin:14px 0 4px;font-size:.9rem}.banner.ok{background:#e6f4ea;border:1px solid #9ad2ae}.banner.warn{background:#fff7e0;border:1px solid #f0c75e}'
         + '.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}.kpi{border:1px solid var(--line);border-radius:10px;padding:10px 12px;break-inside:avoid}'
         + '.kpi-l{font-size:.72rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.kpi-v{font-size:1.75rem;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums}'
@@ -19525,38 +19951,61 @@
         + 'td{padding:6px 7px;border-bottom:1px solid var(--line);vertical-align:top}th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}tr.hi td{background:#ebf4ff}.sub{font-size:.72rem;color:var(--muted)}'
         + '.chip{display:inline-block;border-radius:999px;padding:1px 9px;font-size:.72rem;font-weight:800;color:#fff;background:#718096;white-space:nowrap}.nw{white-space:nowrap}.band-green{background:#2f855a}.band-even{background:#2b6cb0}.band-yellow{background:#b7791f}.band-red{background:#c53030}'
         + '.empty{color:var(--muted);font-size:.84rem;padding:14px 4px}.wide{font-size:.8rem}.defs{font-size:.78rem;color:var(--muted)}.defs li{margin:3px 0}'
-        + '.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.cn{display:none}'
+        + '.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}.cn{display:none}.top{font-size:.78rem}.top a{color:var(--blue);text-decoration:none}'
+        + '@media(max-width:640px){.cw{display:none}.cn{display:block}.page{padding:16px 12px 30px}.two,.three{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-v{font-size:1.4rem}.tw table{min-width:460px}.tw table.wide{min-width:760px}}'
         + '.card,.kpi{min-width:0}'
-        + '@media(max-width:640px){.cw{display:none}.cn{display:block}.page{padding:16px 12px 30px}.two,.three{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-v{font-size:1.4rem}.tw table{min-width:460px}.tw table.wide{min-width:640px}}'
-        + '@media print{.cw{display:block!important}.cn{display:none!important}body{background:#fff}.page{max-width:none;padding:0}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}h2{break-after:avoid}.card,.kpi,tr{break-inside:avoid}.tw{overflow:visible}.tw table,.tw table.wide{min-width:0}table.wide{font-size:.7rem}th,td{padding:4px 4px}th{font-size:.62rem}.nw,.chip{white-space:normal}@page{size:letter;margin:12mm}}';
-      return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>OKS End-of-Shift Report ' + shiftRptEsc(t.business_date) + '</title><style>' + css + '</style></head><body><div class="page">'
-        + '<h1>OKS End-of-Shift Report</h1>'
+        + '@media print{.cw{display:block!important}.cn{display:none!important}body{background:#fff}.page{max-width:none;padding:0}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}h2{break-after:avoid;break-before:auto}.card,.kpi,tr{break-inside:avoid}.tw{overflow:visible}.tw table,.tw table.wide{min-width:0}table.wide{font-size:.66rem}th,td{padding:4px 4px}th{font-size:.6rem}.nw,.chip{white-space:normal}.toc,.top{display:none}@page{size:letter;margin:12mm}}';
+      return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + shiftRptEsc(shiftRptSiteName(data)) + ' End-of-Shift Report ' + shiftRptEsc(t.business_date) + '</title><style>' + css + '</style></head><body><div class="page">'
+        + '<h1>' + shiftRptEsc(shiftRptSiteName(data)) + ' End-of-Shift Report</h1>'
         + '<div class="meta">Business date <b>' + shiftRptEsc(shiftRptLongDate(t.business_date)) + '</b> &middot; shift 7:00 PM to 9:00 AM &middot; generated ' + shiftRptEsc(generated) + '</div>'
-        + banner + '<p class="meta">' + compare + '</p>' + missing
-        + '<h2>The night at a glance</h2>'
-        + (insights.length ? '<ul class="insights">' + insights.map(function(s) { return '<li>' + s + '</li>'; }).join("") + '</ul>' : '')
-        + '<div class="kpis" style="margin-top:12px">' + shiftRptKpis(t, b) + '</div>'
-        + '<section class="sec"><h2>Trucks finished through the night</h2><div class="card">' + curveSvg
-        + '<div class="legend"><span><i style="border-color:#2b6cb0"></i>This shift</span>' + (b ? '<span><i style="border-color:#dd6b20;border-top-style:dashed"></i>Average of ' + b.nights + ' nights</span>' : '')
-        + '<span><i style="border-color:#94a3b8"></i>Each earlier night</span><span><i style="border-color:#c53030;border-top-style:dashed"></i>4 AM goal</span></div></div></section>'
-        + '<section class="sec"><h2>Arrivals and finishes by hour</h2><div class="card">' + flowSvg
-        + '<div class="legend"><span><i class="bar" style="background:#90cdf4"></i>Trucks arriving</span><span><i class="bar" style="background:#2b6cb0"></i>Trucks finishing</span>' + (b ? '<span><i style="border-color:#dd6b20;border-top-style:dashed"></i>Usual finishes (' + b.nights + '-night average)</span>' : '') + '</div></div></section>'
-        + '<section class="sec"><h2>How this shift compares with the last ' + (nightsAsc.length - 1) + ' nights</h2><div class="three">'
-        + '<div class="card"><h3>When 95% were done</h3>' + trend1 + '</div><div class="card"><h3>Pallets per unload hour</h3>' + trend2 + '</div><div class="card"><h3>Average wait to start</h3>' + trend3 + '</div></div>' + histTable + '</section>'
-        + '<section class="sec"><h2>By zone</h2>' + zonesTable + '<p class="note">Zone differences are against that zone\'s own average over the same earlier nights.</p></section>'
-        + '<section class="sec"><h2>Suppliers</h2><div class="two"><div class="card"><h3>Slowest to turn <span class="muted">(2+ trucks)</span></h3>' + slowTable + '</div><div class="card"><h3>Busiest</h3>' + busyTable + '</div></div></section>'
+        + banner + '<p class="meta">' + compare + '</p>' + missing + '<div class="toc">' + toc + '</div>'
+        + sec("sec-glance", "The night at a glance", (insights.length ? '<ul class="insights">' + insights.map(function(s) { return '<li>' + s + '</li>'; }).join("") + '</ul>' : '') + shiftRptKpiGroups(data))
+        + sec("sec-flow", "Flow through the night",
+            card("Trucks finished through the night", curveSvg, legendLine(SR_C.tonight, "This shift") + (b ? legendLine(SR_C.avg, avgText(), true) : "") + legendLine(SR_C.gray, "Each earlier night") + legendLine(SR_C.red, goalShort + " goal", true))
+          + card("Trucks on the dock", queueSvg, legendBar(SR_C.tonight, "Being unloaded") + legendBar("#f6ad55", "Waiting to start") + (b ? legendLine(SR_C.avg, avgText("all on dock"), true) : ""))
+          + card("Arrivals and finishes by hour", flowSvg + (t.pre_shift_arrivals ? '<div class="note">' + shiftRptNum(t.pre_shift_arrivals) + ' truck' + (t.pre_shift_arrivals === 1 ? "" : "s") + ' checked in before 7 PM and are not in the hourly bars.</div>' : ''), legendBar(SR_C.light, "Trucks arriving") + legendBar(SR_C.tonight, "Trucks finishing") + (b ? legendLine(SR_C.avg, avgText("finishes"), true) : ""))
+          + '<div class="two">' + card("Pallets unloaded through the night", palletCurve, legendLine(SR_C.tonight, "This shift") + (b ? legendLine(SR_C.avg, avgText(), true) : ""))
+          + card("Pallets arriving and finishing by hour", palletFlow, legendBar(SR_C.light, "Pallets arriving") + legendBar(SR_C.tonight, "Pallets finishing") + (b ? legendLine(SR_C.avg, avgText("finishing"), true) : "")) + '</div>')
+        + sec("sec-waiting", "Waiting and speed",
+            '<div class="two">' + card("Average wait to start, by check-in hour", waitSvg, legendBar("#f6ad55", "This shift") + (b ? legendLine(SR_C.avg, avgText(), true) : ""))
+          + card("Average unload time, by start hour", unloadSvg, legendBar(SR_C.tonight, "This shift") + (b ? legendLine(SR_C.avg, avgText(), true) : "")) + '</div>'
+          + '<div class="two">' + card("Where a truck's time goes", bothW(breakdown), legendBar("#fbd38d", "Waiting for a door") + legendBar("#f6ad55", "Waiting at the door") + legendBar(SR_C.tonight, "Unloading"))
+          + card("Trucks by time on the dock", bothW(dockHist), legendBar(SR_C.tonight, "This shift") + legendLine(SR_C.avg, "Earlier-night average", false)) + '</div>'
+          + '<p class="note">The bars in "where a truck\'s time goes" are averages of each step over the trucks that have that stamp, so they add up to roughly (not exactly) the average time on the dock.</p>')
+        + sec("sec-appts", "Appointments and arrivals",
+            card("Appointments and arrivals by hour", apptSvg, legendBar("#cbd5e0", "Appointments") + legendBar(SR_C.tonight, "Trucks arriving") + (b ? legendLine(SR_C.avg, avgText("arrivals"), true) : ""))
+          + '<div class="two">' + card("Arrival against the appointment", bothW(punctHist), legendBar(SR_C.green, "On time") + legendBar(SR_C.tonight, "Early") + legendBar(SR_C.amber, "Late") + legendLine(SR_C.avg, "Earlier-night average", false))
+          + card("Trucks by load size", bothW(palletHist), legendBar(SR_C.tonight, "This shift") + legendLine(SR_C.avg, "Earlier-night average", false)) + '</div>')
+        + sec("sec-zones", "By zone",
+            card("Trucks finished through the night, by zone", zoneCurves, "") + zoneLegend + zonesTable + '<p class="note">Zone differences are against that zone\'s own average over the same earlier nights.</p>')
+        + sec("sec-doors", "Doors",
+            '<div class="two">' + card("Trucks handled by door <span class=\"muted\">(top 15)</span>", doorChart) + '<div class="card"><h3>Busiest doors</h3>' + doorTable + '<div class="note">' + shiftRptNum(t.doors_used) + ' doors handled a truck; at most ' + shiftRptNum(t.peak_unloading) + ' trucks were being unloaded at once.</div></div></div>')
+        + sec("sec-suppliers", "Suppliers and carriers",
+            '<div class="two"><div class="card"><h3>Suppliers: slowest to turn <span class="muted">(2+ trucks)</span></h3>' + tableOr(t.suppliers.slowest, "slow", "supplier", slowH, "No supplier had two or more finished trucks.") + '</div>'
+          + '<div class="card"><h3>Suppliers: busiest</h3>' + tableOr(t.suppliers.busiest, "busy", "supplier", busyH, "No supplier data.") + '</div></div>'
+          + '<div class="two"><div class="card"><h3>Suppliers: most pallets</h3>' + tableOr(t.suppliers.top_pallets, "pal", "supplier", palH, "No supplier data.") + '</div>'
+          + '<div class="card"><h3>Carriers: busiest</h3>' + tableOr((t.carriers || {}).busiest, "busy", "carrier", carBusyH, "No carrier data.") + '</div></div>'
+          + '<div class="card"><h3>Carriers: slowest to turn <span class="muted">(2+ trucks)</span></h3>' + tableOr((t.carriers || {}).slowest, "slow", "carrier", carSlowH, "No carrier had two or more finished trucks.") + '</div>')
+        + sec("sec-exceptions", "Exceptions",
+            '<div class="card"><h3>Longest times on the dock</h3>' + longTable + '</div>'
+          + '<div class="two"><div class="card"><h3>Scheduled but never arrived <span class="muted">(' + shiftRptNum(t.never_arrived) + ')</span></h3>' + noShowTable + (t.never_arrived > (t.no_shows || []).length ? '<div class="note">Showing the first ' + t.no_shows.length + ' by appointment time.</div>' : '') + '</div>'
+          + '<div class="card"><h3>Rejected loads <span class="muted">(' + shiftRptNum(t.rejected) + ')</span></h3>' + rejTable + '</div></div>')
+        + sec("sec-nights", "How this shift compares with the last " + (nightsAsc.length - 1) + " nights", trends + histTable)
         + unloaderHtml + unloaderNote
+        + sec("sec-hours", "Hour by hour", hourTable + '<p class="note">In brackets: the earlier-night average for that hour (appointments to finished), and how many of the trucks on the dock were still waiting to start.</p>')
         + '<h2>How to read this</h2><ul class="defs"><li><b>95% of trucks done</b> is the time by which 95% of the trucks that were unloaded had finished. It ignores the last few stragglers.</li>'
-        + '<li><b>Wait to start</b> runs from driver check-in to the start of unloading. <b>Time on dock</b> runs from check-in to unload finish. <b>Average unload time</b> runs from unload start to finish, and ignores anything over 8 hours as a stamping error.</li>'
-        + '<li><b>Finished by 4 AM</b> is the share of trucks that checked in which finished unloading by 4:00 AM. <b>Scheduled, never arrived</b> trucks are left out of every time and pace figure.</li>'
+        + '<li><b>Wait to start</b> runs from driver check-in to the start of unloading, split into <b>waiting for a door</b> (check-in to driver at the door) and <b>waiting at the door</b> (at the door to unload start). <b>Time on dock</b> runs from check-in to unload finish. <b>Average unload time</b> runs from unload start to finish, and ignores anything over 8 hours as a stamping error.</li>'
+        + '<li><b>Finished by ' + shiftRptEsc(goalShort) + '</b> is the share of trucks that checked in which finished unloading by ' + shiftRptEsc(shiftRptGoalFull(t)) + '. <b>Scheduled, never arrived</b> trucks are left out of every time and pace figure.</li>'
+        + '<li><b>Arrived on time</b> means check-in within 15 minutes either side of the appointment. <b>Trucks on the dock</b> counts every truck checked in and not yet finished at each 15-minute mark.</li>'
         + '<li><b>Pallets per unload hour</b> is pallets on timed unloads divided by the hours spent unloading them, per door, not per person.</li>'
+        + '<li><b>Same weekday</b> appears when at least two of the earlier nights fell on the same day of the week as this shift.</li>'
         + '<li>Nights with fewer than 10 arrivals are treated as no shift and are not used in the averages. All times come from DMS stamps.</li></ul>'
         + '</div></body></html>';
     }
 
     function shiftRptFilename(data) {
       const m = /^(\d+)\/(\d+)\/(\d+)$/.exec(data.business_date || "");
-      return "OKS_shift_report_" + (m ? m[3] + "-" + m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0") : "latest") + ".html";
+      return (data.site === "MN" ? "MN" : "OKS") + "_shift_report_" + (m ? m[3] + "-" + m[1].padStart(2, "0") + "-" + m[2].padStart(2, "0") : "latest") + ".html";
     }
 
     function shiftRptSetState(text, isError) {
@@ -19571,8 +20020,8 @@
       if (SHIFT_RPT.busy) return;
       SHIFT_RPT.busy = true; SHIFT_RPT.doc = "";
       shiftRptSetState("Building your report. The first time it also reads the earlier nights from DMS, which can take up to a minute. After that it is quick.");
-      const date = portalSelectedBusinessDate() || portalDefaultBusinessDateKey();
-      fetch(apiUrl("/api/portal/shift-report?business_date=" + encodeURIComponent(date) + "&days=" + SHIFT_RPT.days))
+      const date = SHIFT_RPT.site === "mn" ? (portalMnSelectedBusinessDate() || portalMnDefaultBusinessDate()) : (portalSelectedBusinessDate() || portalDefaultBusinessDateKey());
+      fetch(apiUrl("/api/portal/shift-report?business_date=" + encodeURIComponent(date) + "&days=" + SHIFT_RPT.days + "&site=" + (SHIFT_RPT.site === "mn" ? "MN" : "OKS")))
         .then(function(r) { return r.json().then(function(j) { if (!r.ok) throw new Error(j && j.detail ? j.detail : "HTTP " + r.status); return j; }); })
         .then(function(data) {
           SHIFT_RPT.data = data; SHIFT_RPT.doc = shiftRptDoc(data);
@@ -19586,9 +20035,11 @@
         .then(function() { SHIFT_RPT.busy = false; });
     }
 
-    function shiftRptOpen() {
+    function shiftRptOpen(site) {
       const ov = document.getElementById("shiftRptOverlay");
       if (!ov) return;
+      SHIFT_RPT.site = site === "mn" ? "mn" : "oks";
+      SHIFT_RPT.data = null; SHIFT_RPT.doc = "";
       ov.style.display = "flex";
       document.body.classList.add("shift-rpt-open");
       const sel = document.getElementById("shiftRptDays"); if (sel) sel.value = String(SHIFT_RPT.days);
@@ -19614,7 +20065,8 @@
     document.addEventListener("click", function(e) {
       const t = e.target;
       if (!t || !t.closest) return;
-      if (t.closest("#portalShiftReportPageBtn")) shiftRptOpen();
+      if (t.closest("#portalShiftReportPageBtn")) shiftRptOpen("oks");
+      else if (t.closest("#portalMnShiftReportPageBtn")) shiftRptOpen("mn");
       else if (t.closest("#shiftRptClose")) shiftRptClose();
       else if (t.closest("#shiftRptDownload")) shiftRptDownload();
       else if (t.closest("#shiftRptPrint")) shiftRptPrint();
@@ -19844,6 +20296,29 @@
     // Desktop notifications for Minnesota while the MN portal is being polled.
     function portalMnFireNotifications() {
       portalMnGetAlerts().forEach(function(a) { portalNotify(a.notifyTitle, a.notifyBody, a.tag); });
+      portalMnAttentionTick();
+    }
+
+    // Minnesota's on-screen popups, the bell and the pace ticker: trucks at the door that nobody has started
+    // and zones running behind. Same rules and wording as OKS; the bell shows both sites' alerts together.
+    function portalMnAttentionTick() {
+      const now = Date.now();
+      let ns = [], zones = [], legacy = new Set();
+      try { ns = portalNotStartedAlerts(now, "mn"); } catch (err) { console.error("Minnesota not-started alerts failed:", err); }
+      try { zones = portalZoneAlerts("mn"); } catch (err) { console.error("Minnesota zone alerts failed:", err); }
+      zones.forEach(function(a) {
+        if (!_portalZoneFired.has(a.tag)) {
+          _portalZoneFired.add(a.tag);
+          portalNotify("[MN] " + a.notifyTitle, a.notifyBody, a.tag);
+          portalBeep(a.sev === "zonered" ? "detention" : "urgent");
+        }
+        a.order = a.sev === "zonered" ? 0 : 2;
+      });
+      try {
+        legacy = new Set(portalMnGetAlerts().filter(function(a) { return a.sev === "needstart" && a.truck; }).map(function(a) { return String(a.truck.id || a.truck.ref); }));
+      } catch (err) { /* the older per-truck alert is optional */ }
+      try { portalAttentionTick(now, ns, zones, legacy, "mn"); } catch (err) { console.error("Minnesota attention popups failed:", err); }
+      try { portalRenderTicker("mn"); } catch (err) { console.error("Minnesota ticker failed:", err); }
     }
 
     // Render the Alerts tab list + tab badge, and fire push notifications.
@@ -23884,6 +24359,13 @@
         button.classList.toggle("role-hidden", !permitted);
         button.disabled = !permitted;
       });
+      // Performance by Name serves the site the login belongs to (OKS logins, or Minnesota's).
+      const perfBtn = document.querySelector('.tab-button[data-tab="unloaderPerformance"]');
+      if (perfBtn) {
+        const perfLabel = role === "minnesota" ? "Performance by Name (MN)" : "Performance by Name (OKS)";
+        perfBtn.textContent = perfLabel;
+        perfBtn.dataset.menuLabel = "Live: " + perfLabel;
+      }
       document.querySelectorAll(".menu-group").forEach((group) => {
         const visibleButton = Array.from(group.querySelectorAll(".tab-button")).some((button) => !button.classList.contains("role-hidden"));
         group.classList.toggle("role-hidden", !visibleButton);
@@ -24024,6 +24506,23 @@
       });
     }
 
+    // Performance by Name shows one site at a time: Minnesota's login sees Minnesota, the admin login can pick, everyone else OKS.
+    function portalPerfSite() {
+      const role = state.auth.role;
+      if (role === "minnesota") return "MN";
+      if (role === "admin") { const sel = document.getElementById("unloaderPerfSite"); return sel && sel.value === "MN" ? "MN" : "OKS"; }
+      return "OKS";
+    }
+    function portalPerfSiteLabel() { return portalPerfSite() === "MN" ? "Minnesota" : "OKS"; }
+    function portalPerfApplySite() {
+      const site = portalPerfSite(), label = portalPerfSiteLabel();
+      const tag = document.querySelector("#unloaderPerfTitle span"); if (tag) tag.textContent = site === "MN" ? "MN" : "OKS";
+      const intro = document.getElementById("unloaderPerfIntro");
+      if (intro) intro.innerHTML = "Built from the optional <b>Unloader</b> name added on a load's door popup in My Portal (" + label + "). Pallets and unload time fill in automatically as DMS records them, so a load only counts toward time and pallets-per-hour once its unload has finished.";
+      const panel = document.getElementById("unloaderPerformancePanel"); if (panel) panel.setAttribute("aria-label", "Performance by Name (" + site + ")");
+      const wrap = document.getElementById("unloaderPerfSiteWrap"); if (wrap) wrap.style.display = state.auth.role === "admin" ? "inline-flex" : "none";
+    }
+
     // One card per unloader: an overall bar against the team (tick = team pace) plus a bar per measure.
     function renderUnloaderRatingBars(data) {
       const box = document.getElementById("unloaderPerfBars");
@@ -24036,7 +24535,7 @@
           + (team.avg_gap_min != null ? ", " + unloaderFmtMinutes(team.avg_gap_min) + " between loads" : "") + ", " + team.loads_per_night + " loads/night"
         : "Needs 2+ unloaders with finished loads";
       box.innerHTML = "";
-      if (!people.length) { box.innerHTML = '<div class="perf-empty">No unloader names yet. Add one from a load\'s door popup in My Portal (OKS).</div>'; return; }
+      if (!people.length) { box.innerHTML = '<div class="perf-empty">No unloader names yet. Add one from a load\'s door popup in My Portal (' + portalPerfSiteLabel() + ').</div>'; return; }
       people.sort(function(a, b) {
         const ra = a.rating && a.rating.ready ? a.rating.index : -1, rb = b.rating && b.rating.ready ? b.rating.index : -1;
         return rb - ra || a.name.localeCompare(b.name);
@@ -24085,8 +24584,9 @@
       const days = rangeEl ? rangeEl.value : "30";
       const gapEl = document.getElementById("unloaderPerfMaxGap");
       const maxGap = gapEl ? gapEl.value : "60";
+      portalPerfApplySite();
       kicker.textContent = "Loading...";
-      fetch(apiUrl("/api/portal/performance?days=" + encodeURIComponent(days) + "&max_gap=" + encodeURIComponent(maxGap)))
+      fetch(apiUrl("/api/portal/performance?days=" + encodeURIComponent(days) + "&max_gap=" + encodeURIComponent(maxGap) + "&site=" + portalPerfSite()))
         .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.detail || "Could not load performance."); return d; }); })
         .then(function(data) {
           const people = data.people || [];
@@ -24112,7 +24612,7 @@
 
           unloaderRenderBars(document.getElementById("unloaderPerfLoadsList"), document.getElementById("unloaderPerfLoadsKicker"),
             people.map(function(p) { return { label: p.name, value: p.loads, count: p.loads + (p.loads === 1 ? " load" : " loads"), meta: formatNumber(p.pallets) + " pallets · " + p.days_worked + " night" + (p.days_worked === 1 ? "" : "s") }; }),
-            { empty: "No unloader names yet — add one from a load's door popup in My Portal (OKS).", kicker: "Most loads first" });
+            { empty: "No unloader names yet — add one from a load's door popup in My Portal (" + portalPerfSiteLabel() + ").", kicker: "Most loads first" });
 
           unloaderRenderBars(document.getElementById("unloaderPerfPphList"), document.getElementById("unloaderPerfPphKicker"),
             people.filter(function(p) { return p.pallets_per_hour != null; })
@@ -24182,6 +24682,8 @@
       const range = document.getElementById("unloaderPerfRange");
       const btn = document.getElementById("unloaderPerfRefreshBtn");
       const gap = document.getElementById("unloaderPerfMaxGap");
+      const siteSel = document.getElementById("unloaderPerfSite");
+      if (siteSel) siteSel.addEventListener("change", renderUnloaderPerformance);
       if (range) range.addEventListener("change", renderUnloaderPerformance);
       if (gap) gap.addEventListener("change", renderUnloaderPerformance);
       if (btn) btn.addEventListener("click", renderUnloaderPerformance);

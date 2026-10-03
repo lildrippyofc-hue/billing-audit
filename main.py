@@ -1101,6 +1101,7 @@ def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
     # Minnesota's Vendors tab builds its turn-time history from completed trucks
     # on every pull (this builder only serves the MN portal).
     _learn_from_dms(board, info, "MN")
+    _sync_unloader_stats(board, info, "MN")
 
     def _stat(st):
         return str(st.get("drstat") or "").strip().lower()
@@ -3498,8 +3499,8 @@ def save_door_note(body: DoorNoteIn, site: str = "OKS", username: str = Depends(
 # An optional name attached to a load from the door map popup. Everyone on OKS
 # My Portal sees it; Performance by Name aggregates it per person.
 
-_require_unloader_write = _require_roles("oks", "manager", "teamlead", "clerk")
-_require_performance_read = _require_roles("oks", "manager", "teamlead")
+_require_unloader_write = _require_roles("oks", "manager", "teamlead", "clerk", "minnesota")
+_require_performance_read = _require_roles("oks", "manager", "teamlead", "minnesota")
 
 
 def _clean_unloader_name(raw: str) -> str:
@@ -3519,6 +3520,7 @@ def _unloader_date_iso(business_date: str) -> Optional[str]:
 
 
 class UnloaderIn(BaseModel):
+    site: str = "OKS"
     business_date: str
     truck_key: str
     unloader: str = ""
@@ -3528,19 +3530,22 @@ class UnloaderIn(BaseModel):
 
 
 @app.get("/api/portal/unloaders")
-def get_unloaders(business_date: str = "", username: str = Depends(_require_unloader_write)):
+def get_unloaders(business_date: str = "", site: str = "OKS", username: str = Depends(_require_unloader_write)):
+    site = _site_param(site)
+    _check_site_role(username, site)
     business_date = business_date.strip()
     conn = get_db()
     assigned: Dict[str, Any] = {}
     if business_date:
         rows = conn.execute(
-            "SELECT truck_key, unloader, updated_by, updated_at FROM load_unloaders WHERE site='OKS' AND business_date=?",
-            (business_date,),
+            "SELECT truck_key, unloader, updated_by, updated_at FROM load_unloaders WHERE site=? AND business_date=?",
+            (site, business_date),
         ).fetchall()
         assigned = {r[0]: {"unloader": r[1], "updated_by": r[2], "updated_at": r[3]} for r in rows}
     roster_rows = conn.execute(
-        "SELECT unloader, COUNT(*) AS n, MAX(updated_at) AS last FROM load_unloaders WHERE site='OKS' "
-        "GROUP BY unloader ORDER BY last DESC LIMIT 80"
+        "SELECT unloader, COUNT(*) AS n, MAX(updated_at) AS last FROM load_unloaders WHERE site=? "
+        "GROUP BY unloader ORDER BY last DESC LIMIT 80",
+        (site,),
     ).fetchall()
     conn.close()
     return {"ok": True, "unloaders": assigned, "roster": [r[0] for r in roster_rows]}
@@ -3548,6 +3553,8 @@ def get_unloaders(business_date: str = "", username: str = Depends(_require_unlo
 
 @app.post("/api/portal/unloaders")
 def save_unloader(body: UnloaderIn, username: str = Depends(_require_unloader_write)):
+    site = _site_param(body.site)
+    _check_site_role(username, site)
     business_date = body.business_date.strip()
     truck_key = body.truck_key.strip()[:200]
     if not business_date or not truck_key:
@@ -3558,25 +3565,25 @@ def save_unloader(body: UnloaderIn, username: str = Depends(_require_unloader_wr
     if name:
         # Reuse an existing spelling so "john" and "John" are one person in the stats.
         existing = conn.execute(
-            "SELECT unloader FROM load_unloaders WHERE site='OKS' AND lower(unloader)=lower(?) LIMIT 1", (name,)
+            "SELECT unloader FROM load_unloaders WHERE site=? AND lower(unloader)=lower(?) LIMIT 1", (site, name)
         ).fetchone()
         if existing:
             name = existing[0]
         conn.execute(
             "INSERT INTO load_unloaders (site, business_date, truck_key, unloader, supplier, area, door, updated_by, updated_at) "
-            "VALUES ('OKS',?,?,?,?,?,?,?,?) "
+            "VALUES (?,?,?,?,?,?,?,?,?) "
             "ON CONFLICT(site, business_date, truck_key) DO UPDATE SET "
             "unloader=excluded.unloader, updated_by=excluded.updated_by, updated_at=excluded.updated_at, "
             "supplier=CASE WHEN excluded.supplier != '' THEN excluded.supplier ELSE load_unloaders.supplier END, "
             "area=CASE WHEN excluded.area != '' THEN excluded.area ELSE load_unloaders.area END, "
             "door=CASE WHEN excluded.door != '' THEN excluded.door ELSE load_unloaders.door END",
-            (business_date, truck_key, name, body.supplier.strip()[:120], body.area.strip()[:40],
+            (site, business_date, truck_key, name, body.supplier.strip()[:120], body.area.strip()[:40],
              body.door.strip()[:20], username, now_str),
         )
     else:
         conn.execute(
-            "DELETE FROM load_unloaders WHERE site='OKS' AND business_date=? AND truck_key=?",
-            (business_date, truck_key),
+            "DELETE FROM load_unloaders WHERE site=? AND business_date=? AND truck_key=?",
+            (site, business_date, truck_key),
         )
     conn.execute("DELETE FROM load_unloaders WHERE updated_at < ?", ((datetime.now(timezone.utc) - timedelta(days=200)).isoformat(),))
     conn.commit()
@@ -3718,8 +3725,10 @@ def _unloader_people(rows: List[Any], accept: Callable[[str], bool], max_gap: in
             "unload_min_total": 0.0, "dates": set(), "areas": {},
             "gap_total": 0.0, "gap_count": 0, "gap_longest": 0.0, "long_gaps": 0, "gap_work_min": 0.0,
             "zp": {}, "zt": {},     # per-zone sums for the team comparison: pallets/hours and loads/minutes
+            "items": [],            # every named load (night, start, finish, pallets, area) for the report's timeline
         })
         p["loads"] += 1
+        p["items"].append({"iso": iso, "start": u_start, "finish": u_finish, "pallets": pallets, "area": area, "supplier": supplier})
         p["pallets"] += pallets or 0
         p["dates"].add(iso)
         if area:
@@ -3788,13 +3797,15 @@ def _unloader_row(p: Dict[str, Any], rating: Optional[Dict[str, Any]] = None) ->
 
 
 @app.get("/api/portal/performance")
-def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = Depends(_require_performance_read)):
+def get_unloader_performance(days: int = 30, max_gap: int = 60, site: str = "OKS", username: str = Depends(_require_performance_read)):
+    site = _site_param(site)
+    _check_site_role(username, site)
     days = max(1, min(int(days), 180))
     # A gap longer than this is treated as a break / waiting on trucks, not idle time.
     max_gap = max(10, min(int(max_gap), 240))
     cutoff = (datetime.now(DMS_BUSINESS_TZ) - timedelta(days=days)).strftime("%Y-%m-%d")
     conn = get_db()
-    rows = conn.execute("SELECT " + _UNLOADER_COLS + " FROM load_unloaders WHERE site='OKS'").fetchall()
+    rows = conn.execute("SELECT " + _UNLOADER_COLS + " FROM load_unloaders WHERE site=?", (site,)).fetchall()
     conn.close()
     people, daily = _unloader_people(rows, lambda iso: iso >= cutoff, max_gap)
     comparison = _unloader_ratings(people)
@@ -3813,16 +3824,43 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, username: str = 
 
 # ── End-of-shift report ───────────────────────────────────────────────────────
 
-_REPORT_PERF_ROLES = {"oks", "manager", "teamlead", "admin"}     # same people who can open Performance by Name
+_REPORT_PERF_ROLES = {"oks", "manager", "teamlead", "minnesota", "admin"}     # same people who can open Performance by Name
+_REPORT_GOAL_MIN = {"OKS": 540, "MN": 600}                                     # 4 AM and 5 AM, minutes after the 7 PM start
+
+
+def _rejected_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The loads DMS marked Rejected (the portal drops them from the schedule): supplier, area, pallets."""
+    stamps_by_key: Dict[str, Dict[str, Any]] = {}
+    for stamp in stamps:
+        key = _dms_key(stamp)
+        if key:
+            stamps_by_key[key] = stamp
+    out: List[Dict[str, Any]] = []
+    seen = set()
+    for load in loads:
+        key = _dms_key(load)
+        if key:
+            seen.add(key)
+        t = _normalize_portal_truck(load, stamps_by_key.get(key, {}))
+        if str(t.get("statusText") or "").strip().lower() == "rejected":
+            out.append({"supplier": t.get("supplier"), "area": t.get("area"), "pallets": t.get("pallets"), "ref": t.get("ref")})
+    for stamp in stamps:
+        key = _dms_key(stamp)
+        if key and key in seen:
+            continue
+        t = _normalize_portal_truck({}, stamp)
+        if str(t.get("statusText") or "").strip().lower() == "rejected":
+            out.append({"supplier": t.get("supplier"), "area": t.get("area"), "pallets": t.get("pallets"), "ref": t.get("ref")})
+    return out
 
 
 def _fetch_dms_night(session: Dict[str, Any], info: str):
-    """Read-only pull of one business date from DMS: (merged non-rejected trucks, rejected count)."""
+    """Read-only pull of one business date from DMS: (merged non-rejected trucks, rejected count, rejected loads)."""
     payload = {"info": info, "loc": session["loc"], "userinfo": session["userinfo"], "buck": session.get("buck") or {}}
     loads = [x for x in _first_list(_dms_json_request("api/load/getloaddetails", payload, session["config"])) if isinstance(x, dict)]
     stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
     rejected = sum(1 for st in stamps if str(st.get("drstat") or "").strip().lower() == "rejected")
-    return _merge_dms_portal_rows(loads, stamps), rejected
+    return _merge_dms_portal_rows(loads, stamps), rejected, _rejected_rows(loads, stamps)
 
 
 def _night_is_closed(info: str) -> bool:
@@ -3831,38 +3869,40 @@ def _night_is_closed(info: str) -> bool:
     return start is not None and datetime.now(timezone.utc) >= start + timedelta(hours=14 + 3)
 
 
-def _store_night_summary(info: str, summary: Dict[str, Any]) -> None:
+def _store_night_summary(info: str, summary: Dict[str, Any], site: str = "OKS") -> None:
     # Only settled nights with trucks are kept: an empty answer could be a DMS hiccup, not a quiet night.
     if not summary.get("scheduled") or not _night_is_closed(info):
         return
     conn = get_db()
     conn.execute(
-        "INSERT INTO shift_summaries (site, business_date, summary, computed_at) VALUES ('OKS',?,?,?) "
+        "INSERT INTO shift_summaries (site, business_date, summary, computed_at) VALUES (?,?,?,?) "
         "ON CONFLICT(site, business_date) DO UPDATE SET summary=excluded.summary, computed_at=excluded.computed_at",
-        (info, json.dumps(summary), datetime.now(timezone.utc).isoformat()),
+        (site, info, json.dumps(summary), datetime.now(timezone.utc).isoformat()),
     )
     conn.commit()
     conn.close()
 
 
-def _previous_night_summary(session: Dict[str, Any], info: str) -> Dict[str, Any]:
+def _previous_night_summary(session: Dict[str, Any], info: str, site: str = "OKS") -> Dict[str, Any]:
     conn = get_db()
-    row = conn.execute("SELECT summary FROM shift_summaries WHERE site='OKS' AND business_date=?", (info,)).fetchone()
+    row = conn.execute("SELECT summary FROM shift_summaries WHERE site=? AND business_date=?", (site, info)).fetchone()
     conn.close()
     if row:
         try:
-            return json.loads(row[0])
+            cached = json.loads(row[0])
+            if cached.get("v") == _sr.SUMMARY_VERSION:
+                return cached
         except ValueError:
             pass
-    trucks, rejected = _fetch_dms_night(session, info)
+    trucks, rejected, rejected_rows = _fetch_dms_night(session, info)
     # Keep Performance by Name current for that night while the data is in hand.
-    _sync_unloader_stats([t for t in trucks if t.get("checkInIso")], info)
-    summary = _sr.summarize_night(trucks, info, DMS_BUSINESS_TZ, _perf_zone, rejected)
-    _store_night_summary(info, summary)
+    _sync_unloader_stats([t for t in trucks if t.get("checkInIso")], info, site)
+    summary = _sr.summarize_night(trucks, info, DMS_BUSINESS_TZ, _perf_zone, rejected, _REPORT_GOAL_MIN[site], rejected_rows)
+    _store_night_summary(info, summary, site)
     return summary
 
 
-def _report_unloaders(info: str, previous_infos: List[str]) -> Optional[Dict[str, Any]]:
+def _report_unloaders(info: str, previous_infos: List[str], site: str = "OKS") -> Optional[Dict[str, Any]]:
     """Per-unloader section for one night: that night's numbers, the team that night, each person's
     own recent average and their 30-day rating. None when nobody was recorded (nothing to show)."""
     night_iso = _unloader_date_iso(info)
@@ -3872,7 +3912,7 @@ def _report_unloaders(info: str, previous_infos: List[str]) -> Optional[Dict[str
     d = _sr.parse_business_date(info)
     cutoff30 = (d - timedelta(days=30)).strftime("%Y-%m-%d")
     conn = get_db()
-    rows = conn.execute("SELECT " + _UNLOADER_COLS + " FROM load_unloaders WHERE site='OKS'").fetchall()
+    rows = conn.execute("SELECT " + _UNLOADER_COLS + " FROM load_unloaders WHERE site=?", (site,)).fetchall()
     conn.close()
     tonight, _ = _unloader_people(rows, lambda iso: iso == night_iso, 60)
     if not tonight:
@@ -3893,12 +3933,65 @@ def _report_unloaders(info: str, previous_infos: List[str]) -> Optional[Dict[str
         "avg_unload_min": round(sum(p["unload_min_total"] for p in tonight.values()) / timed, 1) if timed else None,
         "avg_gap_min": round(sum(p["gap_total"] for p in tonight.values()) / gap_n, 1) if gap_n else None,
     }
+    start_dt = _sr.shift_start(info, DMS_BUSINESS_TZ)
+
+    def after_start(iso_text: Optional[str]) -> Optional[float]:
+        dt = _sr.parse_iso(iso_text)
+        return round((dt - start_dt).total_seconds() / 60, 1) if dt and start_dt else None
+
+    # Team pace in each zone that night, so each person can be shown against the team on the SAME zone.
+    z_min: Dict[str, float] = {}
+    z_n: Dict[str, int] = {}
+    z_pal: Dict[str, float] = {}
+    z_hrs: Dict[str, float] = {}
+    for p in tonight.values():
+        for z, a in p["zt"].items():
+            z_min[z] = z_min.get(z, 0) + a["min"]
+            z_n[z] = z_n.get(z, 0) + a["n"]
+        for z, a in p["zp"].items():
+            z_pal[z] = z_pal.get(z, 0) + a["pallets"]
+            z_hrs[z] = z_hrs.get(z, 0) + a["hours"]
+    # One aggregate per night (tonight and each earlier night) for the per-person trend lines.
+    night_list = sorted(prev_isos | {night_iso})
+    per_night = {iso: _unloader_people(rows, lambda x, i=iso: x == i, 60)[0] for iso in night_list}
+    team["history"] = []
+    for iso in night_list:
+        pp = per_night[iso]
+        if not pp:
+            continue
+        hh = sum(q["unload_min_total"] for q in pp.values()) / 60
+        tp = sum(q["timed_pallets"] for q in pp.values())
+        tl = sum(q["timed_loads"] for q in pp.values())
+        team["history"].append({"date": iso, "people": len(pp), "loads": sum(q["loads"] for q in pp.values()),
+                                "pallets": sum(q["pallets"] for q in pp.values()),
+                                "pallets_per_hour": round(tp / hh, 1) if hh > 0 and tp else None,
+                                "avg_unload_min": round(sum(q["unload_min_total"] for q in pp.values()) / tl, 1) if tl else None})
     people = []
     for name, p in tonight.items():
         row = _unloader_row(p, rating30.get(name))
         row["first_start"] = p.get("first_start")
         row["last_finish"] = p.get("last_finish")
         row["areas"] = dict(sorted(p["areas"].items(), key=lambda kv: -kv[1])[:4])
+        row["timeline"] = sorted(
+            ({"s": after_start(i["start"]), "f": after_start(i["finish"]), "pallets": i["pallets"], "zone": _perf_zone(i["area"]), "area": i["area"] or ""}
+             for i in p["items"] if i["iso"] == night_iso and i["start"] and i["finish"]),
+            key=lambda x: (x["s"] is None, x["s"]))
+        row["zone_table"] = []
+        for z, a in p["zt"].items():
+            pz = p["zp"].get(z)
+            row["zone_table"].append({
+                "zone": z, "loads": a["n"], "avg_unload_min": round(a["min"] / a["n"], 1),
+                "team_avg_unload_min": round(z_min[z] / z_n[z], 1) if z_n.get(z) else None,
+                "pph": round(pz["pallets"] / pz["hours"], 1) if pz and pz["hours"] > 0 else None,
+                "team_pph": round(z_pal[z] / z_hrs[z], 1) if z_hrs.get(z, 0) > 0 and z_pal.get(z, 0) > 0 else None,
+            })
+        row["history"] = []
+        for iso in night_list:
+            q = per_night[iso].get(name)
+            if q:
+                qr = _unloader_row(q)
+                row["history"].append({"date": iso, "loads": qr["loads"], "pallets": qr["pallets"], "pallets_per_hour": qr["pallets_per_hour"],
+                                       "avg_unload_min": qr["avg_unload_min"], "avg_gap_min": qr["avg_gap_min"]})
         e = earlier.get(name)
         if e:
             er = _unloader_row(e)
@@ -3914,22 +4007,24 @@ def _report_unloaders(info: str, previous_infos: List[str]) -> Optional[Dict[str
 
 
 @app.get("/api/portal/shift-report")
-def get_shift_report(business_date: str = "", days: int = 7, username: str = Depends(_require_oks_dms)):
+def get_shift_report(business_date: str = "", days: int = 7, site: str = "OKS", username: str = Depends(_require_vendor_stats)):
     """Everything the end-of-shift report needs for one business date: tonight's summary, the earlier
     nights it is compared with, their average, and (for roles that can see it) the per-unloader section.
     Reads DMS only. Settled earlier nights are cached, so only the first report is slow."""
+    site = _site_param(site)
+    _check_site_role(username, site)
     days = max(3, min(int(days or 7), 14))
-    session = _ensure_dms_session()
+    session = _ensure_dms_mn_session() if site == "MN" else _ensure_dms_session()
     info = _dms_business_date(business_date)
     try:
-        trucks, rejected = _fetch_dms_night(session, info)
+        trucks, rejected, rejected_rows = _fetch_dms_night(session, info)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail="Could not read this shift from DMS: %s" % e)
-    _sync_unloader_stats([t for t in trucks if t.get("checkInIso")], info)
-    tonight = _sr.summarize_night(trucks, info, DMS_BUSINESS_TZ, _perf_zone, rejected)
-    _store_night_summary(info, tonight)
+    _sync_unloader_stats([t for t in trucks if t.get("checkInIso")], info, site)
+    tonight = _sr.summarize_night(trucks, info, DMS_BUSINESS_TZ, _perf_zone, rejected, _REPORT_GOAL_MIN[site], rejected_rows)
+    _store_night_summary(info, tonight, site)
 
     # Is the shift really over? Nothing still being unloaded and nobody left who could still arrive.
     now_utc = datetime.now(timezone.utc)
@@ -3952,7 +4047,7 @@ def get_shift_report(business_date: str = "", days: int = 7, username: str = Dep
     missing: List[str] = []
     for pinfo in previous_infos:
         try:
-            previous.append(_previous_night_summary(session, pinfo))
+            previous.append(_previous_night_summary(session, pinfo, site))
         except Exception:
             missing.append(pinfo)
     previous.sort(key=lambda s: _sr.parse_business_date(s["business_date"]))
@@ -3960,10 +4055,10 @@ def get_shift_report(business_date: str = "", days: int = 7, username: str = Dep
     unloaders = None
     unloaders_hidden = _ROLES.get(username, "guest") not in _REPORT_PERF_ROLES
     if not unloaders_hidden:
-        unloaders = _report_unloaders(info, previous_infos)
+        unloaders = _report_unloaders(info, previous_infos, site)
     return {
         "ok": True,
-        "site": "OKS",
+        "site": site,
         "business_date": info,
         "generated_at": now_utc.isoformat(),
         "status": status,
