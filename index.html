@@ -10577,7 +10577,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalSetView("zones"); }, target: portalTourEl("portalZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes that have not started</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes after the clerk's check-in without starting</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
@@ -10626,7 +10626,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes that have not started</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you: the ones <b>on the lot 30+ minutes after the clerk's check-in without starting</b>, longest first, as big tiles. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
@@ -15943,6 +15943,7 @@
         appointmentIso: row.appointmentIso || null,
         checkInIso: row.checkInIso || null,
         driverAtDoorIso: row.driverAtDoorIso || null,
+        clerkCheckInIso: row.clerkCheckInIso || null,
         unloadStartIso: row.unloadStartIso || null,
         unloadFinishIso: row.unloadFinishIso || null,
         receivingStartIso: row.receivingStartIso || null,
@@ -15951,6 +15952,7 @@
         appointmentMs: appointmentMs,
         checkInMs: checkInMs,
         driverAtDoorMs: driverAtDoorMs,
+        clerkCheckInMs: portalIsoToMs(row.clerkCheckInIso),
         unloadStartMs: unloadStartMs,
         unloadFinishMs: unloadFinishMs,
         receivingStartMs: receivingStartMs,
@@ -18176,10 +18178,15 @@
       if (d.getHours() < 19) floor.setDate(floor.getDate() - 1);
       return floor.getTime();
     }
-    // Minutes a truck has been on the lot for warning purposes: the real time on the lot, but never counting before 10 PM.
+    // Minutes a truck has been waiting on the lot for warning purposes. The clock starts at the clerk's check-in stamp, counted from
+    // 5 minutes before it, and never before 10 PM. A truck the clerk has not checked in yet has no clock running (null), so
+    // nothing is flagged until the clerk has it. The "N min on lot" label on a tile still shows the real time since the driver
+    // reached the door; this is only the clock behind the colours, the 61+ counters and the "on the lot 30+ min" band.
+    const PORTAL_CLERK_LEAD_MIN = 5;
     function portalDoorWarnMinutes(row, now) {
-      const start = row.driverAtDoorMs || row.checkInMs || row.appointmentMs;
-      if (!start) return null;
+      const stamp = row.clerkCheckInMs || portalIsoToMs(row.clerkCheckInIso);
+      if (!stamp) return null;
+      const start = stamp - PORTAL_CLERK_LEAD_MIN * 60000;
       return Math.max(0, Math.floor((now - Math.max(start, portalWarnFloorMs(now))) / 60000));
     }
 
@@ -18204,8 +18211,8 @@
       return { mins: mins, spill: /spill/i.test(r.comments || "") };
     }
 
-    // A truck that has been on the lot for 30 or more minutes (the "37 min on lot" on its tile, counted from the driver
-    // reaching the door, else check-in, and never before 10 PM) and has not started unloading. Unlike portalNotStartedInfo this ignores the
+    // A truck the clerk checked in 30 or more minutes ago (counted from 5 minutes before the clerk check-in stamp, and never
+    // before 10 PM) that has not started unloading. Unlike portalNotStartedInfo this ignores the
     // appointment, so a truck that arrived early and has simply been sitting there still shows up.
     const PORTAL_WAITING_MIN = 30;
     function portalWaitingInfo(r, now) {
@@ -19010,7 +19017,7 @@
           + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 29 minutes past the goal and red at 30 or more. It starts at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
           + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
-          + '<b>On the lot ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks whose time on the lot (the minutes on the tile, counted from the driver reaching the door, or check-in if there is no door stamp) has passed ' + PORTAL_WAITING_MIN + ' without unloading starting, longest first. Warnings start at 10 PM, so nothing is listed earlier and trucks that got here before 10 PM are counted from 10 PM. '
+          + '<b>On the lot ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in that have waited ' + PORTAL_WAITING_MIN + ' minutes without unloading starting, counted from 5 minutes before the clerk check-in stamp, longest first (the minutes on each tile are the real time since the driver reached the door). A truck is not counted until the clerk has checked it in. Warnings start at 10 PM, so nothing is listed earlier and trucks checked in before 10 PM are counted from 10 PM. '
           + '<b>Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min</b> lists loads that started unloading and are still not finished, longest first (a spill noted in DMS shows amber). '
           + '<b>All doors</b> opens the zone\'s full door map; Sort doors by reorders it. '
           + '<b>Started</b> (green) = trucks whose unload has begun, finished ones included. <b>Unloaded &amp; finished</b> (blue) = trucks whose unload is done. Both are out of every truck scheduled for the zone tonight.';
@@ -24854,7 +24861,7 @@
       const counts = formatNumber(d.named_loads) + " named load" + (d.named_loads === 1 ? "" : "s") + " and " + formatNumber(d.door_notes) + " door note" + (d.door_notes === 1 ? "" : "s") + " (OKS and Minnesota together)";
       if (d.persistent === false) {
         el.className = "friendly-note storage-bad";
-        el.innerHTML = "<b>&#9888; Not on permanent storage.</b> Names, notes and history are saved on the server, but they will be <b>wiped the next time it updates or restarts</b>. Ask whoever manages Railway to attach a volume and set <code>DATA_DIR</code> to its mount path. Right now it holds " + counts + ", kept since " + since + ".";
+        el.innerHTML = "<b>&#9888; Not on permanent storage.</b> Names, notes, history and sign-ins are saved on the server, but they will be <b>wiped the next time it updates or restarts</b> (and everyone signed out). Ask whoever manages Railway to attach a volume and set <code>DATA_DIR</code> to its mount path. Right now it holds " + counts + ", kept since " + since + ".";
       } else {
         el.className = "friendly-note storage-ok";
         el.innerHTML = "<b>&#10003; Saved on the server</b> and shared by every login" + (d.persistent ? ", on permanent storage, so it survives updates and restarts" : "") + ". Holding " + counts + ", kept since " + since + ".";

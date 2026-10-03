@@ -92,8 +92,12 @@ _ROLES: Dict[str, str] = {
     "patrick": "azaudit",
 }
 
-# In-memory session store (fine for a single-process server)
-_sessions: Dict[str, str] = {}
+# Login sessions. The dict below is a cache of the login_sessions table (see _session_user): a login survives a deploy or
+# restart because it is looked up in the database the first time it is seen afterwards.
+_SESSION_DAYS = 7                           # how long a login lasts (the cookie uses the same number)
+_sessions: Dict[str, str] = {}              # token -> username
+_session_expiry: Dict[str, float] = {}      # token -> epoch seconds it stops working (a token without an entry never expires in memory)
+_session_misses: Dict[str, float] = {}      # tokens recently looked up and not found, so garbage cookies cost one lookup a minute
 
 # Who is online: every signed-in page checks in every 30 s while it is on screen. A browser that has not checked in for
 # _PRESENCE_TTL seconds stops counting, so closing the tab or locking the phone drops off within about a minute and a half.
@@ -273,6 +277,21 @@ def init_db():
             first_seen    TEXT NOT NULL,
             last_seen     TEXT NOT NULL,
             PRIMARY KEY (business_date, session_hash)
+        );
+
+        -- Logins, so a deploy or restart does not sign anyone out. Only a hash of the login token is stored, never the token.
+        CREATE TABLE IF NOT EXISTS login_sessions (
+            token_hash TEXT PRIMARY KEY,
+            username   TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+        );
+
+        -- Slack/webhook alerts already sent on a business date, so a deploy does not send them all again.
+        CREATE TABLE IF NOT EXISTS alert_sent (
+            dedupe_key    TEXT PRIMARY KEY,
+            business_date TEXT NOT NULL,
+            sent_at       REAL NOT NULL
         );
     """)
     conn.execute("INSERT OR IGNORE INTO app_meta (key, value) VALUES ('db_created_at', ?)", (datetime.now(timezone.utc).isoformat(),))
@@ -724,6 +743,11 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
     driver_at_door = _parse_dms_time(
         merged.get("drdoor") or merged.get("driverAtDoor") or merged.get("driver_at_door")
     )
+    # The clerk's own check-in stamp (clrkchk): when the clerk logged the truck in, which comes a median 13 to 20 minutes after
+    # the driver reaches the door. The "on the lot" warnings count from it.
+    clerk_check_in = _parse_dms_time(
+        merged.get("clrkchk") or merged.get("clerkCheckIn") or merged.get("clerk_check_in")
+    )
     unload_start = _parse_dms_time(
         merged.get("unstart") or merged.get("unloadStart") or merged.get("unload_start")
     )
@@ -760,6 +784,7 @@ def _normalize_portal_truck(load: Dict[str, Any], stamp: Dict[str, Any]) -> Dict
         "appointmentIso": appointment,
         "checkInIso": check_in,
         "driverAtDoorIso": driver_at_door,
+        "clerkCheckInIso": clerk_check_in,
         "unloadStartIso": unload_start,
         "unloadFinishIso": unload_finish,
         "receivingStartIso": receiving_start,
@@ -932,6 +957,77 @@ def _storage_status() -> Dict[str, Any]:
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
 
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _session_store(token: str, username: str) -> None:
+    """Remember a login in the database as well as in memory (only a hash of the token is stored)."""
+    now = datetime.now(timezone.utc)
+    expires = now + timedelta(days=_SESSION_DAYS)
+    _sessions[token] = username
+    _session_expiry[token] = expires.timestamp()
+    try:
+        conn = get_db()
+        conn.execute(
+            "INSERT OR REPLACE INTO login_sessions (token_hash, username, created_at, expires_at) VALUES (?,?,?,?)",
+            (_token_hash(token), username, now.isoformat(), expires.isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        print(f"[sessions] could not save a login: {exc}")      # it still works until the next restart
+
+
+def _session_forget(token: str) -> None:
+    _sessions.pop(token, None)
+    _session_expiry.pop(token, None)
+    try:
+        conn = get_db()
+        conn.execute("DELETE FROM login_sessions WHERE token_hash=?", (_token_hash(token),))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
+def _session_user(token: Optional[str]) -> Optional[str]:
+    """Who a login token belongs to: None if it is unknown, expired, or its account no longer exists. After a deploy the
+    in-memory list is empty, so the first request with a token loads it from the database and signs nobody out."""
+    if not token:
+        return None
+    now = time.time()
+    user = _sessions.get(token)
+    if user is not None:
+        exp = _session_expiry.get(token)
+        if exp is not None and now > exp:
+            _session_forget(token)
+            return None
+        return user
+    if now - _session_misses.get(token, 0.0) < 60:
+        return None
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT username, expires_at FROM login_sessions WHERE token_hash=?", (_token_hash(token),)).fetchone()
+        conn.close()
+    except Exception:
+        return None                                   # database trouble: refuse this request, but do not remember it as a miss
+    if row:
+        try:
+            exp = datetime.fromisoformat(row[1]).timestamp()
+        except ValueError:
+            exp = 0.0
+        if exp > now and row[0] in _USERS:
+            _sessions[token] = row[0]
+            _session_expiry[token] = exp
+            return row[0]
+        _session_forget(token)                        # expired, or the account has been removed
+    if len(_session_misses) > 2000:
+        _session_misses.clear()
+    _session_misses[token] = now
+    return None
+
+
 def _presence_touch(token: str, username: str) -> None:
     """Note that this signed-in browser is active right now. Every authenticated request counts, not only the page's own
     check-in, so a phone or TV that is still running an older copy of the page (for example right after a deploy), or a page
@@ -943,9 +1039,9 @@ def _presence_touch(token: str, username: str) -> None:
 
 
 def require_auth(session: Optional[str] = Cookie(default=None)) -> str:
-    if not session or session not in _sessions:
+    username = _session_user(session)
+    if username is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    username = _sessions[session]
     _presence_touch(session, username)
     return username
 
@@ -978,12 +1074,12 @@ def login(creds: LoginIn, response: Response):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = secrets.token_hex(32)
     uname = creds.username.strip().lower()
-    _sessions[token] = uname
+    _session_store(token, uname)
     response.set_cookie(
         "session", token,
         httponly=True,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,   # 7 days
+        max_age=60 * 60 * 24 * _SESSION_DAYS,
         secure=os.environ.get("RAILWAY_ENVIRONMENT") is not None,
     )
     # Record visit for daily counter
@@ -998,11 +1094,21 @@ def login(creds: LoginIn, response: Response):
     return {"ok": True, "username": uname, "role": _ROLES.get(uname, "guest")}
 
 
+@app.on_event("startup")
+def _prune_login_sessions() -> None:
+    try:
+        conn = get_db()
+        conn.execute("DELETE FROM login_sessions WHERE expires_at < ?", (datetime.now(timezone.utc).isoformat(),))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 @app.post("/api/logout")
 def logout(response: Response, session: Optional[str] = Cookie(default=None)):
-    if session and session in _sessions:
-        del _sessions[session]
     if session:
+        _session_forget(session)
         _presence.pop(session, None)
     response.delete_cookie("session")
     return {"ok": True}
@@ -4666,6 +4772,36 @@ _ALERT_SITES = {
     "MN": {"env": "ALERT_WEBHOOK_URL_MN", "session": lambda: _ensure_dms_mn_session()},
 }
 _alert_sent: Dict[str, float] = {}
+_alert_loaded_for = ""                      # the business date whose sent-alert keys have been loaded from the database
+
+
+def _alert_load_sent(business_date: str) -> None:
+    """Start a business date with the alerts already sent for it (kept in the database, so a deploy in the middle of a shift does
+    not send every active alert again) and forget the earlier dates."""
+    global _alert_loaded_for
+    for key in [k for k in _alert_sent if k.split("|")[1] != business_date]:
+        _alert_sent.pop(key, None)
+    try:
+        conn = get_db()
+        for key, sent_at in conn.execute("SELECT dedupe_key, sent_at FROM alert_sent WHERE business_date=?", (business_date,)).fetchall():
+            _alert_sent.setdefault(key, sent_at)
+        conn.execute("DELETE FROM alert_sent WHERE business_date != ?", (business_date,))
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        print(f"[alerts] could not load the alerts already sent: {exc}")
+    _alert_loaded_for = business_date
+
+
+def _alert_save_sent(keys: List[str], business_date: str, sent_at: float) -> None:
+    try:
+        conn = get_db()
+        conn.executemany("INSERT OR REPLACE INTO alert_sent (dedupe_key, business_date, sent_at) VALUES (?,?,?)",
+                         [(k, business_date, sent_at) for k in keys])
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        print(f"[alerts] could not save the alerts just sent: {exc}")
 
 
 def _alert_free_minutes() -> int:
@@ -4776,8 +4912,8 @@ def _run_alert_cycle() -> None:
     free_minutes = _alert_free_minutes()
     now_ms = datetime.now(timezone.utc).timestamp() * 1000
     business_date = _dms_business_date(None)
-    for key in [k for k in _alert_sent if k.split("|")[1] != business_date]:
-        _alert_sent.pop(key, None)
+    if _alert_loaded_for != business_date:
+        _alert_load_sent(business_date)
     for site, cfg in _ALERT_SITES.items():
         url = os.environ.get(cfg["env"], "").strip()
         if not url:
@@ -4797,6 +4933,7 @@ def _run_alert_cycle() -> None:
                 _post_alert_webhook(url, f"{site} dock alerts ({len(fresh)} new)\n" + "\n".join("- " + text for _, text in fresh))
                 for dedupe, _ in fresh:
                     _alert_sent[dedupe] = now_ms
+                _alert_save_sent([d for d, _ in fresh], business_date, now_ms)
         except Exception as exc:
             print(f"[alerts] {site} cycle failed: {exc}")
 
