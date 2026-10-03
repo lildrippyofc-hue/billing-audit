@@ -1018,6 +1018,14 @@
     .zs-stat span { display:block; font-size:1rem; font-weight:700; color:var(--muted,#4a5568); }
     .zone-building { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 16px; font-size:0.92em; font-weight:600; color:var(--text,#2d3748); background:var(--card-bg,#fff); border:1px solid var(--border,#e2e8f0); border-radius:10px; padding:12px 16px; margin-bottom:12px; }
     :root.dark .zone-building { background:#17263f; border-color:#1e3a55; }
+    /* The whole zone takes the colour of where it will finish against the goal: light green = on or before it (up to 5 min past),
+       yellow = 5 to 20 min past, red = more than 20 min past. Colours start at 10 PM. */
+    .zone-card.zv-ok, .zone-building.zv-ok { background:#e6f7ec; border-color:#9ae6b4; }
+    .zone-card.zv-close, .zone-building.zv-close { background:#fff8d6; border-color:#f2d96b; }
+    .zone-card.zv-late, .zone-building.zv-late { background:#fde7e7; border-color:#f5a3a3; }
+    :root.dark .zone-card.zv-ok, :root.dark .zone-building.zv-ok, :root.retro .zone-card.zv-ok, :root.retro .zone-building.zv-ok { background:#143a29; border-color:#2f855a; }
+    :root.dark .zone-card.zv-close, :root.dark .zone-building.zv-close, :root.retro .zone-card.zv-close, :root.retro .zone-building.zv-close { background:#3d3513; border-color:#a07a1a; }
+    :root.dark .zone-card.zv-late, :root.dark .zone-building.zv-late, :root.retro .zone-card.zv-late, :root.retro .zone-building.zv-late { background:#4a1f1f; border-color:#b03a3a; }
     .zone-card.zs-green  { border-left:6px solid #38a169; }
     .zone-card.zs-yellow { border-left:6px solid #d69e2e; }
     .zone-card.zs-red    { border-left:6px solid #e53e3e; }
@@ -1025,7 +1033,7 @@
     :root.dark .zone-card.zs-yellow { border-left-color:#d69e2e; }
     :root.dark .zone-card.zs-red    { border-left-color:#e53e3e; }
     .zone-status { margin:2px 0 6px; }
-    .zone-chip { display:inline-block; font-size:0.78em; font-weight:800; letter-spacing:.02em; padding:3px 10px; border-radius:999px; }
+    .zone-chip { display:inline-block; font-size:0.95em; font-weight:800; letter-spacing:.02em; padding:4px 13px; border-radius:999px; }
     .zone-chip.green  { background:#c6f6d5; color:#22543d; }
     .zone-chip.yellow { background:#fefcbf; color:#744210; }
     .zone-chip.red    { background:#fed7d7; color:#822727; }
@@ -1041,7 +1049,7 @@
     .zone-eta-time.inline { font-size:clamp(1.7rem, 3.6vw, 2.3rem); margin:0; }
     .zone-eta.done .zone-eta-time { color:#2f855a; }
     :root.dark .zone-eta.done .zone-eta-time { color:#68d391; }
-    .zone-eta-delta { font-size:0.88em; font-weight:800; color:var(--muted,#718096); }
+    .zone-eta-delta { font-size:1.3em; font-weight:900; line-height:1.25; margin-top:4px; color:var(--muted,#718096); }
     .zone-eta-delta.early { color:#2f855a; } .zone-eta-delta.close { color:#b7791f; } .zone-eta-delta.late { color:#c53030; }
     :root.dark .zone-eta-delta.early { color:#68d391; } :root.dark .zone-eta-delta.close { color:#f6e05e; } :root.dark .zone-eta-delta.late { color:#fc8181; }
     .zone-eta-note { font-size:0.78em; color:var(--muted,#718096); }
@@ -4535,7 +4543,7 @@
     }
     /* Each zone card: what needs attention first, as big tiles (on the door 30+ min and not started; unloading over 45 min),
        then the zone's full door map on demand. Nothing in the cards flashes. */
-    .zone-sec { margin-top:14px; padding-top:10px; border-top:2px solid #e2e8f0; min-width:0; }
+    .zone-sec { margin-top:26px; padding-top:16px; border-top:5px solid #e2e8f0; min-width:0; }
     :root.dark .zone-sec { border-top-color:#2d3748; }
     .zone-wait.has-items { border-top-color:#f6ad55; }
     .zone-long.has-long { border-top-color:#fc8181; }
@@ -4553,7 +4561,7 @@
     #myPortalPanel .zone-wide-map .door-tile .door-no, #myPortalMnPanel .zone-wide-map .door-tile .door-no { font-size:1.15rem; }
     .zone-wide-map .door-tile .door-sup { font-size:0.74em; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
     .zone-wide-map .door-tile .door-dwell { font-size:0.72em; }
-    .zone-alldoors { margin-top:14px; border-top:2px solid #e2e8f0; padding-top:8px; }
+    .zone-alldoors { margin-top:22px; border-top:4px solid #e2e8f0; padding-top:10px; }
     :root.dark .zone-alldoors { border-top-color:#2d3748; }
     .zone-alldoors > summary { cursor:pointer; font-size:0.84em; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--muted,#718096); padding:4px 0 8px; }
     /* no flashing in the zone cards: a load unloading over 45 minutes stays a steady red tile */
@@ -10571,7 +10579,7 @@
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
           body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about an hour." },
         { title: "On track, running late, behind", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-status"),
-          body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 29 minutes past the goal, and <b>red</b> at 30 minutes or more past. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
+          body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 20 minutes past the goal, and <b>red</b> when it is more than 20 minutes past. The <b>whole zone</b> takes the same colour (light green, yellow or red) from 10 PM on. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
         { title: "Started and finished percentages", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-pcts"),
           body: "Two numbers on every zone: <b>green is Started</b> (trucks whose unload has begun) and <b>blue is Unloaded &amp; finished</b>. The bar under them shows both, green behind and blue in front. Both are out of the zone's trucks tonight." },
         { title: "No-shows drop out at 2:30 AM", before: function() { portalSetView("zones"); }, target: portalTourEl("portalZonesBuilding"),
@@ -10620,7 +10628,7 @@
         { title: "Estimated finish: building and each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-eta"),
           body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
         { title: "On track, running late, behind", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-status"),
-          body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 29 minutes past the goal, and <b>red</b> at 30 minutes or more past. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
+          body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 20 minutes past the goal, and <b>red</b> when it is more than 20 minutes past. The <b>whole zone</b> takes the same colour (light green, yellow or red) from 10 PM on. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
         { title: "Started and finished percentages", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-pcts"),
           body: "Two numbers on every zone: <b>green is Started</b> (trucks whose unload has begun) and <b>blue is Unloaded &amp; finished</b>. The bar under them shows both, green behind and blue in front. Both are out of the zone's trucks tonight." },
         { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
@@ -18814,14 +18822,14 @@
       return portalZonesFinishMs(est) || portalSt(site).simEstMs || null;
     }
 
-    // Where a projected finish sits against the goal: "ok" is before the goal or within 5 minutes after it, "close" is 5 to 29
-    // minutes past, "late" is 30 or more. `d` is minutes past the goal (negative = before). This, not the pace chip, says
+    // Where a projected finish sits against the goal: "ok" is before the goal or within 5 minutes after it, "close" is 5 to 20
+    // minutes past, "late" is more than 20. `d` is minutes past the goal (negative = before). This, not the pace chip, says
     // whether a zone is in trouble.
     function portalGoalVerdict(estMs, site) {
       const goal = portalSiteGoalMs(site);
       if (!goal || !estMs) return null;
       const d = Math.round((Math.round(estMs / 300000) * 300000 - goal) / 60000);
-      return { d: d, level: d >= 30 ? "late" : d >= 5 ? "close" : "ok" };
+      return { d: d, level: d > 20 ? "late" : d >= 5 ? "close" : "ok" };
     }
 
     // The pace chip compares a zone with a usual night at this time. Slower than usual only turns yellow or red when it puts
@@ -18848,7 +18856,7 @@
         const d = v.d;
         if (Math.abs(d) < 5) delta = "On track: right at the " + goalText + " goal";
         else if (d < 0) { delta = "On track: " + portalZoneFmtMin(-d) + " before the " + goalText + " goal"; cls = "early"; }
-        else if (d < 30) { delta = "Running late: " + portalZoneFmtMin(d) + " past the " + goalText + " goal"; cls = "close"; }
+        else if (d <= 20) { delta = "Running late: " + portalZoneFmtMin(d) + " past the " + goalText + " goal"; cls = "close"; }
         else { delta = "Behind: " + portalZoneFmtMin(d) + " past the " + goalText + " goal"; cls = "late"; }
       }
       return { time: "~" + portalFinishClock(rounded), delta: delta, cls: cls };
@@ -18874,8 +18882,8 @@
       return text;
     }
 
-    // Alerts for zones whose estimated finish has stayed past the goal for 5+ minutes (5 to 29 minutes past is a warning, 30 or
-    // more is critical). Being slower than a usual night is not an alert on its own: it only matters if it pushes the
+    // Alerts for zones whose estimated finish has stayed past the goal for 5+ minutes (5 to 20 minutes past is a warning, more
+    // than 20 is critical). Being slower than a usual night is not an alert on its own: it only matters if it pushes the
     // finish past the goal. They join the Alerts tab and fire the same desktop notification / sound as truck alerts, once
     // per zone per level.
     function portalZoneAlerts(site) {
@@ -18961,6 +18969,9 @@
           line = '<span class="zone-eta-label">Whole building &middot; estimated finish</span><span class="zone-eta-note">appears once trucks are arriving and unloading</span>';
         }
         building.innerHTML = line;
+        const bAll = est && est.all;
+        const bV = buildingEst && !(bAll && bAll.status === "early") ? portalGoalVerdict(buildingEst, site) : null;
+        building.className = "zone-building zv-" + (bV ? bV.level : "none");
       }
 
       grid.innerHTML = z.groups.map(function(g, gi) {
@@ -18987,7 +18998,11 @@
         const zr = est ? est[g.def.key] : null;
         const info = portalZoneStatusInfo(zr, site);
         const mapKey = site + ":" + g.def.key;
-        return '<article class="zone-card zs-' + info.cls + '">'
+        // The whole card takes the colour of where the zone will finish against the goal (light green / yellow / red), from 10 PM
+        // like the alerts; before that the estimate is too rough to colour anything, and a finished zone is green.
+        const goalV = zr && zr.status !== "early" && zr.status !== "done" ? portalGoalVerdict(zr.estMs, site) : null;
+        const goalLevel = zr && zr.status === "done" ? "ok" : goalV ? goalV.level : "none";
+        return '<article class="zone-card zs-' + info.cls + ' zv-' + goalLevel + '">'
           + '<div class="zone-head"><h3>' + escapeHtml(g.def.title) + '</h3></div>'
           + (info.label ? '<div class="zone-status"><span class="zone-chip ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' : '')
           + portalZoneEtaHtml(zr, site)
@@ -19014,7 +19029,7 @@
           + (o.scheduled
           ? 'Not in either group: ' + o.completed + ' of ' + o.scheduled + ' trucks complete (' + escapeHtml(z.otherNames.join(", ")) + '). They still count in the whole-shift total above.<br>'
           : '')
-          + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 29 minutes past the goal and red at 30 or more. It starts at 10 PM; earlier than that the gap is mostly noise. '
+          + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 20 minutes past the goal and red when it is more than 20 past. The whole zone card takes the same colour: light green when the zone will finish on or before the goal, yellow 5 to 20 minutes past it, red more than 20 past. Colours start at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
           + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry and Amb. '
           + '<b>On the lot ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in that have waited ' + PORTAL_WAITING_MIN + ' minutes without unloading starting, counted from 5 minutes before the clerk check-in stamp, longest first (the minutes on each tile are the real time since the driver reached the door). A truck is not counted until the clerk has checked it in. Warnings start at 10 PM, so nothing is listed earlier and trucks checked in before 10 PM are counted from 10 PM. '
