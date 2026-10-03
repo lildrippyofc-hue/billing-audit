@@ -812,8 +812,18 @@
     :root.dark .door-tile.ns-yellow .door-ns { color:#f6e05e; }
     :root.dark .door-tile.ns-red .door-ns { color:#feb2b2; }
     .door-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin:0 0 10px; }
-    .door-sortbox { display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px 8px; font-size:0.82em; font-weight:700; color:var(--text,#2d3748); }
-    .door-sort-select { padding:5px 8px; border:1px solid var(--border,#cbd5e0); border-radius:6px; background:transparent; color:inherit; font:inherit; max-width:100%; }
+    /* The sort control is how you reorder every door map, so it is a tinted, bold panel rather than a thin grey field. */
+    .door-sortbox { --sort-accent:#2b6cb0; --sort-label:#1e4e8c; --sort-tint:rgba(43,108,176,.12);
+      display:inline-flex; align-items:center; flex-wrap:wrap; gap:6px 10px; font-size:0.95em; font-weight:800; color:var(--text,#1a202c);
+      padding:7px 12px; border:2px solid var(--sort-accent); border-radius:10px; background:var(--sort-tint); }
+    .door-sortbox label { font-weight:900; font-size:0.86em; letter-spacing:.06em; text-transform:uppercase; color:var(--sort-label); white-space:nowrap; }
+    .door-sortbox label::before { content:"\2195\00a0"; }
+    .door-sort-select { padding:6px 10px; border:2px solid var(--sort-accent); border-radius:8px; background:var(--card-bg,#fff); color:inherit; font:inherit; font-weight:800; max-width:100%; cursor:pointer; }
+    .door-sortbox .door-sort-rev { font-weight:800; font-size:0.9em; border:2px solid var(--sort-accent); }
+    /* the dark and retro themes style every select and button with a more specific rule: keep the accent on top of them */
+    :root .door-sortbox .door-sort-select, :root .door-sortbox .door-sort-rev { border-color:var(--sort-accent); }
+    :root.dark .door-sortbox { --sort-accent:#4299e1; --sort-label:#90cdf4; --sort-tint:rgba(66,153,225,.16); }
+    :root.retro .door-sortbox { --sort-accent:#00f5ff; --sort-label:#a5e7ff; --sort-tint:rgba(0,245,255,.10); }
     .door-sort-select option { color:#1a202c; background:#fff; }
     .door-sort-rev[aria-pressed="true"] { background:#1e3a5f; color:#fff; border-color:#1e3a5f; }
     :root.dark .door-sort-rev[aria-pressed="true"] { background:#2b6cb0; border-color:#2b6cb0; }
@@ -2328,6 +2338,9 @@
       line-height: 1.45;
       max-width: 680px;
     }
+
+    .friendly-note.storage-ok { border-left:4px solid #38a169; padding-left:8px; }
+    .friendly-note.storage-bad { border-left:4px solid #e53e3e; background:rgba(229,62,62,.1); padding:6px 8px; border-radius:4px; color:var(--text, inherit); }
 
     .chart-mode-button {
       min-width: 92px;
@@ -4926,6 +4939,7 @@
           </div>
           <div class="friendly-note" id="unloaderPerfIntro" style="margin:-2px 0 10px;">Built from the optional <b>Unloader</b> name added on a load's door popup in My Portal (OKS). Pallets and unload time fill in automatically as DMS records them, so a load only counts toward time and pallets-per-hour once its unload has finished.</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px;">
+            <button type="button" id="unloaderPerfBackBtn" class="secondary-btn" style="display:none;font-weight:700;">&larr; Back to My Portal</button>
             <label for="unloaderPerfRange" style="font-weight:700;font-size:0.85em;">Period</label>
             <select id="unloaderPerfRange" class="lookup-input" style="width:auto;min-width:150px;">
               <option value="7">Last 7 days</option>
@@ -4945,8 +4959,10 @@
               <select id="unloaderPerfSite" class="lookup-input" style="width:auto;min-width:110px;"><option value="OKS">OKS</option><option value="MN">Minnesota</option></select>
             </span>
             <button type="button" id="unloaderPerfRefreshBtn" class="secondary-btn">Refresh</button>
+            <span id="unloaderPerfUpdated" style="font-size:0.8em;color:var(--muted,#718096);"></span>
           </div>
           <div class="summary-grid" id="unloaderPerfSummary"></div>
+          <div class="friendly-note" id="unloaderPerfStorage" style="display:none;margin-top:10px;"></div>
         </section>
 
         <div id="unloaderPerfBody" class="overview-grid" style="margin-top:14px;">
@@ -7467,6 +7483,7 @@
           <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
           <button type="button" class="portal-view-btn" data-view="zones">Zones</button>
           <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
+          <button type="button" class="portal-view-btn" data-view="performance" id="portalMnPerfBtn" title="Performance by Name: how each unloader is doing against the team">Performance</button>
           <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalMnChatBadge" style="display:none;">0</span></button>
           <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
         </div>
@@ -10309,6 +10326,8 @@
     });
     document.querySelectorAll("#portalMnViewSwitch .portal-view-btn").forEach(function(button) {
       button.addEventListener("click", function() {
+        // Performance is its own page (Performance by Name for Minnesota); it opens from here and has a way back.
+        if (button.dataset.view === "performance") { portalOpenPerformanceFromPortal("mn"); return; }
         portalMnSetView(button.dataset.view || "board");
       });
     });
@@ -10524,7 +10543,7 @@
         { title: "New Zones tab", before: function() { portalSetView("zones"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
-          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is when 95% of the trucks should be done, rounded to 5 minutes. It is a guide, not a promise: usually within about an hour." },
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about an hour." },
         { title: "Green, yellow, red", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-status"),
           body: "Each zone compares itself with the usual pace for this time of night. <b>Green</b> means on schedule or ahead. <b>Yellow</b> means slightly behind, and it sends you a notification. <b>Red</b> means <b>30 minutes or more</b> behind schedule. The comparison starts at 10 PM, because earlier than that the gap is mostly noise." },
         { title: "Started and finished percentages", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-pcts"),
@@ -10573,7 +10592,7 @@
         { title: "New Zones tab", before: function() { portalMnSetView("zones"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load</b>. Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-eta"),
-          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is when 95% of the trucks should be done, rounded to 5 minutes. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
         { title: "Green, yellow, red", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-status"),
           body: "Each zone compares itself with the usual Minnesota pace for this time of night. <b>Green</b> means on schedule or ahead. <b>Yellow</b> means slightly behind, and it sends you a notification. <b>Red</b> means <b>30 minutes or more</b> behind schedule. The comparison starts at 10 PM, because earlier than that the gap is mostly noise." },
         { title: "Started and finished percentages", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-pcts"),
@@ -10590,6 +10609,8 @@
           body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalMnTicker"),
           body: "The <b>ticker</b> under the announcements scrolls whether the whole building and each zone are ahead of or behind the average night, with an estimated finish for each. It appears once live data is flowing." },
+        { title: "Performance tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="performance"]'); },
+          body: "The new <b>Performance</b> tab sits right beside Vendors. It opens <b>Performance by Name</b> for Minnesota: how each unloader is doing against the team, built from the names typed on loads. It refreshes itself every minute while it is open, and <b>Back to My Portal</b> brings you straight back here." },
         { title: "Also new: Unloader names and Performance by Name", body: "Tap any occupied door and you can type who is unloading that load in the new <b>Unloader</b> field (optional). The <b>Performance by Name</b> tab then rates each unloader on pallets per hour, average unload time, downtime between loads, and loads per night, against the team. <b>100 is team pace</b> and higher is better. Speed is compared fairly by zone, and a measure needs at least 5 finished loads before it counts." },
         { title: "Also new: built for your phone", body: "Everything now fits an iPhone screen: no sideways scrolling, bigger buttons and menus that are easy to hit with a thumb, no zoom-in when you tap a field, and the bell and popups kept within thumb reach. In Safari, use <b>Add to Home Screen</b> for a full-screen version." },
         { title: "Areas tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="areas"]'); },
@@ -10782,6 +10803,49 @@
     // My Portal sees the same note on that door -- not just the device that typed it.
     let portalPendingNoteFlush = null;   // set while a note has an unsaved debounce pending
 
+    // Saves that are still on their way, and saves that failed and are waiting to retry. Logging out or closing the page
+    // first pushes every pending edit through, so a note typed a second ago is never dropped.
+    const portalSavesInFlight = new Set();
+    const portalRetryFns = new Set();          // edits that are typed but not saved (waiting to retry, or refused by the server)
+    let portalSaveEpoch = 0;                   // bumped at logout so an abandoned edit is never retried under the next login
+    function portalSaveError(resp, data) {
+      const err = new Error((data && data.detail) || "Save failed");
+      err.status = resp.status;                // the server answered: below 500 means it said no, so retrying cannot help
+      return err;
+    }
+    // POST a save. keepalive lets it finish if the page closes a moment later; a request that hangs for 15 s is cut off so it
+    // becomes an ordinary failure and gets retried instead of sitting on "Saving..." forever.
+    let PORTAL_SAVE_TIMEOUT_MS = 15000;
+    function portalSaveFetch(url, body) {
+      const ctl = typeof AbortController === "function" ? new AbortController() : null;
+      const timer = ctl ? setTimeout(function() { ctl.abort(); }, PORTAL_SAVE_TIMEOUT_MS) : 0;
+      const stop = function() { clearTimeout(timer); };
+      return fetch(url, {
+        method: "POST", keepalive: true, headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined
+      }).then(function(resp) { stop(); return resp; }, function(err) { stop(); throw err; });
+    }
+    function portalSaveRefused(err) { return !!(err && err.status && err.status < 500); }
+    function portalSaveFailText(err, retries) {
+      if (portalSaveRefused(err)) return err.status === 401 ? "Not saved: you were signed out. Sign in and type it again." : "Not saved: " + err.message;
+      return retries < 4 ? "Could not save yet. Trying again..." : "Not saved yet. Check the connection; it keeps trying.";
+    }
+    function portalTrackSave(p) {
+      portalSavesInFlight.add(p);
+      const done = function() { portalSavesInFlight.delete(p); };
+      p.then(done, done);
+      return p;
+    }
+    async function portalFlushPendingEdits() {
+      if (portalPendingNoteFlush) portalPendingNoteFlush();
+      if (typeof portalPendingUnloaderFlush !== "undefined" && portalPendingUnloaderFlush) portalPendingUnloaderFlush();
+      Array.from(portalRetryFns).forEach(function(fn) { fn(); });
+      await Promise.race([Promise.all(Array.from(portalSavesInFlight)), new Promise(function(r) { setTimeout(r, 6000); })]);
+      return portalRetryFns.size === 0 && portalSavesInFlight.size === 0;
+    }
+    document.addEventListener("visibilitychange", function() { if (document.visibilityState === "hidden") portalFlushPendingEdits(); });
+    window.addEventListener("pagehide", function() { portalFlushPendingEdits(); });
+
     function portalDoorNoteBadge(siteKey, r, dn) {
       const st = siteKey === "mn" ? state.portalMn : state.portal;
       const info = (st.doorNotes || {})[String(r.ref || r.po || dn)];
@@ -10802,13 +10866,11 @@
 
     function portalSaveDoorNote(siteKey, bizDate, truckKey, doorNum, note) {
       const st = siteKey === "mn" ? state.portalMn : state.portal;
-      return fetch(apiUrl("/api/portal/door-notes?site=" + (siteKey === "mn" ? "MN" : "OKS")), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_date: bizDate, truck_key: truckKey, note: note, door: String(doorNum || "") })
-      }).then(function(resp) {
+      return portalSaveFetch(apiUrl("/api/portal/door-notes?site=" + (siteKey === "mn" ? "MN" : "OKS")),
+        { business_date: bizDate, truck_key: truckKey, note: note, door: String(doorNum || "") }
+      ).then(function(resp) {
         return resp.json().then(function(data) {
-          if (!resp.ok || !data.ok) throw new Error((data && data.detail) || "Save failed");
+          if (!resp.ok || !data.ok) throw portalSaveError(resp, data);
           const trimmed = note.trim();
           const info = trimmed ? { note: trimmed, updated_by: data.updated_by, updated_at: data.updated_at } : null;
           st.doorNotes = st.doorNotes || {};
@@ -10864,17 +10926,13 @@
     function portalSaveUnloader(site, bizDate, truckKey, doorNum, name, r) {
       site = site === "mn" ? "mn" : "oks";
       const st = portalSt(site);
-      return fetch(apiUrl("/api/portal/unloaders"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          site: site === "mn" ? "MN" : "OKS",
-          business_date: bizDate, truck_key: truckKey, unloader: name, door: String(doorNum || ""),
-          supplier: (r && r.supplier) || "", area: (r && r.area) || ""
-        })
+      return portalSaveFetch(apiUrl("/api/portal/unloaders"), {
+        site: site === "mn" ? "MN" : "OKS",
+        business_date: bizDate, truck_key: truckKey, unloader: name, door: String(doorNum || ""),
+        supplier: (r && r.supplier) || "", area: (r && r.area) || ""
       }).then(function(resp) {
         return resp.json().then(function(data) {
-          if (!resp.ok || !data.ok) throw new Error((data && data.detail) || "Save failed");
+          if (!resp.ok || !data.ok) throw portalSaveError(resp, data);
           st.unloaders = st.unloaders || {};
           if (data.unloader) {
             st.unloaders[truckKey] = { unloader: data.unloader, updated_by: data.updated_by, updated_at: data.updated_at };
@@ -11177,11 +11235,13 @@
         + '<div id="doorDetailUnloaderStatus" style="font-size:0.74em;color:var(--muted,#64748b);margin:3px 0 12px;min-height:1.2em;"></div>';
       actions.innerHTML = unloaderHtml +
         '<div style="font-weight:700;font-size:0.82em;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#64748b);margin-bottom:6px;">Shift note <span style="font-weight:400;text-transform:none;letter-spacing:0;">(shared — everyone on My Portal sees this)</span></div>'
-        + '<textarea id="doorDetailNote" rows="2" style="width:100%;box-sizing:border-box;border:1px solid var(--border,#e2e8f0);border-radius:6px;padding:6px 8px;font:inherit;background:transparent;color:inherit;" placeholder="e.g. waiting on lumper, spill on trailer..."></textarea>'
+        + '<textarea id="doorDetailNote" rows="2" maxlength="500" style="width:100%;box-sizing:border-box;border:1px solid var(--border,#e2e8f0);border-radius:6px;padding:6px 8px;font:inherit;background:transparent;color:inherit;" placeholder="e.g. waiting on lumper, spill on trailer..."></textarea>'
         + '<div id="doorDetailNoteStatus" style="font-size:0.74em;color:var(--muted,#64748b);margin-top:3px;min-height:1.2em;"></div>'
+        + '<div id="doorDetailStorageWarn" style="display:none;font-size:0.76em;font-weight:700;color:#c53030;margin-top:4px;">&#9888; This server is not on permanent storage, so notes and names are lost the next time it updates.</div>'
         + '<div style="margin-top:8px;"><button type="button" id="doorDetailCopyBtn" class="secondary-btn" style="font-size:0.82em;">Copy summary</button></div>';
       const noteEl = document.getElementById('doorDetailNote');
       const noteStatusEl = document.getElementById('doorDetailNoteStatus');
+      portalShowStorageStatus();
       noteEl.value = existingNote ? existingNote.note : "";
       function noteByline(info) {
         if (!info || !info.note) return "";
@@ -11191,18 +11251,27 @@
       }
       noteStatusEl.textContent = noteByline(existingNote);
       portalPendingNoteFlush = null;
-      let noteSaveTimer = null;
+      let noteSaveTimer = null, noteRetryTimer = null, noteRetries = 0;
       function doSaveNote() {
-        clearTimeout(noteSaveTimer);
+        clearTimeout(noteSaveTimer); clearTimeout(noteRetryTimer);
         portalPendingNoteFlush = null;
-        if (!bizDate) { noteStatusEl.textContent = "Could not save — no business date loaded."; return; }
+        if (!bizDate) { noteStatusEl.textContent = "Could not save — no business date loaded."; return Promise.resolve(false); }
         const value = noteEl.value;
+        const epoch = portalSaveEpoch;
         noteStatusEl.textContent = "Saving...";
-        portalSaveDoorNote(site, bizDate, truckKey, doorNum, value).then(function(info) {
+        return portalTrackSave(portalSaveDoorNote(site, bizDate, truckKey, doorNum, value).then(function(info) {
+          noteRetries = 0; portalRetryFns.delete(doSaveNote);
           if (noteEl.value === value) noteStatusEl.textContent = info ? noteByline(info) : "";
-        }, function() {
-          if (noteEl.value === value) noteStatusEl.textContent = "Save failed — will retry on next edit.";
-        });
+          return true;
+        }, function(err) {
+          if (epoch !== portalSaveEpoch) return false;       // logged out meanwhile: this edit was given up on
+          // keep the text; a dropped connection is retried so it is never lost
+          portalRetryFns.add(doSaveNote);
+          if (noteEl.value === value) noteStatusEl.textContent = portalSaveFailText(err, noteRetries);
+          clearTimeout(noteRetryTimer);
+          if (!portalSaveRefused(err)) noteRetryTimer = setTimeout(function() { if (epoch === portalSaveEpoch) doSaveNote(); }, Math.min(30000, 3000 * (++noteRetries)));
+          return false;
+        }));
       }
       noteEl.addEventListener('input', function() {
         noteStatusEl.textContent = "Typing...";
@@ -11217,26 +11286,34 @@
       if (unloaderEl) {
         const unloaderStatusEl = document.getElementById('doorDetailUnloaderStatus');
         let savedUnloader = existingUnloader ? existingUnloader.unloader : "";
-        let unloaderTimer = null;
+        let unloaderTimer = null, unloaderRetryTimer = null, unloaderRetries = 0;
         unloaderEl.value = savedUnloader;
         unloaderStatusEl.textContent = existingUnloader && existingUnloader.updated_by
           ? "Set by " + existingUnloader.updated_by + (fmt(existingUnloader.updated_at) ? " at " + fmt(existingUnloader.updated_at) : "") : "";
         function doSaveUnloader() {
-          clearTimeout(unloaderTimer);
+          clearTimeout(unloaderTimer); clearTimeout(unloaderRetryTimer);
           portalPendingUnloaderFlush = null;
           const value = unloaderEl.value.trim();
-          if (value === savedUnloader) return;
-          if (!bizDate) { unloaderStatusEl.textContent = "Could not save — no business date loaded."; return; }
+          if (value === savedUnloader) { portalRetryFns.delete(doSaveUnloader); return Promise.resolve(true); }
+          if (!bizDate) { unloaderStatusEl.textContent = "Could not save — no business date loaded."; return Promise.resolve(false); }
           unloaderStatusEl.textContent = "Saving...";
-          portalSaveUnloader(site, bizDate, truckKey, doorNum, value, r).then(function(saved) {
+          const epoch = portalSaveEpoch;
+          return portalTrackSave(portalSaveUnloader(site, bizDate, truckKey, doorNum, value, r).then(function(saved) {
+            unloaderRetries = 0; portalRetryFns.delete(doSaveUnloader);
             savedUnloader = saved;
             if (unloaderEl.value.trim() === value) {
               unloaderEl.value = saved;
               unloaderStatusEl.textContent = saved ? "Saved — counts toward " + saved + "'s performance." : "Cleared.";
             }
-          }, function() {
-            unloaderStatusEl.textContent = "Save failed — will retry on next edit.";
-          });
+            return true;
+          }, function(err) {
+            if (epoch !== portalSaveEpoch) return false;
+            portalRetryFns.add(doSaveUnloader);
+            unloaderStatusEl.textContent = portalSaveFailText(err, unloaderRetries);
+            clearTimeout(unloaderRetryTimer);
+            if (!portalSaveRefused(err)) unloaderRetryTimer = setTimeout(function() { if (epoch === portalSaveEpoch) doSaveUnloader(); }, Math.min(30000, 3000 * (++unloaderRetries)));
+            return false;
+          }));
         }
         unloaderEl.addEventListener('input', function() {
           unloaderStatusEl.textContent = "Typing...";
@@ -18629,6 +18706,18 @@
       return value;
     }
 
+    // The building is finished when its last zone is, so its estimate is the latest zone estimate. The separate whole-dock
+    // simulation behind the Projected Finish card ran about an hour later than the zones early in the night on OKS (and
+    // often landed before its own last zone on Minnesota), so it is only the fallback when no zone has an estimate.
+    function portalBuildingFinishMs(site, est) {
+      let latest = 0;
+      PORTAL_ZONE_GROUPS.forEach(function(g) {
+        const r = est && est[g.key];
+        if (r && r.status !== "done" && r.estMs > latest) latest = r.estMs;
+      });
+      return latest || portalSt(site).estMs || null;
+    }
+
     function portalZoneStatusInfo(r) {
       if (!r) return { cls: "none", label: "" };
       if (r.status === "done") return { cls: "green", label: "Zone finished" };
@@ -18743,12 +18832,13 @@
       const building = portalSiteEl(site, "ZonesBuilding");
       if (building) {
         let line;
-        if (st.estMs) {
-          const p = portalEtaParts(st.estMs, site);
+        const buildingEst = portalBuildingFinishMs(site, est);
+        if (buildingEst) {
+          const p = portalEtaParts(buildingEst, site);
           line = '<span class="zone-eta-label">Whole building &middot; estimated finish</span>'
             + '<span class="zone-eta-time inline">' + escapeHtml(p.time) + '</span>'
             + (p.delta ? '<span class="zone-eta-delta ' + p.cls + '">' + escapeHtml(p.delta) + '</span>' : '')
-            + '<span class="zone-eta-note">when 95% of trucks are done</span>';
+            + '<span class="zone-eta-note" title="The building is finished when its last zone is, so this is the latest of the zone estimates below.">when the last zone is 95% done</span>';
         } else if (z.total.scheduled && z.total.completed >= z.total.scheduled) {
           line = '<span class="zone-eta-label">Whole building &middot; estimated finish</span><span class="zone-eta-note">every truck on the dock is finished</span>';
         } else {
@@ -19144,7 +19234,7 @@
         const finish = r.status !== "done" && estMs && estMs > now ? "est. finish " + portalFinishClock(estMs) : "";
         items.push({ label: label, cls: cls, state: text, finish: finish });
       };
-      describe("WHOLE BUILDING", est.all, portalSt(site).estMs);
+      describe("WHOLE BUILDING", est.all, portalBuildingFinishMs(site, est));
       PORTAL_ZONE_GROUPS.forEach(function(g) { describe(g.title.toUpperCase(), est[g.key], est[g.key] && est[g.key].estMs); });
       return items;
     }
@@ -24413,6 +24503,27 @@
       return allowed.find((tab) => document.querySelector('.tab-button[data-tab="' + tab + '"]')) || "help";
     }
 
+    // Where a login starts: its own My Portal (Minnesota's for the Minnesota login, OKS's for everyone else who has one),
+    // otherwise the first section that login can open.
+    function portalHomeTab(role) {
+      role = role || state.auth.role;
+      const home = role === "minnesota" ? "myPortalMn" : "myPortal";
+      return allowedTabsForRole(role).includes(home) && document.querySelector('.tab-button[data-tab="' + home + '"]') ? home : firstAllowedTab(role);
+    }
+    // A fresh sign-in, or opening the app in a new browser tab, lands on My Portal. Reloading the page inside the same
+    // browser tab keeps whichever section you were on.
+    function portalMarkLanded(on) {
+      try { if (on) sessionStorage.setItem("landedHome", "1"); else sessionStorage.removeItem("landedHome"); } catch (err) {}
+    }
+    function portalStartupTab(isSignedIn) {
+      let landed = false;
+      try { landed = sessionStorage.getItem("landedHome") === "1"; } catch (err) {}
+      let tab = landed ? normalizeTabName(localStorage.getItem("activeTab") || "") : "";
+      if (!tab || !document.querySelector('.tab-button[data-tab="' + tab + '"]') || !canAccessTab(tab)) tab = portalHomeTab(state.auth.role);
+      if (isSignedIn) portalMarkLanded(true);
+      return tab;
+    }
+
     function applyRoleAccess() {
       const role = state.auth.role || "guest";
       const allowed = new Set(allowedTabsForRole(role));
@@ -24519,8 +24630,9 @@
         if (!resp.ok || !data.ok) throw new Error(data.detail || "Login failed");
         setAuth(data);
         hideLogin();
-        const savedTab = normalizeTabName(localStorage.getItem("activeTab") || "");
-        selectTab(canAccessTab(savedTab) ? savedTab : firstAllowedTab(state.auth.role));
+        portalLoadStorageStatus();
+        portalMarkLanded(true);
+        selectTab(portalHomeTab(state.auth.role));
         showToast("Signed in as " + data.username + ".");
       } catch (err) {
         if (els.loginMessage) els.loginMessage.textContent = err.message || "Login failed.";
@@ -24530,14 +24642,48 @@
     }
 
     async function handleLogout() {
+      // Push any note or unloader name typed a moment ago through first; once the session ends the server would refuse it.
+      let saved = true;
+      try { saved = await portalFlushPendingEdits(); } catch (err) { saved = false; }
+      if (!saved && !window.confirm("A note or unloader name you just typed has not saved yet. Log out anyway and lose it?")) return;
+      portalSaveEpoch++;                  // anything still unsaved is abandoned: never retry it under the next login
+      portalRetryFns.clear();
       try {
         await fetch(apiUrl("/api/logout"), { method: "POST", credentials: "include" });
       } catch (err) {}
       setAuth({ username: "", role: "guest" });
       portalStopLivePolling();
       portalMnStopPolling();
+      portalMarkLanded(false);
       showLogin("Signed out.");
       selectTab(firstAllowedTab("guest"));
+    }
+
+    // -- Is everything saved on permanent storage? ----------------------------------------------
+    const portalStorage = { data: null };
+    function portalLoadStorageStatus() {
+      return fetch(apiUrl("/api/storage-status"), { credentials: "include" })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { portalStorage.data = d && d.ok ? d : null; portalShowStorageStatus(); return portalStorage.data; })
+        .catch(function() { return null; });
+    }
+    function portalShowStorageStatus() {
+      const d = portalStorage.data;
+      const warn = document.getElementById("doorDetailStorageWarn");
+      if (warn) warn.style.display = d && d.persistent === false ? "" : "none";
+      const el = document.getElementById("unloaderPerfStorage");
+      if (!el) return;
+      if (!d) { el.style.display = "none"; return; }
+      el.style.display = "";
+      const since = d.since ? new Date(d.since).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+      const counts = formatNumber(d.named_loads) + " named load" + (d.named_loads === 1 ? "" : "s") + " and " + formatNumber(d.door_notes) + " door note" + (d.door_notes === 1 ? "" : "s") + " (OKS and Minnesota together)";
+      if (d.persistent === false) {
+        el.className = "friendly-note storage-bad";
+        el.innerHTML = "<b>&#9888; Not on permanent storage.</b> Names, notes and history are saved on the server, but they will be <b>wiped the next time it updates or restarts</b>. Ask whoever manages Railway to attach a volume and set <code>DATA_DIR</code> to its mount path. Right now it holds " + counts + ", kept since " + since + ".";
+      } else {
+        el.className = "friendly-note storage-ok";
+        el.innerHTML = "<b>&#10003; Saved on the server</b> and shared by every login" + (d.persistent ? ", on permanent storage, so it survives updates and restarts" : "") + ". Holding " + counts + ", kept since " + since + ".";
+      }
     }
 
     // -- Performance by Name (OKS) ----------------------------------------------------
@@ -24576,8 +24722,24 @@
       return "OKS";
     }
     function portalPerfSiteLabel() { return portalPerfSite() === "MN" ? "Minnesota" : "OKS"; }
+    // Where the Back button goes: Minnesota's login always returns to its My Portal; the admin only when they came from a
+    // My Portal's Performance tab (the section menu has no "back").
+    let portalPerfReturnTab = "";
+    function portalPerfBackTarget() { return state.auth.role === "minnesota" ? "myPortalMn" : portalPerfReturnTab; }
+    function portalOpenPerformanceFromPortal(site) {
+      portalPerfReturnTab = site === "mn" ? "myPortalMn" : "myPortal";
+      const sel = document.getElementById("unloaderPerfSite");
+      if (sel && state.auth.role === "admin") sel.value = site === "mn" ? "MN" : "OKS";
+      selectTab("unloaderPerformance");
+    }
+    (function() {
+      const back = document.getElementById("unloaderPerfBackBtn");
+      if (back) back.addEventListener("click", function() { const t = portalPerfBackTarget(); if (t) selectTab(t); });
+    })();
     function portalPerfApplySite() {
       const site = portalPerfSite(), label = portalPerfSiteLabel();
+      const backBtn = document.getElementById("unloaderPerfBackBtn");
+      if (backBtn) backBtn.style.display = portalPerfBackTarget() ? "" : "none";
       const tag = document.querySelector("#unloaderPerfTitle span"); if (tag) tag.textContent = site === "MN" ? "MN" : "OKS";
       const intro = document.getElementById("unloaderPerfIntro");
       if (intro) intro.innerHTML = "Built from the optional <b>Unloader</b> name added on a load's door popup in My Portal (" + label + "). Pallets and unload time fill in automatically as DMS records them, so a load only counts toward time and pallets-per-hour once its unload has finished.";
@@ -24639,7 +24801,8 @@
       });
     }
 
-    function renderUnloaderPerformance() {
+    function renderUnloaderPerformance(opts) {
+      const quiet = !!(opts && opts.quiet === true);              // the automatic refresh updates in place, without the "Loading..." flicker
       const rangeEl = document.getElementById("unloaderPerfRange");
       const kicker = document.getElementById("unloaderPerfKicker");
       const summary = document.getElementById("unloaderPerfSummary");
@@ -24647,10 +24810,13 @@
       const gapEl = document.getElementById("unloaderPerfMaxGap");
       const maxGap = gapEl ? gapEl.value : "60";
       portalPerfApplySite();
-      kicker.textContent = "Loading...";
+      portalLoadStorageStatus();
+      if (!quiet) kicker.textContent = "Loading...";
       fetch(apiUrl("/api/portal/performance?days=" + encodeURIComponent(days) + "&max_gap=" + encodeURIComponent(maxGap) + "&site=" + portalPerfSite()))
         .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.detail || "Could not load performance."); return d; }); })
         .then(function(data) {
+          const upd = document.getElementById("unloaderPerfUpdated");
+          if (upd) upd.textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
           const people = data.people || [];
           const totals = data.totals || { loads: 0, pallets: 0, people: 0 };
           const timedLoads = people.reduce(function(s, p) { return s + p.timed_loads; }, 0);
@@ -24748,11 +24914,24 @@
       if (siteSel) siteSel.addEventListener("change", renderUnloaderPerformance);
       if (range) range.addEventListener("change", renderUnloaderPerformance);
       if (gap) gap.addEventListener("change", renderUnloaderPerformance);
-      if (btn) btn.addEventListener("click", renderUnloaderPerformance);
+      if (btn) btn.addEventListener("click", function() { renderUnloaderPerformance(); });
     })();
+
+    // While Performance by Name is open it refreshes itself every minute (and the moment you come back to the page), so
+    // names and numbers entered by anyone else show up without pressing Refresh.
+    let PORTAL_PERF_REFRESH_MS = 60000;
+    function portalPerfAutoRefresh() {
+      const panel = document.getElementById("unloaderPerformancePanel");
+      if (panel && panel.classList.contains("active") && document.visibilityState === "visible" && state.auth.username) {
+        try { renderUnloaderPerformance({ quiet: true }); } catch (err) { console.error("Performance refresh failed:", err); }
+      }
+    }
+    (function perfLoop() { setTimeout(function() { portalPerfAutoRefresh(); perfLoop(); }, PORTAL_PERF_REFRESH_MS); })();
+    document.addEventListener("visibilitychange", function() { if (document.visibilityState === "visible") portalPerfAutoRefresh(); });
 
     function selectTab(name) {
       name = normalizeTabName(name);
+      if (name !== "unloaderPerformance") portalPerfReturnTab = "";
       if (state.auth.ready && state.auth.username && !canAccessTab(name)) {
         showToast("That section is not available for this login.");
         name = firstAllowedTab(state.auth.role);
@@ -25102,17 +25281,17 @@
       }
     })();
 
-        requestAnimationFrame(function() {
-      initAuth().then(function(isSignedIn) {
-        var savedTab = normalizeTabName(localStorage.getItem("activeTab") || "myPortal");
-        if (!document.querySelector('.tab-button[data-tab="' + savedTab + '"]') || !canAccessTab(savedTab)) {
-          savedTab = firstAllowedTab(state.auth.role);
-        }
+    // Page start: check who is signed in, then open My Portal (or, when reloading inside the same browser tab, where you were).
+    function portalBoot() {
+      return initAuth().then(function(isSignedIn) {
+        if (isSignedIn) portalLoadStorageStatus();
+        const savedTab = portalStartupTab(isSignedIn);
         selectTab(savedTab);
         renderAll();
         if (!isSignedIn) closeSectionMenu();
       });
-    });
+    }
+    requestAnimationFrame(portalBoot);
   
     // -- Gummy Worms (retro mode only) ---------------------------------------
     (function initGummyWorms() {

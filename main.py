@@ -243,7 +243,14 @@ def init_db():
             cleared_at  TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_portal_announcements_site ON portal_announcements(site, id);
+
+        -- Small facts about this database itself (for example when it was first created).
+        CREATE TABLE IF NOT EXISTS app_meta (
+            key    TEXT PRIMARY KEY,
+            value  TEXT NOT NULL
+        );
     """)
+    conn.execute("INSERT OR IGNORE INTO app_meta (key, value) VALUES ('db_created_at', ?)", (datetime.now(timezone.utc).isoformat(),))
     # Vendor turn-time history is kept per site; rows that predate the column
     # all came from OKS, which the column default covers.
     vendor_cols = [r[1] for r in conn.execute("PRAGMA table_info(vendor_unload_times)")]
@@ -860,6 +867,42 @@ def _sync_unloader_stats(trucks: List[Dict[str, Any]], shift_date: str, site: st
         conn.close()
     except Exception:
         pass
+
+
+# ── Is the database on permanent storage? ─────────────────────────────────────
+# Names, notes and history live in audit.db inside DATA_DIR. On Railway that folder only survives a redeploy when it
+# is a mounted volume, so the app checks and says so instead of leaving anyone to find out by losing data.
+
+def _on_separate_mount(path: Path) -> Optional[bool]:
+    """True when `path` sits on its own mounted volume, False when it is on the container's own disk, None if unknown."""
+    try:
+        mounts = [ln.split()[1] for ln in open("/proc/mounts", encoding="utf-8").read().splitlines() if len(ln.split()) > 1]
+    except OSError:
+        return None
+    here = str(path.resolve())
+    system = ("/proc", "/sys", "/dev", "/etc", "/run")
+    for m in mounts:
+        if m == "/" or any(m == x or m.startswith(x + "/") for x in system):
+            continue
+        if here == m or here.startswith(m.rstrip("/") + "/"):
+            return True
+    return False
+
+
+def _storage_status() -> Dict[str, Any]:
+    env_set = bool(os.environ.get("DATA_DIR"))
+    on_railway = bool(os.environ.get("RAILWAY_ENVIRONMENT"))
+    on_volume = _on_separate_mount(DATA_DIR)
+    persistent: Optional[bool] = None            # None = running somewhere else (for example a laptop): not a deploy risk
+    if on_railway:
+        persistent = bool(env_set and on_volume)
+    conn = get_db()
+    row = conn.execute("SELECT value FROM app_meta WHERE key='db_created_at'").fetchone()
+    notes = conn.execute("SELECT COUNT(*) FROM door_notes WHERE note != ''").fetchone()[0]
+    named = conn.execute("SELECT COUNT(*) FROM load_unloaders").fetchone()[0]
+    conn.close()
+    return {"persistent": persistent, "on_railway": on_railway, "data_dir_set": env_set, "on_volume": on_volume,
+            "since": row[0] if row else None, "door_notes": notes, "named_loads": named}
 
 
 # ── Auth helpers ──────────────────────────────────────────────────────────────
@@ -3796,10 +3839,52 @@ def _unloader_row(p: Dict[str, Any], rating: Optional[Dict[str, Any]] = None) ->
     }
 
 
+@app.get("/api/storage-status")
+def storage_status(username: str = Depends(require_auth)):
+    return {"ok": True, **_storage_status()}
+
+
+_perf_sync_at: Dict[str, float] = {}
+
+
+def _recent_business_dates(site: str) -> List[str]:
+    """The business date running now and the one before it (the previous night can still be finishing when the next starts)."""
+    today = _dms_business_date(None)
+    d = _sr.parse_business_date(today)
+    prev = d - timedelta(days=1)
+    return [today, "%d/%d/%d" % (prev.month, prev.day, prev.year)]
+
+
+def _refresh_unloader_stats(site: str) -> None:
+    """Fill in pallets and unload times for named loads straight from DMS, so Performance by Name is current even when
+    nobody has My Portal open (the portal only refreshes them while someone is looking at it). At most once a minute."""
+    now = time.time()
+    if now - _perf_sync_at.get(site, 0.0) < 60:
+        return
+    _perf_sync_at[site] = now
+    try:
+        dates = _recent_business_dates(site)
+        conn = get_db()
+        pending = conn.execute(
+            "SELECT COUNT(*) FROM load_unloaders WHERE site=? AND business_date IN (?,?) AND unload_finish IS NULL",
+            (site, dates[0], dates[1]),
+        ).fetchone()[0]
+        conn.close()
+        if not pending:
+            return                                  # every named load on those nights is already finished and recorded
+        session = _ensure_dms_mn_session() if site == "MN" else _ensure_dms_session()
+        for info in dates:
+            trucks, _rej, _rows = _fetch_dms_night(session, info)
+            _sync_unloader_stats([t for t in trucks if t.get("checkInIso")], info, site)
+    except Exception:
+        pass                                        # no DMS right now: show what is saved
+
+
 @app.get("/api/portal/performance")
 def get_unloader_performance(days: int = 30, max_gap: int = 60, site: str = "OKS", username: str = Depends(_require_performance_read)):
     site = _site_param(site)
     _check_site_role(username, site)
+    _refresh_unloader_stats(site)
     days = max(1, min(int(days), 180))
     # A gap longer than this is treated as a break / waiting on trucks, not idle time.
     max_gap = max(10, min(int(max_gap), 240))
