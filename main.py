@@ -1585,10 +1585,12 @@ def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depe
 
 
 @app.get("/api/dms/portal")
-def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False, _: str = Depends(_require_oks_view)):
+def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = False, username: str = Depends(_require_oks_view)):
     """Read DMS load/stamp rows for My Portal. This route never writes to DMS."""
     # In debug mode, never 500 — capture and return whatever we can learn.
     if debug:
+        if _ROLES.get(username, "guest") == "azaudit":
+            raise HTTPException(status_code=403, detail="Not allowed for this login.")
         dbg: Dict[str, Any] = {}
         try:
             session = _ensure_dms_session(force=force)

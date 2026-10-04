@@ -9852,15 +9852,54 @@
     });
     els.spillRecordButton.addEventListener("click", () => recordSpillEvent(true));
     els.spillCleanButton.addEventListener("click", () => recordSpillEvent(false));
+    // ---- Dock time ----
+    // Every dock this app serves keeps Central time: the DMS stamps, the 7 PM to 9 AM shift, the 4 AM and 5 AM goals, the 10 PM warning start and the
+    // 2:30 AM no-show cutoff are all Central. The people looking at it are not all in that time zone. Anything that works out "what time is it at the
+    // dock", or shows a time to someone watching the dock, goes through these helpers instead of the browser's own clock, so a viewer in Arizona or
+    // New York gets exactly what a viewer on the dock floor gets. (Tools that work on uploaded files, such as the payroll and billing audits, still use
+    // the browser's clock on purpose.)
+    const DOCK_TZ = "America/Chicago";
+    const _dockPartsFmt = new Intl.DateTimeFormat("en-US", { timeZone: DOCK_TZ, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric", weekday: "short" });
+    const _DOCK_DOW = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    // The dock's wall clock at an instant (x is a Date or milliseconds): y, mo (0-11), d, h, mi, s, dow (0 = Sunday).
+    function dockParts(x) {
+      const o = {};
+      _dockPartsFmt.formatToParts(new Date(+x)).forEach(function(p) { o[p.type] = p.value; });
+      return { y: +o.year, mo: +o.month - 1, d: +o.day, h: (+o.hour) % 24, mi: +o.minute, s: +o.second, dow: _DOCK_DOW[o.weekday] };
+    }
+    // The instant at which the dock clock reads this wall time. Days and months may overflow (d + 1, mo + 1) like the Date constructor.
+    function dockMs(y, mo, d, h, mi, s, msec) {
+      const wall = Date.UTC(y, mo, d, h || 0, mi || 0, s || 0, msec || 0);
+      let t = wall;
+      for (let i = 0; i < 3; i++) {                       // correct by the zone offset at that instant; repeating settles it across a daylight-saving change
+        const p = dockParts(t);
+        t += wall - Date.UTC(p.y, p.mo, p.d, p.h, p.mi, p.s, ((t % 1000) + 1000) % 1000);
+      }
+      return t;
+    }
+    function dockH(x) { return dockParts(x).h; }
+    function dockAddDays(x, n) { const p = dockParts(x); return dockMs(p.y, p.mo, p.d + n, p.h, p.mi, p.s, ((+x % 1000) + 1000) % 1000); }
+    function dockDateKey(x) { const p = dockParts(x); return p.y + "-" + String(p.mo + 1).padStart(2, "0") + "-" + String(p.d).padStart(2, "0"); }
+    // The next time the dock clock reads hour h:00 (strictly after nowMs), and the most recent 7 PM at or before nowMs.
+    function dockNextHourMs(h, nowMs) {
+      const p = dockParts(nowMs);
+      const t = dockMs(p.y, p.mo, p.d, h, 0, 0, 0);
+      return t > nowMs ? t : dockMs(p.y, p.mo, p.d + 1, h, 0, 0, 0);
+    }
+    function dockPrev7pmMs(nowMs) {
+      const p = dockParts(nowMs);
+      const t = dockMs(p.y, p.mo, p.d, 19, 0, 0, 0);
+      return t <= nowMs ? t : dockMs(p.y, p.mo, p.d - 1, 19, 0, 0, 0);
+    }
+
     // Set default date to today
     if (els.bizDateInput && !els.bizDateInput.value) {
-      const today = new Date();
-      els.bizDateInput.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      els.bizDateInput.value = dockDateKey(Date.now());
     }
     els.bizDateRunButton.addEventListener("click", renderBusinessDateAudit);
 
     function portalDateKey(date) {
-      return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+      return dockDateKey(date);
     }
 
     function safeLocalStorageGet(key) {
@@ -9884,9 +9923,8 @@
     }
 
     function portalDefaultBusinessDateKey() {
-      const d = new Date();
-      if (d.getHours() >= 19) d.setDate(d.getDate() + 1);
-      return portalDateKey(d);
+      const now = Date.now();
+      return dockDateKey(dockH(now) >= 19 ? dockAddDays(now, 1) : now);
     }
 
     function portalSelectedBusinessDate() {
@@ -9923,14 +9961,14 @@
       const value = portalSelectedBusinessDate() || portalDefaultBusinessDateKey();
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
       if (!match) return null;
-      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, 0, 0, 0).getTime();
+      return dockMs(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, 0, 0, 0);
     }
 
     function portalShiftStartMs() {
       const value = portalSelectedBusinessDate() || portalDefaultBusinessDateKey();
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
       if (!match) return null;
-      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - 1, 19, 0, 0, 0).getTime();
+      return dockMs(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - 1, 19, 0, 0, 0);
     }
 
     function portalShiftGoalMs() {
@@ -10011,29 +10049,27 @@
     (function startPortalClock() {
       function tick() {
         const now = new Date();
-        const h = now.getHours();
-        const m = String(now.getMinutes()).padStart(2, "0");
-        const s = String(now.getSeconds()).padStart(2, "0");
+        const dp = dockParts(now);
+        const h = dp.h;
+        const m = String(dp.mi).padStart(2, "0");
+        const s = String(dp.s).padStart(2, "0");
         const ampm = h >= 12 ? "PM" : "AM";
         const h12 = h % 12 || 12;
-        if (els.portalLiveClock) els.portalLiveClock.textContent = h12 + ":" + m + ":" + s + " " + ampm;
+        if (els.portalLiveClock) { els.portalLiveClock.textContent = h12 + ":" + m + ":" + s + " " + ampm + " CT"; els.portalLiveClock.title = "Dock time (Central Time), whatever your own clock says"; }
         const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
         const days2 = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
         const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
         if (els.portalDayLabel) {
           els.portalDayLabel.textContent = state.portal.businessDate
             ? "DMS Business Date: " + state.portal.businessDate
-            : days2[now.getDay()] + ", " + months[now.getMonth()] + " " + now.getDate() + ", " + now.getFullYear();
+            : days2[dp.dow] + ", " + months[dp.mo] + " " + dp.d + ", " + dp.y;
         }
-        if (els.portalLiveDot) els.portalLiveDot.style.opacity = now.getSeconds() % 2 === 0 ? "1" : "0.3";
+        if (els.portalLiveDot) els.portalLiveDot.style.opacity = dp.s % 2 === 0 ? "1" : "0.3";
 
         // 4AM countdown
         const timer = document.getElementById("portal4amTimer");
         if (timer) {
-          const goal = new Date();
-          goal.setHours(4, 0, 0, 0);
-          if (goal <= now) goal.setDate(goal.getDate() + 1);
-          const diffMs = goal - now;
+          const diffMs = dockNextHourMs(4, now.getTime()) - now;
           const totalSec = Math.floor(diffMs / 1000);
           const hh = Math.floor(totalSec / 3600);
           const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
@@ -10107,13 +10143,14 @@
       var overlay = document.getElementById("portalKioskOverlay");
       if (!overlay || !overlay.classList.contains("active")) return;
       var now = new Date();
-      var h = now.getHours(), m = String(now.getMinutes()).padStart(2,"0"), s = String(now.getSeconds()).padStart(2,"0");
+      var dpk = dockParts(now);
+      var h = dpk.h, m = String(dpk.mi).padStart(2,"0"), s = String(dpk.s).padStart(2,"0");
       var ampm = h >= 12 ? "PM" : "AM"; var h12 = h % 12 || 12;
       var cl = document.getElementById("kioskClock"); if (cl) cl.textContent = h12 + ":" + m + ":" + s + " " + ampm;
       var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
       var days2 = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-      var kd = document.getElementById("kioskDate"); if (kd) kd.textContent = days2[now.getDay()] + ", " + months[now.getMonth()] + " " + now.getDate();
-      var goalMs = portalShiftGoalMs() || (function(){ var goal = new Date(); goal.setHours(4,0,0,0); if (goal <= now) goal.setDate(goal.getDate()+1); return goal.getTime(); })();
+      var kd = document.getElementById("kioskDate"); if (kd) kd.textContent = days2[dpk.dow] + ", " + months[dpk.mo] + " " + dpk.d;
+      var goalMs = portalShiftGoalMs() || dockNextHourMs(4, now.getTime());
       var diffMs = goalMs - now.getTime(); var ts = Math.max(0, Math.floor(diffMs/1000));
       var k4 = document.getElementById("kiosk4am");
       if (k4) {
@@ -10128,7 +10165,7 @@
       var kPace = document.getElementById("kioskPace");
       if (kPace) {
         var estMs = p.estMs || 0;
-        var goal4amMs = portalShiftGoalMs() || (function(){ var g=new Date(); g.setHours(4,0,0,0); if (g<=now) g.setDate(g.getDate()+1); return g.getTime(); })();
+        var goal4amMs = portalShiftGoalMs() || dockNextHourMs(4, now.getTime());
         var bMs = estMs ? estMs - goal4amMs : 0;
         if (!estMs) { kPace.textContent = "Calculating..."; kPace.className = "kiosk-pace"; }
         else if (bMs > 30*60000) { var bm=Math.round(bMs/60000); kPace.textContent = "BEHIND BY " + bm + " MIN  -  PICK IT UP"; kPace.className = "kiosk-pace pace-crit"; }
@@ -10137,10 +10174,14 @@
       }
     }
 
+    // The on-screen alert pop-ups, their sounds and the desktop alert notifications were switched off at the user's request
+    // (2026-10-04). Alerts still collect in the Notifications bell, the Alerts tab and the Needs Attention panel. Set this to true to
+    // bring pop-ups, beeps and desktop notifications back. (Pinned announcements still notify.)
+    const PORTAL_ALERT_POPUPS = false;
     // -- Feature 1: Sound alerts -----------------------------------------------
     var _portalMuted = safeLocalStorageGet("portalMuted") === "1";
     function portalBeep(type) {
-      if (_portalMuted) return;
+      if (!PORTAL_ALERT_POPUPS || _portalMuted) return;
       try {
         var ctx = new (window.AudioContext || window.webkitAudioContext)();
         function _tone(freq, dur, delay, vol) {
@@ -10181,6 +10222,7 @@
 
     function portalNotify(title, body, tag) {
       if (!tag) return;
+      if (!PORTAL_ALERT_POPUPS && String(tag).indexOf("announce:") !== 0) return;       // alert notifications are off; announcements still notify
       const now = Date.now();
       const last = _portalNotifyLastAt[tag] || 0;
       if (_portalNotifiedTags.has(tag) && now - last < 15 * 60000) return;
@@ -10192,6 +10234,7 @@
     }
 
     function portalRequestNotifPermission() {
+      if (!PORTAL_ALERT_POPUPS) return;                  // no desktop alerts any more, so there is nothing to ask permission for
       const enabled = safeLocalStorageGet("portalAlertsEnabled") === "1";
       const desktopReady = !("Notification" in window) || Notification.permission === "granted" || Notification.permission === "denied";
       if (enabled && desktopReady) return;
@@ -10603,7 +10646,7 @@
     };
     const PORTAL_TOUR_STEPS = {
       oks: [
-        { title: "What's new in My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that pop up and then tuck into a bell, a pace ticker, unloader performance bars, and a layout that works on a phone. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
+        { title: "What's new in My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that collect in a notifications bell, a pace ticker, unloader performance bars, and a layout that works on a phone. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
         { title: "New: end-of-shift report", target: portalTourEl("portalShiftReportPageBtn"),
           body: "<b>Shift Report</b> builds a full report for the night: dozens of numbers, charts of how the shift ran, and a comparison with the <b>last 7 nights</b> (you can pick 3 or 14). Press it when the shift is done. It says <b>Final</b> once every truck is finished and nothing is left to arrive, or <b>still in progress</b> if you open it early. The first one takes a bit because it reads the earlier nights from DMS, then it is quick." },
         { title: "Charts, comparison and unloaders", target: portalTourEl("portalShiftReportPageBtn"),
@@ -10624,8 +10667,8 @@
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
           body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts 5 minutes before the clerk's check-in stamp, the same clock as <b>Driver on dock for</b> on each tile (you can switch it to the later of door arrival and appointment, or to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck checked in before 10 PM is counted from 10 PM. A truck the clerk has not checked in yet is not flagged. The sort menu here works the same way as on Zones." },
-        { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
-          body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
+        { title: "The notification bell", target: portalTourEl("portalNotifDock"),
+          body: "New alerts go straight into the <b>Notifications bell</b> (it pings when one arrives), for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. The bell keeps every alert that is still unresolved. Open it to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalTicker"),
           body: "The <b>ticker</b> under the header scrolls whether the whole building and each zone are ahead of or behind the average night, with an estimated finish for each. It appears once live data is flowing." },
         { title: "Late Truck Separation stays out of the way", before: function() { portalSetView("board"); }, target: portalTourEl("portalNoShowSection"),
@@ -10652,7 +10695,7 @@
           body: "You can replay this any time with the <b>What's new</b> button." }
       ],
       mn: [
-        { title: "What's new in Minnesota My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that pop up and then tuck into a bell, a pace ticker, and unloader performance. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
+        { title: "What's new in Minnesota My Portal", body: "The newest changes come first: an <b>end-of-shift report</b> with charts, a <b>Zones</b> tab, a door map that flags trucks nobody has started, alerts that collect in a notifications bell, a pace ticker, and unloader performance. Earlier updates follow at the end. It takes a couple of minutes, and you can skip any time." },
         { title: "New: end-of-shift report", target: portalTourEl("portalMnShiftReportPageBtn"),
           body: "<b>Shift Report</b> builds a full report for the night: dozens of numbers, charts of how the shift ran, and a comparison with the <b>last 7 nights</b> (you can pick 3 or 14). Press it when the shift is done. It says <b>Final</b> once every truck is finished and nothing is left to arrive, or <b>still in progress</b> if you open it early. The first one takes a bit because it reads the earlier nights from DMS, then it is quick." },
         { title: "Charts, comparison and unloaders", target: portalTourEl("portalMnShiftReportPageBtn"),
@@ -10673,8 +10716,8 @@
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
           body: "On the <b>Door Map</b>, a truck at the door that nobody has started turns its door <b>yellow after 15 minutes</b> and <b>red after 30</b>. You can change those minutes right here. The clock starts 5 minutes before the clerk's check-in stamp, the same clock as <b>Driver on dock for</b> on each tile (you can switch it to the later of door arrival and appointment, or to \"driver at the door\"), and never before <b>10 PM</b>: nothing is flagged earlier, and a truck checked in before 10 PM is counted from 10 PM. A truck the clerk has not checked in yet is not flagged. The sort menu here works the same way as on Zones." },
-        { title: "Popups and the notification bell", target: portalTourEl("portalNotifDock"),
-          body: "New alerts pop up on screen, for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. After about <b>30 seconds</b> they tuck into the <b>Notifications bell</b>, which keeps every alert that is still unresolved. Open the bell to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
+        { title: "The notification bell", target: portalTourEl("portalNotifDock"),
+          body: "New alerts go straight into the <b>Notifications bell</b> (it pings when one arrives), for example <b>Door 64 is overdue to start</b>, with a button that jumps to that door. The bell keeps every alert that is still unresolved. Open it to jump to a door, clear one, or <b>Clear all</b>. On a phone the bell sits at the bottom right." },
         { title: "Pace ticker", target: portalTourEl("portalMnTicker"),
           body: "The <b>ticker</b> under the announcements scrolls whether the whole building and each zone are ahead of or behind the average night, with an estimated finish for each. It appears once live data is flowing." },
         { title: "Performance tab", before: function() { portalMnSetView("board"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="performance"]'); },
@@ -11038,7 +11081,7 @@
       e.log.innerHTML = msgs.map(function(m) {
         const mine = m.username === state.auth.username;
         let t = "";
-        try { t = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+        try { t = new Date(m.created_at).toLocaleTimeString([], { timeZone: DOCK_TZ, hour: '2-digit', minute: '2-digit' }); } catch (e) {}
         return '<div class="portal-chat-msg' + (mine ? ' mine' : '') + '">'
           + '<div class="pcm-meta">' + escapeHtml(mine ? "You" : m.username) + ' · ' + t + '</div>'
           + '<div class="pcm-bubble">' + escapeHtml(m.message) + '</div></div>';
@@ -11143,7 +11186,7 @@
       const a = st.announcement;
       if (!a) { e.banner.style.display = "none"; return; }
       let t = "";
-      try { t = new Date(a.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (err) {}
+      try { t = new Date(a.created_at).toLocaleString([], { timeZone: DOCK_TZ, month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (err) {}
       e.text.textContent = a.message;
       e.meta.textContent = "Posted by " + a.created_by + (t ? " · " + t : "");
       e.banner.style.display = "flex";
@@ -11249,7 +11292,7 @@
       // how long the driver has been on the dock, counted from 5 minutes before the clerk check-in stamp (or, before the clerk has
       // checked the truck in, how long the driver has been waiting on the clerk)
       const dockMin = portalDockMinutes(r, now);
-      const dockText = dockMin != null ? dur(dockMin * 60000) : (ageStart ? "waiting on clerk " + dur(now - ageStart) : "");
+      const dockText = dockMin != null ? dur(dockMin * 60000) : (portalIsStaged(r) ? "staged, no door yet" : (ageStart ? "waiting on clerk " + dur(now - ageStart) : ""));
       const poParts = String(r.po || "").split(/[,;]/).map(function(p) { return p.trim(); }).filter(Boolean);
       const fields = [
         { k: 'Supplier', v: r.supplier },
@@ -11653,10 +11696,10 @@
       els.portalAddError.style.display = "none";
       let checkInMs = Date.now();
       if (timeVal) {
-        const now = new Date();
+        const dnow = dockParts(Date.now());
         const [hh, mm] = timeVal.split(":").map(Number);
-        const t = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
-        if (!isNaN(t.getTime())) checkInMs = t.getTime();
+        const tMs = dockMs(dnow.y, dnow.mo, dnow.d, hh, mm, 0, 0);
+        if (!isNaN(tMs)) checkInMs = tMs;
       }
       portalClockIn(ref, door, supplier, po, checkInMs);
       els.portalInputRef.value = "";
@@ -12201,7 +12244,7 @@
         const tr = document.createElement("tr");
         if (row.errors && row.errors.length) tr.className = "schedule-row-error";
         const scheduled = row.scheduled_iso
-          ? new Date(row.scheduled_iso).toLocaleString("en-US", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })
+          ? new Date(row.scheduled_iso).toLocaleString("en-US", { timeZone: DOCK_TZ, month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })
           : row.scheduled_text || "-";
         const uploadResult = resultByRow.get(String(row.row_number));
         const statusText = uploadResult
@@ -12374,7 +12417,7 @@
         const tr = document.createElement("tr");
         if (row.errors && row.errors.length) tr.className = "schedule-row-error";
         const scheduled = row.scheduled_iso
-          ? new Date(row.scheduled_iso).toLocaleString("en-US", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })
+          ? new Date(row.scheduled_iso).toLocaleString("en-US", { timeZone: DOCK_TZ, month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })
           : row.scheduled_text || "-";
         const uploadResult = resultByRow.get(String(row.row_number));
         const statusText = uploadResult
@@ -14011,7 +14054,7 @@
         return;
       }
       if (state.liveDoorStatus === "loaded") {
-        const time = state.liveDoorLoadedAt ? state.liveDoorLoadedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "now";
+        const time = state.liveDoorLoadedAt ? state.liveDoorLoadedAt.toLocaleTimeString([], { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit" }) : "now";
         els.liveDoorStatus.textContent = `Live Google dock status: loaded ${state.liveDoors.size} doors at ${time}.`;
         return;
       }
@@ -16005,7 +16048,7 @@
         receivingStartMs: receivingStartMs,
         receivingFinishMs: receivingFinishMs,
         finishMs: unloadFinishMs || receivingFinishMs,
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString("en-US", { timeZone: DOCK_TZ })
       };
     }
 
@@ -16015,6 +16058,7 @@
     }
 
     function portalMaybeNotify(title, body) {
+      if (!PORTAL_ALERT_POPUPS) return;                  // desktop alert notifications are off (see PORTAL_ALERT_POPUPS)
       if (!("Notification" in window)) return;
       if (Notification.permission === "granted") {
         try { new Notification(title, { body: body, icon: "/favicon.ico" }); } catch(e) {}
@@ -16223,7 +16267,7 @@
       const estMs = state.portal.estMs;
       if (estMs && els.portalEstNote && state.portal.estMs !== null) {
         const remaining = estMs - now;
-        const goal4amMs = portalShiftGoalMs() || (function(){ const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime() + 9*3600000; })();
+        const goal4amMs = portalShiftGoalMs() || dockPrev7pmMs(now) + 9*3600000;
         const behindMs = Math.max(0, estMs - goal4amMs);
         let countStr;
         if (remaining <= 0) {
@@ -16291,7 +16335,7 @@
         po: po.trim(),
         checkInMs: checkInMs,
         finishMs: null,
-        date: new Date().toLocaleDateString()
+        date: new Date().toLocaleDateString("en-US", { timeZone: DOCK_TZ })
       });
       portalSaveTrucks(trucks);
     }
@@ -16321,7 +16365,7 @@
       const selected = portalSelectedBusinessDate();
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(selected || "");
       if (match) return Number(match[2]) + "/" + Number(match[3]) + "/" + match[1];
-      return state.portal.businessDate || new Date().toLocaleDateString("en-US");
+      return state.portal.businessDate || new Date().toLocaleDateString("en-US", { timeZone: DOCK_TZ });
     }
 
     function portalCsvEsc(v) {
@@ -16354,7 +16398,7 @@
       const projected = state.portal.estMs ? portalFormatTime(state.portal.estMs)
         : (complete.length >= scheduled && scheduled > 0 ? "Done OK" : "--");
       return {
-        generated: new Date(now).toLocaleString("en-US", { hour12: true }),
+        generated: new Date(now).toLocaleString("en-US", { timeZone: DOCK_TZ, hour12: true }),
         businessDate: portalBusinessDateDisplay(),
         scheduled: scheduled,
         arrived: rows.length,
@@ -16391,7 +16435,7 @@
 
       function fmtT(ms) {
         if (!ms) return "";
-        return new Date(ms).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+        return new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "2-digit", minute: "2-digit", hour12: true });
       }
 
       const headers = ["Shift Date","Source","Truck/Ref","Door","Supplier","PO","Appointment","Check-In","Driver At Door","Unload Start","Unload Finish","Receiving Finish","Min on Dock","Status","Detention (min)","Alert Notes"];
@@ -16458,7 +16502,7 @@
           }
           if (list.length === 0) { els.portalExportsList.innerHTML = ""; return; }
           els.portalExportsList.innerHTML = list.map(function(e) {
-            const savedAt = e.saved_at ? new Date(e.saved_at).toLocaleString() : "";
+            const savedAt = e.saved_at ? new Date(e.saved_at).toLocaleString("en-US", { timeZone: DOCK_TZ }) : "";
             return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border,#e2e8f0);">' +
               '<div>' +
                 '<span style="font-size:0.88em;font-weight:600;color:var(--text,#1a202c);">' + e.shift_date + '</span>' +
@@ -16484,8 +16528,8 @@
       if (/\blate\b/i.test(String(truck.statusText || ""))) return "late";
       if (/spill/i.test(truck.comments || "")) return "spill";
       if (truck.appointmentMs) {
-        const d = new Date(truck.appointmentMs);
-        if (d.getHours() === 6 && d.getMinutes() === 0) return "6 AM appt";
+        const ap = dockParts(truck.appointmentMs);
+        if (ap.h === 6 && ap.mi === 0) return "6 AM appt";
       }
       return null;
     }
@@ -16567,9 +16611,8 @@
     }
 
     function portalMnDefaultBusinessDate() {
-      const d = new Date();
-      if (d.getHours() >= 19) d.setDate(d.getDate() + 1);
-      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const now = Date.now();
+      return dockDateKey(dockH(now) >= 19 ? dockAddDays(now, 1) : now);
     }
 
     function portalMnSelectedBusinessDate() {
@@ -16589,7 +16632,7 @@
       if (!value) return "-";
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return String(value);
-      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      return d.toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
     }
 
     function portalMnTruckStatus(row) {
@@ -16645,7 +16688,7 @@
         state.portalMn.areaSummary = Array.isArray(data.area_summary) ? data.area_summary : [];
         const loc = data.location || {};
         const locName = loc.name || loc.locName || loc.cCode || "Minnesota";
-        portalMnSetStatus("Live Minnesota DMS active: " + state.portalMn.liveRows.length + " arrived truck(s), " + state.portalMn.scheduledRows.length + " scheduled for business date " + (data.business_date || selectedDate) + " at " + locName + ". Updated " + new Date().toLocaleTimeString() + ", auto-refreshes every " + Math.round((state.portalMn.livePollMs || 30000) / 1000) + " sec.", "good");
+        portalMnSetStatus("Live Minnesota DMS active: " + state.portalMn.liveRows.length + " arrived truck(s), " + state.portalMn.scheduledRows.length + " scheduled for business date " + (data.business_date || selectedDate) + " at " + locName + ". Updated " + new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ }) + ", auto-refreshes every " + Math.round((state.portalMn.livePollMs || 30000) / 1000) + " sec.", "good");
       } catch (err) {
         const msg = (err && (err.message || String(err))) || "Minnesota DMS unavailable.";
         state.portalMn.liveError = msg;
@@ -16682,14 +16725,14 @@
       const value = portalMnSelectedBusinessDate() || portalMnDefaultBusinessDate();
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
       if (!match) return null;
-      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, 0, 0, 0).getTime();
+      return dockMs(Number(match[1]), Number(match[2]) - 1, Number(match[3]), hour, 0, 0, 0);
     }
 
     function portalMnShiftStartMs() {
       const value = portalMnSelectedBusinessDate() || portalMnDefaultBusinessDate();
       const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
       if (!match) return null;
-      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - 1, 19, 0, 0, 0).getTime();
+      return dockMs(Number(match[1]), Number(match[2]) - 1, Number(match[3]) - 1, 19, 0, 0, 0);
     }
 
     function portalMnShiftGoalMs() {
@@ -16917,7 +16960,7 @@
 
       // 5AM cutoff tracker
       if (els.portalMn5amCard && els.portalMn5amCount && els.portalMn5amNote) {
-        const cutoff5am = portalMnShiftGoalMs() || (function() { const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime() + 10*3600000; })();
+        const cutoff5am = portalMnShiftGoalMs() || dockPrev7pmMs(now) + 10*3600000;
         const msTo5am = cutoff5am - now;
         const notStarted = enriched.filter(function(t) { return t.status !== "complete" && !t.checkInMs; });
         const n = notStarted.length;
@@ -16967,7 +17010,7 @@
         ? Math.round(completedWithTime.reduce(function(s, r) { return s + r.turnMin; }, 0) / completedWithTime.length)
         : 120;
 
-      const shiftStartMs = portalMnShiftStartMs() || (function() { const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime(); })();
+      const shiftStartMs = portalMnShiftStartMs() || dockPrev7pmMs(now);
       const goal5amMs = portalMnShiftGoalMs() || (shiftStartMs + 10 * 3600000);
       const shiftWindowHours = Math.max((goal5amMs - shiftStartMs) / 3600000, 1);
       const timeRemainingToGoalMs = Math.max(0, goal5amMs - now);
@@ -17006,8 +17049,8 @@
         estMs = zoneFinishMs ? Math.max(now, Math.round(zoneFinishMs / 300000) * 300000) : (finishFc ? finishFc.p95 : now + (stillRunning / effectiveRate) * 3600000);
         state.portalMn.simEstMs = finishFc ? finishFc.p95 : null;
         state.portalMn.estMs = estMs;
-        const ef = new Date(estMs);
-        const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
+        const ef = dockParts(estMs);
+        const hh = ef.h, mm = String(ef.mi).padStart(2,"0");
         const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
         projectedFinishText = h12 + ":" + mm + " " + ampm;
         const minsOut = Math.round((estMs - now) / 60000);
@@ -17114,8 +17157,8 @@
           state.portalMn.notifiedBehind = false;
         } else if (behindMs > 0) {
           const behindMin = Math.round(behindMs / 60000);
-          const ef2 = new Date(estMs);
-          const hh2 = ef2.getHours(), mm2 = String(ef2.getMinutes()).padStart(2,"0");
+          const ef2 = dockParts(estMs);
+          const hh2 = ef2.h, mm2 = String(ef2.mi).padStart(2,"0");
           const ampm2 = hh2 >= 12 ? "PM" : "AM"; const h12b = hh2 % 12 || 12;
           const paceStr = (actualRate && needRate) ? " Current pace: " + actualRate + " trucks/hr. Required pace: " + needRate + " trucks/hr to hit 5:00 AM." : "";
           const isCrit = behindMin > 30;
@@ -17191,7 +17234,7 @@
           if (els.portalMnTimelineElapsed) els.portalMnTimelineElapsed.style.width = shiftPct + "%";
           if (els.portalMnTimelineNeedle)  els.portalMnTimelineNeedle.style.left  = shiftPct + "%";
           if (els.portalMnTimelineNowLabel) {
-            els.portalMnTimelineNowLabel.textContent = new Date(now).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+            els.portalMnTimelineNowLabel.textContent = new Date(now).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
           }
           [
             [els.portalMnTimelineScheduled, shiftTotal],
@@ -17202,7 +17245,7 @@
             const estPct = Math.round(Math.min(Math.max((state.portalMn.estMs - shiftStartMs) / shiftTotalMs * 100, 0), 100));
             els.portalMnTimelineEst.style.left = estPct + "%";
             els.portalMnTimelineEst.style.display = "";
-            els.portalMnTimelineEst.title = "Est. finish: " + new Date(state.portalMn.estMs).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+            els.portalMnTimelineEst.title = "Est. finish: " + new Date(state.portalMn.estMs).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
           } else if (els.portalMnTimelineEst) {
             els.portalMnTimelineEst.style.display = "none";
           }
@@ -17717,9 +17760,9 @@
     }
 
     function portalFinishClock(ms) {
-      const d = new Date(ms);
-      const h = d.getHours();
-      return (h % 12 || 12) + ":" + String(d.getMinutes()).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
+      const d = dockParts(ms);
+      const h = d.h;
+      return (h % 12 || 12) + ":" + String(d.mi).padStart(2, "0") + " " + (h >= 12 ? "PM" : "AM");
     }
 
     // Where tonight's progress sits among recent nights at the same hour. `done` is
@@ -17835,6 +17878,7 @@
     function portalDockLabel(row, now) {
       const dock = portalDockMinutes(row, now);
       if (dock != null) return "Driver on dock for " + portalFmtDuration(dock);
+      if (portalIsStaged(row)) return "Staged, no door yet";
       const waited = portalDoorAgeMinutes(row, now);
       return waited != null ? "Waiting on clerk " + portalFmtDuration(waited) : "";
     }
@@ -18024,7 +18068,7 @@
 
     function portalFormatTime(ms) {
       if (!ms) return "";
-      return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      return new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
     }
 
     function portalFillScorecard(container, cards) {
@@ -18137,7 +18181,7 @@
         var r = byDoor[dn];
         if (!r) return { door: dn, status: "Open", ref: "", supplier: "", appt: "", dwell: "", po: "" };
         var st = statusLabel[r.status] || "Active";
-        var apptStr = r.appointmentMs ? new Date(r.appointmentMs).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}) : "";
+        var apptStr = r.appointmentMs ? new Date(r.appointmentMs).toLocaleTimeString("en-US",{timeZone:DOCK_TZ,hour:"numeric",minute:"2-digit",hour12:true}) : "";
         var dwellStr = r.countdownLabel || portalStatusLabel(r.status);
         return { door: dn, status: st, ref: r.ref || "", supplier: r.supplier || "", appt: apptStr, dwell: dwellStr, po: r.po || "" };
       });
@@ -18155,7 +18199,7 @@
       var payload = {
         action: "push_doors",
         doors: portalBuildSheetsPayload(allDoors, byDoor),
-        updated_at: new Date().toLocaleString("en-US", { hour12: true })
+        updated_at: new Date().toLocaleString("en-US", { timeZone: DOCK_TZ, hour12: true })
       };
       if (statusEl) { statusEl.className = "sheets-sync-idle"; statusEl.textContent = "Syncing..."; }
       fetch(cfg.webhookUrl, {
@@ -18164,7 +18208,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }).then(function() {
-        if (statusEl) { statusEl.className = "sheets-sync-ok"; statusEl.textContent = "Synced at " + new Date().toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); }
+        if (statusEl) { statusEl.className = "sheets-sync-ok"; statusEl.textContent = "Synced at " + new Date().toLocaleTimeString("en-US",{timeZone:DOCK_TZ,hour:"numeric",minute:"2-digit",hour12:true}); }
       }).catch(function(err) {
         if (statusEl) { statusEl.className = "sheets-sync-err"; statusEl.textContent = "Sync failed  -  check Apps Script URL"; }
       });
@@ -18241,10 +18285,8 @@
     // Returns 10 PM of the night that `now` falls in (before 7 PM it is still last night's shift).
     const PORTAL_WARN_FROM_HOUR = 22;
     function portalWarnFloorMs(now) {
-      const d = new Date(now);
-      const floor = new Date(d.getFullYear(), d.getMonth(), d.getDate(), PORTAL_WARN_FROM_HOUR, 0, 0, 0);
-      if (d.getHours() < 19) floor.setDate(floor.getDate() - 1);
-      return floor.getTime();
+      const d = dockParts(now);
+      return dockMs(d.y, d.mo, d.d + (d.h < 19 ? -1 : 0), PORTAL_WARN_FROM_HOUR, 0, 0, 0);
     }
     // Minutes a truck has been waiting on the lot for warning purposes. The clock starts at the clerk's check-in stamp, counted from
     // 5 minutes before it, and never before 10 PM. A truck the clerk has not checked in yet has no clock running (null), so
@@ -19301,8 +19343,8 @@
       }
     }
 
-    // New alerts pop up on screen for 30 seconds, then slide up into the Notifications bell at the
-    // top right. The bell's drop-down keeps every alert that is still unresolved until it is cleared.
+    // (Pop-ups are switched off, see PORTAL_ALERT_POPUPS.) When they are on, new alerts pop up on screen for 30 seconds, then slide up
+    // into the Notifications bell at the top right. The bell's drop-down keeps every alert that is still unresolved until it is cleared.
     function portalPopupRender(fresh) {
       const stack = document.getElementById("portalPopupStack");
       if (!stack) return;
@@ -19369,14 +19411,21 @@
     function portalAttentionRender() {
       const now = Date.now();
       const active = _portalPopupItems.filter(function(x) { return !_portalPopupDismissed.has(x.id); });
-      active.forEach(function(x) { if (!_portalPopupFirstShown.has(x.id)) _portalPopupFirstShown.set(x.id, now); });
-      const fresh = active.filter(function(x) { return now - _portalPopupFirstShown.get(x.id) < PORTAL_POPUP_MS; });
-      portalPopupRender(_portalMenuOpen ? [] : fresh);     // while the menu is open it already lists them
+      let added = 0;
+      active.forEach(function(x) { if (!_portalPopupFirstShown.has(x.id)) { _portalPopupFirstShown.set(x.id, now); added++; } });
+      // No pop-ups on screen (user's call, 2026-10-04): a new alert goes straight into the Notifications bell, which pings once.
+      portalPopupRender(PORTAL_ALERT_POPUPS ? active.filter(function(x) { return !_portalMenuOpen && now - _portalPopupFirstShown.get(x.id) < PORTAL_POPUP_MS; }) : []);
       portalBellRender(active);
       clearTimeout(_portalPopupTimer);
-      if (fresh.length) {
-        const wait = Math.min.apply(null, fresh.map(function(x) { return PORTAL_POPUP_MS - (now - _portalPopupFirstShown.get(x.id)); }));
-        _portalPopupTimer = setTimeout(portalAttentionDockExpired, Math.max(250, wait));
+      if (PORTAL_ALERT_POPUPS) {
+        const fresh = active.filter(function(x) { return now - _portalPopupFirstShown.get(x.id) < PORTAL_POPUP_MS; });
+        if (fresh.length) {
+          const wait = Math.min.apply(null, fresh.map(function(x) { return PORTAL_POPUP_MS - (now - _portalPopupFirstShown.get(x.id)); }));
+          _portalPopupTimer = setTimeout(portalAttentionDockExpired, Math.max(250, wait));
+        }
+      } else if (added) {
+        const bell = document.getElementById("portalNotifBell");
+        if (bell) { bell.classList.remove("bell-ping"); void bell.offsetWidth; bell.classList.add("bell-ping"); }
       }
     }
 
@@ -20084,7 +20133,7 @@
         if (p == null) return '<span class="muted">--</span>';
         return '<span class="' + (Math.abs(p) < 3 ? "flat" : ((p > 0) === (better !== "down") ? "good" : "bad")) + '">' + (p > 0 ? "+" : "") + p + "%</span>";
       };
-      const time = function(iso) { return iso ? new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "--"; };
+      const time = function(iso) { return iso ? new Date(iso).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit" }) : "--"; };
       const zoneName = function(z) { return SHIFT_RPT_ZONES[z] || z; };
       const rows = people.map(function(p) {
         const r = p.rating, e = p.earlier;
@@ -20510,7 +20559,7 @@
         : 'No earlier nights were available to compare with.';
       const missing = (data.missing || []).length ? '<p class="note">Could not read ' + data.missing.map(function(d) { return shiftRptEsc(shiftRptDay(d)); }).join(", ") + ' from DMS, so ' + (data.missing.length === 1 ? "it is" : "they are") + ' left out of the comparison.</p>' : '';
       const insights = shiftRptInsights(data);
-      const generated = new Date(data.generated_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+      const generated = new Date(data.generated_at).toLocaleString("en-US", { timeZone: DOCK_TZ, dateStyle: "medium", timeStyle: "short" });
       const unloaderHtml = shiftRptUnloaderHtml(data.unloaders, t);
       const unloaderNote = data.unloaders_hidden ? "" : (data.unloaders ? "" : '<p class="note">No unloader names were entered on this shift, so there is no per-unloader section.</p>');
       const sec = function(id, title, body) { return '<section class="sec" id="' + id + '"><h2>' + title + '</h2>' + body + '</section>'; };
@@ -20690,7 +20739,7 @@
         "OKS End-of-Shift Operations Report",
         "Generated: " + snapshot.generated,
         "Business date: " + snapshot.businessDate,
-        "DMS sync: " + (state.portal.liveUpdatedAt ? new Date(state.portal.liveUpdatedAt).toLocaleString("en-US", { hour12: true }) : "not synced"),
+        "DMS sync: " + (state.portal.liveUpdatedAt ? new Date(state.portal.liveUpdatedAt).toLocaleString("en-US", { timeZone: DOCK_TZ, hour12: true }) : "not synced"),
         "",
         "Supervisor Summary",
         "Scheduled trucks: " + snapshot.scheduled,
@@ -20966,7 +21015,7 @@
 
       if (meta) {
         meta.textContent = alerts.length
-          ? alerts.length + " alert" + (alerts.length !== 1 ? "s" : "") + " need attention  -  updated " + new Date().toLocaleTimeString()
+          ? alerts.length + " alert" + (alerts.length !== 1 ? "s" : "") + " need attention  -  updated " + new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ })
           : "All clear - no trucks need attention right now.";
       }
 
@@ -21130,7 +21179,7 @@
 
       // 4AM cutoff tracker
       if (els.portal4amCard && els.portal4amCount && els.portal4amNote) {
-        const cutoff4am = portalShiftGoalMs() || (function() { const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime() + 9*3600000; })();
+        const cutoff4am = portalShiftGoalMs() || dockPrev7pmMs(now) + 9*3600000;
         const msTo4am = cutoff4am - now;
         const notStarted = enriched.filter(function(t) { return t.status !== "complete" && !t.checkInMs; });
         const n = notStarted.length;
@@ -21183,7 +21232,7 @@
       // store avgTurn for use in pace card note below (after elapsedH/needRate are computed)
 
       // Shift window: 7PM -> 4AM for the selected DMS business date.
-      const shiftStartMs = portalShiftStartMs() || (function() { const d = new Date(); d.setHours(19,0,0,0); if (d.getTime() > now) d.setDate(d.getDate()-1); return d.getTime(); })();
+      const shiftStartMs = portalShiftStartMs() || dockPrev7pmMs(now);
       const goal4amMs = portalShiftGoalMs() || (shiftStartMs + 9 * 3600000);
       const shiftWindowHours = Math.max((goal4amMs - shiftStartMs) / 3600000, 1);
       const timeRemainingToGoalMs = Math.max(0, goal4amMs - now);
@@ -21222,8 +21271,8 @@
         estMs = zoneFinishMs ? Math.max(now, Math.round(zoneFinishMs / 300000) * 300000) : (finishFc ? finishFc.p95 : now + (stillRunning / effectiveRate) * 3600000);
         state.portal.simEstMs = finishFc ? finishFc.p95 : null;
         state.portal.estMs = estMs;
-        const ef = new Date(estMs);
-        const hh = ef.getHours(), mm = String(ef.getMinutes()).padStart(2,"0");
+        const ef = dockParts(estMs);
+        const hh = ef.h, mm = String(ef.mi).padStart(2,"0");
         const ampm = hh >= 12 ? "PM" : "AM"; const h12 = hh % 12 || 12;
         projectedFinishText = h12 + ":" + mm + " " + ampm;
         const minsOut = Math.round((estMs - now) / 60000);
@@ -21331,8 +21380,8 @@
           state.portal.notifiedBehind = false;
         } else if (behindMs > 0) {
           const behindMin = Math.round(behindMs / 60000);
-          const ef2 = new Date(estMs);
-          const hh2 = ef2.getHours(), mm2 = String(ef2.getMinutes()).padStart(2,"0");
+          const ef2 = dockParts(estMs);
+          const hh2 = ef2.h, mm2 = String(ef2.mi).padStart(2,"0");
           const ampm2 = hh2 >= 12 ? "PM" : "AM"; const h12b = hh2 % 12 || 12;
           const paceStr = (actualRate && needRate) ? " Current pace: " + actualRate + " trucks/hr. Required pace: " + needRate + " trucks/hr to hit 4:00 AM." : "";
           const isCrit = behindMin > 30;
@@ -21443,7 +21492,7 @@
         if (needleEl)  needleEl.style.left    = shiftPct + "%";
         if (nowLabel) {
           const nowH = new Date(now);
-          nowLabel.textContent = nowH.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+          nowLabel.textContent = nowH.toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
         }
         [
           [els.portalTimelineScheduled, shiftTotal],
@@ -21454,7 +21503,7 @@
           const estPct = Math.round(Math.min(Math.max((state.portal.estMs - shiftStartMs) / shiftTotalMs * 100, 0), 100));
           estEl.style.left = estPct + "%";
           estEl.style.display = "";
-          estEl.title = "Est. finish: " + new Date(state.portal.estMs).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+          estEl.title = "Est. finish: " + new Date(state.portal.estMs).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
         } else if (estEl) {
           estEl.style.display = "none";
         }
@@ -21581,8 +21630,8 @@
 
         let checkInStr = " - ";
         if (r.checkInMs) {
-          const checkInTime = new Date(r.checkInMs);
-          const ch = checkInTime.getHours(), cm = String(checkInTime.getMinutes()).padStart(2,"0");
+          const checkInTime = dockParts(r.checkInMs);
+          const ch = checkInTime.h, cm = String(checkInTime.mi).padStart(2,"0");
           const camp = ch >= 12 ? "PM" : "AM"; const ch12 = ch % 12 || 12;
           checkInStr = ch12 + ":" + cm + " " + camp;
         }
@@ -21637,10 +21686,10 @@
           stepDiv.className = "load-step clickable" + (done ? " done" : current ? " current" : "");
           let timeStr = "";
           if (msVal) {
-            const d = new Date(msVal);
-            const hh = d.getHours() % 12 || 12;
-            const mm = String(d.getMinutes()).padStart(2, "0");
-            const ap = d.getHours() >= 12 ? "p" : "a";
+            const d = dockParts(msVal);
+            const hh = d.h % 12 || 12;
+            const mm = String(d.mi).padStart(2, "0");
+            const ap = d.h >= 12 ? "p" : "a";
             timeStr = hh + ":" + mm + ap;
           }
           stepDiv.title = done
@@ -21716,7 +21765,7 @@
       }
       if (els.portalBoardMeta) {
         els.portalBoardMeta.textContent = enriched.length > 0
-          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown  -  " + detention.length + " in detention  -  " + (startSoon.length + urgent.length + warning.length) + " urgent/warning  -  updated " + new Date().toLocaleTimeString())
+          ? (filtered.length + " truck" + (filtered.length !== 1 ? "s" : "") + " shown  -  " + detention.length + " in detention  -  " + (startSoon.length + urgent.length + warning.length) + " urgent/warning  -  updated " + new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ }))
           : "No trucks clocked in yet. Use the form above to add a truck.";
       }
 
@@ -21750,8 +21799,8 @@
             const minsLate = apptMs ? Math.round((nowMs2 - apptMs) / 60000) : 0;
             let apptStr = " - ";
             if (apptMs) {
-              const d2 = new Date(apptMs);
-              const hh2 = d2.getHours() % 12 || 12, mm2 = String(d2.getMinutes()).padStart(2,"0"), ap2 = d2.getHours() >= 12 ? "PM" : "AM";
+              const d2 = dockParts(apptMs);
+              const hh2 = d2.h % 12 || 12, mm2 = String(d2.mi).padStart(2,"0"), ap2 = d2.h >= 12 ? "PM" : "AM";
               apptStr = hh2 + ":" + mm2 + " " + ap2;
             }
             [ns.ref || " - ", ns.supplier || " - ", ns.door || " - ", apptStr, minsLate > 0 ? minsLate + " min" : " - ", "Separated - no detention warning"].forEach(function(v) {
@@ -24451,7 +24500,7 @@
 
       function fmtMs(ms) {
         if (!ms) return null;
-        return new Date(ms).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        return new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
       }
 
       tbody.innerHTML = "";
@@ -24510,8 +24559,8 @@
     async function dmsStampFromBoard(truck, truckKey, stampTypeKey) {
       const overrideKey = truckKey + ":" + stampTypeKey;
       const stampTimeIso = new Date().toISOString();
-      const timeLabel = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-      const sentAt = new Date().toLocaleTimeString();
+      const timeLabel = new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
+      const sentAt = new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ });
       const loadId = truck.loadId || truck.ref || truck.id || "";
       const supplier = truck.supplier || "";
 
@@ -24580,8 +24629,8 @@
       if (els.dmsStampResult) els.dmsStampResult.style.display = "none";
 
       const stampTimeIso = time ? new Date(time).toISOString() : new Date().toISOString();
-      const sentAt = new Date().toLocaleTimeString();
-      const timeLabel = new Date(stampTimeIso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+      const sentAt = new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ });
+      const timeLabel = new Date(stampTimeIso).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
       try {
         const resp = await fetch(apiUrl("/api/dms/stamp"), {
           method: "POST",
@@ -24720,7 +24769,7 @@
       if (!iso) return "";
       const d = new Date(iso);
       if (isNaN(d.getTime())) return iso;
-      return d.toLocaleString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit", hour: "numeric", minute: "2-digit" });
+      return d.toLocaleString("en-US", { timeZone: DOCK_TZ, month: "2-digit", day: "2-digit", year: "2-digit", hour: "numeric", minute: "2-digit" });
     }
 
     function containerLogElapsedHM(startIso, endIso) {
@@ -25070,7 +25119,7 @@
       let peak = "";
       if (d.peak && d.peak.count) {
         let at = "";
-        try { at = " at " + new Date(d.peak.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); } catch (err) {}
+        try { at = " at " + new Date(d.peak.at).toLocaleTimeString([], { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit" }); } catch (err) {}
         peak = " Busiest this shift: " + d.peak.count + at + ".";
       }
       bar.title = "Everyone signed in and active in the last minute and a half, counted per browser: three people on the same login count as three, two tabs in one browser count once." + peak
@@ -25107,7 +25156,7 @@
         .then(function(d) {
           if (!d || !d.ok) { panel.textContent = "Could not load the usage history."; return; }
           if (!d.days.length) { panel.textContent = "Nothing saved yet. Shifts appear here as people use the site."; return; }
-          const clock = function(iso) { try { return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); } catch (err) { return ""; } };
+          const clock = function(iso) { try { return new Date(iso).toLocaleTimeString([], { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit" }); } catch (err) { return ""; } };
           const day = function(key) { try { return new Date(key + "T12:00:00").toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }); } catch (err) { return key; } };
           panel.innerHTML = '<table class="presence-table"><thead><tr><th>Shift</th><th>Busiest</th><th>Browsers</th><th>By login</th></tr></thead><tbody>'
             + d.days.map(function(x) {
@@ -25206,7 +25255,7 @@
       if (!el) return;
       if (!d) { el.style.display = "none"; return; }
       el.style.display = "";
-      const since = d.since ? new Date(d.since).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+      const since = d.since ? new Date(d.since).toLocaleDateString("en-US", { timeZone: DOCK_TZ, month: "short", day: "numeric", year: "numeric" }) : "";
       const counts = formatNumber(d.named_loads) + " named load" + (d.named_loads === 1 ? "" : "s") + " and " + formatNumber(d.door_notes) + " door note" + (d.door_notes === 1 ? "" : "s") + " (OKS and Minnesota together)";
       if (d.persistent === false) {
         el.className = "friendly-note storage-bad";
@@ -25442,7 +25491,7 @@
         .then(function(r) { return r.json().then(function(d) { if (!r.ok) throw new Error(d.detail || "Could not load performance."); return d; }); })
         .then(function(data) {
           const upd = document.getElementById("unloaderPerfUpdated");
-          if (upd) upd.textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+          if (upd) upd.textContent = "Updated " + new Date().toLocaleTimeString([], { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", second: "2-digit" });
           const people = data.people || [];
           const totals = data.totals || { loads: 0, pallets: 0, people: 0 };
           const timedLoads = people.reduce(function(s, p) { return s + p.timed_loads; }, 0);
@@ -25740,7 +25789,7 @@
       }
       stats.forEach(function(s) {
         const tr = document.createElement("tr");
-        const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : " - ";
+        const lastSeen = s.last_seen ? new Date(s.last_seen).toLocaleDateString("en-US", { timeZone: DOCK_TZ, month: "short", day: "numeric", year: "numeric" }) : " - ";
         const fmtMin = function(m) { return Math.floor(m/60) + "h " + (m%60) + "m"; };
         const avgColor = s.avg_min <= 120 ? "var(--green,#38a169)" : s.avg_min <= 180 ? "var(--amber,#d69e2e)" : "var(--red,#e53e3e)";
         [
@@ -25794,8 +25843,8 @@
         reports.forEach(function(report) {
           const tr = document.createElement("tr");
           const dt = new Date(report.uploaded_at);
-          const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-          const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          const dateStr = dt.toLocaleDateString("en-US", { timeZone: DOCK_TZ, month: "short", day: "numeric", year: "numeric" });
+          const timeStr = dt.toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit" });
           [dateStr + " " + timeStr, report.filename, report.row_count].forEach(function(val) {
             const td = document.createElement("td");
             td.textContent = val;
@@ -25840,8 +25889,8 @@
         decisions.forEach(function(d) {
           const tr = document.createElement("tr");
           const dt = new Date(d.decided_at);
-          const dateStr = dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-          const timeStr = dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+          const dateStr = dt.toLocaleDateString("en-US", { timeZone: DOCK_TZ, month: "short", day: "numeric" });
+          const timeStr = dt.toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit" });
           const isBreakdown = d.decision === "Breakdown Truck";
           [dateStr + " " + timeStr, d.truck_key, d.supplier_key || "-", d.decision, d.filename || "-"].forEach(function(val, i) {
             const td = document.createElement("td");
@@ -26124,7 +26173,7 @@
     <div class="portal-notif-menu" id="portalNotifMenu" hidden>
       <div class="notif-head"><span>Needs attention</span><button type="button" id="portalNotifClearAll">Clear all</button></div>
       <div class="portal-notif-list" id="portalNotifList"></div>
-      <div class="notif-foot">New alerts pop up for 30 seconds, then wait here until they are cleared or resolved.</div>
+      <div class="notif-foot">New alerts appear here and wait until they are cleared or resolved.</div>
     </div>
   </div>
   <div class="portal-popup-stack" id="portalPopupStack" aria-live="assertive"></div>
