@@ -1047,9 +1047,9 @@
     .zone-eta-label { font-size:0.72em; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted,#718096); }
     .zone-eta-time { font-size:clamp(2.1rem, 4.6vw, 3rem); font-weight:900; line-height:1.05; letter-spacing:-0.5px; font-variant-numeric:tabular-nums; color:var(--text,#1a202c); margin:2px 0; }
     .zone-eta-time.inline { font-size:clamp(1.7rem, 3.6vw, 2.3rem); margin:0; }
-    .zone-eta.done .zone-eta-time { color:#2f855a; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:0.4em; }
-    .zone-eta-at { font-size:0.62em; font-weight:900; letter-spacing:0; white-space:nowrap; }
-    @media (max-width:520px) { .zone-eta.done .zone-eta-time { column-gap:0.3em; } .zone-eta-at { font-size:0.5em; } }
+    .zone-eta.done .zone-eta-time { color:#2f855a; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:0.35em; font-size:clamp(1.7rem, 3.4vw, 2.4rem); }
+    .zone-eta-at { white-space:nowrap; }
+    @media (max-width:520px) { .zone-eta.done .zone-eta-time { font-size:clamp(1.6rem, 8vw, 2.1rem); } }
     :root.dark .zone-eta.done .zone-eta-time { color:#68d391; }
     .zone-eta-delta { font-size:1.3em; font-weight:900; line-height:1.25; margin-top:4px; color:var(--muted,#718096); }
     .zone-eta-delta.early { color:#2f855a; } .zone-eta-delta.close { color:#b7791f; } .zone-eta-delta.late { color:#c53030; }
@@ -2046,6 +2046,30 @@
       font-size: 1.35rem;
       color: #004976;
     }
+
+    /* Active time vs downtime: downtime goes left from a centre line, active unload time goes right, on one minutes scale. */
+    .bal-row { padding:12px; background:var(--panel-2); border:1px solid #C5D9E8; border-radius:var(--radius); }
+    .bal-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .bal-pill { flex:none; font-weight:800; font-size:0.82rem; padding:3px 10px; border-radius:999px; background:#d6e8f5; color:#004976; white-space:nowrap; }
+    .bal-chart { display:grid; grid-template-columns:minmax(0,1fr) 2px minmax(0,1fr); align-items:center; min-height:34px; }
+    .bal-half { display:flex; align-items:center; gap:8px; min-width:0; }
+    .bal-half.left { flex-direction:row-reverse; }
+    .bal-bar { flex:none; height:22px; }
+    .bal-half.left .bal-bar { background:#dd6b20; border-radius:6px 0 0 6px; }
+    .bal-half.right .bal-bar { background:#2b6cb0; border-radius:0 6px 6px 0; }
+    .bal-val { font-weight:800; font-size:0.95rem; white-space:nowrap; }
+    .bal-half.left .bal-val { color:#9c4221; }
+    .bal-half.right .bal-val { color:#2a4365; }
+    .bal-axis { align-self:stretch; background:#2d3748; opacity:.55; border-radius:1px; }
+    .bal-empty { font-size:0.82rem; color:var(--muted); font-style:italic; }
+    .bal-legend { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:0.84rem; color:var(--muted); margin:0 0 10px; }
+    .bal-key { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+    .bal-key.down { background:#dd6b20; } .bal-key.up { background:#2b6cb0; }
+    :root.dark .bal-row { border-color:#1e3a55; }
+    :root.dark .bal-pill { background:#2a4365; color:#bee3f8; }
+    :root.dark .bal-half.left .bal-val { color:#fbd38d; } :root.dark .bal-half.right .bal-val { color:#bee3f8; }
+    :root.dark .bal-axis { background:#a0aec0; }
+    @media (max-width:520px) { .bal-val { font-size:0.85rem; } .bal-half { gap:5px; } }
 
     .dock-bar {
       grid-column: 1 / -1;
@@ -5023,14 +5047,11 @@
             <div class="panel-header"><h2>Pallets per Hour</h2><span class="panel-kicker" id="unloaderPerfPphKicker"></span></div>
             <div class="dock-list" id="unloaderPerfPphList"></div>
           </section>
-          <section class="panel chart-panel-wide">
-            <div class="panel-header"><h2>Average Unload Time</h2><span class="panel-kicker" id="unloaderPerfTimeKicker"></span></div>
-            <div class="dock-list" id="unloaderPerfTimeList"></div>
-          </section>
-          <section class="panel chart-panel-wide">
-            <div class="panel-header"><h2>Downtime Between Loads</h2><span class="panel-kicker" id="unloaderPerfGapKicker"></span></div>
-            <div class="friendly-note" style="margin:-2px 0 10px;">The wait between finishing one load and starting the next, per person per night. A wait longer than the "Count gaps up to" setting is treated as a break (or no trucks to unload) and left out of the average, but counted as a long gap. This includes time spent waiting on trucks, so compare people working the same nights.</div>
-            <div class="dock-list" id="unloaderPerfGapList"></div>
+          <section class="panel chart-panel-wide" id="unloaderPerfBalancePanel">
+            <div class="panel-header"><h2>Active Time vs Downtime</h2><span class="panel-kicker" id="unloaderPerfBalanceKicker"></span></div>
+            <div class="friendly-note" style="margin:-2px 0 10px;">One bar per person. <b>Downtime</b> (the wait between finishing one load and starting the next, per person per night) goes to the <b>left</b>; <b>active time</b> (average unload time per load) goes to the <b>right</b>. Both use the same minutes scale, so a bar that leans right is spending more of its time unloading. A wait longer than the "Count gaps up to" setting is treated as a break (or no trucks to unload) and left out of the downtime average, but counted as a long gap. Downtime includes time spent waiting on trucks, so compare people working the same nights.</div>
+            <div class="bal-legend"><span><i class="bal-key down"></i>Downtime between loads</span><span><i class="bal-key up"></i>Active unload time per load</span></div>
+            <div class="dock-list" id="unloaderPerfBalanceList"></div>
           </section>
           <section class="panel chart-panel-wide">
             <div class="panel-header"><h2>Loads per Night</h2><span class="panel-kicker" id="unloaderPerfDailyKicker"></span></div>
@@ -6797,6 +6818,201 @@
           </div>
         </section>
 
+        <div class="portal-zone-label">Drill-down views</div>
+        <!-- View switcher: Board / Doors / Areas / Vendors -->
+        <div class="portal-view-switch" id="portalViewSwitch">
+          <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
+          <button type="button" class="portal-view-btn" data-view="board">Board</button>
+          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
+          <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
+          <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalChatBadge" style="display:none;">0</span></button>
+          <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
+        </div>
+
+        <!-- Team chat: shared across everyone signed in to this site's My Portal -->
+        <section id="portalChatView" style="display:none; margin-top:10px;">
+          <div class="portal-chat-panel">
+            <div class="portal-chat-log" id="portalChatLog"><div class="door-empty">Loading chat...</div></div>
+            <div class="portal-chat-input-row">
+              <input id="portalChatInput" type="text" class="lookup-input" placeholder="Message the shift..." maxlength="1000" autocomplete="off">
+              <button type="button" id="portalChatSendBtn" class="file-button primary">Send</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="portalClientView" style="display:none; margin-top:10px;">
+          <div class="portal-client-panel">
+            <div class="portal-client-head">
+              <div>
+                <div class="portal-client-title">Supervisor View</div>
+                <div class="portal-client-sub">Clean manager view with totals, risks, late trucks, and projected finish.</div>
+              </div>
+            </div>
+            <div class="portal-client-grid">
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewScheduled">0</div><div class="lbl">Scheduled</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewArrived">0</div><div class="lbl">Arrived</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewDone">0</div><div class="lbl">Done</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewOpen">0</div><div class="lbl">Open</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewRisk">0</div><div class="lbl">Needs Attention</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewLate">0</div><div class="lbl">Late / No-show</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalClientViewProjected">--</div><div class="lbl">Projected Finish</div></div>
+            </div>
+            <div class="portal-client-message" id="portalClientViewMessage">Waiting for live data.</div>
+          </div>
+        </section>
+
+        <!-- Operations board -->
+        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="display:none; margin-top:10px;" id="portalBoardView">
+          <div class="table-toolbar">
+            <div>
+              <div class="table-title" id="portalBoardTitle">Live Dock Board</div>
+              <div class="table-meta" id="portalBoardMeta">No trucks clocked in yet. Use the form above to add a truck.</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input id="portalSearch" type="search" class="lookup-input" placeholder="Search door, PO, supplier, carrier..." autocomplete="off" style="max-width:230px;">
+              <select id="portalSortBy" class="lookup-input" style="max-width:160px;" title="Sort the board">
+                <option value="smart">Sort: Priority</option>
+                <option value="door">Sort: Door #</option>
+                <option value="timeleft">Sort: Time left</option>
+                <option value="supplier">Sort: Supplier</option>
+                <option value="checkin">Sort: Check-in time</option>
+              </select>
+              <select id="portalStatusFilter" class="lookup-input" style="max-width:160px;">
+                <option value="all">All Trucks</option>
+                <option value="active">Active Only</option>
+                <option value="urgent">Urgent / Warning</option>
+                <option value="detention">In Detention</option>
+                <option value="complete">Completed</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroller">
+            <table id="portalBoard">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Late / no-show trucks are separated from detention risk because they have not arrived. -->
+        <section id="portalNoShowSection" class="table-wrap portal-late-panel" style="display:none;">
+          <div class="table-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div>
+              <div class="table-title">Late Truck Separation</div>
+              <div class="table-meta" id="portalNoShowSummary">No late / no-show trucks right now.</div>
+            </div>
+            <button type="button" id="portalLateToggle" class="portal-ctrl-btn" aria-expanded="false" style="flex:none;">Show</button>
+          </div>
+          <div class="portal-late-note">These trucks are late or not checked in. They stay out of detention warnings because detention only matters after the truck arrives.</div>
+          <div class="table-scroller" style="margin-top:10px;">
+            <table id="portalNoShowTable" style="font-size:0.88em;">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Door Map view  -  every door on the dock; in-progress trucks occupy, completed free the door -->
+        <section id="portalDoorView" style="display:none; margin-top:10px;">
+          <div class="door-range-row">
+            <label for="portalDoorRange">Doors on dock</label>
+            <input id="portalDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = only scheduled doors)" autocomplete="off" style="max-width:260px;">
+            <span class="door-range-hint">Set your full door range to see open doors too.</span>
+          </div>
+          <!-- Google Sheets live sync bar -->
+          <div class="sheets-bar">
+            <span class="sheets-bar-label">&#x1F4CA; Live Clerk Sheet:</span>
+            <button type="button" id="portalSheetsOpenBtn" class="secondary-btn" style="font-size:0.8em; display:none;">Open Sheet</button>
+            <button type="button" id="portalSheetsSetupBtn" class="secondary-btn" style="font-size:0.8em;">Setup Sheets Sync</button>
+            <span id="portalSheetsSyncStatus" class="sheets-sync-idle" style="font-size:0.78em;"></span>
+          </div>
+          <div class="door-controls">
+            <span class="door-sortbox"><label for="portalDoorSort">Sort by</label>
+              <select id="portalDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
+            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red. Nothing is flagged before 10 PM; trucks that got here earlier are counted from 10 PM.">Not started: yellow after
+              <input id="portalNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
+              <input id="portalNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
+              <select id="portalNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
+                <option value="clerk">5 minutes before the clerk check-in</option>
+                <option value="ready">the later of door arrival and appointment</option>
+                <option value="door">driver at the door</option>
+              </select></span>
+          </div>
+          <div class="door-sort-note" id="portalDoorSortNote"></div>
+          <div class="dms-scorecard" id="portalScorecardDoors"></div>
+          <div class="door-map" id="portalDoorMap"></div>
+        </section>
+
+        <!-- Sheets setup modal -->
+        <div class="sheets-modal-overlay" id="portalSheetsModal" style="display:none;">
+          <div class="sheets-modal">
+            <div class="sheets-modal-head">
+              <div class="sheets-modal-title">&#x1F4CA; Google Sheets Live Dock Sync</div>
+              <button type="button" id="portalSheetsModalClose" class="secondary-btn" style="font-size:0.82em;">Close</button>
+            </div>
+            <div class="sheets-modal-body">
+              <p>Clerks open the Google Sheet on any phone or tablet and see every door live. Empty doors are highlighted with a <strong>yellow "Load Here"</strong> column  -  clerks write a truck number there to send a load request back to the portal.</p>
+              <ol>
+                <li>Create a new <strong>Google Sheet</strong> and name it anything you want.</li>
+                <li>In the sheet: click <strong>Extensions &#x2192; Apps Script</strong>.</li>
+                <li>Delete the default code, paste the script below, and click <strong>Save</strong>.</li>
+                <li>Click <strong>Deploy &#x2192; New Deployment &#x2192; Web App</strong>.<br>
+                  Set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>. Click Deploy and <strong>copy the Web App URL</strong>.</li>
+                <li>Go back to your Google Sheet and copy its URL from the browser bar.</li>
+                <li>Paste both URLs below and click <strong>Save &amp; Activate</strong>.</li>
+              </ol>
+              <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                <label style="font-weight:700; font-size:0.9em;">Apps Script Web App URL (webhook):</label>
+                <input id="portalSheetsWebhookUrl" type="url" class="lookup-input" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
+                <label style="font-weight:700; font-size:0.9em;">Google Sheet URL (for Open Sheet button):</label>
+                <input id="portalSheetsViewUrl" type="url" class="lookup-input" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;">
+                <button type="button" id="portalSheetsSaveConfig" class="primary-btn" style="align-self:flex-start;">Save &amp; Activate</button>
+                <span id="portalSheetsSaveMsg" style="font-size:0.8em; color:#38a169; display:none;">Saved! Door map will sync on next render.</span>
+              </div>
+              <hr style="border:none; border-top:1px solid var(--border,#e2e8f0); margin:14px 0;">
+              <div style="font-weight:700; margin-bottom:8px;">Paste this script into Apps Script:</div>
+              <div style="position:relative;">
+                <button type="button" id="portalSheetsScriptCopyBtn" class="secondary-btn sheets-script-copy">Copy</button>
+                <pre class="sheets-script-block" id="portalSheetsScriptBlock"></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Area Breakdown view -->
+        <section id="portalAreaView" style="display:none; margin-top:10px;">
+          <div class="dms-scorecard" id="portalScorecardAreas"></div>
+          <div class="area-grid" id="portalAreaGrid"></div>
+        </section>
+
+        <!-- Cold vs Dry zones view -->
+        <section id="portalZonesView" style="margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Shift Completion &amp; Performance by Zone</div>
+            <span id="portalZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+            <span class="door-sortbox" title="Sorts every zone's door map (shared with the Door Map tab)"><label for="portalZonesSort">Sort doors by</label>
+              <select id="portalZonesSort" class="door-sort-select" aria-label="Sort the zone door maps"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
+          </div>
+          <div class="zone-building" id="portalZonesBuilding"></div>
+          <div class="zone-grid" id="portalZonesGrid"></div>
+          <div class="zone-foot" id="portalZonesFoot"></div>
+        </section>
+
+        <!-- Vendor Performance History view -->
+        <section id="portalVendorView" style="display:none; margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Vendor Turn-Time History</div>
+            <button type="button" id="portalVendorRefreshBtn" class="portal-ctrl-btn" style="font-size:0.82em;">&#x21BB; Refresh</button>
+            <span id="portalVendorMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+          </div>
+          <div class="vendor-grid" id="portalVendorGrid">
+            <div style="color:var(--muted,#718096); font-size:0.85em; padding:12px 0;">Click Refresh to load vendor data.</div>
+          </div>
+        </section>
+
         <div class="portal-dashboard-shell" aria-label="Operations dashboard">
           <div class="portal-zone-label">Operations cockpit</div>
           <div class="portal-ops-grid">
@@ -7015,201 +7231,6 @@
           <div id="portalProgressFill"></div>
         </div>
 
-        <div class="portal-zone-label">Drill-down views</div>
-        <!-- View switcher: Board / Doors / Areas / Vendors -->
-        <div class="portal-view-switch" id="portalViewSwitch">
-          <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
-          <button type="button" class="portal-view-btn" data-view="board">Board</button>
-          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
-          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
-          <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
-          <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalChatBadge" style="display:none;">0</span></button>
-          <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
-        </div>
-
-        <!-- Team chat: shared across everyone signed in to this site's My Portal -->
-        <section id="portalChatView" style="display:none; margin-top:10px;">
-          <div class="portal-chat-panel">
-            <div class="portal-chat-log" id="portalChatLog"><div class="door-empty">Loading chat...</div></div>
-            <div class="portal-chat-input-row">
-              <input id="portalChatInput" type="text" class="lookup-input" placeholder="Message the shift..." maxlength="1000" autocomplete="off">
-              <button type="button" id="portalChatSendBtn" class="file-button primary">Send</button>
-            </div>
-          </div>
-        </section>
-
-        <section id="portalClientView" style="display:none; margin-top:10px;">
-          <div class="portal-client-panel">
-            <div class="portal-client-head">
-              <div>
-                <div class="portal-client-title">Supervisor View</div>
-                <div class="portal-client-sub">Clean manager view with totals, risks, late trucks, and projected finish.</div>
-              </div>
-            </div>
-            <div class="portal-client-grid">
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewScheduled">0</div><div class="lbl">Scheduled</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewArrived">0</div><div class="lbl">Arrived</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewDone">0</div><div class="lbl">Done</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewOpen">0</div><div class="lbl">Open</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewRisk">0</div><div class="lbl">Needs Attention</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewLate">0</div><div class="lbl">Late / No-show</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalClientViewProjected">--</div><div class="lbl">Projected Finish</div></div>
-            </div>
-            <div class="portal-client-message" id="portalClientViewMessage">Waiting for live data.</div>
-          </div>
-        </section>
-
-        <!-- Operations board -->
-        <section class="table-wrap" aria-labelledby="portalBoardTitle" style="display:none; margin-top:10px;" id="portalBoardView">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title" id="portalBoardTitle">Live Dock Board</div>
-              <div class="table-meta" id="portalBoardMeta">No trucks clocked in yet. Use the form above to add a truck.</div>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <input id="portalSearch" type="search" class="lookup-input" placeholder="Search door, PO, supplier, carrier..." autocomplete="off" style="max-width:230px;">
-              <select id="portalSortBy" class="lookup-input" style="max-width:160px;" title="Sort the board">
-                <option value="smart">Sort: Priority</option>
-                <option value="door">Sort: Door #</option>
-                <option value="timeleft">Sort: Time left</option>
-                <option value="supplier">Sort: Supplier</option>
-                <option value="checkin">Sort: Check-in time</option>
-              </select>
-              <select id="portalStatusFilter" class="lookup-input" style="max-width:160px;">
-                <option value="all">All Trucks</option>
-                <option value="active">Active Only</option>
-                <option value="urgent">Urgent / Warning</option>
-                <option value="detention">In Detention</option>
-                <option value="complete">Completed</option>
-              </select>
-            </div>
-          </div>
-          <div class="table-scroller">
-            <table id="portalBoard">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Late / no-show trucks are separated from detention risk because they have not arrived. -->
-        <section id="portalNoShowSection" class="table-wrap portal-late-panel" style="display:none;">
-          <div class="table-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div>
-              <div class="table-title">Late Truck Separation</div>
-              <div class="table-meta" id="portalNoShowSummary">No late / no-show trucks right now.</div>
-            </div>
-            <button type="button" id="portalLateToggle" class="portal-ctrl-btn" aria-expanded="false" style="flex:none;">Show</button>
-          </div>
-          <div class="portal-late-note">These trucks are late or not checked in. They stay out of detention warnings because detention only matters after the truck arrives.</div>
-          <div class="table-scroller" style="margin-top:10px;">
-            <table id="portalNoShowTable" style="font-size:0.88em;">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Door Map view  -  every door on the dock; in-progress trucks occupy, completed free the door -->
-        <section id="portalDoorView" style="display:none; margin-top:10px;">
-          <div class="door-range-row">
-            <label for="portalDoorRange">Doors on dock</label>
-            <input id="portalDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = only scheduled doors)" autocomplete="off" style="max-width:260px;">
-            <span class="door-range-hint">Set your full door range to see open doors too.</span>
-          </div>
-          <!-- Google Sheets live sync bar -->
-          <div class="sheets-bar">
-            <span class="sheets-bar-label">&#x1F4CA; Live Clerk Sheet:</span>
-            <button type="button" id="portalSheetsOpenBtn" class="secondary-btn" style="font-size:0.8em; display:none;">Open Sheet</button>
-            <button type="button" id="portalSheetsSetupBtn" class="secondary-btn" style="font-size:0.8em;">Setup Sheets Sync</button>
-            <span id="portalSheetsSyncStatus" class="sheets-sync-idle" style="font-size:0.78em;"></span>
-          </div>
-          <div class="door-controls">
-            <span class="door-sortbox"><label for="portalDoorSort">Sort by</label>
-              <select id="portalDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
-              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
-            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red. Nothing is flagged before 10 PM; trucks that got here earlier are counted from 10 PM.">Not started: yellow after
-              <input id="portalNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
-              <input id="portalNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
-              <select id="portalNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
-                <option value="clerk">5 minutes before the clerk check-in</option>
-                <option value="ready">the later of door arrival and appointment</option>
-                <option value="door">driver at the door</option>
-              </select></span>
-          </div>
-          <div class="door-sort-note" id="portalDoorSortNote"></div>
-          <div class="dms-scorecard" id="portalScorecardDoors"></div>
-          <div class="door-map" id="portalDoorMap"></div>
-        </section>
-
-        <!-- Sheets setup modal -->
-        <div class="sheets-modal-overlay" id="portalSheetsModal" style="display:none;">
-          <div class="sheets-modal">
-            <div class="sheets-modal-head">
-              <div class="sheets-modal-title">&#x1F4CA; Google Sheets Live Dock Sync</div>
-              <button type="button" id="portalSheetsModalClose" class="secondary-btn" style="font-size:0.82em;">Close</button>
-            </div>
-            <div class="sheets-modal-body">
-              <p>Clerks open the Google Sheet on any phone or tablet and see every door live. Empty doors are highlighted with a <strong>yellow "Load Here"</strong> column  -  clerks write a truck number there to send a load request back to the portal.</p>
-              <ol>
-                <li>Create a new <strong>Google Sheet</strong> and name it anything you want.</li>
-                <li>In the sheet: click <strong>Extensions &#x2192; Apps Script</strong>.</li>
-                <li>Delete the default code, paste the script below, and click <strong>Save</strong>.</li>
-                <li>Click <strong>Deploy &#x2192; New Deployment &#x2192; Web App</strong>.<br>
-                  Set <em>Execute as: Me</em> and <em>Who has access: Anyone</em>. Click Deploy and <strong>copy the Web App URL</strong>.</li>
-                <li>Go back to your Google Sheet and copy its URL from the browser bar.</li>
-                <li>Paste both URLs below and click <strong>Save &amp; Activate</strong>.</li>
-              </ol>
-              <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-                <label style="font-weight:700; font-size:0.9em;">Apps Script Web App URL (webhook):</label>
-                <input id="portalSheetsWebhookUrl" type="url" class="lookup-input" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%;">
-                <label style="font-weight:700; font-size:0.9em;">Google Sheet URL (for Open Sheet button):</label>
-                <input id="portalSheetsViewUrl" type="url" class="lookup-input" placeholder="https://docs.google.com/spreadsheets/d/..." style="width:100%;">
-                <button type="button" id="portalSheetsSaveConfig" class="primary-btn" style="align-self:flex-start;">Save &amp; Activate</button>
-                <span id="portalSheetsSaveMsg" style="font-size:0.8em; color:#38a169; display:none;">Saved! Door map will sync on next render.</span>
-              </div>
-              <hr style="border:none; border-top:1px solid var(--border,#e2e8f0); margin:14px 0;">
-              <div style="font-weight:700; margin-bottom:8px;">Paste this script into Apps Script:</div>
-              <div style="position:relative;">
-                <button type="button" id="portalSheetsScriptCopyBtn" class="secondary-btn sheets-script-copy">Copy</button>
-                <pre class="sheets-script-block" id="portalSheetsScriptBlock"></pre>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Area Breakdown view -->
-        <section id="portalAreaView" style="display:none; margin-top:10px;">
-          <div class="dms-scorecard" id="portalScorecardAreas"></div>
-          <div class="area-grid" id="portalAreaGrid"></div>
-        </section>
-
-        <!-- Cold vs Dry zones view -->
-        <section id="portalZonesView" style="margin-top:10px;">
-          <div class="portal-vendor-toolbar">
-            <div class="table-title">Shift Completion &amp; Performance by Zone</div>
-            <span id="portalZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
-            <span class="door-sortbox" title="Sorts every zone's door map (shared with the Door Map tab)"><label for="portalZonesSort">Sort doors by</label>
-              <select id="portalZonesSort" class="door-sort-select" aria-label="Sort the zone door maps"></select>
-              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
-          </div>
-          <div class="zone-building" id="portalZonesBuilding"></div>
-          <div class="zone-grid" id="portalZonesGrid"></div>
-          <div class="zone-foot" id="portalZonesFoot"></div>
-        </section>
-
-        <!-- Vendor Performance History view -->
-        <section id="portalVendorView" style="display:none; margin-top:10px;">
-          <div class="portal-vendor-toolbar">
-            <div class="table-title">Vendor Turn-Time History</div>
-            <button type="button" id="portalVendorRefreshBtn" class="portal-ctrl-btn" style="font-size:0.82em;">&#x21BB; Refresh</button>
-            <span id="portalVendorMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
-          </div>
-          <div class="vendor-grid" id="portalVendorGrid">
-            <div style="color:var(--muted,#718096); font-size:0.85em; padding:12px 0;">Click Refresh to load vendor data.</div>
-          </div>
-        </section>
-
         <!-- End-of-shift report modal -->
         <div class="report-modal-overlay" id="portalReportModal" style="display:none;">
           <div class="report-modal">
@@ -7337,6 +7358,123 @@
           </div>
         </div>
         <div class="mn-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <div class="portal-zone-label">Drill-down views</div>
+        <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
+          <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
+          <button type="button" class="portal-view-btn" data-view="board">Board</button>
+          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
+          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
+          <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
+          <button type="button" class="portal-view-btn" data-view="performance" id="portalMnPerfBtn" title="Performance by Name: how each unloader is doing against the team">Performance</button>
+          <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalMnChatBadge" style="display:none;">0</span></button>
+          <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
+        </div>
+
+        <!-- Team chat: shared across everyone signed in to Minnesota My Portal -->
+        <section id="portalMnChatView" style="display:none; margin-top:10px;">
+          <div class="portal-chat-panel">
+            <div class="portal-chat-log" id="portalMnChatLog"><div class="door-empty">Loading chat...</div></div>
+            <div class="portal-chat-input-row">
+              <input id="portalMnChatInput" type="text" class="lookup-input" placeholder="Message the shift..." maxlength="1000" autocomplete="off">
+              <button type="button" id="portalMnChatSendBtn" class="file-button primary">Send</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Area breakdown view (Minnesota) -->
+        <section id="portalMnAreaView" style="display:none; margin-top:10px;">
+          <div class="dms-scorecard" id="portalMnScorecardAreas"></div>
+          <div class="area-grid" id="portalMnAreaGrid"></div>
+        </section>
+
+        <!-- Cold vs Dry zones view (Minnesota) -->
+        <section id="portalMnZonesView" style="margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Shift Completion &amp; Performance by Zone</div>
+            <span id="portalMnZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+            <span class="door-sortbox" title="Sorts every zone's door map (shared with the Door Map tab)"><label for="portalMnZonesSort">Sort doors by</label>
+              <select id="portalMnZonesSort" class="door-sort-select" aria-label="Sort the zone door maps"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
+          </div>
+          <div class="zone-building" id="portalMnZonesBuilding"></div>
+          <div class="zone-grid" id="portalMnZonesGrid"></div>
+          <div class="zone-foot" id="portalMnZonesFoot"></div>
+        </section>
+
+        <!-- Vendor Performance History view (Minnesota) -->
+        <section id="portalMnVendorView" style="display:none; margin-top:10px;">
+          <div class="portal-vendor-toolbar">
+            <div class="table-title">Vendor Turn-Time History</div>
+            <button type="button" id="portalMnVendorRefreshBtn" class="portal-ctrl-btn" style="font-size:0.82em;">&#x21BB; Refresh</button>
+            <button type="button" id="portalMnVendorBackfillBtn" class="portal-ctrl-btn" style="font-size:0.82em;" title="Fill the history from the last 7 days of Minnesota DMS shifts">Load last 7 days</button>
+            <span id="portalMnVendorMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
+          </div>
+          <div class="vendor-grid" id="portalMnVendorGrid">
+            <div style="color:var(--muted,#718096); font-size:0.85em; padding:12px 0;">Click Refresh to load vendor data.</div>
+          </div>
+        </section>
+
+        <section id="portalMnClientView" style="display:none; margin-top:10px;">
+          <div class="portal-client-panel">
+            <div class="portal-client-head">
+              <div>
+                <div class="portal-client-title">Supervisor View</div>
+                <div class="portal-client-sub">Clean manager view with totals, risks, late trucks, and projected finish.</div>
+              </div>
+            </div>
+            <div class="portal-client-grid">
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewScheduled">0</div><div class="lbl">Scheduled</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewArrived">0</div><div class="lbl">Arrived</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewDone">0</div><div class="lbl">Done</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewOpen">0</div><div class="lbl">Open</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewRisk">0</div><div class="lbl">Needs Attention</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewLate">0</div><div class="lbl">Late / No-show</div></div>
+              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewProjected">--</div><div class="lbl">Projected Finish</div></div>
+            </div>
+            <div class="portal-client-message" id="portalMnClientViewMessage">Waiting for live data.</div>
+          </div>
+        </section>
+
+        <section id="portalMnBoardView" style="display:none; margin-top:10px;">
+          <section class="table-wrap" aria-labelledby="portalMnBoardTitle">
+            <div class="table-toolbar">
+              <div>
+                <div class="table-title" id="portalMnBoardTitle">Minnesota Live Dock Board</div>
+                <div class="table-meta" id="portalMnBoardMeta">Sync Minnesota DMS to load trucks.</div>
+              </div>
+            </div>
+            <div class="table-scroller">
+              <table id="portalMnBoard">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="portalMnDoorView" style="display:none; margin-top:10px;">
+          <div class="door-range-row">
+            <label for="portalMnDoorRange">Doors on dock</label>
+            <input id="portalMnDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = default 1-120)" autocomplete="off" style="max-width:260px;">
+            <span class="door-range-hint">Based on the door zones seen in Minnesota's DMS ranged report.</span>
+          </div>
+          <div class="door-controls">
+            <span class="door-sortbox"><label for="portalMnDoorSort">Sort by</label>
+              <select id="portalMnDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
+              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
+            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red. Nothing is flagged before 10 PM; trucks that got here earlier are counted from 10 PM.">Not started: yellow after
+              <input id="portalMnNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
+              <input id="portalMnNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
+              <select id="portalMnNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
+                <option value="clerk">5 minutes before the clerk check-in</option>
+                <option value="ready">the later of door arrival and appointment</option>
+                <option value="door">driver at the door</option>
+              </select></span>
+          </div>
+          <div class="door-sort-note" id="portalMnDoorSortNote"></div>
+          <div class="dms-scorecard" id="portalMnScorecardDoors"></div>
+          <div class="door-map" id="portalMnDoorMap"></div>
+        </section>
         <div class="mn-portal-grid">
           <article class="metric-card" data-accent="blue">
             <div class="metric-label">Scheduled</div>
@@ -7521,123 +7659,6 @@
           </div>
         </div>
 
-        <div class="portal-zone-label">Drill-down views</div>
-        <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
-          <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
-          <button type="button" class="portal-view-btn" data-view="board">Board</button>
-          <button type="button" class="portal-view-btn" data-view="doors">Door Map</button>
-          <button type="button" class="portal-view-btn" data-view="areas">Areas</button>
-          <button type="button" class="portal-view-btn" data-view="vendors">Vendors</button>
-          <button type="button" class="portal-view-btn" data-view="performance" id="portalMnPerfBtn" title="Performance by Name: how each unloader is doing against the team">Performance</button>
-          <button type="button" class="portal-view-btn" data-view="chat">Team Chat<span class="chat-unread-badge" id="portalMnChatBadge" style="display:none;">0</span></button>
-          <button type="button" class="portal-view-btn" data-view="client">Supervisor View</button>
-        </div>
-
-        <!-- Team chat: shared across everyone signed in to Minnesota My Portal -->
-        <section id="portalMnChatView" style="display:none; margin-top:10px;">
-          <div class="portal-chat-panel">
-            <div class="portal-chat-log" id="portalMnChatLog"><div class="door-empty">Loading chat...</div></div>
-            <div class="portal-chat-input-row">
-              <input id="portalMnChatInput" type="text" class="lookup-input" placeholder="Message the shift..." maxlength="1000" autocomplete="off">
-              <button type="button" id="portalMnChatSendBtn" class="file-button primary">Send</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- Area breakdown view (Minnesota) -->
-        <section id="portalMnAreaView" style="display:none; margin-top:10px;">
-          <div class="dms-scorecard" id="portalMnScorecardAreas"></div>
-          <div class="area-grid" id="portalMnAreaGrid"></div>
-        </section>
-
-        <!-- Cold vs Dry zones view (Minnesota) -->
-        <section id="portalMnZonesView" style="margin-top:10px;">
-          <div class="portal-vendor-toolbar">
-            <div class="table-title">Shift Completion &amp; Performance by Zone</div>
-            <span id="portalMnZonesMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
-            <span class="door-sortbox" title="Sorts every zone's door map (shared with the Door Map tab)"><label for="portalMnZonesSort">Sort doors by</label>
-              <select id="portalMnZonesSort" class="door-sort-select" aria-label="Sort the zone door maps"></select>
-              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
-          </div>
-          <div class="zone-building" id="portalMnZonesBuilding"></div>
-          <div class="zone-grid" id="portalMnZonesGrid"></div>
-          <div class="zone-foot" id="portalMnZonesFoot"></div>
-        </section>
-
-        <!-- Vendor Performance History view (Minnesota) -->
-        <section id="portalMnVendorView" style="display:none; margin-top:10px;">
-          <div class="portal-vendor-toolbar">
-            <div class="table-title">Vendor Turn-Time History</div>
-            <button type="button" id="portalMnVendorRefreshBtn" class="portal-ctrl-btn" style="font-size:0.82em;">&#x21BB; Refresh</button>
-            <button type="button" id="portalMnVendorBackfillBtn" class="portal-ctrl-btn" style="font-size:0.82em;" title="Fill the history from the last 7 days of Minnesota DMS shifts">Load last 7 days</button>
-            <span id="portalMnVendorMeta" style="font-size:0.78em; color:var(--muted,#718096);"></span>
-          </div>
-          <div class="vendor-grid" id="portalMnVendorGrid">
-            <div style="color:var(--muted,#718096); font-size:0.85em; padding:12px 0;">Click Refresh to load vendor data.</div>
-          </div>
-        </section>
-
-        <section id="portalMnClientView" style="display:none; margin-top:10px;">
-          <div class="portal-client-panel">
-            <div class="portal-client-head">
-              <div>
-                <div class="portal-client-title">Supervisor View</div>
-                <div class="portal-client-sub">Clean manager view with totals, risks, late trucks, and projected finish.</div>
-              </div>
-            </div>
-            <div class="portal-client-grid">
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewScheduled">0</div><div class="lbl">Scheduled</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewArrived">0</div><div class="lbl">Arrived</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewDone">0</div><div class="lbl">Done</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewOpen">0</div><div class="lbl">Open</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewRisk">0</div><div class="lbl">Needs Attention</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewLate">0</div><div class="lbl">Late / No-show</div></div>
-              <div class="portal-client-kpi"><div class="val" id="portalMnClientViewProjected">--</div><div class="lbl">Projected Finish</div></div>
-            </div>
-            <div class="portal-client-message" id="portalMnClientViewMessage">Waiting for live data.</div>
-          </div>
-        </section>
-
-        <section id="portalMnBoardView" style="display:none; margin-top:10px;">
-          <section class="table-wrap" aria-labelledby="portalMnBoardTitle">
-            <div class="table-toolbar">
-              <div>
-                <div class="table-title" id="portalMnBoardTitle">Minnesota Live Dock Board</div>
-                <div class="table-meta" id="portalMnBoardMeta">Sync Minnesota DMS to load trucks.</div>
-              </div>
-            </div>
-            <div class="table-scroller">
-              <table id="portalMnBoard">
-                <thead></thead>
-                <tbody></tbody>
-              </table>
-            </div>
-          </section>
-        </section>
-
-        <section id="portalMnDoorView" style="display:none; margin-top:10px;">
-          <div class="door-range-row">
-            <label for="portalMnDoorRange">Doors on dock</label>
-            <input id="portalMnDoorRange" type="text" class="lookup-input" placeholder="e.g. 1-120 (blank = default 1-120)" autocomplete="off" style="max-width:260px;">
-            <span class="door-range-hint">Based on the door zones seen in Minnesota's DMS ranged report.</span>
-          </div>
-          <div class="door-controls">
-            <span class="door-sortbox"><label for="portalMnDoorSort">Sort by</label>
-              <select id="portalMnDoorSort" class="door-sort-select" aria-label="Sort the door map"></select>
-              <button type="button" class="door-sort-rev portal-ctrl-btn" aria-pressed="false" title="Reverse the order">&#x21C5; Reverse</button></span>
-            <span class="door-ns-set" title="How long a truck at the door can wait to start unloading before its door turns yellow, then red. Nothing is flagged before 10 PM; trucks that got here earlier are counted from 10 PM.">Not started: yellow after
-              <input id="portalMnNsYellow" type="number" min="1" max="240" value="15" aria-label="Minutes before a door turns yellow"> min, red after
-              <input id="portalMnNsRed" type="number" min="2" max="480" value="30" aria-label="Minutes before a door turns red"> min, counted from
-              <select id="portalMnNsClock" aria-label="Where the not-started clock begins" style="padding:4px 6px;border:1px solid var(--border,#cbd5e0);border-radius:6px;background:transparent;color:inherit;font:inherit;">
-                <option value="clerk">5 minutes before the clerk check-in</option>
-                <option value="ready">the later of door arrival and appointment</option>
-                <option value="door">driver at the door</option>
-              </select></span>
-          </div>
-          <div class="door-sort-note" id="portalMnDoorSortNote"></div>
-          <div class="dms-scorecard" id="portalMnScorecardDoors"></div>
-          <div class="door-map" id="portalMnDoorMap"></div>
-        </section>
       </section>
 
       <section id="mnScheduleUploaderPanel" class="tab-panel" aria-label="Minnesota Schedule Uploader">
@@ -10590,7 +10611,7 @@
         { title: "New Zones tab", before: function() { portalSetView("zones"); }, target: function() { return document.querySelector('#portalViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load / Plants</b> (plant loads count with the dry zone). Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-eta"),
-          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. When a zone is done, its big number says <b>Finished</b> with the time its last truck finished unloading. It is a guide, not a promise: usually within about an hour." },
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 4:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. When a zone is done, its big number says <b>Finished</b> with the time its last truck finished unloading, and the line under it says how that sits against the goal (a zone that finished late turns yellow or red instead of staying green). It is a guide, not a promise: usually within about an hour." },
         { title: "On track, running late, behind", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-status"),
           body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 20 minutes past the goal, and <b>red</b> when it is more than 20 minutes past. The <b>whole zone</b> takes the same colour (light green, yellow or red) from 10 PM on. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
         { title: "Started and finished percentages", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-pcts"),
@@ -10639,7 +10660,7 @@
         { title: "New Zones tab", before: function() { portalMnSetView("zones"); }, target: function() { return document.querySelector('#portalMnViewSwitch .portal-view-btn[data-view="zones"]'); },
           body: "<b>Zones</b> splits tonight into three groups: <b>Freezer</b>, <b>Cooler / Fresh Meat / Produce</b>, and <b>Dry / Slip Sheet / Floor Load / Plants</b> (plant loads count with the dry zone). Each one gets its own card with progress, an estimated finish, its own door map, and an area-by-area table." },
         { title: "Estimated finish: building and each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-eta"),
-          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. When a zone is done, its big number says <b>Finished</b> with the time its last truck finished unloading. It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
+          body: "Every zone card shows a big <b>Estimated Finish</b>, with how it sits against the 5:00 AM goal (early, close, or late). The <b>whole building</b> estimate is in the strip above the cards. It is simply the <b>latest of the zone estimates</b> (the building is done when its last zone is), rounded to 5 minutes. When a zone is done, its big number says <b>Finished</b> with the time its last truck finished unloading, and the line under it says how that sits against the goal (a zone that finished late turns yellow or red instead of staying green). It is a guide, not a promise: usually within about 30 to 45 minutes, and it tends to run a little early." },
         { title: "On track, running late, behind", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-status"),
           body: "Under each zone's name, a chip says how its pace compares with a <b>usual night</b> at this time. <b>Green</b> is usual pace or faster. Slower than usual shows <b>grey</b> while the zone is still on track for the goal, <b>yellow</b> when its estimated finish is 5 to 20 minutes past the goal, and <b>red</b> when it is more than 20 minutes past. The <b>whole zone</b> takes the same colour (light green, yellow or red) from 10 PM on. The line under the Estimated Finish says it plainly: <b>On track</b>, <b>Running late</b> or <b>Behind</b>, with how far from the goal. Alerts and notifications fire when a zone is <b>projected past the goal</b> for 5 minutes, from 10 PM on." },
         { title: "Started and finished percentages", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-pcts"),
@@ -18899,6 +18920,14 @@
     // Where a projected finish sits against the goal: "ok" is before the goal or within 5 minutes after it, "close" is 5 to 20
     // minutes past, "late" is more than 20. `d` is minutes past the goal (negative = before). This, not the pace chip, says
     // whether a zone is in trouble.
+    // Where an ACTUAL finish time sits against the goal: exact minutes (an estimate is rounded to 5 minutes, a real time is not), same
+    // thresholds as portalGoalVerdict (before the goal or under 5 minutes past is ok, 5 to 20 past is close, more than 20 past is late).
+    function portalFinishedVerdict(finishedMs, site) {
+      const goal = portalSiteGoalMs(site);
+      if (!goal || !finishedMs) return null;
+      const d = Math.round((finishedMs - goal) / 60000);
+      return { d: d, level: d > 20 ? "late" : d >= 5 ? "close" : "ok" };
+    }
     function portalGoalVerdict(estMs, site) {
       const goal = portalSiteGoalMs(site);
       if (!goal || !estMs) return null;
@@ -18939,9 +18968,20 @@
     function portalZoneEtaHtml(r, site) {
       if (!r) return "";
       if (r.status === "done") {
-        // the zone is done: say when its last truck finished unloading, right beside the word
+        // the zone is done: the big line says when its last truck finished unloading, right beside the word, and the line under it says
+        // how that sits against the goal (the same style as the estimate it replaces)
         const at = r.finishedMs ? '<span class="zone-eta-at" title="When the last truck in this zone finished unloading">' + escapeHtml(portalFinishClock(r.finishedMs)) + '</span>' : "";
-        return '<div class="zone-eta done"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">Finished' + (at ? " " + at : "") + '</div></div>';
+        const fv = portalFinishedVerdict(r.finishedMs, site);
+        const goalText = portalSiteGoalText(site);
+        let delta = "", cls = "early";
+        if (fv) {
+          const d = fv.d;
+          if (Math.abs(d) < 5) delta = "Right at the " + goalText + " goal";
+          else if (d < 0) delta = portalZoneFmtMin(-d) + " before the " + goalText + " goal";
+          else { delta = portalZoneFmtMin(d) + " past the " + goalText + " goal"; cls = d <= 20 ? "close" : "late"; }
+        }
+        return '<div class="zone-eta done"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">Finished' + (at ? " " + at : "") + '</div>'
+          + (delta ? '<div class="zone-eta-delta ' + cls + '">' + escapeHtml(delta) + '</div>' : '') + '</div>';
       }
       const p = portalEtaParts(r.estMs, site);
       return '<div class="zone-eta"><div class="zone-eta-label">Estimated finish</div><div class="zone-eta-time">' + escapeHtml(p.time) + '</div>'
@@ -19081,7 +19121,8 @@
         // The whole card takes the colour of where the zone will finish against the goal (light green / yellow / red), from 10 PM
         // like the alerts; before that the estimate is too rough to colour anything, and a finished zone is green.
         const goalV = zr && zr.status !== "early" && zr.status !== "done" ? portalGoalVerdict(zr.estMs, site) : null;
-        const goalLevel = zr && zr.status === "done" ? "ok" : goalV ? goalV.level : "none";
+        const doneV = zr && zr.status === "done" && zr.finishedMs ? portalFinishedVerdict(zr.finishedMs, site) : null;
+        const goalLevel = zr && zr.status === "done" ? (doneV ? doneV.level : "ok") : goalV ? goalV.level : "none";
         return '<article class="zone-card zs-' + info.cls + ' zv-' + goalLevel + '">'
           + '<div class="zone-head"><h3>' + escapeHtml(g.def.title) + '</h3></div>'
           + (info.label ? '<div class="zone-status"><span class="zone-chip ' + info.cls + '">' + escapeHtml(info.label) + '</span></div>' : '')
@@ -25183,6 +25224,48 @@
       return m < 60 ? m + " min" : Math.floor(m / 60) + "h " + String(m % 60).padStart(2, "0") + "m";
     }
 
+    // Downtime (left) and active unload time (right) for each person on one shared minutes scale, most active first.
+    function renderUnloaderBalance(people, data) {
+      const list = document.getElementById("unloaderPerfBalanceList"), kicker = document.getElementById("unloaderPerfBalanceKicker");
+      if (!list) return;
+      list.innerHTML = "";
+      const rows = people.filter(function(p) { return p.avg_unload_min != null || p.avg_gap_min != null; }).map(function(p) {
+        const act = p.avg_unload_min, idle = p.avg_gap_min;
+        return { p: p, act: act, idle: idle, share: act != null && idle != null && act + idle > 0 ? act / (act + idle) : null };
+      });
+      if (!rows.length) {
+        list.appendChild(emptySmall("Needs finished unloads (unload start and finish in DMS)."));
+        if (kicker) kicker.textContent = "";
+        return;
+      }
+      rows.sort(function(a, b) {
+        return (b.share == null ? -1 : b.share) - (a.share == null ? -1 : a.share)
+          || (a.act == null ? 1e9 : a.act) - (b.act == null ? 1e9 : b.act) || a.p.name.localeCompare(b.p.name);
+      });
+      if (kicker) kicker.textContent = "Most active first | gaps up to " + data.max_gap + " min";
+      const max = Math.max.apply(null, rows.map(function(r) { return Math.max(r.act || 0, r.idle || 0); }).concat([1]));
+      const width = function(v) { return v == null ? 0 : Math.max(2, Math.round(v / max * 66)); };   // percent of one half, leaving room for the label
+      rows.forEach(function(r) {
+        const p = r.p, row = document.createElement("div");
+        row.className = "bal-row";
+        const bits = [];
+        bits.push(p.timed_loads + " timed load" + (p.timed_loads === 1 ? "" : "s"));
+        if (p.gap_count) bits.push(p.gap_count + " gap" + (p.gap_count === 1 ? "" : "s"));
+        if (p.idle_pct != null) bits.push(p.idle_pct + "% idle");
+        if (p.longest_gap_min != null) bits.push("longest gap " + unloaderFmtMinutes(p.longest_gap_min));
+        if (p.long_gaps) bits.push(p.long_gaps + " long gap" + (p.long_gaps === 1 ? "" : "s") + " skipped");
+        if (p.timed_loads < 5 || (p.gap_count && p.gap_count < 5)) bits.push("small sample");
+        row.innerHTML = '<div class="bal-top"><div><div class="dock-name">' + escapeHtml(p.name) + '</div><div class="dock-meta">' + escapeHtml(bits.join(" | ")) + '</div></div>'
+          + (r.share != null ? '<span class="bal-pill" title="Unload time divided by unload time plus downtime">' + Math.round(r.share * 100) + '% active</span>' : '') + '</div>'
+          + '<div class="bal-chart">'
+          + '<div class="bal-half left">' + (r.idle != null ? '<span class="bal-bar" style="width:' + width(r.idle) + '%"></span><span class="bal-val">' + escapeHtml(unloaderFmtMinutes(r.idle)) + '</span>' : '<span class="bal-empty">no gaps yet</span>') + '</div>'
+          + '<div class="bal-axis"></div>'
+          + '<div class="bal-half right">' + (r.act != null ? '<span class="bal-bar" style="width:' + width(r.act) + '%"></span><span class="bal-val">' + escapeHtml(unloaderFmtMinutes(r.act)) + '</span>' : '<span class="bal-empty">no timed loads</span>') + '</div>'
+          + '</div>';
+        list.appendChild(row);
+      });
+    }
+
     function unloaderRenderBars(listEl, kickerEl, items, opts) {
       listEl.innerHTML = "";
       if (!items.length) {
@@ -25392,25 +25475,7 @@
               .map(function(p) { return { label: p.name, value: p.pallets_per_hour, count: p.pallets_per_hour + " plt/hr", meta: p.timed_loads + " timed load" + (p.timed_loads === 1 ? "" : "s") + (p.timed_loads < 5 ? " · small sample" : "") }; }),
             { empty: "Needs finished unloads with a pallet count.", kicker: "Fastest first" });
 
-          unloaderRenderBars(document.getElementById("unloaderPerfTimeList"), document.getElementById("unloaderPerfTimeKicker"),
-            people.filter(function(p) { return p.avg_unload_min != null; })
-              .sort(function(a, b) { return a.avg_unload_min - b.avg_unload_min; })
-              .map(function(p) { return { label: p.name, value: p.avg_unload_min, count: unloaderFmtMinutes(p.avg_unload_min), meta: p.timed_loads + " timed load" + (p.timed_loads === 1 ? "" : "s") + (p.timed_loads < 5 ? " · small sample" : "") }; }),
-            { empty: "Needs finished unloads (unload start and finish in DMS).", kicker: "Quickest first" });
-
-          unloaderRenderBars(document.getElementById("unloaderPerfGapList"), document.getElementById("unloaderPerfGapKicker"),
-            people.filter(function(p) { return p.avg_gap_min != null; })
-              .sort(function(a, b) { return a.avg_gap_min - b.avg_gap_min; })
-              .map(function(p) {
-                return {
-                  label: p.name, value: Math.max(p.avg_gap_min, 0.5), count: unloaderFmtMinutes(p.avg_gap_min) + " avg",
-                  meta: p.gap_count + " gap" + (p.gap_count === 1 ? "" : "s") + " · " + (p.idle_pct != null ? p.idle_pct + "% idle · " : "")
-                    + "longest " + unloaderFmtMinutes(p.longest_gap_min)
-                    + (p.long_gaps ? " · " + p.long_gaps + " long gap" + (p.long_gaps === 1 ? "" : "s") + " skipped" : "")
-                    + (p.gap_count < 5 ? " · small sample" : "")
-                };
-              }),
-            { empty: "Needs a named associate with two or more finished unloads in the same night.", kicker: "Least downtime first · gaps up to " + data.max_gap + " min" });
+          renderUnloaderBalance(people, data);
 
           const daily = (data.daily || []).slice().reverse().slice(0, 14);
           unloaderRenderBars(document.getElementById("unloaderPerfDailyList"), document.getElementById("unloaderPerfDailyKicker"),
