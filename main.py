@@ -3972,6 +3972,35 @@ _PERF_ZONES = [
              "plant", "plants", "plants flowers", "cold plant", "cold plants", "plant load", "plant loads", "floral", "flowers")),
 ]
 _PERF_MIN_SAMPLE = 5                    # finished loads / gaps needed before a measure is rated
+
+# The unloader pace target (user, 2026-10-03): 2 trucks per hour. A person's trucks per hour is their finished, timed loads divided by
+# the hours they were on the clock: unload time plus the idle gaps up to the page's break cutoff (a longer gap is a break and is left
+# out), summed over the nights shown. Fewer than _TPH_MIN_LOADS loads is too few to judge. Hitting the target is an A.
+# UNLOADER_TARGET_TRUCKS_PER_HOUR (Railway variable) changes the target without a code change.
+try:
+    _UNLOADER_TARGET_TPH = float(os.environ.get("UNLOADER_TARGET_TRUCKS_PER_HOUR", "2"))
+except ValueError:
+    _UNLOADER_TARGET_TPH = 2.0
+if _UNLOADER_TARGET_TPH <= 0:
+    _UNLOADER_TARGET_TPH = 2.0
+_TPH_MIN_LOADS = 3
+_TPH_GRADES = ((1.00, "A", "green"), (0.90, "B", "even"), (0.80, "C", "yellow"), (0.70, "D", "red"), (0.0, "F", "red"))   # share of the target
+
+
+def _target_grade(tph: Optional[float]) -> Optional[Dict[str, Any]]:
+    """How a trucks-per-hour figure sits against the target: percent of target, letter and colour band."""
+    if tph is None:
+        return None
+    ratio = tph / _UNLOADER_TARGET_TPH
+    for floor, letter, band in _TPH_GRADES:
+        if ratio + 1e-9 >= floor:
+            return {"per_hour": _UNLOADER_TARGET_TPH, "pct": int(100 * ratio + 1e-9), "letter": letter, "band": band}   # rounded down, so 100% always means an A
+    return None
+
+
+def _target_info() -> Dict[str, Any]:
+    return {"trucks_per_hour": _UNLOADER_TARGET_TPH, "min_loads": _TPH_MIN_LOADS,
+            "grades": [{"letter": g[1], "min_pct": round(g[0] * 100)} for g in _TPH_GRADES]}
 _PERF_RATIO_CAP = (0.25, 2.0)           # one wild measure cannot swamp the overall score
 
 
@@ -4099,6 +4128,7 @@ def _unloader_people(rows: List[Any], accept: Callable[[str], bool], max_gap: in
             "name": name, "loads": 0, "pallets": 0, "timed_loads": 0, "timed_pallets": 0,
             "unload_min_total": 0.0, "dates": set(), "areas": {},
             "gap_total": 0.0, "gap_count": 0, "gap_longest": 0.0, "long_gaps": 0, "gap_work_min": 0.0,
+            "clock_min": 0.0, "clock_loads": 0,      # time on the clock and the timed loads in it, for trucks per hour
             "zp": {}, "zt": {},     # per-zone sums for the team comparison: pallets/hours and loads/minutes
             "items": [],            # every named load (night, start, finish, pallets, area) for the report's timeline
         })
@@ -4133,15 +4163,19 @@ def _unloader_people(rows: List[Any], accept: Callable[[str], bool], max_gap: in
         p["last_finish"] = max(s[1] for s in items).isoformat()
         latest_finish = items[0][1]
         p["gap_work_min"] += items[0][2]
+        p["clock_loads"] += len(items)
+        p["clock_min"] += max(0.0, (items[0][1] - items[0][0]).total_seconds() / 60)
         for start, finish, mins in items[1:]:
             gap = max(0.0, (start - latest_finish).total_seconds() / 60)
             if gap > max_gap:
                 p["long_gaps"] += 1
+                p["clock_min"] += max(0.0, (finish - start).total_seconds() / 60)          # a break: only the unload itself is on the clock
             else:
                 p["gap_total"] += gap
                 p["gap_count"] += 1
                 p["gap_longest"] = max(p["gap_longest"], gap)
                 p["gap_work_min"] += mins
+                p["clock_min"] += max(0.0, (finish - latest_finish).total_seconds() / 60)  # the idle gap plus the unload, overlap counted once
             latest_finish = max(latest_finish, finish)
 
     return people, daily
@@ -4151,8 +4185,14 @@ def _unloader_row(p: Dict[str, Any], rating: Optional[Dict[str, Any]] = None) ->
     timed = p["timed_loads"]
     hours = p["unload_min_total"] / 60
     gaps = p["gap_count"]
+    clock_hours = p["clock_min"] / 60
+    tph = p["clock_loads"] / clock_hours if p["clock_loads"] >= _TPH_MIN_LOADS and clock_hours > 0 else None
     return {
         "rating": rating,
+        "clock_loads": p["clock_loads"],
+        "clock_hours": round(clock_hours, 2),
+        "trucks_per_hour": round(tph, 2) if tph is not None else None,
+        "target": _target_grade(tph),
         "name": p["name"],
         "loads": p["loads"],
         "pallets": p["pallets"],
@@ -4228,10 +4268,16 @@ def get_unloader_performance(days: int = 30, max_gap: int = 60, site: str = "OKS
     comparison = _unloader_ratings(people)
     out = [_unloader_row(p, comparison["people"][p["name"]]) for p in people.values()]
     out.sort(key=lambda x: (-x["loads"], x["name"].lower()))
+    team_loads_clock = sum(p["clock_loads"] for p in people.values())
+    team_hours_clock = sum(p["clock_min"] for p in people.values()) / 60
+    team_tph = team_loads_clock / team_hours_clock if team_loads_clock >= _TPH_MIN_LOADS and team_hours_clock > 0 else None
     return {
         "ok": True,
         "days": days,
         "max_gap": max_gap,
+        "target": _target_info(),
+        "team_trucks_per_hour": round(team_tph, 2) if team_tph is not None else None,
+        "team_target": _target_grade(team_tph),
         "team": comparison["team"],
         "people": out,
         "daily": [{"date": d, "counts": c} for d, c in sorted(daily.items())],
@@ -4351,6 +4397,10 @@ def _report_unloaders(info: str, previous_infos: List[str], site: str = "OKS") -
         "avg_unload_min": round(sum(p["unload_min_total"] for p in tonight.values()) / timed, 1) if timed else None,
         "avg_gap_min": round(sum(p["gap_total"] for p in tonight.values()) / gap_n, 1) if gap_n else None,
     }
+    t_loads = sum(p["clock_loads"] for p in tonight.values())
+    t_hours = sum(p["clock_min"] for p in tonight.values()) / 60
+    team["trucks_per_hour"] = round(t_loads / t_hours, 2) if t_loads >= _TPH_MIN_LOADS and t_hours > 0 else None
+    team["target"] = _target_grade(team["trucks_per_hour"])
     start_dt = _sr.shift_start(info, DMS_BUSINESS_TZ)
 
     def after_start(iso_text: Optional[str]) -> Optional[float]:
@@ -4409,19 +4459,20 @@ def _report_unloaders(info: str, previous_infos: List[str], site: str = "OKS") -
             if q:
                 qr = _unloader_row(q)
                 row["history"].append({"date": iso, "loads": qr["loads"], "pallets": qr["pallets"], "pallets_per_hour": qr["pallets_per_hour"],
-                                       "avg_unload_min": qr["avg_unload_min"], "avg_gap_min": qr["avg_gap_min"]})
+                                       "avg_unload_min": qr["avg_unload_min"], "avg_gap_min": qr["avg_gap_min"], "trucks_per_hour": qr["trucks_per_hour"]})
         e = earlier.get(name)
         if e:
             er = _unloader_row(e)
             row["earlier"] = {
                 "nights": er["days_worked"], "loads_per_night": round(er["loads"] / er["days_worked"], 1) if er["days_worked"] else None,
                 "pallets_per_hour": er["pallets_per_hour"], "avg_unload_min": er["avg_unload_min"], "avg_gap_min": er["avg_gap_min"],
+                "trucks_per_hour": er["trucks_per_hour"],
             }
         else:
             row["earlier"] = None
         people.append(row)
     people.sort(key=lambda x: (-x["loads"], x["name"].lower()))
-    return {"team": team, "people": people}
+    return {"team": team, "people": people, "target": _target_info()}
 
 
 @app.get("/api/portal/shift-report")

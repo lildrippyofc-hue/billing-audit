@@ -12,7 +12,7 @@ field so old cached nights are rebuilt instead of showing gaps.
 from datetime import datetime, time, timedelta, timezone
 from typing import Any, Callable, Dict, List, Optional
 
-SUMMARY_VERSION = 3
+SUMMARY_VERSION = 4
 
 STEP_MIN = 15
 STEPS = 57                 # 7 PM .. 9 AM inclusive, in 15-minute steps
@@ -22,6 +22,47 @@ UNLOAD_CAP_MIN = 480       # an unload longer than this is a stamping error, not
 DOCK_CAP_MIN = 720
 OVER_MIN = 120             # "over 2 hours on the dock" (the default free time)
 LONG_UNLOAD_MIN = 45       # an unload longer than this is flagged "unloading over 45 min" on the live Zones screen
+
+# Zone grade (user, 2026-10-03: "I also want scorecard grades"): a 100-point score per zone and night, worked out from five measured
+# things so every point can be explained. The rubric is mine, not the user's: change these numbers to change the grading.
+#   finish   40  full marks at or before the goal; lose 1 point for every 2 minutes the zone's 95%-done time is past it (0 at 80 min past)
+#   by_goal  25  the share of trucks that arrived and were finished by the goal, times 25
+#   waiting  15  15 minus the share of trucks that waited over 30 minutes to start once they were READY, times 15 (ready = the later of
+#                check-in and the DMS appointment time, so a truck that came early and sat before its appointment is not held against the zone)
+#   speed    10  10 minus the share of timed unloads that ran over 45 minutes, times 10
+#   dock     10  10 minus the share of finished trucks that spent over 2 hours on the dock, times 10
+# Letter: A 90+, B 80+, C 70+, D 60+, otherwise F. A zone needs 3 finished trucks to be graded.
+GRADE_MAX = {"finish": 40, "by_goal": 25, "waiting": 15, "speed": 10, "dock": 10}
+GRADE_LATE_LOSS_PER_MIN = 0.5
+GRADE_MIN_FINISHED = 3
+GRADE_LETTERS = ((90, "A"), (80, "B"), (70, "C"), (60, "D"))
+
+
+def grade_letter(score: float) -> str:
+    for floor, letter in GRADE_LETTERS:
+        if score >= floor:
+            return letter
+    return "F"
+
+
+def zone_grade(block: Dict[str, Any], goal_min: int) -> Optional[Dict[str, Any]]:
+    """Score and letter for one zone's night from its block (see the rubric above), or None when too few trucks finished."""
+    if block["completed"] < GRADE_MIN_FINISHED or block.get("p95_finish_min") is None:
+        return None
+    past = block["p95_finish_min"] - goal_min
+    timed, done, ready_n = block["timed_unloads"], block["completed"], block["ready_wait_n"]
+    share = lambda n, d: min(1.0, n / d) if d else 0.0
+    parts = [
+        {"key": "finish", "max": GRADE_MAX["finish"], "pts": max(0.0, min(40.0, 40.0 - max(0.0, past) * GRADE_LATE_LOSS_PER_MIN)), "value": _r(past)},
+        {"key": "by_goal", "max": GRADE_MAX["by_goal"], "pts": 25.0 * (block["pct_by_goal"] or 0.0) / 100.0, "value": block["pct_by_goal"]},
+        {"key": "waiting", "max": GRADE_MAX["waiting"], "pts": 15.0 * (1 - share(block["ready_waited_30"], ready_n)), "value": _r(100.0 * share(block["ready_waited_30"], ready_n))},
+        {"key": "speed", "max": GRADE_MAX["speed"], "pts": 10.0 * (1 - share(block["long_unloads"], timed)), "value": _r(100.0 * share(block["long_unloads"], timed))},
+        {"key": "dock", "max": GRADE_MAX["dock"], "pts": 10.0 * (1 - share(block["over_2h"], done)), "value": _r(100.0 * share(block["over_2h"], done))},
+    ]
+    for part in parts:
+        part["pts"] = round(part["pts"], 1)
+    score = int(sum(part["pts"] for part in parts) + 0.5 + 1e-9)          # halves round up (Python's round() would round 83.5 and 84.5 differently)
+    return {"score": score, "letter": grade_letter(score), "parts": parts}
 MIN_NIGHT_ARRIVALS = 10    # a night with fewer arrivals is treated as "no shift" and kept out of baselines
 ZONE_KEYS = ("freezer", "chilled", "dry", "other")
 
@@ -49,8 +90,8 @@ _ZONE_BASELINE_METRICS = (
     "first_arrival_min", "first_start_min", "p50_finish_min", "p90_finish_min", "p95_finish_min", "last_finish_min", "finished_by_goal", "pct_by_goal",
     "avg_unload_min", "p50_unload_min", "p90_unload_min", "max_unload_min", "long_unloads", "pph",
     "avg_wait_min", "p90_wait_min", "max_wait_min", "waited_30", "waited_60", "avg_yard_wait_min", "avg_door_wait_min",
-    "avg_dock_min", "p90_dock_min", "longest_dock_min", "over_2h", "over_3h", "avg_rec_lag_min", "rec_delays_45",
-    "on_time_pct", "early_pct", "late_pct", "avg_offset_min", "peak_on_dock", "avg_on_dock", "peak_unloading", "doors_used",
+    "avg_ready_wait_min", "ready_waited_30", "avg_dock_min", "p90_dock_min", "longest_dock_min", "over_2h", "over_3h", "avg_rec_lag_min", "rec_delays_45",
+    "on_time_pct", "early_pct", "late_pct", "avg_offset_min", "peak_on_dock", "avg_on_dock", "peak_unloading", "doors_used", "grade_score",
 )
 
 
@@ -139,6 +180,14 @@ def _zone_block(items: List[Dict[str, Any]], goal_min: int = GOAL_MIN) -> Dict[s
     dwaits = [i["dwait"] for i in items if i["dwait"] is not None]
     reclags = [i["reclag"] for i in items if i["reclag"] is not None]
     offsets = [i["offset"] for i in items if i["offset"] is not None]
+    # wait to start counted from when the truck was ready: the later of check-in and its appointment (never below zero)
+    ready_waits = []
+    for i in items:
+        if i["ci"] is not None and i["us"] is not None:
+            ready_from = max(i["ci"], i["appt"]) if i["appt"] is not None else i["ci"]
+            w = max(0.0, i["us"] - ready_from)
+            if w <= DOCK_CAP_MIN:
+                ready_waits.append(w)
     pal_h = sum(i["unload"] / 60 for i in items if i["unload"] is not None and i["pallets"])
     pal_n = sum(i["pallets"] for i in items if i["unload"] is not None and i["pallets"])
     arrived = [i for i in items if i["ci"] is not None]
@@ -211,7 +260,7 @@ def _zone_block(items: List[Dict[str, Any]], goal_min: int = GOAL_MIN) -> Dict[s
     slowest = sorted((r for r in items if r["unload"] is not None), key=lambda r: -r["unload"])[:5]
     slowest_unloads = [{"supplier": r["supplier"], "door": r["door"], "unload_min": _r(r["unload"]), "pallets": r["pallets"]} for r in slowest]
 
-    return {
+    block = {
         # volume
         "scheduled": len(items),
         "arrived": len(arr),
@@ -247,6 +296,9 @@ def _zone_block(items: List[Dict[str, Any]], goal_min: int = GOAL_MIN) -> Dict[s
         "waited_60": sum(1 for w in waits if w > 60),
         "avg_yard_wait_min": _r(_mean(yards)),
         "avg_door_wait_min": _r(_mean(dwaits)),
+        "ready_wait_n": len(ready_waits),
+        "avg_ready_wait_min": _r(_mean(ready_waits)),
+        "ready_waited_30": sum(1 for w in ready_waits if w > 30),
         # time on the dock
         "avg_dock_min": _r(_mean(docks)),
         "p90_dock_min": _r(_pct(dock_sorted, 0.9)),
@@ -282,6 +334,9 @@ def _zone_block(items: List[Dict[str, Any]], goal_min: int = GOAL_MIN) -> Dict[s
         "longest_docks": longest_docks,
         "slowest_unloads": slowest_unloads,
     }
+    block["grade"] = zone_grade(block, goal_min)
+    block["grade_score"] = block["grade"]["score"] if block["grade"] else None
+    return block
 
 
 def summarize_night(trucks: List[Dict[str, Any]], business_date: str, tz,

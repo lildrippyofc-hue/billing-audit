@@ -5005,6 +5005,11 @@
         </section>
 
         <div id="unloaderPerfBody" class="overview-grid" style="margin-top:14px;">
+          <section class="panel chart-panel-wide" id="unloaderPerfTargetPanel">
+            <div class="panel-header"><h2>Trucks per Hour vs the Target</h2><span class="panel-kicker" id="unloaderPerfTargetKicker"></span></div>
+            <div class="friendly-note" style="margin:-2px 0 10px;" id="unloaderPerfTargetNote">The target is 2 trucks per hour. A person's trucks per hour is their finished loads divided by the hours they were on the clock: unloading plus idle gaps up to the break cutoff above (a longer gap is a break and is left out).</div>
+            <div class="perf-cards" id="unloaderPerfTarget"></div>
+          </section>
           <section class="panel chart-panel-wide" id="unloaderPerfBarsPanel">
             <div class="panel-header"><h2>Performance vs the Team</h2><span class="panel-kicker" id="unloaderPerfBarsKicker"></span></div>
             <div class="friendly-note" style="margin:-2px 0 10px;">Each bar compares a person with the team average, where <b>100 = the team's pace</b> and higher is better on every measure (so for unload time and downtime, 110 means 10% faster / less idle). Speed is compared on the same zones, so someone on Dry isn't marked down for Dry being slower than Freezer. The overall bar is the average of the measures with enough data (5+ finished loads each). Targets will replace this team comparison once you set them.</div>
@@ -10593,7 +10598,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalSetView("zones"); }, target: portalTourEl("portalZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you, as big tiles, longest first. First <b>Waiting for the clerk 30+ min</b>: the driver is on the dock but the clerk has not checked the truck in yet (counted from the driver reaching the door, never before 10 PM). Then <b>Driver on dock 30+ min, not started</b>: counted from 5 minutes before the clerk's check-in. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> while the clerk has not checked it in. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you, as big tiles, longest first. First <b>Waiting for the clerk 30+ min</b>: the driver is on the dock but the clerk has not checked the truck in yet (counted from the driver reaching the door, never before 10 PM). Then <b>Driver on dock 30+ min, not started</b>: counted from 5 minutes before the clerk's check-in, and only once the truck's DMS appointment time has arrived (an early truck cannot be in detention yet, so it is left off). Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> while the clerk has not checked it in. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalSetView("zones"); }, target: portalTourZonePart(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalSetView("doors"); }, target: function() { return document.querySelector("#myPortalPanel .door-controls"); },
@@ -10642,7 +10647,7 @@
         { title: "No-shows drop out at 2:30 AM", before: function() { portalMnSetView("zones"); }, target: portalTourEl("portalMnZonesBuilding"),
           body: "From <b>2:30 AM</b>, trucks that have not arrived stop counting. They come out of every finish time (the building and each zone), the percentages, and the pace, so a truck that never shows cannot hold the estimate back. If one does show up later, it counts again the moment it checks in." },
         { title: "What needs you in each zone", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-wait"),
-          body: "Under the percentages, each zone shows the trucks that need you, as big tiles, longest first. First <b>Waiting for the clerk 30+ min</b>: the driver is on the dock but the clerk has not checked the truck in yet (counted from the driver reaching the door, never before 10 PM). Then <b>Driver on dock 30+ min, not started</b>: counted from 5 minutes before the clerk's check-in. Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> while the clerk has not checked it in. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
+          body: "Under the percentages, each zone shows the trucks that need you, as big tiles, longest first. First <b>Waiting for the clerk 30+ min</b>: the driver is on the dock but the clerk has not checked the truck in yet (counted from the driver reaching the door, never before 10 PM). Then <b>Driver on dock 30+ min, not started</b>: counted from 5 minutes before the clerk's check-in, and only once the truck's DMS appointment time has arrived (an early truck cannot be in detention yet, so it is left off). Each tile says <b>Driver on dock for</b> that long, or <b>Waiting on clerk</b> while the clerk has not checked it in. <b>Tap a tile</b> for the full popup. <b>All doors</b> at the bottom of the card opens the zone's full door map; use <b>Sort doors by</b> at the top of the page to reorder it (red first, longest on the door, stage, biggest load, supplier, unloader, or door number), and <b>Reverse</b> to flip it." },
         { title: "Unloads running long", before: function() { portalMnSetView("zones"); }, target: portalTourZonePartMn(".zone-long"),
           body: "A load that <b>started unloading and is still not finished after 45 minutes</b> is listed here in its own band across the card, longest first. It is a steady red tile (it no longer flashes here). A spill noted in DMS shows amber, since spills legitimately take longer." },
         { title: "Doors that need starting", before: function() { portalMnSetView("doors"); }, target: function() { return document.querySelector("#myPortalMnPanel .door-controls"); },
@@ -18261,11 +18266,14 @@
     }
 
     // A truck the clerk checked in 30 or more minutes ago (counted from 5 minutes before the clerk check-in stamp, and never
-    // before 10 PM) that has not started unloading. Unlike portalNotStartedInfo this ignores the
-    // appointment, so a truck that arrived early and has simply been sitting there still shows up.
+    // before 10 PM) that has not started unloading. A truck that is still BEFORE its DMS appointment time is left off (user: it will
+    // not be hitting detention, so it should not be on this list); it joins the moment its appointment time arrives if it is still
+    // waiting. A truck with no appointment time on DMS is listed, since there is nothing to hold it back.
     const PORTAL_WAITING_MIN = 30;
     function portalWaitingInfo(r, now) {
       if (!r || r.status === "complete" || r.unloadStartMs || r.unloadFinishMs || r.receivingFinishMs) return null;
+      const appt = r.appointmentMs || portalIsoToMs(r.appointmentIso);
+      if (appt && now < appt) return null;
       const mins = portalDoorWarnMinutes(r, now);                           // nothing is listed before 10 PM; counted from 10 PM after
       if (mins == null || mins < PORTAL_WAITING_MIN || mins > PORTAL_NS_STALE_MIN) return null;
       return { mins: mins };
@@ -19102,7 +19110,7 @@
           + '<b>The chip</b> under a zone\'s name compares its pace with a usual night at this time (median of about 120 recent shifts): green is usual pace or faster; slower than usual stays grey while the zone is still on track for the goal, and turns yellow when its estimated finish is 5 to 20 minutes past the goal and red when it is more than 20 past. The whole zone card takes the same colour: light green when the zone will finish on or before the goal, yellow 5 to 20 minutes past it, red more than 20 past. Colours start at 10 PM; earlier than that the gap is mostly noise. '
           + '<b>Est. finish</b> is when 95% of the zone\'s trucks should be done. It is a rough guide: typically off by about an hour. '
           + 'Cooler includes Cooler, Chill and Eggs. Dry includes Dry, Amb, Slip Sheet, Floor Loaded and Plants/Flowers. '
-          + '<b>Driver on dock ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in whose driver has been on the dock ' + PORTAL_WAITING_MIN + ' minutes or more without unloading starting, longest first. <b>Driver on dock for</b> on each tile counts from 5 minutes before the clerk check-in stamp; a truck the clerk has not checked in shows <b>Waiting on clerk</b> instead and is not listed. Warnings (the colours and this list) start at 10 PM, so nothing is flagged earlier and trucks checked in before 10 PM are counted from 10 PM. '
+          + '<b>Driver on dock ' + PORTAL_WAITING_MIN + '+ min, not started</b> lists trucks the clerk has checked in whose driver has been on the dock ' + PORTAL_WAITING_MIN + ' minutes or more without unloading starting, longest first. <b>Driver on dock for</b> on each tile counts from 5 minutes before the clerk check-in stamp; a truck the clerk has not checked in shows <b>Waiting on clerk</b> instead and is not listed. Warnings (the colours and this list) start at 10 PM, so nothing is flagged earlier and trucks checked in before 10 PM are counted from 10 PM. A truck that is early, still before its DMS appointment time, is left off until the appointment time arrives, because it cannot be in detention yet. '
           + '<b>Unloading over ' + PORTAL_LONG_UNLOAD_MIN + ' min</b> lists loads that started unloading and are still not finished, longest first (a spill noted in DMS shows amber). '
           + '<b>All doors</b> opens the zone\'s full door map; Sort doors by reorders it. '
           + '<b>Started</b> (green) = trucks whose unload has begun, finished ones included. <b>Unloaded &amp; finished</b> (blue) = trucks whose unload is done. Both are out of every truck scheduled for the zone tonight.';
@@ -20083,10 +20091,25 @@
             people.length > 1 && dt != null ? sgn(dt, "down") : "--", z.pph != null ? shiftRptNum(z.pph, 1) : "--", z.team_pph != null ? shiftRptNum(z.team_pph, 1) : "--"] });
         });
       });
+      // trucks per hour against the target (finished loads divided by the hours on the clock; hitting the target is an A)
+      const tgt = (u.target && u.target.trucks_per_hour) || 2;
+      const tphPeople = people.filter(function(p) { return p.trucks_per_hour != null; });
+      const tphChart = tphPeople.length ? mkH(tphPeople.map(function(p) { return { label: p.name, value: p.trucks_per_hour }; }).sort(function(a, b) { return b.value - a.value; }),
+        { value: tgt, label: "target " + shiftRptNum(tgt, 1) + "/hr" }, function(v) { return shiftRptNum(v, 1); }, "up", "Trucks per hour by unloader against the target") : '<div class="empty">Each unloader needs at least ' + ((u.target && u.target.min_loads) || 3) + ' finished loads to be measured.</div>';
+      const gradeChip = function(g) { return g ? '<span class="chip band-' + shiftRptEsc(g.band) + '">' + shiftRptEsc(g.letter) + ' &middot; ' + g.pct + '% of target</span>' : '<span class="muted">too few loads</span>'; };
+      const tphTable = shiftRptTable([{ t: "Unloader" }, { t: "Loads", num: 1 }, { t: "Hours on the clock", num: 1 }, { t: "Trucks / hr", num: 1 }, { t: "Against the target" }, { t: "Earlier nights", num: 1 }],
+        people.map(function(p) {
+          const e = p.earlier;
+          return { cells: ['<b>' + shiftRptEsc(p.name) + '</b>', shiftRptNum(p.clock_loads), p.clock_hours != null ? shiftRptNum(p.clock_hours, 1) + " h" : "--", p.trucks_per_hour != null ? shiftRptNum(p.trucks_per_hour, 2) : "--", gradeChip(p.target),
+            e && e.trucks_per_hour != null ? shiftRptNum(e.trucks_per_hour, 2) : '<span class="muted">first night</span>'] };
+        }).concat([{ hi: true, cells: ['<b>Whole team</b>', shiftRptNum(people.reduce(function(sum, p) { return sum + (p.clock_loads || 0); }, 0)), "", team.trucks_per_hour != null ? '<b>' + shiftRptNum(team.trucks_per_hour, 2) + '</b>' : "--", gradeChip(team.target), ""] }]));
       const zoneTable = zRows.length ? shiftRptTable([{ t: "Unloader" }, { t: "Zone" }, { t: "Loads", num: 1 }, { t: "Avg unload", num: 1 }, { t: "Team, same zone", num: 1 }, { t: "vs team", num: 1 }, { t: "Pallets/hr", num: 1 }, { t: "Team pallets/hr", num: 1 }], zRows, "wide") : "";
       return '<section class="sec" id="sec-unloaders"><h2>Performance by unloader</h2>'
         + '<p class="lead">' + people.length + ' unloader' + (people.length === 1 ? "" : "s") + ' recorded on this shift, ' + shiftRptNum(team.loads) + ' loads and ' + shiftRptNum(team.pallets) + ' pallets. Team pace: '
         + (team.pallets_per_hour != null ? shiftRptNum(team.pallets_per_hour, 1) + ' pallets per hour' : 'not enough timed loads yet') + (team.avg_unload_min != null ? ', ' + shiftRptDur(team.avg_unload_min) + ' average unload' : '') + '.</p>'
+        + '<div class="two"><div class="card"><h3>Trucks per hour against the ' + shiftRptNum(tgt, 1) + ' per hour target <span class="muted">(higher is better)</span></h3>' + tphChart
+        + '<div class="note">Hitting the target is an A: <b>A</b> at or above it, <b>B</b> 90 to 99% of it, <b>C</b> 80 to 89%, <b>D</b> 70 to 79%, <b>F</b> under 70%.</div></div>'
+        + '<div class="card"><h3>Target scorecard</h3>' + tphTable + '<div class="note">Trucks per hour is finished loads divided by the hours on the clock: time unloading plus the idle gaps up to 60 minutes (a longer gap is a break and is left out). It needs at least ' + ((u.target && u.target.min_loads) || 3) + ' finished loads.</div></div></div>'
         + '<div class="card"><h3>Who unloaded what, and when</h3>' + gantt + ganttLegend + '<div class="note">Each bar is one load, from unload start to finish. Gaps between bars are downtime; a person who never overlaps their own bars was working one load at a time.</div></div>'
         + '<div class="two"><div class="card"><h3>Pallets per unload hour <span class="muted">(higher is better)</span></h3>' + pphChart + '</div>'
         + '<div class="card"><h3>Average unload time <span class="muted">(lower is better)</span></h3>' + timeChart + '</div></div>'
@@ -20229,8 +20252,25 @@
         });
         return '<div class="card"><h3>' + shiftRptEsc(title) + '</h3>' + shiftRptSvgTrend({ items: items, yFmt: yFmt, goal: opts.goal, label: scName(z) + ": " + title + ", by night" }) + '</div>';
       };
+      // The grade: a 100-point score from five measured things (see zone_grade in shift_report.py), shown with every point accounted for.
+      const scGradeFact = function(part) {
+        const v = part.value;
+        if (v == null) return "--";
+        if (part.key === "finish") return v <= -0.5 ? shiftRptDur(-v) + " before the " + goalShort + " goal (full marks)" : Math.abs(v) < 0.5 ? "right on the " + goalShort + " goal (full marks)" : shiftRptDur(v) + " past the " + goalShort + " goal (lose 1 point per 2 minutes)";
+        if (part.key === "by_goal") return shiftRptNum(v, 0) + "% of the trucks that arrived were finished by " + goalShort;
+        if (part.key === "waiting") return shiftRptNum(v, 0) + "% of trucks waited over 30 minutes to start once ready (the later of check-in and appointment)";
+        if (part.key === "speed") return shiftRptNum(v, 0) + "% of timed unloads ran over 45 minutes";
+        return shiftRptNum(v, 0) + "% of finished trucks spent over 2 hours on the dock";
+      };
+      const scGradeLabels = { finish: "Finish time vs the goal", by_goal: "Finished by " + goalShort, waiting: "Short waits once ready", speed: "Unloads under 45 minutes", dock: "Under 2 hours on the dock" };
       const scCard = function(z) {
         const a = t.zones[z], base = b && b.zones ? b.zones[z] : null, col = SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other, v = scVerdict(a);
+        const gr = a.grade, grBase = base ? base.grade_score : null;
+        const gradeBadge = gr ? '<span class="zgrade zgr-' + gr.letter + '" title="Zone grade: ' + gr.score + ' out of 100. The table below shows how it was earned.">' + gr.letter + ' <small>' + gr.score + ' / 100</small></span>' : '<span class="zgrade zgr-none" title="A zone needs at least 3 finished trucks to be graded.">Not graded</span>';
+        const gradeTable = gr ? '<h3 class="kg">How the grade was earned' + (scFinal ? '' : ' (so far, shift still running)') + (grBase != null ? ' <span class="muted">&middot; average grade of the earlier nights: ' + shiftRptNum(grBase, 0) + ' / 100</span>' : '') + '</h3>'
+          + shiftRptTable([{ t: "What is measured" }, { t: "Points", num: 1 }, { t: "What happened" }], gr.parts.map(function(pt) {
+              return { cells: [shiftRptEsc(scGradeLabels[pt.key] || pt.key), shiftRptNum(pt.pts, 1) + " / " + pt.max, shiftRptEsc(scGradeFact(pt))] };
+            }).concat([{ hi: true, cells: ['<b>Total</b>', '<b>' + gr.score + ' / 100</b>', '<b>Grade ' + gr.letter + '</b>'] }])) : "";
         const bv = function(k) { return base ? base[k] : null; };
         const finishTiles = [
           scCmp("Zone done (95%)", a.p95_finish_min, bv("p95_finish_min"), scDn(scLater, scDur, 5), scClk),
@@ -20264,7 +20304,9 @@
           scCmp("Waited over 30 min", a.waited_30, bv("waited_30"), scDn(scMore, scN1, 1), scN0, "trucks, check-in to start"),
           scCmp("Waited over 60 min", a.waited_60, bv("waited_60"), scDn(scMore, scN1, 1), scN0, "trucks, check-in to start"),
           scCmp("Waiting for a door", a.avg_yard_wait_min, bv("avg_yard_wait_min"), scDn(scLonger, scDur, 3), scDur, "check-in to driver at the door"),
-          scCmp("Waiting at the door", a.avg_door_wait_min, bv("avg_door_wait_min"), scDn(scLonger, scDur, 3), scDur, "door to unload start")
+          scCmp("Waiting at the door", a.avg_door_wait_min, bv("avg_door_wait_min"), scDn(scLonger, scDur, 3), scDur, "door to unload start"),
+          scCmp("Average wait once ready", a.avg_ready_wait_min, bv("avg_ready_wait_min"), scDn(scLonger, scDur, 5), scDur, "from the later of check-in and appointment"),
+          scCmp("Waited 30+ min once ready", a.ready_waited_30, bv("ready_waited_30"), scDn(scMore, scN1, 1), scN0, "of " + scN0(a.ready_wait_n) + " trucks (this drives the grade)")
         ];
         const dockTiles = [
           scCmp("Average time on dock", a.avg_dock_min, bv("avg_dock_min"), scDn(scLonger, scDur, 5), scDur),
@@ -20316,10 +20358,10 @@
         const legendCurve = legendLine(col, "This shift") + (base ? legendLine(SR_C.avg, "Zone average, " + nAvg + " night" + (nAvg === 1 ? "" : "s"), true) : "") + legendLine(SR_C.red, goalShort + " goal", true);
         return '<div class="zcard zc-' + v.cls + '" id="zone-' + z + '">'
           + '<div class="zhead"><h3><i class="zdot" style="background:' + col + '"></i>' + shiftRptEsc(scName(z)) + '</h3>'
-          + (v.cls === "none" && !v.label ? "" : '<span class="chip ' + v.chip + '">' + shiftRptEsc(v.label) + '</span>') + '</div>'
+          + '<span class="zhead-r">' + gradeBadge + (v.cls === "none" && !v.label ? "" : '<span class="chip ' + v.chip + '">' + shiftRptEsc(v.label) + '</span>') + '</span></div>'
           + '<div class="zbig">' + (a.p95_finish_min != null ? shiftRptEsc(shiftRptClock(a.p95_finish_min)) : "--") + ' <span class="zbig-l">95% of the zone done</span></div>'
           + '<div class="zbig-s ' + (v.cls === "ok" ? "good" : v.cls === "late" ? "bad" : v.cls === "close" ? "amber" : "flat") + '">' + shiftRptEsc(v.detail) + (scFinal ? "" : " (shift still in progress, so far)") + '</div>'
-          + scGroup("When the zone finished", finishTiles) + scGroup("Trucks and pallets", truckTiles) + scGroup("Unloading speed", speedTiles)
+          + gradeTable + scGroup("When the zone finished", finishTiles) + scGroup("Trucks and pallets", truckTiles) + scGroup("Unloading speed", speedTiles)
           + scGroup("Waiting to start", waitTiles) + scGroup("Time on the dock", dockTiles) + scGroup("After the unload, and arrivals", afterTiles) + scGroup("Load on the zone", loadTiles)
           + '<h3 class="kg">Through the night</h3>'
           + '<div class="two"><div class="card"><h3>Trucks finished</h3>' + curve + '<div class="legend">' + legendCurve + '</div></div>'
@@ -20327,7 +20369,7 @@
           + '<div class="two"><div class="card"><h3>Trucks on the dock</h3>' + queue + '<div class="legend">' + legendBar(col, "Being unloaded") + legendBar("#f6ad55", "Waiting to start") + (base ? legendLine(SR_C.avg, "Zone average, all on dock", true) : "") + '</div></div>' + clockTrend + '</div>'
           + '<h3 class="kg">Night by night</h3>'
           + '<div class="three">' + scTrendMini(z, "Finished by " + goalShort + " (%)", "pct_by_goal", function(x) { return shiftRptNum(x, 0) + "%"; })
-            + scTrendMini(z, "Trucks unloaded", "completed", scN0) + scTrendMini(z, "Pallets per unload hour", "pph", scN0) + '</div>'
+            + scTrendMini(z, "Zone grade (score out of 100)", "grade_score", scN0) + scTrendMini(z, "Pallets per unload hour", "pph", scN0) + '</div>'
           + '<div class="three">' + scTrendMini(z, "Average unload time", "avg_unload_min", function(x) { return shiftRptNum(x, 0) + "m"; })
             + scTrendMini(z, "Average wait to start", "avg_wait_min", function(x) { return shiftRptNum(x, 0) + "m"; })
             + scTrendMini(z, "Over 2 hours on dock", "over_2h", scN0) + '</div>'
@@ -20338,13 +20380,15 @@
           + '</div>';
       };
       const scSummary = scOrder.length ? '<div class="zsum">' + scOrder.map(function(z) {
-        const v = scVerdict(t.zones[z]);
-        return '<a class="chip ' + v.chip + '" href="#zone-' + z + '" style="text-decoration:none">' + shiftRptEsc(scName(z)) + ': ' + shiftRptEsc(v.label) + (v.detail ? " &middot; " + shiftRptEsc(v.detail) : "") + '</a>';
+        const v = scVerdict(t.zones[z]), g = t.zones[z].grade;
+        return '<a class="chip ' + v.chip + '" href="#zone-' + z + '" style="text-decoration:none">' + shiftRptEsc(scName(z)) + ': ' + (g ? 'Grade ' + g.letter + ' (' + g.score + ') &middot; ' : '') + shiftRptEsc(v.label) + (v.detail ? " &middot; " + shiftRptEsc(v.detail) : "") + '</a>';
       }).join("") + '</div>' : "";
       const scorecards = scOrder.length
         ? scSummary + scOrder.map(scCard).join("")
           + '<p class="note"><b>The verdict</b> uses the same lines as the live Zones screen on the time 95% of the zone\'s trucks were done: <b>on goal</b> is at or before the ' + shiftRptEsc(shiftRptGoalFull(t)) + ' goal or up to 5 minutes after it, <b>close</b> is 5 to 20 minutes past, <b>past goal</b> is more than 20 minutes past. '
           + 'Small coloured lines compare a number with <b>that zone\'s own average over the earlier nights</b> shown in this report (green is better, red is worse, grey is neutral). Trucks that never arrived are left out of every time and percentage. '
+          + '<b>The grade</b> is a score out of 100 worked out from five things, so every point can be traced: <b>finish time vs the goal 40</b> (full marks at or before the goal, then 1 point lost for every 2 minutes past it, nothing left at 80 minutes past), <b>finished by the goal 25</b> (the share of arrived trucks finished by it), '
+          + '<b>short waits 15</b> (waits of 30 minutes or less to start, counted from when the truck was ready: the later of its check-in and its DMS appointment, so an early truck is not held against the zone), <b>unloads under 45 minutes 10</b> and <b>under 2 hours on the dock 10</b> (each is full marks minus the share of trucks that missed it). <b>A</b> is 90 or more, <b>B</b> 80, <b>C</b> 70, <b>D</b> 60, below that <b>F</b>. A zone needs 3 finished trucks to be graded. '
           + 'Plant loads (PLANTS/FLOWERS) count in the dry zone.</p>'
         : '<div class="empty">No zone data for this shift.</div>';
 
@@ -20451,6 +20495,8 @@
         + '@media(max-width:640px){.cw{display:none}.cn{display:block}.page{padding:16px 12px 30px}.two,.three{grid-template-columns:minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-v{font-size:1.4rem}.tw table{min-width:460px}.tw table.wide{min-width:760px}}'
         + '.zsum{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}.zsum .chip{font-size:.8rem;padding:3px 12px}'
         + '.zcard{border:1px solid var(--line);border-left:8px solid #94a3b8;border-radius:10px;padding:12px 16px 14px;margin:14px 0}.zcard.zc-ok{border-left-color:#2f855a;background:#f6fcf8}.zcard.zc-close{border-left-color:#b7791f;background:#fffcf2}.zcard.zc-late{border-left-color:#c53030;background:#fff7f7}'
+        + '.zhead-r{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.zgrade{display:inline-flex;align-items:baseline;gap:7px;border-radius:12px;padding:2px 14px;font-weight:900;font-size:1.7rem;line-height:1.15;color:#fff;background:#718096}'
+        + '.zgrade small{font-size:.48em;font-weight:800;opacity:.95}.zgr-A{background:#2f855a}.zgr-B{background:#2b6cb0}.zgr-C{background:#b7791f}.zgr-D{background:#dd6b20}.zgr-F{background:#c53030}.zgrade.zgr-none{font-size:.8rem;padding:3px 12px}'
         + '.zhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px}.zhead h3{font-size:1.15rem;margin:0}.zdot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px}.zhead .chip{font-size:.85rem;padding:3px 14px}'
         + '.zbig{font-size:2.1rem;font-weight:900;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:4px}.zbig-l{font-size:.85rem;font-weight:700;color:var(--muted)}.zbig-s{font-size:.95rem;font-weight:800}.amber{color:var(--amber)}'
         + '.zg{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;margin:4px 0 2px}.zt{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;break-inside:avoid;min-width:0}'
@@ -25196,6 +25242,49 @@
       }
     }
 
+    // One card per unloader against the trucks-per-hour target: the bar fills to their share of the target, the tick is 100% (the target itself).
+    function renderUnloaderTargetCards(data) {
+      const box = document.getElementById("unloaderPerfTarget");
+      const kicker = document.getElementById("unloaderPerfTargetKicker");
+      const note = document.getElementById("unloaderPerfTargetNote");
+      if (!box) return;
+      const tgt = data.target || { trucks_per_hour: 2, min_loads: 3, grades: [] };
+      const people = (data.people || []).slice();
+      const fmt = function(v) { return (Math.round(v * 100) / 100).toString(); };
+      const tgtText = fmt(tgt.trucks_per_hour);
+      const tg = data.team_target;
+      kicker.textContent = data.team_trucks_per_hour != null
+        ? "Team: " + fmt(data.team_trucks_per_hour) + " trucks/hr, " + (tg ? tg.pct + "% of the target (" + tg.letter + ")" : "")
+        : "Needs " + tgt.min_loads + "+ finished loads";
+      if (note) note.innerHTML = 'The target is <b>' + tgtText + ' trucks per hour</b>. A person\'s trucks per hour is their finished loads divided by the hours they were on the clock: unloading plus idle gaps up to the break cutoff above (a longer gap is a break and is left out), over the days shown. '
+        + 'Hitting the target is an <b>A</b>; <b>B</b> is 90 to 99% of it, <b>C</b> 80 to 89%, <b>D</b> 70 to 79%, <b>F</b> under 70%. It needs at least ' + tgt.min_loads + ' finished loads.';
+      box.innerHTML = "";
+      if (!people.length) { box.innerHTML = '<div class="perf-empty">No unloader names yet.</div>'; return; }
+      people.sort(function(a, b) { return (b.trucks_per_hour == null ? -1 : b.trucks_per_hour) - (a.trucks_per_hour == null ? -1 : a.trucks_per_hour) || a.name.localeCompare(b.name); });
+      const pctBar = function(p) { return Math.max(2, Math.min(150, p)) / 150 * 100; };
+      people.forEach(function(p) {
+        const g = p.target, card = document.createElement("article");
+        card.className = "perf-card" + (g ? " band-" + g.band : "");
+        if (!g) {
+          card.innerHTML = '<div class="perf-head"><span class="perf-name"></span><span class="perf-badge"></span></div><div class="perf-empty"></div>';
+          card.querySelector(".perf-name").textContent = p.name;
+          card.querySelector(".perf-badge").textContent = "Not enough data yet";
+          card.querySelector(".perf-empty").textContent = "Needs " + tgt.min_loads + "+ finished loads with start and finish times. So far: " + (p.clock_loads || 0) + ".";
+          box.appendChild(card);
+          return;
+        }
+        card.innerHTML = '<div class="perf-head"><span class="perf-name"></span><span class="perf-badge"></span></div>'
+          + '<div style="font-size:1.7em;font-weight:900;line-height:1.1;margin:0 0 8px;">' + escapeHtml(fmt(p.trucks_per_hour)) + ' <span style="font-size:0.5em;font-weight:700;opacity:.7;">trucks / hr</span></div>'
+          + '<div class="perf-bar"><div class="perf-fill" style="width:' + pctBar(g.pct) + '%"></div><i class="perf-tick" style="left:' + (100 / 150 * 100) + '%"></i></div>'
+          + '<div class="perf-scale"><span>0</span><span>target ' + escapeHtml(tgtText) + ' / hr = 100%</span><span>150%</span></div>'
+          + '<div class="perf-m-text"></div>';
+        card.querySelector(".perf-name").textContent = p.name;
+        card.querySelector(".perf-badge").textContent = "Grade " + g.letter + " · " + g.pct + "% of target";
+        card.querySelector(".perf-m-text").textContent = p.clock_loads + " finished load" + (p.clock_loads === 1 ? "" : "s") + " in " + (Math.round(p.clock_hours * 10) / 10) + " hours on the clock" + (p.clock_loads < 5 ? " · small sample" : "");
+        box.appendChild(card);
+      });
+    }
+
     // One card per unloader: an overall bar against the team (tick = team pace) plus a bar per measure.
     function renderUnloaderRatingBars(data) {
       const box = document.getElementById("unloaderPerfBars");
@@ -25285,6 +25374,7 @@
             return '<article class="metric-card"' + (i === 1 ? ' data-accent="purple"' : "") + '><div class="metric-label">' + escapeHtml(c[0]) + '</div><div class="metric-value">' + escapeHtml(c[1]) + '</div><div class="metric-note">' + escapeHtml(c[2]) + '</div></article>';
           }).join("");
 
+          renderUnloaderTargetCards(data);
           renderUnloaderRatingBars(data);
 
           unloaderRenderBars(document.getElementById("unloaderPerfLoadsList"), document.getElementById("unloaderPerfLoadsKicker"),
