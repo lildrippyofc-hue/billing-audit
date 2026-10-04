@@ -19882,6 +19882,57 @@
       return shiftRptSvgFrame(W, H, g, o.label);
     }
 
+    // A donut chart with its legend. o: { items: [{ label, value, color }], center: "text in the hole", sub: "small text under it", label }
+    function shiftRptSvgPie(o) {
+      const items = o.items.filter(function(i) { return i.value > 0; });
+      const total = items.reduce(function(s, i) { return s + i.value; }, 0);
+      if (!total) return '<div class="empty">Nothing to show for this night.</div>';
+      const W = 400, H = Math.max(190, 36 + items.length * 30), cx = 92, cy = Math.round(H / 2), R = 78, r = 46;
+      const pt = function(rad, ang) { return [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)]; };
+      let a0 = -Math.PI / 2, g = "";
+      items.forEach(function(it) {
+        const frac = it.value / total, a1 = a0 + frac * 2 * Math.PI;
+        if (frac >= 0.9999) {
+          g += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ((R + r) / 2) + '" fill="none" stroke="' + it.color + '" stroke-width="' + (R - r) + '"/>';
+        } else {
+          const p0 = pt(R, a0), p1 = pt(R, a1), p2 = pt(r, a1), p3 = pt(r, a0), big = frac > 0.5 ? 1 : 0;
+          g += '<path d="M' + p0[0].toFixed(1) + ' ' + p0[1].toFixed(1) + ' A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1)
+            + ' L' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1) + ' A' + r + ' ' + r + ' 0 ' + big + ' 0 ' + p3[0].toFixed(1) + ' ' + p3[1].toFixed(1) + ' Z" fill="' + it.color + '" stroke="#fff" stroke-width="1.5"/>';
+        }
+        a0 = a1;
+      });
+      g += '<text x="' + cx + '" y="' + (cy - 1) + '" text-anchor="middle" font-size="21" font-weight="800" fill="#1a202c">' + shiftRptEsc(o.center != null ? o.center : shiftRptNum(total, 0)) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="11" fill="#64748b">' + shiftRptEsc(o.sub || "total") + '</text>';
+      const y0 = Math.round((H - items.length * 30) / 2) + 14;
+      items.forEach(function(it, i) {
+        const y = y0 + i * 30, name = it.label.length > 30 ? it.label.slice(0, 29) + "..." : it.label;
+        g += '<rect x="196" y="' + (y - 11) + '" width="12" height="12" rx="3" fill="' + it.color + '"/>'
+          + '<text x="214" y="' + y + '" font-size="12.5" font-weight="700" fill="#1a202c">' + shiftRptEsc(name) + '</text>'
+          + '<text x="214" y="' + (y + 13) + '" font-size="11.5" fill="#64748b">' + shiftRptEsc(shiftRptNum(it.value, it.value % 1 ? 1 : 0) + (it.unit || "") + " | " + Math.round(100 * it.value / total) + "%") + '</text>';
+      });
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+    // Columns stacked by layer (for example trucks finished each hour, one colour per zone). o: { labels, layers: [{ data, color }], label, w, h, narrow }
+    function shiftRptSvgStackCols(o) {
+      const W = o.w || 720, H = o.h || 250, P = { l: 40, r: 14, t: 14, b: 30 }, iw = W - P.l - P.r, ih = H - P.t - P.b, n = o.labels.length;
+      let ymax = 1;
+      for (let k = 0; k < n; k++) ymax = Math.max(ymax, o.layers.reduce(function(s, L) { return s + (L.data[k] || 0); }, 0));
+      const step = shiftRptNiceStep(ymax, 5); ymax = Math.ceil(ymax / step) * step;
+      let g = shiftRptAxis(P, W, H, ymax, step);
+      const slot = iw / n, bw = slot * 0.68;
+      for (let k = 0; k < n; k++) {
+        const x = P.l + slot * k + (slot - bw) / 2;
+        let acc = 0;
+        o.layers.forEach(function(L) {
+          const v = L.data[k] || 0;
+          if (v > 0) { const h = ih * v / ymax; g += '<rect x="' + x.toFixed(1) + '" y="' + (P.t + ih - ih * acc / ymax - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + L.color + '"/>'; }
+          acc += v;
+        });
+        if (!(o.narrow && k % 2)) g += '<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (H - 9) + '" text-anchor="middle" font-size="10" fill="#64748b">' + shiftRptEsc(o.labels[k]) + '</text>';
+      }
+      return shiftRptSvgFrame(W, H, g, o.label);
+    }
+
     // Each wide chart is also drawn in a narrow shape. The page shows the narrow one on a phone (so the text
     // stays readable) and the wide one everywhere else, including print.
     function shiftRptBoth(fn, o, narrowH) {
@@ -20487,6 +20538,237 @@
           + 'Plant loads (PLANTS/FLOWERS) count in the dry zone.</p>'
         : '<div class="empty">No zone data for this shift.</div>';
 
+      // --- the night in plain words: a very simple summary at the very top, in everyday language. Everything else in the report is detail. ---
+      const plFinal = !!status.final;
+      const plDur = function(m) { return shiftRptDur(Math.abs(m)); };
+      // how far from the goal a time was, in plain words, and what colour that is
+      const plVsGoal = function(min) {
+        const d = min - goal;
+        if (Math.abs(d) < 5) return { text: "right on time", level: "ok", d: d };
+        if (d < 0) return { text: plDur(d) + " early", level: "ok", d: d };
+        return { text: plDur(d) + " late", level: d <= 20 ? "close" : "late", d: d };
+      };
+      // "better than usual" / "worse than usual" next to a number, against the average of the earlier nights
+      const plUsual = function(cur, base, lowerIsBetter, tol, fmt) {
+        if (cur == null || base == null || !b) return "";
+        const diff = cur - base;
+        if (Math.abs(diff) < tol) return ' <span class="pl-tag pl-same">about the usual</span>';
+        const better = lowerIsBetter ? diff < 0 : diff > 0;
+        return ' <span class="pl-tag ' + (better ? "pl-good" : "pl-bad") + '">' + (better ? "better" : "worse") + ' than usual</span> <span class="pl-usual">(usual: ' + shiftRptEsc(fmt(base)) + ')</span>';
+      };
+      const bv = t.p95_finish_min != null ? plVsGoal(t.p95_finish_min) : null;
+      let plHead = "";
+      if (!t.scheduled) {
+        plHead = '<div class="pl-head pl-none"><div class="pl-big">No trucks were found for this night.</div></div>';
+      } else if (bv) {
+        plHead = '<div class="pl-head pl-' + bv.level + '"><div class="pl-big">' + (plFinal ? "We finished <b>" + shiftRptEsc(bv.text) + "</b>." : "The shift is still going. So far we are <b>" + shiftRptEsc(bv.text) + "</b>.") + '</div>'
+          + '<div class="pl-sub">The goal is to have every truck unloaded by <b>' + shiftRptEsc(goalShort) + '</b>. Nearly every truck (95 out of every 100) was unloaded by <b>' + shiftRptEsc(shiftRptClock(t.p95_finish_min)) + '</b>'
+          + (t.last_finish_min != null ? ', and the very last truck was done at <b>' + shiftRptEsc(shiftRptClock(t.last_finish_min)) + '</b>' : '') + '.</div></div>';
+      }
+      const plFacts = [];
+      plFacts.push('<li><b>' + shiftRptNum(t.completed) + ' trucks</b> were unloaded' + (t.never_arrived ? '. ' + shiftRptNum(t.never_arrived) + ' scheduled truck' + (t.never_arrived === 1 ? "" : "s") + ' never showed up' : '') + (t.rejected ? ' and ' + shiftRptNum(t.rejected) + ' load' + (t.rejected === 1 ? " was" : "s were") + ' turned away (rejected)' : '') + '.</li>');
+      plFacts.push('<li><b>' + shiftRptNum(t.pallets_total) + ' pallets</b> came off the trucks.</li>');
+      if (t.avg_wait_min != null) plFacts.push('<li>After checking in, a truck waited about <b>' + shiftRptEsc(shiftRptDur(t.avg_wait_min)) + '</b> before unloading started.' + plUsual(t.avg_wait_min, b && b.avg_wait_min, true, 5, shiftRptDur) + '</li>');
+      if (t.avg_unload_min != null) plFacts.push('<li>Unloading one truck took about <b>' + shiftRptEsc(shiftRptDur(t.avg_unload_min)) + '</b>.' + plUsual(t.avg_unload_min, b && b.avg_unload_min, true, 2, shiftRptDur) + '</li>');
+      plFacts.push('<li><b>' + shiftRptNum(t.over_2h) + ' truck' + (t.over_2h === 1 ? "" : "s") + '</b> sat on the dock for more than 2 hours.' + plUsual(t.over_2h, b && b.over_2h, true, 2, function(v) { return shiftRptNum(v, 0); }) + '</li>');
+      // each zone in a few words: its grade, when it finished, what went best and what to fix first
+      const plPartText = {
+        finish: ["it finished on time", "it finished late"],
+        by_goal: ["most trucks were done by the goal", "a lot of trucks were not done by the goal"],
+        waiting: ["trucks started unloading quickly", "trucks waited too long to start unloading"],
+        speed: ["unloads went quickly", "too many unloads took more than 45 minutes"],
+        dock: ["no truck sat too long", "too many trucks sat on the dock for over 2 hours"]
+      };
+      const plZones = scOrder.map(function(z) {
+        const a = t.zones[z], g = a.grade, name = shiftRptEsc(scName(z));
+        if (!g || a.p95_finish_min == null) return '<div class="pl-zone pl-none"><div class="pl-zname">' + name + '</div><div class="pl-ztime">Too few trucks finished to give this zone a grade.</div></div>';
+        const v = plVsGoal(a.p95_finish_min);
+        const ratios = g.parts.filter(function(p) { return p.key !== "finish"; }).map(function(p) { return { key: p.key, r: p.max ? p.pts / p.max : 1 }; });
+        const best = ratios.slice().sort(function(x, y) { return y.r - x.r; })[0], worst = ratios.slice().sort(function(x, y) { return x.r - y.r; })[0];
+        return '<div class="pl-zone pl-' + v.level + '"><div class="pl-ztop"><div class="pl-zname">' + name + '</div><div class="pl-grade zgr-' + g.letter + '" title="' + g.score + ' out of 100">' + g.letter + '</div></div>'
+          + '<div class="pl-ztime">Done at <b>' + shiftRptEsc(shiftRptClock(a.p95_finish_min)) + '</b>, ' + shiftRptEsc(v.text) + '.</div>'
+          + '<div class="pl-line pl-goodline"><b>Went well:</b> ' + shiftRptEsc(plPartText[best.key][0]) + '.</div>'
+          + '<div class="pl-line pl-badline"><b>' + (worst.r < 0.6 ? "Fix first" : "Weakest spot") + ':</b> ' + (worst.r >= 0.9 ? 'nothing stood out as a problem.' : shiftRptEsc(plPartText[worst.key][1]) + '.') + '</div></div>';
+      }).join("");
+      // the people, against the target (only when names were entered and this login may see them)
+      let plPeople = "";
+      const plPeopleRows = data.unloaders && data.unloaders.people ? data.unloaders.people.filter(function(p) { return p.target; }) : [];
+      if (plPeopleRows.length) {
+        const tgtN = (data.unloaders.target && data.unloaders.target.trucks_per_hour) || 2;
+        const plSay = { A: "hit the target", B: "just under the target", C: "under the target", D: "well under the target", F: "well under the target" };
+        plPeople = '<h3 class="kg">How each person did</h3><p class="pl-note">The target is <b>' + shiftRptNum(tgtN, 1) + ' trucks an hour</b> for each person.</p><ul class="pl-list">'
+          + plPeopleRows.slice().sort(function(x, y) { return y.trucks_per_hour - x.trucks_per_hour; }).map(function(p) {
+              return '<li><b>' + shiftRptEsc(p.name) + '</b>: ' + shiftRptNum(p.trucks_per_hour, 1) + ' trucks an hour, ' + shiftRptEsc(plSay[p.target.letter] || "") + ' <span class="chip band-' + shiftRptEsc(p.target.band) + '">Grade ' + shiftRptEsc(p.target.letter) + '</span></li>';
+            }).join("") + '</ul>';
+      }
+      const plainHtml = '<div class="pl">' + plHead
+        + '<h3 class="kg">The numbers that matter</h3><ul class="pl-list">' + plFacts.join("") + '</ul>'
+        + (plZones ? '<h3 class="kg">How each zone did</h3><div class="pl-zones">' + plZones + '</div>' : '')
+        + plPeople
+        + '<h3 class="kg">What the colors and grades mean</h3>'
+        + '<div class="pl-legend"><span class="pl-key pl-ok"></span> <b>Green</b>: on time (or early) &nbsp; <span class="pl-key pl-close"></span> <b>Yellow</b>: a little late (up to 20 minutes) &nbsp; <span class="pl-key pl-late"></span> <b>Red</b>: late (more than 20 minutes)</div>'
+        + '<p class="pl-note">Each zone also gets a grade from <b>A</b> (best) to <b>F</b> (worst). An A means it finished on time and ran smoothly. The score is explained in the Zone scorecards section further down.</p>'
+        + '<h3 class="kg">Words in this report</h3><ul class="pl-list pl-words">'
+        + '<li><b>Goal</b>: the time we want every truck unloaded by (' + shiftRptEsc(shiftRptGoalFull(t)) + ').</li>'
+        + '<li><b>Wait to start</b>: how long a truck sat after checking in before unloading began.</li>'
+        + '<li><b>On the dock</b>: the whole time from check-in until the truck was unloaded.</li>'
+        + '<li><b>Zone</b>: a part of the building: Freezer, Cooler / Fresh Meat / Produce, or Dry / Slip Sheet / Floor Load / Plants.</li>'
+        + '<li><b>Usual</b>: the average of the nights before this one that are shown in this report.</li></ul>'
+        + '<p class="pl-note">Everything below this section is the detail, for when you want to dig in. You do not need it to understand the night.</p></div>';
+
+      // --- what could have been done to finish earlier: patterns in tonight's numbers against a usual night, the best recent night and the recent run ---
+      const idNights = prev.filter(function(p) { return p && p.has_data; });
+      const idShareAfterMidnight = function(hourly) {                       // share of trucks that did not check in until after midnight
+        if (!hourly) return null;
+        const tot = hourly.reduce(function(s, h) { return s + (h.arrivals || 0); }, 0);
+        return tot ? 100 * hourly.slice(5).reduce(function(s, h) { return s + (h.arrivals || 0); }, 0) / tot : null;
+      };
+      const ideas = [];
+      scOrder.forEach(function(z) {
+        const a = t.zones[z];
+        if (!a || a.p95_finish_min == null || a.completed < 3) return;
+        const late = a.p95_finish_min - goal;
+        if (late <= 5) return;
+        const base = b && b.zones ? b.zones[z] : null;
+        const facts = [];
+        const note = function(kind, cur, ref, tol, textFn) { if (cur != null && ref != null && cur - ref >= tol) facts.push({ kind: kind, size: (cur - ref) / Math.max(Math.abs(ref), 1), text: textFn(cur, ref) }); };
+        note("wait", a.avg_ready_wait_min, base && base.avg_ready_wait_min, 5, function(c, r) { return "trucks waited " + shiftRptDur(c) + " to start unloading once they were ready (usual: " + shiftRptDur(r) + ")"; });
+        note("unload", a.avg_unload_min, base && base.avg_unload_min, 3, function(c, r) { return "each unload took " + shiftRptDur(c) + " (usual: " + shiftRptDur(r) + ")"; });
+        note("sched", a.scheduled, base && base.scheduled, 3, function(c, r) { return shiftRptNum(c) + " trucks were booked here (usual: " + shiftRptNum(r, 0) + ")"; });
+        note("start", a.first_start_min, base && base.first_start_min, 20, function(c, r) { return "the first unload did not start until " + shiftRptClock(c) + " (usual: " + shiftRptClock(r) + ")"; });
+        [[28, "2:00 AM"], [32, "3:00 AM"]].forEach(function(kk) {
+          note("backlog", a.waiting ? a.waiting[kk[0]] : null, base && base.waiting ? base.waiting[kk[0]] : null, 2, function(c, r) { return "at " + kk[1] + " there were still " + shiftRptNum(c) + " trucks waiting to start (usual: " + shiftRptNum(r, 0) + ")"; });
+        });
+        note("arrive", idShareAfterMidnight(a.hourly), base ? idShareAfterMidnight(base.hourly) : null, 8, function(c, r) { return shiftRptNum(c, 0) + "% of the trucks did not check in until after midnight (usual: " + shiftRptNum(r, 0) + "%)"; });
+        facts.sort(function(x, y) { return y.size - x.size; });
+        const top = facts.slice(0, 3);
+        const lines = [];
+        if (top.length) lines.push("Compared with a usual night: " + top.map(function(f) { return f.text; }).join("; and ") + ".");
+        // the best recent night for this zone
+        let bestN = null;
+        idNights.forEach(function(n) { const zz = n.zones && n.zones[z]; if (zz && zz.p95_finish_min != null && zz.completed >= 3 && (!bestN || zz.p95_finish_min < bestN.zz.p95_finish_min)) bestN = { n: n, zz: zz }; });
+        if (bestN && a.p95_finish_min - bestN.zz.p95_finish_min >= 15) {
+          const why = [];
+          if (a.avg_ready_wait_min != null && bestN.zz.avg_ready_wait_min != null && a.avg_ready_wait_min - bestN.zz.avg_ready_wait_min >= 5) why.push("trucks waited " + shiftRptDur(a.avg_ready_wait_min - bestN.zz.avg_ready_wait_min) + " less to start");
+          if (a.avg_unload_min != null && bestN.zz.avg_unload_min != null && a.avg_unload_min - bestN.zz.avg_unload_min >= 3) why.push("unloads were " + shiftRptDur(a.avg_unload_min - bestN.zz.avg_unload_min) + " quicker");
+          const s1 = idShareAfterMidnight(a.hourly), s2 = idShareAfterMidnight(bestN.zz.hourly);
+          if (s1 != null && s2 != null && s1 - s2 >= 8) why.push("only " + shiftRptNum(s2, 0) + "% of the trucks checked in after midnight (tonight " + shiftRptNum(s1, 0) + "%)");
+          lines.push("On the best recent night (" + shiftRptEsc(shiftRptDay(bestN.n.business_date)) + ") this zone finished at " + shiftRptClock(bestN.zz.p95_finish_min) + ", " + shiftRptDur(a.p95_finish_min - bestN.zz.p95_finish_min) + " earlier than tonight" + (why.length ? ": " + why.join(", and ") : "") + ".");
+        }
+        // is it a pattern?
+        const lateNights = idNights.filter(function(n) { const zz = n.zones && n.zones[z]; return zz && zz.p95_finish_min != null && zz.completed >= 3 && zz.p95_finish_min - goal > 5; }).length + 1;
+        const ofNights = idNights.filter(function(n) { const zz = n.zones && n.zones[z]; return zz && zz.p95_finish_min != null && zz.completed >= 3; }).length + 1;
+        if (lateNights >= 2 && lateNights * 2 >= ofNights) lines.push("It finished after the goal on <b>" + lateNights + " of the last " + ofNights + " nights</b>, so this looks like a pattern, not a one-off.");
+        // did late arrivals decide the finish?
+        const lastArrStep = a.curve_arr ? a.curve_arr.findIndex(function(v) { return v >= a.arrived; }) : -1;
+        let tipKind = top.length ? top[0].kind : null, tail = null;
+        if (lastArrStep >= 0 && a.last_finish_min != null) {
+          tail = a.last_finish_min - lastArrStep * 15;
+          if (tail <= 75) { lines.push("The last truck here checked in around " + shiftRptClock(lastArrStep * 15) + " and the zone was done at " + shiftRptClock(a.last_finish_min) + ", so the late arrivals set the finish time."); tipKind = "arrive"; }
+        }
+        const tips = {
+          wait: "Put more people on this zone earlier, and start the next truck the moment a door frees up.",
+          unload: "Look at the slowest loads and find out why they dragged (big loads, damage, door problems).",
+          sched: "Plan extra help on nights when this zone is booked heavily.",
+          start: "Start unloading as soon as the first trucks arrive instead of waiting.",
+          backlog: "Get the early trucks started sooner so fewer are left waiting after midnight.",
+          arrive: "Ask for earlier appointments or spread arrivals out. This part is mostly outside the dock control."
+        };
+        ideas.push({ rank: late, title: shiftRptEsc(scName(z)) + " finished <b>" + shiftRptEsc(shiftRptDur(late)) + "</b> after the " + shiftRptEsc(goalShort) + " goal", lines: lines, tip: tips[tipKind] || "Compare tonight with the best recent night above and see what was different." });
+      });
+      // trucks bunching up in one hour
+      if (b && b.hourly) {
+        let worstH = -1, worstEx = 0;
+        t.hourly.forEach(function(h, i) { const ex = (h.arrivals || 0) - (b.hourly[i].arrivals || 0); if (ex > worstEx) { worstEx = ex; worstH = i; } });
+        if (worstH >= 0 && worstEx >= 4) ideas.push({ rank: -1, title: "Too many trucks showed up in the <b>" + shiftRptEsc(shiftRptHourLabel(worstH)) + "</b> hour",
+          lines: [shiftRptNum(t.hourly[worstH].arrivals) + " trucks checked in during that hour, " + shiftRptNum(worstEx, 0) + " more than a usual night, and the dock only finished " + shiftRptNum(t.hourly[worstH].finishes) + " trucks in the same hour."], tip: "Move a few appointments out of that hour so trucks arrive more evenly." });
+      }
+      // people idle between loads while trucks were waiting
+      const idPeople = data.unloaders && data.unloaders.people ? data.unloaders.people : [];
+      const idIdle = idPeople.reduce(function(s, p) { return s + (p.idle_total_min || 0); }, 0);
+      const idMaxWaiting = t.queue && t.queue.waiting ? Math.max.apply(null, t.queue.waiting) : 0;
+      if (idPeople.length && idIdle >= 60 && idMaxWaiting >= 5) ideas.push({ rank: -2, title: "People were idle between loads while trucks were waiting",
+        lines: ["The named unloaders spent about <b>" + shiftRptEsc(shiftRptDur(idIdle)) + "</b> in total between one load finishing and the next one starting" + (data.unloaders.team && data.unloaders.team.avg_gap_min != null ? " (an average gap of " + shiftRptEsc(shiftRptDur(data.unloaders.team.avg_gap_min)) + ")" : "") + ", while up to " + shiftRptNum(idMaxWaiting) + " trucks were waiting to start."], tip: "Keep each person on the next truck right away." });
+      // the slowest unloads of the night
+      const idSlow = [];
+      scOrder.forEach(function(z) { ((t.zones[z] || {}).slowest_unloads || []).forEach(function(x) { if (x.unload_min != null && x.unload_min > 45) idSlow.push({ z: z, x: x }); }); });
+      idSlow.sort(function(p, q) { return q.x.unload_min - p.x.unload_min; });
+      if (idSlow.length) ideas.push({ rank: -3, title: "A few unloads took far too long",
+        lines: ["The slowest were: " + idSlow.slice(0, 3).map(function(s) { return shiftRptEsc(s.x.supplier || "a load") + (s.x.door != null ? " (door " + s.x.door + ")" : "") + " at <b>" + shiftRptEsc(shiftRptDur(s.x.unload_min)) + "</b>"; }).join(", ") + ".", shiftRptNum(t.zones && scOrder.reduce(function(s, z) { return s + ((t.zones[z] || {}).long_unloads || 0); }, 0)) + " unloads in all took longer than 45 minutes."], tip: "Find out why these dragged (a very big load, damage, a door problem) so it can be fixed next time." });
+      if (t.rec_delays_45 >= 5) ideas.push({ rank: -4, title: "Trucks waited a long time for receiving to start",
+        lines: [shiftRptNum(t.rec_delays_45) + " trucks waited more than 45 minutes after unloading for receiving to start."], tip: "Worth checking that receiving is started right after the unload." });
+      ideas.sort(function(p, q) { return q.rank - p.rank; });
+      const ideasHtml = '<p class="pl-note" style="margin-top:0">These are patterns in the numbers, not promises. Trucks that check in late cannot be unloaded early, so some of this is outside the dock control.</p>'
+        + (ideas.length ? ideas.slice(0, 7).map(function(it, i) {
+            return '<div class="pl-idea"><div class="pl-idea-title">' + (i + 1) + '. ' + it.title + '</div><ul class="pl-list">' + it.lines.map(function(l) { return '<li>' + l + '</li>'; }).join("") + '</ul><div class="pl-try"><b>Try:</b> ' + shiftRptEsc(it.tip) + '</div></div>';
+          }).join("") : '<div class="pl-head pl-ok"><div class="pl-big">Every zone finished on time, and nothing stood out as a problem tonight.</div></div>');
+
+      // --- the night in pictures: pie charts and extra charts, each with one plain line under it ---
+      const pcCard = function(title, svg, cap) { return '<div class="card"><h3>' + shiftRptEsc(title) + '</h3>' + svg + (cap ? '<div class="pc-cap' + (cap.indexOf('<span') === 0 ? ' legend' : '') + '">' + cap + '</div>' : '') + '</div>'; };
+      const pcShort = { freezer: "Freezer", chilled: "Cooler", dry: "Dry", other: "Other" };
+      const pcPct = function(part, whole) { return whole ? Math.round(100 * part / whole) : 0; };
+      const pies = [];
+      pies.push(pcCard("What happened to the booked trucks", shiftRptSvgPie({ items: [{ label: "Unloaded", value: t.completed, color: SR_C.green }, { label: "Still on the dock", value: t.open, color: "#f6ad55" }, { label: "Never showed up", value: t.never_arrived, color: "#a0aec0" }, { label: "Rejected", value: t.rejected, color: SR_C.red }], center: shiftRptNum(t.scheduled + (t.rejected || 0), 0), sub: "trucks booked", label: "What happened to the booked trucks" }),
+        shiftRptNum(t.completed) + " of the " + shiftRptNum(t.scheduled) + " scheduled trucks were unloaded (" + pcPct(t.completed, t.scheduled) + "%)."));
+      const pcTime = [t.avg_yard_wait_min, t.avg_door_wait_min, t.avg_unload_min];
+      if (pcTime.every(function(v) { return v != null; })) {
+        const tot = pcTime[0] + pcTime[1] + pcTime[2];
+        pies.push(pcCard("Where a truck's time goes", shiftRptSvgPie({ items: [{ label: "Waiting for a door", value: pcTime[0], color: "#fbd38d", unit: " min" }, { label: "Waiting at the door", value: pcTime[1], color: "#f6ad55", unit: " min" }, { label: "Unloading", value: pcTime[2], color: SR_C.tonight, unit: " min" }], center: shiftRptDur(tot), sub: "average truck", label: "Where a truck's time goes" }),
+          "Of an average truck's time at the dock, <b>" + pcPct(pcTime[0] + pcTime[1], tot) + "%</b> was spent waiting and <b>" + pcPct(pcTime[2], tot) + "%</b> was spent unloading."));
+      }
+      if (t.punctuality && t.punctuality.n) {
+        const pcn = t.punctuality.counts, early = pcn.slice(0, 4).reduce(function(s, v) { return s + v; }, 0), late5 = pcn.slice(5).reduce(function(s, v) { return s + v; }, 0);
+        pies.push(pcCard("Were trucks on time?", shiftRptSvgPie({ items: [{ label: "Early", value: early, color: SR_C.tonight }, { label: "On time (15 min either way)", value: pcn[4], color: SR_C.green }, { label: "Late", value: late5, color: SR_C.amber }], center: shiftRptNum(t.punctuality.n, 0), sub: "trucks", label: "Were trucks on time?" }),
+          pcPct(early, t.punctuality.n) + "% came early, " + pcPct(pcn[4], t.punctuality.n) + "% were on time and " + pcPct(late5, t.punctuality.n) + "% were late."));
+      }
+      if (t.dock_hist) {
+        const dh = t.dock_hist, u1 = (dh[0] || 0) + (dh[1] || 0), u2 = (dh[2] || 0) + (dh[3] || 0), u3 = (dh[4] || 0) + (dh[5] || 0) + (dh[6] || 0), dt = u1 + u2 + u3;
+        pies.push(pcCard("How long trucks sat on the dock", shiftRptSvgPie({ items: [{ label: "Under 1 hour", value: u1, color: SR_C.green }, { label: "1 to 2 hours", value: u2, color: SR_C.amber }, { label: "Over 2 hours", value: u3, color: SR_C.red }], center: shiftRptNum(dt, 0), sub: "trucks", label: "How long trucks sat on the dock" }),
+          "<b>" + pcPct(u3, dt) + "%</b> of the trucks (" + shiftRptNum(u3) + ") sat on the dock for more than 2 hours."));
+      }
+      pies.push(pcCard("Trucks unloaded, by zone", shiftRptSvgPie({ items: scOrder.map(function(z) { return { label: scName(z), value: (t.zones[z] || {}).completed || 0, color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other }; }), center: shiftRptNum(t.completed, 0), sub: "unloaded", label: "Trucks unloaded by zone" }),
+        "Each color is one zone. The bigger the slice, the more trucks that zone unloaded."));
+      pies.push(pcCard("Pallets unloaded, by zone", shiftRptSvgPie({ items: scOrder.map(function(z) { return { label: scName(z), value: (t.zones[z] || {}).pallets || 0, color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other }; }), center: shiftRptNum(t.pallets_total, 0), sub: "pallets", label: "Pallets unloaded by zone" }),
+        "The same split, counted in pallets instead of trucks."));
+      if (idPeople.length >= 2) {
+        pies.push(pcCard("Loads handled by each person", shiftRptSvgPie({ items: idPeople.slice().sort(function(x, y) { return y.loads - x.loads; }).slice(0, 8).map(function(p, i) { return { label: p.name, value: p.loads, color: SR_PEOPLE_COLORS[i % SR_PEOPLE_COLORS.length] }; }), center: shiftRptNum(idPeople.reduce(function(s, p) { return s + p.loads; }, 0), 0), sub: "named loads", label: "Loads handled by each person" }),
+          "Only loads that had an unloader name entered are counted."));
+      }
+      const pcGoal = scOrder.filter(function(z) { const a = t.zones[z]; return a && a.arrived; }).map(function(z) {
+        const a = t.zones[z], after = Math.max(0, a.completed - a.finished_by_goal);
+        return pcCard(scName(z) + ": did it make the goal?", shiftRptSvgPie({ items: [{ label: "Done by " + goalShort, value: a.finished_by_goal, color: SR_C.green }, { label: "Done after " + goalShort, value: after, color: SR_C.red }, { label: "Not done", value: a.open, color: "#a0aec0" }], center: a.pct_by_goal != null ? shiftRptNum(a.pct_by_goal, 0) + "%" : "--", sub: "by " + goalShort, label: scName(z) + " trucks finished by the goal" }),
+          shiftRptNum(a.finished_by_goal) + " of " + shiftRptNum(a.arrived) + " trucks were done by " + shiftRptEsc(goalShort) + ".");
+      });
+      // extra bar and line charts
+      const zoneForCharts = scOrder.filter(function(z) { const a = t.zones[z]; return a && a.completed >= 1; });
+      const pcFinish = zoneForCharts.filter(function(z) { return t.zones[z].p95_finish_min != null; });
+      const extra = [];
+      if (pcFinish.length) extra.push(pcCard("When each zone finished", shiftRptSvgHBars({ items: pcFinish.map(function(z) { return { label: pcShort[z] || z, value: t.zones[z].p95_finish_min }; }), ref: { value: goal, label: goalShort + " goal" }, better: "down", fmt: shiftRptClock, label: "When each zone finished compared with the goal" }),
+        "Green bars finished before the goal. Orange bars finished after it. The blue line is the goal."));
+      if (zoneForCharts.length) {
+        extra.push(pcCard("Trucks finished each hour, by zone", shiftRptBoth(shiftRptSvgStackCols, { labels: hourLabels, layers: zoneForCharts.map(function(z) { return { data: (t.zones[z].hourly || []).map(function(h) { return h.finishes; }), color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other }; }), label: "Trucks finished each hour, stacked by zone" }, 230),
+          zoneForCharts.map(function(z) { return '<span><i class="bar" style="background:' + (SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other) + '"></i>' + shiftRptEsc(scName(z)) + '</span>'; }).join(" ")));
+        extra.push(pcCard("Trucks arriving each hour, by zone", shiftRptBoth(shiftRptSvgStackCols, { labels: hourLabels, layers: zoneForCharts.map(function(z) { return { data: (t.zones[z].hourly || []).map(function(h) { return h.arrivals; }), color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other }; }), label: "Trucks arriving each hour, stacked by zone" }, 230),
+          "When the trucks showed up. A tall column here with a short column above it means trucks arrived faster than they could be unloaded."));
+      }
+      const pcWait = zoneForCharts.filter(function(z) { return t.zones[z].avg_ready_wait_min != null; });
+      if (pcWait.length) extra.push(pcCard("How long trucks waited to start, by zone", shiftRptSvgHBars({ items: pcWait.map(function(z) { return { label: pcShort[z] || z, value: t.zones[z].avg_ready_wait_min }; }), fmt: function(v) { return shiftRptDur(v); }, label: "Average wait to start by zone" }),
+        "Average wait from when a truck was ready (checked in and past its appointment) until unloading started. Shorter is better."));
+      const pcGrades = scOrder.filter(function(z) { return t.zones[z] && t.zones[z].grade; });
+      if (pcGrades.length) extra.push(pcCard("Zone grades", shiftRptSvgHBars({ items: pcGrades.map(function(z) { return { label: pcShort[z] || z, value: t.zones[z].grade.score }; }), ref: { value: 90, label: "A = 90" }, better: "up", fmt: function(v) { return shiftRptNum(v, 0) + "/100"; }, label: "Zone grades out of 100" }),
+        "The score out of 100. A bar that reaches the blue line is an A."));
+      const trendNights = idNights.concat([t]);
+      if (trendNights.length >= 2 && pcFinish.length) {
+        const trendSeries = pcFinish.map(function(z) { return { data: trendNights.map(function(n) { const zz = n.zones && n.zones[z]; return zz && zz.p95_finish_min != null && zz.completed >= 3 ? zz.p95_finish_min : null; }), color: SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other, width: 2.6 }; })
+          .concat([{ data: trendNights.map(function() { return goal; }), color: SR_C.red, width: 1.6, dash: "6 4" }]);
+        const trendTicks = trendNights.map(function(n, i) { return [i, shiftRptDay(n.business_date).replace(/^[A-Za-z]+ /, "")]; });
+        extra.push(pcCard("When each zone finished, night by night", shiftRptBoth(shiftRptSvgLines, { n: trendNights.length, series: trendSeries, xTicks: trendTicks, vlines: [], yFmt: shiftRptClock, label: "When each zone finished, night by night" }, 240),
+          pcFinish.map(function(z) { return '<span><i style="border-color:' + (SR_ZONE_COLOR[z] || SR_ZONE_COLOR.other) + '"></i>' + shiftRptEsc(scName(z)) + '</span>'; }).join(" ") + ' <span><i style="border-color:' + SR_C.red + ';border-top-style:dashed"></i>' + shiftRptEsc(goalShort) + ' goal</span>'));
+      }
+      const picturesHtml = '<div class="two">' + pies.join("") + '</div>'
+        + (pcGoal.length ? '<h3 class="kg">Did each zone make the goal?</h3><div class="three">' + pcGoal.join("") + '</div>' : '')
+        + '<h3 class="kg">More charts</h3><div class="two">' + extra.join("") + '</div>';
+
       // --- doors ---
       const doorItems = (t.doors || []).slice(0, 15).map(function(d) { return { label: "Door " + d.door, value: d.trucks }; });
       const doorChart = doorItems.length ? shiftRptSvgHBars({ items: doorItems, fmt: function(v) { return shiftRptNum(v) + " trucks"; }, label: "Trucks handled by door" }) : '<div class="empty">No door data.</div>';
@@ -20564,7 +20846,7 @@
       const unloaderNote = data.unloaders_hidden ? "" : (data.unloaders ? "" : '<p class="note">No unloader names were entered on this shift, so there is no per-unloader section.</p>');
       const sec = function(id, title, body) { return '<section class="sec" id="' + id + '"><h2>' + title + '</h2>' + body + '</section>'; };
       const card = function(title, body, legend) { return '<div class="card"><h3>' + title + '</h3>' + body + (legend ? '<div class="legend">' + legend + '</div>' : '') + '</div>'; };
-      const toc = [["sec-glance", "At a glance"], ["sec-scorecards", "Zone scorecards"], ["sec-flow", "Flow"], ["sec-waiting", "Waiting and speed"], ["sec-appts", "Appointments"], ["sec-zones", "Zones"], ["sec-doors", "Doors"], ["sec-suppliers", "Suppliers and carriers"], ["sec-exceptions", "Exceptions"], ["sec-nights", "Night by night"]]
+      const toc = [["sec-plain", "The night in plain words"], ["sec-ideas", "What could have been done to finish earlier"], ["sec-pictures", "Pie charts and more charts"], ["sec-glance", "More highlights"], ["sec-scorecards", "Zone scorecards"], ["sec-flow", "Flow"], ["sec-waiting", "Waiting and speed"], ["sec-appts", "Appointments"], ["sec-zones", "Zones"], ["sec-doors", "Doors"], ["sec-suppliers", "Suppliers and carriers"], ["sec-exceptions", "Exceptions"], ["sec-nights", "Night by night"]]
         .concat(unloaderHtml ? [["sec-unloaders", "Unloaders"]] : []).concat([["sec-hours", "Hour by hour"]])
         .map(function(x) { return '<a href="#' + x[0] + '">' + x[1] + '</a>'; }).join(" &middot; ");
       const css = ':root{--ink:#1a202c;--muted:#64748b;--line:#e2e8f0;--blue:#2b6cb0;--green:#2f855a;--red:#c53030;--amber:#b7791f}'
@@ -20599,13 +20881,29 @@
         + '.zt-s.good{color:var(--green)}.zt-s.bad{color:var(--red)}.zt-s.flat{color:var(--muted)}'
         + '@media(max-width:640px){.zg{grid-template-columns:repeat(2,minmax(0,1fr))}.zbig{font-size:1.7rem}.zcard{padding:10px 12px 12px}}'
         + '@media print{.zg{grid-template-columns:repeat(4,minmax(0,1fr))}.zcard{break-inside:auto}.zhead{break-after:avoid}}'
+        + '.pl-head{border-radius:12px;padding:16px 18px;margin:6px 0 4px;border:2px solid #cbd5e0;border-left-width:10px;background:#f7fafc}.pl-head.pl-ok{border-color:#2f855a;background:#f0fff4}.pl-head.pl-close{border-color:#b7791f;background:#fffaf0}.pl-head.pl-late{border-color:#c53030;background:#fff5f5}'
+        + '.pl-big{font-size:1.6rem;font-weight:800;line-height:1.25}.pl-big b{font-size:1.15em}.pl-ok .pl-big b{color:#2f855a}.pl-close .pl-big b{color:#b7791f}.pl-late .pl-big b{color:#c53030}.pl-sub{font-size:1.05rem;margin-top:6px}'
+        + '.pl-list{margin:6px 0 0;padding-left:22px;font-size:1.05rem}.pl-list li{margin:7px 0}.pl-note{font-size:.95rem;color:var(--muted);margin:8px 0 0}.pl-words{font-size:.95rem}'
+        + '.pl-tag{display:inline-block;border-radius:999px;padding:0 9px;font-size:.78rem;font-weight:800;color:#fff;background:#718096;vertical-align:1px}.pl-tag.pl-good{background:#2f855a}.pl-tag.pl-bad{background:#c53030}.pl-tag.pl-same{background:#718096}.pl-usual{color:var(--muted);font-size:.85rem}'
+        + '.pl-zones{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:6px}.pl-zone{border:2px solid #cbd5e0;border-left-width:10px;border-radius:12px;padding:12px 14px;background:#fff;break-inside:avoid}'
+        + '.pl-zone.pl-ok{border-color:#2f855a;background:#f0fff4}.pl-zone.pl-close{border-color:#b7791f;background:#fffaf0}.pl-zone.pl-late{border-color:#c53030;background:#fff5f5}.pl-zone.pl-none{background:#f7fafc}'
+        + '.pl-ztop{display:flex;justify-content:space-between;align-items:center;gap:10px}.pl-zname{font-size:1.1rem;font-weight:800}.pl-grade{flex:none;width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;color:#fff;background:#718096}'
+        + '.pl-ztime{font-size:1.05rem;margin:6px 0}.pl-line{font-size:.98rem;margin-top:5px}.pl-goodline b{color:#2f855a}.pl-badline b{color:#c53030}'
+        + '.pl-grade.zgr-A{background:#2f855a}.pl-grade.zgr-B{background:#2b6cb0}.pl-grade.zgr-C{background:#b7791f}.pl-grade.zgr-D{background:#dd6b20}.pl-grade.zgr-F{background:#c53030}'
+        + '.pl-legend{font-size:1rem;margin-top:4px}.pl-key{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px}.pl-key.pl-ok{background:#2f855a}.pl-key.pl-close{background:#b7791f}.pl-key.pl-late{background:#c53030}'
+        + '@media(max-width:640px){.pl-big{font-size:1.3rem}.pl-zones{grid-template-columns:minmax(0,1fr)}}'
+        + '.pl-idea{border:1px solid var(--line);border-left:8px solid #2b6cb0;border-radius:10px;padding:10px 14px;margin:10px 0;background:#f7fbff;break-inside:avoid}.pl-idea-title{font-size:1.1rem;font-weight:800}.pl-try{margin-top:6px;font-size:1rem;color:#2a4365}.pl-try b{color:#2b6cb0}'
+        + '.pc-cap{font-size:.92rem;margin-top:6px;color:#2d3748}.pc-cap span{margin-right:12px}'
         + '.card,.kpi{min-width:0}'
         + '@media print{.cw{display:block!important}.cn{display:none!important}body{background:#fff}.page{max-width:none;padding:0}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}h2{break-after:avoid;break-before:auto}.card,.kpi,tr{break-inside:avoid}.tw{overflow:visible}.tw table,.tw table.wide{min-width:0}table.wide{font-size:.66rem}th,td{padding:4px 4px}th{font-size:.6rem}.nw,.chip{white-space:normal}.toc,.top{display:none}@page{size:letter;margin:12mm}}';
       return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + shiftRptEsc(shiftRptSiteName(data)) + ' End-of-Shift Report ' + shiftRptEsc(t.business_date) + '</title><style>' + css + '</style></head><body><div class="page">'
         + '<h1>' + shiftRptEsc(shiftRptSiteName(data)) + ' End-of-Shift Report</h1>'
         + '<div class="meta">Business date <b>' + shiftRptEsc(shiftRptLongDate(t.business_date)) + '</b> &middot; shift 7:00 PM to 9:00 AM &middot; generated ' + shiftRptEsc(generated) + '</div>'
         + banner + '<p class="meta">' + compare + '</p>' + missing + '<div class="toc">' + toc + '</div>'
-        + sec("sec-glance", "The night at a glance", (insights.length ? '<ul class="insights">' + insights.map(function(s) { return '<li>' + s + '</li>'; }).join("") + '</ul>' : '') + shiftRptKpiGroups(data))
+        + sec("sec-plain", "The night in plain words", plainHtml)
+        + sec("sec-ideas", "What could have been done to finish earlier", ideasHtml)
+        + sec("sec-pictures", "Pie charts and more charts", picturesHtml)
+        + sec("sec-glance", "More highlights", (insights.length ? '<ul class="insights">' + insights.map(function(s) { return '<li>' + s + '</li>'; }).join("") + '</ul>' : '') + shiftRptKpiGroups(data))
         + sec("sec-scorecards", "Zone scorecards", scorecards)
         + sec("sec-flow", "Flow through the night",
             card("Trucks finished through the night", curveSvg, legendLine(SR_C.tonight, "This shift") + (b ? legendLine(SR_C.avg, avgText(), true) : "") + legendLine(SR_C.gray, "Each earlier night") + legendLine(SR_C.red, goalShort + " goal", true))
