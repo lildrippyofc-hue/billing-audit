@@ -2748,6 +2748,472 @@
       display: flex;
     }
 
+    /* -- Executive cleanup pass ------------------------------------------------
+       Local-only visual polish: keep the existing app flow, but make the shell,
+       menu, panels, tables, and buttons feel more organized for demos. */
+    body {
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.75), rgba(234,243,248,0.88) 240px, var(--bg) 620px),
+        radial-gradient(circle at 8% 0%, rgba(0,169,202,0.12), transparent 32%),
+        radial-gradient(circle at 95% 4%, rgba(220,88,42,0.10), transparent 26%);
+    }
+
+    .app-shell {
+      padding-top: 18px;
+      padding-bottom: 38px;
+    }
+
+    header {
+      min-height: 58px;
+      align-items: center;
+      padding: 14px 16px;
+      border: 1px solid rgba(0, 73, 118, 0.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.82);
+      box-shadow: 0 14px 34px rgba(0, 73, 118, 0.08);
+      backdrop-filter: blur(10px);
+    }
+
+    header h1 {
+      font-size: clamp(1.45rem, 2.2vw, 2.2rem);
+    }
+
+    .subtitle {
+      max-width: 680px;
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .toolbar {
+      gap: 8px;
+    }
+
+    .dark-toggle,
+    .auth-chip {
+      box-shadow: none;
+    }
+
+    .status-line {
+      min-height: 18px;
+      margin: 8px 0 12px;
+      padding: 8px 12px;
+      border: 1px solid rgba(0, 73, 118, 0.10);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.58);
+      font-size: 0.84rem;
+    }
+
+    .section-menu {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+
+    .menu-toggle {
+      width: min(460px, 100%);
+      min-height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #004976, #006f94);
+      box-shadow: 0 12px 24px rgba(0, 73, 118, 0.18);
+    }
+
+    .hamburger-lines {
+      width: 20px;
+    }
+
+    .menu-current {
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+    }
+
+    .menu-panel {
+      width: min(1040px, calc(100vw - 48px));
+      grid-template-columns: repeat(3, minmax(210px, 1fr));
+      gap: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 24px 70px rgba(0, 41, 76, 0.22);
+      backdrop-filter: blur(12px);
+    }
+
+    .menu-search-input {
+      grid-column: 1 / -1;
+      min-height: 42px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #f8fbfd;
+      padding: 0 12px;
+      font-weight: 700;
+    }
+
+    .menu-search-empty {
+      grid-column: 1 / -1;
+    }
+
+    .menu-group {
+      padding: 10px;
+      border: 1px solid rgba(0, 73, 118, 0.10);
+      border-radius: 12px;
+      background: linear-gradient(180deg, #ffffff, #f8fbfd);
+    }
+
+    .menu-group-title {
+      margin: 0 4px 8px;
+      color: #004976;
+      font-size: 0.68rem;
+      letter-spacing: 0.10em;
+    }
+
+    .tab-button {
+      min-height: 38px;
+      border-radius: 9px;
+      padding: 0 10px;
+      font-size: 0.86rem;
+      font-weight: 740;
+    }
+
+    .tab-button:hover {
+      color: #004976;
+      background: #eef7fb;
+    }
+
+    .tab-button[aria-selected="true"] {
+      background: linear-gradient(135deg, #e3f5fb, #d6eef7);
+      border-left: 4px solid #DC582A;
+      box-shadow: inset 0 0 0 1px rgba(0,73,118,0.08);
+    }
+
+    main {
+      display: block;
+    }
+
+    .tab-panel.active {
+      animation: panelLift 0.18s ease-out;
+    }
+
+    @keyframes panelLift {
+      from { opacity: 0.78; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .brand-mark {
+      margin-bottom: 12px;
+      border-left-width: 5px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #ffffff, #f7fbfd);
+      box-shadow: 0 8px 20px rgba(0, 73, 118, 0.07);
+    }
+
+    .summary-grid {
+      gap: 12px;
+    }
+
+    .metric-card,
+    .panel,
+    .table-wrap,
+    .empty-state,
+    .lookup-box {
+      border-color: rgba(0, 73, 118, 0.12);
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 73, 118, 0.08);
+    }
+
+    .metric-card {
+      min-height: 92px;
+      padding: 13px 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,252,254,0.98));
+    }
+
+    .metric-label,
+    .table-kicker,
+    .panel-kicker {
+      color: #267f98;
+    }
+
+    .metric-value {
+      font-size: clamp(1.15rem, 1.9vw, 1.85rem);
+      color: #003f66;
+    }
+
+    .metric-note {
+      font-size: 0.73rem;
+      line-height: 1.3;
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panel-header {
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(0, 73, 118, 0.10);
+    }
+
+    .panel h2,
+    .table-title {
+      color: #003f66;
+    }
+
+    .friendly-note {
+      max-width: 760px;
+      font-size: 0.9rem;
+    }
+
+    .table-wrap {
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .table-toolbar {
+      border-bottom: 1px solid rgba(0,73,118,0.10);
+      background: #f8fbfd;
+    }
+
+    table {
+      font-size: 0.84rem;
+    }
+
+    th {
+      background: #f2f7fa;
+      color: #315e76;
+    }
+
+    td {
+      color: #263b49;
+    }
+
+    tbody tr:hover td {
+      background: rgba(0,169,202,0.05);
+    }
+
+    .dock-row,
+    .bal-row,
+    .overview-item,
+    .lookup-detail-card {
+      border-color: rgba(0, 73, 118, 0.10);
+      background: #f8fbfd;
+    }
+
+    .file-button.primary,
+    .primary-btn,
+    button.primary {
+      background: linear-gradient(135deg, #DC582A, #f06e3c);
+      border-color: #DC582A;
+      box-shadow: 0 10px 22px rgba(220,88,42,0.20);
+    }
+
+    .file-button.primary:hover,
+    .primary-btn:hover,
+    button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(220,88,42,0.24);
+    }
+
+    .secondary-btn,
+    .portal-ctrl-btn,
+    button:not(.tab-button):not(.menu-toggle):not(.dark-toggle):not(.primary-btn):not(.tutorial-next):not(.tutorial-skip) {
+      border-radius: 9px;
+    }
+
+    .truck-report-actions {
+      padding: 10px;
+      border: 1px solid rgba(0, 73, 118, 0.10);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.68);
+      box-shadow: 0 8px 20px rgba(0, 73, 118, 0.06);
+    }
+
+    .menu-panel {
+      max-height: min(720px, calc(100vh - 140px));
+      overflow: auto;
+    }
+
+    .portal-command-bar {
+      border-radius: 14px;
+      border-color: rgba(0, 73, 118, 0.14);
+      box-shadow: 0 12px 30px rgba(0, 73, 118, 0.08);
+      background: #ffffff;
+    }
+
+    .portal-info-strip {
+      background: linear-gradient(135deg, #004976, #0b6f91);
+    }
+
+    .portal-controls-strip {
+      background: #f8fbfd;
+      border-top: 1px solid rgba(0, 73, 118, 0.10);
+    }
+
+    .portal-view-switch {
+      padding: 6px;
+      border: 1px solid rgba(0, 73, 118, 0.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.72);
+      box-shadow: 0 8px 20px rgba(0, 73, 118, 0.06);
+    }
+
+    .portal-view-btn {
+      border-radius: 9px;
+      font-weight: 820;
+    }
+
+    .portal-view-btn.active {
+      background: linear-gradient(135deg, #004976, #006f94);
+      box-shadow: 0 8px 18px rgba(0,73,118,0.18);
+    }
+
+    .portal-ops-grid {
+      gap: 14px;
+    }
+
+    .portal-action-panel,
+    .portal-client-panel,
+    .portal-chart-card,
+    .portal-schedule-panel {
+      border-radius: 12px;
+      border-color: rgba(0, 73, 118, 0.12);
+      box-shadow: 0 10px 30px rgba(0, 73, 118, 0.08);
+    }
+
+    .portal-action-head,
+    .portal-client-head {
+      padding-bottom: 9px;
+      border-bottom: 1px solid rgba(0,73,118,0.10);
+    }
+
+    .portal-client-grid {
+      gap: 10px;
+    }
+
+    .portal-client-kpi,
+    .portal-mini-card,
+    .portal-timeline-stat {
+      border-radius: 10px;
+      background: #f8fbfd;
+    }
+
+    .portal-client-kpi .val,
+    .portal-mini-card .val {
+      color: #003f66;
+    }
+
+    .portal-action-item,
+    .portal-forecast-item {
+      border-radius: 10px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45);
+    }
+
+    .zone-grid {
+      gap: 14px;
+    }
+
+    .zone-card {
+      border-radius: 12px;
+      box-shadow: 0 10px 28px rgba(0,73,118,0.08);
+    }
+
+    .zone-head,
+    .zone-stat-row {
+      gap: 8px;
+    }
+
+    .door-tile {
+      border-radius: 9px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-width: 100%;
+    }
+
+    :root.dark body {
+      background:
+        radial-gradient(circle at 10% 0%, rgba(0,229,255,0.10), transparent 30%),
+        radial-gradient(circle at 96% 0%, rgba(255,165,61,0.10), transparent 28%),
+        #070c15;
+    }
+
+    :root.dark header,
+    :root.dark .status-line,
+    :root.dark .menu-panel,
+    :root.dark .menu-group,
+    :root.dark .truck-report-actions {
+      background: rgba(13, 26, 38, 0.88);
+      border-color: rgba(85, 168, 212, 0.22);
+    }
+
+    :root.dark header {
+      clip-path: none;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.34);
+    }
+
+    :root.dark .portal-command-bar {
+      clip-path: none;
+      background: rgba(13, 26, 38, 0.92);
+      border-color: rgba(85,168,212,0.24);
+    }
+
+    :root.dark .portal-controls-strip,
+    :root.dark .portal-view-switch {
+      background: rgba(9,24,39,0.86);
+      border-color: rgba(85,168,212,0.20);
+    }
+
+    :root.dark .menu-toggle {
+      background: linear-gradient(135deg, #0d3b5b, #005f78);
+    }
+
+    :root.dark .menu-search-input {
+      background: #091827;
+      color: #e8f3ff;
+      border-color: #1e3a55;
+    }
+
+    :root.dark .menu-group {
+      background: linear-gradient(180deg, rgba(16,31,45,0.96), rgba(11,24,36,0.96));
+    }
+
+    :root.dark .tab-button:hover,
+    :root.dark .tab-button[aria-selected="true"] {
+      background: rgba(0,229,255,0.10);
+      border-left-color: var(--amber);
+    }
+
+    :root.dark .metric-card,
+    :root.dark .panel,
+    :root.dark .table-wrap,
+    :root.dark .empty-state,
+    :root.dark .lookup-box {
+      box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+    }
+
+    :root.dark .metric-card,
+    :root.dark .table-toolbar,
+    :root.dark .dock-row,
+    :root.dark .bal-row,
+    :root.dark .overview-item,
+    :root.dark .lookup-detail-card,
+    :root.dark .portal-client-kpi,
+    :root.dark .portal-mini-card,
+    :root.dark .portal-timeline-stat {
+      background: rgba(16,31,45,0.76);
+      border-color: rgba(85,168,212,0.18);
+    }
+
+    :root.dark tbody tr:hover td {
+      background: rgba(0,229,255,0.06) !important;
+    }
+
+    :root.retro .menu-toggle,
+    :root.retro .file-button.primary,
+    :root.retro .primary-btn,
+    :root.retro button.primary {
+      background: linear-gradient(135deg,#ff4fd8,#ffb000,#00f5ff);
+      color: #090014;
+      border-color: rgba(255,255,255,0.24);
+    }
+
     @media (max-width: 1080px) {
       header {
         grid-template-columns: 1fr;
@@ -2771,7 +3237,7 @@
       }
 
       .menu-panel {
-        grid-template-columns: repeat(2, minmax(180px, 1fr));
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
       }
     }
 
@@ -4743,7 +5209,6 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Live: My Portal (MN)">My Portal (MN)</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="mnScheduleUploader" data-menu-label="Minnesota: Schedule Uploader">MN Schedule Uploader</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="dmsStamp" data-menu-label="Live: DMS Stamp">DMS Stamp</button>
         </div>
         <div class="menu-group">
           <div class="menu-group-title">Truck Report</div>
@@ -4751,54 +5216,9 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="data" data-menu-label="Truck Report: Data">Data</button>
         </div>
         <div class="menu-group">
-          <div class="menu-group-title">Daily Review</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="exceptions" data-menu-label="Daily Review: Exceptions Queue">Exceptions Queue</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Lead Tools</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="ddp" data-menu-label="Lead Tools: DDP / EXW">DDP / EXW</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="truckFinder" data-menu-label="Lead Tools: Truck Finder">Truck Finder</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="audit" data-menu-label="Lead Tools: Roll Off Audit">Roll Off Audit</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="turnTracker" data-menu-label="Lead Tools: Turn Tracker">Turn Tracker</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Clerk Support and Helper</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="clerkDoor" data-menu-label="Clerk Support: Clerk Door">Clerk Door</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="doorSuggestor" data-menu-label="Clerk Support: Door Suggestor">Door Suggestor</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="spillTracker" data-menu-label="Clerk Support: Spill Tracker">Spill Tracker</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="guardShack" data-menu-label="Clerk Support: Guard Shack Cheat Sheet">Guard Shack Cheat Sheet</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">ALDIOKS Billing Audit</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="truckChargeAudit" data-menu-label="ALDIOKS Billing Audit: PowerView">PowerView Billing Audit</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="detention" data-menu-label="ALDIOKS Billing Audit: Detention">Detention</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="bizDateAudit" data-menu-label="ALDIOKS Billing Audit: Business Date">Business Date</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="clerkBoard" data-menu-label="ALDIOKS Billing Audit: Clerk Entry">Clerk Entry</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">ALDIOKS Container Log</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="containerLog" data-menu-label="ALDIOKS Container Log">Container Log</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Minnesota</div>
+          <div class="menu-group-title">Billing Audits</div>
+          <button class="tab-button" type="button" aria-selected="false" data-tab="truckChargeAudit" data-menu-label="Billing Audits: OKS PowerView">OKS Billing Audit</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="mnBillingAudit" data-menu-label="Minnesota: PowerView Billing Audit">MN Billing Audit</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="guardShackMn" data-menu-label="Minnesota: Dock Cheat Sheet">MN Dock Cheat Sheet</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Arizona</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="azTimeAudit" data-menu-label="Arizona: Time Audit">Arizona Time Audit</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Database</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="history" data-menu-label="Database: History">History</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Analytics</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="trends" data-menu-label="Analytics: Trends">Trends</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Help</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="help" data-menu-label="Help: How To Use">How To Use</button>
         </div>
       </div>
     </nav>
@@ -7717,126 +8137,6 @@
         </div>
       </section>
 
-      <!-- === DMS STAMP ======================================================= -->
-      <section id="dmsStampPanel" class="tab-panel" aria-label="DMS Stamp">
-        <div class="motivation-bar" id="motivBar_dmsStamp"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-
-        <!-- Connection status bar -->
-        <div class="portal-header-bar" style="margin-bottom:12px;">
-          <div class="portal-live-badge">
-            <span class="portal-live-dot" id="dmsStampDot" style="background:#718096;"></span>
-            <span style="font-weight:700; color:var(--text,#1a202c);">DMS Timestamp Board</span>
-          </div>
-          <div style="font-size:0.82em; color:var(--muted,#888);" id="dmsStampStatus">Click a stamp button to record a timestamp locally and push it to DMS.</div>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <button id="dmsStampRefreshBoardBtn" type="button" class="secondary-btn" style="font-size:0.82em;">&#8635; Refresh Trucks</button>
-            <button id="dmsStampTestBtn" type="button" class="secondary-btn" style="font-size:0.82em;">Test DMS Connection</button>
-          </div>
-        </div>
-
-        <!-- Truck stamp board -->
-        <div class="table-wrap" style="margin-bottom:14px;">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title">Truck Board</div>
-              <div class="table-meta" id="dmsStampBoardMeta">Trucks pulled from My Portal. Click any stamp button to record the time and send to DMS.</div>
-            </div>
-          </div>
-          <div class="table-scroller">
-            <table id="dmsStampBoardTable" style="width:100%; border-collapse:collapse; font-size:0.84em; min-width:820px;">
-              <thead>
-                <tr style="background:var(--header-bg,#f7fafc);">
-                  <th style="text-align:left; padding:9px 10px; white-space:nowrap;">Truck / Load ID</th>
-                  <th style="text-align:left; padding:9px 10px; white-space:nowrap;">Vendor</th>
-                  <th style="text-align:left; padding:9px 10px; white-space:nowrap;">Door</th>
-                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Check In</th>
-                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Driver @ Door</th>
-                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Unload Start</th>
-                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Unload Finish</th>
-                  <th style="text-align:center; padding:9px 8px; white-space:nowrap; color:#00A9CA;">Rcv Finish</th>
-                </tr>
-              </thead>
-              <tbody id="dmsStampBoardBody">
-                <tr><td colspan="8" style="padding:18px 10px; color:var(--muted,#888); text-align:center; font-style:italic;">Open My Portal first to clock in trucks  -  they will appear here automatically.</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Manual stamp (fallback) -->
-        <details style="margin-bottom:14px;">
-          <summary style="cursor:pointer; font-size:0.84em; font-weight:700; color:var(--label,#00A9CA); padding:8px 0; user-select:none;">&#9654; Manual Stamp  -  enter Load ID by hand</summary>
-          <div class="panel" style="padding:18px 20px; margin-top:10px;">
-            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;">
-              <div>
-                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Load ID</label>
-                <input id="dmsStampLoadId" type="text" class="lookup-input" placeholder="Paste Load ID" autocomplete="off" style="width:100%;">
-              </div>
-              <div>
-                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">PO # (optional)</label>
-                <input id="dmsStampPo" type="text" class="lookup-input" placeholder="e.g. 1234567" autocomplete="off" style="width:100%;">
-              </div>
-              <div>
-                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Stamp Type</label>
-                <select id="dmsStampType" class="lookup-input" style="width:100%;">
-                  <option value="checkin">Check In</option>
-                  <option value="driveratdoor">Driver At Door</option>
-                  <option value="unloadstart">Unload Start</option>
-                  <option value="unloadfinish">Unload Finish</option>
-                  <option value="receivingfinish">Receiving Finish</option>
-                </select>
-              </div>
-              <div>
-                <label style="font-size:0.78em; font-weight:700; color:var(--label,#00A9CA); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.06em;">Time (defaults to now)</label>
-                <div style="display:flex; gap:6px;">
-                  <input id="dmsStampTime" type="datetime-local" class="lookup-input" style="flex:1;">
-                  <button id="dmsStampNowBtn" type="button" class="secondary-btn" style="font-size:0.8em; white-space:nowrap;">Now</button>
-                </div>
-              </div>
-            </div>
-            <div style="margin-top:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-              <button id="dmsStampSubmitBtn" type="button" class="primary-btn" style="font-size:0.92em; font-weight:700; padding:9px 22px;">Stamp Truck</button>
-              <span id="dmsStampSpinner" style="display:none; font-size:0.82em; color:var(--muted,#888);">Stamping...</span>
-            </div>
-            <div id="dmsStampResult" style="margin-top:12px; display:none; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600;"></div>
-          </div>
-        </details>
-
-        <!-- Stamp log -->
-        <div class="table-wrap">
-          <div class="table-toolbar">
-            <div>
-              <div class="table-title">Stamp Log</div>
-              <div class="table-meta" id="dmsStampLogMeta">Stamps you send this session appear here.</div>
-            </div>
-            <button id="dmsStampClearLog" type="button" class="secondary-btn" style="font-size:0.8em;">Clear Log</button>
-          </div>
-          <div class="table-scroller">
-            <table id="dmsStampLogTable" style="width:100%; border-collapse:collapse; font-size:0.84em;">
-              <thead>
-                <tr>
-                  <th style="text-align:left; padding:8px 10px;">Sent At</th>
-                  <th style="text-align:left; padding:8px 10px;">Load ID</th>
-                  <th style="text-align:left; padding:8px 10px;">Vendor</th>
-                  <th style="text-align:left; padding:8px 10px;">Stamp Type</th>
-                  <th style="text-align:left; padding:8px 10px;">Stamp Time</th>
-                  <th style="text-align:left; padding:8px 10px;">Result</th>
-                </tr>
-              </thead>
-              <tbody id="dmsStampLogBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- DevTools tip -->
-        <div class="panel" style="margin-top:14px; padding:16px 20px; border-left:4px solid #d69e2e; background:var(--warn-bg,#fffbeb);">
-          <div style="font-size:0.78em; font-weight:700; color:#744210; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">Can't find the stamp endpoint?</div>
-          <p style="margin:0; font-size:0.85em; color:var(--text,#1a202c); line-height:1.6;">Open DMS in Chrome, press <strong>F12</strong> -> Network tab -> filter by <strong>XHR</strong>. Stamp a truck the normal way. Look for a POST request with "stamp" in the URL. Right-click -> Copy URL -> paste into <code>dms_config.json</code> as <code>"stamp_endpoint"</code> and restart the server.</p>
-        </div>
-
-      </section>
-      <!-- === END DMS STAMP ==================================================== -->
-
       <section id="exceptionsPanel" class="tab-panel" aria-label="Exceptions Queue">
         <div class="motivation-bar" id="motivBar_exceptions"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="brand-mark">
@@ -8322,17 +8622,6 @@
               </div>
             </div>
 
-            <!-- STEP 8 -->
-            <div class="help-step">
-              <div class="help-step-num">8</div>
-              <div class="help-step-content">
-                <h3>Use DMS Stamp Only If It Is Set Up</h3>
-                <p>Go to <strong>Live -> DMS Stamp</strong>. This can send times to DMS if the DMS connection is configured. Powerful button. Tiny rectangle. Big consequences.</p>
-                <div class="help-step-tip">Click <strong>Test DMS Connection</strong> first. If it fails, ask whoever manages the app setup. No one is born knowing server settings.</div>
-                <div class="help-step-tip" style="margin-top:8px; border-left-color:#d69e2e; background:#fffbeb;">Do not guess on DMS stamps. Wrong stamps affect the real system, and the real system has no sense of humor.</div>
-              </div>
-            </div>
-
           </div><!-- end .help-steps -->
 
           <!-- CHEAT SHEET -->
@@ -8411,10 +8700,6 @@
               <div class="glossary-item">
                 <h4>My Portal</h4>
                 <p>The live board. It shows trucks, timers, warnings, and shift progress. It is the dashboard version of "please handle this."</p>
-              </div>
-              <div class="glossary-item">
-                <h4>DMS Stamp</h4>
-                <p>A time sent to DMS for a truck event, like unload start or unload finish.</p>
               </div>
               <div class="glossary-item">
                 <h4>Export Shift</h4>
@@ -8536,11 +8821,6 @@
               <div class="faq-item">
                 <p class="faq-q">How do I know when the shift will be done?</p>
                 <p class="faq-a">Look at <strong>Projected Finish</strong> in My Portal. It updates as the shift moves.</p>
-              </div>
-
-              <div class="faq-item">
-                <p class="faq-q">The DMS Stamp tab says the connection failed. What now?</p>
-                <p class="faq-a">Ask whoever manages the app setup to check the DMS connection.</p>
               </div>
 
               <div class="faq-item">
@@ -8924,15 +9204,15 @@
     const TALL_DOOR_NUMBERS = new Set([1, 15, 17, 18, 21, 27, 28, 54, 56, 61, 65, 72, 73, 74, 80, 84, 86, 88, 89, 91, 94, 95, 98, 100, 103]);
     const ROLE_TABS = {
       admin: ["*"],
-      oks: ["myPortal", "unloaderPerformance", "overview", "data", "help"],
-      minnesota: ["myPortalMn", "unloaderPerformance", "mnScheduleUploader", "mnBillingAudit", "guardShackMn", "guardShack", "overview", "data"],
-      manager: ["myPortal", "unloaderPerformance", "alerts", "dmsStamp", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
-      teamlead: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "exceptions", "ddp", "truckFinder", "audit", "turnTracker", "help"],
-      clerk: ["myPortal", "dmsStamp", "clerkDoor", "doorSuggestor", "spillTracker", "guardShack", "help"],
-      client: ["overview", "data", "trends", "help"],
-      work: ["overview", "data", "ddp", "truckFinder", "audit", "turnTracker", "truckChargeAudit", "detention", "bizDateAudit", "clerkBoard", "history", "trends", "help"],
-      guest: ["overview", "data", "help"],
-      azaudit: ["myPortal", "myPortalMn", "unloaderPerformance", "azTimeAudit"]
+      oks: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "truckChargeAudit"],
+      minnesota: ["myPortalMn", "unloaderPerformance", "mnScheduleUploader", "mnBillingAudit", "overview", "data"],
+      manager: ["myPortal", "unloaderPerformance", "myPortalMn", "mnScheduleUploader", "alerts", "overview", "data", "truckChargeAudit", "mnBillingAudit"],
+      teamlead: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "truckChargeAudit"],
+      clerk: ["myPortal", "alerts", "overview", "data"],
+      client: ["overview", "data"],
+      work: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "truckChargeAudit", "mnBillingAudit"],
+      guest: ["overview", "data"],
+      azaudit: ["myPortal", "myPortalMn", "unloaderPerformance"]
     };
     // PowerView-style billing audit site config — declared here (not down by
     // its render code) so the file-input/run-button wiring that runs at page
@@ -9161,20 +9441,6 @@
       portalMnScheduleClearBtn: document.getElementById("portalMnScheduleClearBtn"),
       portalMnScheduleStatus: document.getElementById("portalMnScheduleStatus"),
       portalMnSchedulePreviewTable: document.getElementById("portalMnSchedulePreviewTable"),
-      dmsStampDot: document.getElementById("dmsStampDot"),
-      dmsStampStatus: document.getElementById("dmsStampStatus"),
-      dmsStampTestBtn: document.getElementById("dmsStampTestBtn"),
-      dmsStampLoadId: document.getElementById("dmsStampLoadId"),
-      dmsStampPo: document.getElementById("dmsStampPo"),
-      dmsStampType: document.getElementById("dmsStampType"),
-      dmsStampTime: document.getElementById("dmsStampTime"),
-      dmsStampNowBtn: document.getElementById("dmsStampNowBtn"),
-      dmsStampSubmitBtn: document.getElementById("dmsStampSubmitBtn"),
-      dmsStampSpinner: document.getElementById("dmsStampSpinner"),
-      dmsStampResult: document.getElementById("dmsStampResult"),
-      dmsStampLogBody: document.getElementById("dmsStampLogBody"),
-      dmsStampLogMeta: document.getElementById("dmsStampLogMeta"),
-      dmsStampClearLog: document.getElementById("dmsStampClearLog"),
       containerLogNumberInput: document.getElementById("containerLogNumberInput"),
       containerLogLocationInput: document.getElementById("containerLogLocationInput"),
       containerLogCommentsInput: document.getElementById("containerLogCommentsInput"),
@@ -9574,12 +9840,6 @@
           { sel: "#portalPaceAlert", title: "Pace Alert Banner", msg: "This banner tells you in plain language whether the shift is on track or behind. It turns green when you are good, yellow when things are getting tight, and red when the estimated finish time goes past 4AM." },
           { sel: "#portalBoard", title: "Live Dock Board", msg: "Every truck clocked in appears here with a live countdown. DETENTION means the truck is past its free time; act on those first. URGENT means under 30 minutes left. Rows update every second without any page reload." },
           { sel: "#portalExportBtn", title: "Export Shift at End of Night", msg: "When the shift is over, click Export Shift to download a CSV with every truck, check-in time, finish time, and detention minutes. A copy also saves to the server so you can pull it up later from the Shift Exports section below." }
-        ],
-        dmsStamp: [
-          { sel: "#dmsStampTestBtn", title: "Test Your DMS Connection First", msg: "Before stamping anything, click this button to make sure the app can reach DMS. It will show a green message if everything is connected, or a red message telling you what to fix." },
-          { sel: "#dmsStampLoadId", title: "Paste the Load ID Here", msg: "The Load ID comes from DMS or from the truck row in My Portal. Paste it here exactly as it appears. This tells DMS which specific truck you are stamping." },
-          { sel: "#dmsStampType", title: "Pick the Stamp Type", msg: "Choose what event you are recording  -  Check In, Driver At Door, Unload Start, Unload Finish, or Receiving Finish. Pick the one that matches what just happened with the truck." },
-          { sel: "#dmsStampSubmitBtn", title: "Hit Stamp Truck to Send It", msg: "After filling in the Load ID and stamp type, click Stamp Truck. The app sends the stamp to DMS through the same login it uses for My Portal. The result shows up instantly below the button, and a log entry appears in the Stamp Log table." }
         ],
         exceptions: [
           { sel: "#exceptionsPanel .summary-grid", title: "Exceptions Overview", msg: "These cards show how many exception items are flagged across the operation  -  high priority, medium priority, and total open items. High priority items need your attention first." },
@@ -21365,10 +21625,9 @@
       { abbr: "RF",  title: "Rcv Finish",     field: "receivingFinishMs", key: "receivingfinish" },
     ];
 
-    // Stamp (or clear) a single load stage right from the board.
-    // Manual trucks persist to localStorage; DMS trucks update in-memory and
-    // attempt a best-effort push to DMS. Marking "Unload Finish" completes the truck
-    // (drives the shift-progress ring); clearing a stage undoes it.
+    // Mark (or clear) a single load stage right from the board for local display.
+    // Manual trucks persist to localStorage; DMS trucks update in-memory only.
+    // This app no longer writes DMS stamps.
     function portalStampStage(truck, field, stampKey, alreadyDone) {
       const truckId = truck.id || truck.ref;
       const newVal = alreadyDone ? null : Date.now();
@@ -21380,19 +21639,6 @@
         if (orig) {
           orig[field] = newVal;
           if (field === "unloadFinishMs" || field === "receivingFinishMs") orig.finishMs = newVal;
-        }
-        if (!alreadyDone) {
-          // Best-effort push to DMS; board already reflects it locally.
-          fetch(apiUrl("/api/dms/stamp"), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              load_id: truck.loadId || truck.ref || null,
-              po: truck.po || null,
-              stamp_type: stampKey,
-              stamp_time: new Date(newVal).toISOString()
-            })
-          }).catch(function() {});
         }
       } else {
         const trucks = portalLoadTrucks();
@@ -24754,286 +25000,6 @@
       els.tableMeta.textContent = `${trucks.length} trucks in ${dockLabel}, sorted by hour, area, and dock section`;
     }
 
-    // -- DMS Stamp --------------------------------------------------------------
-
-    var _dmsStampLog = [];
-    // key: "truckKey:stampType" -> { timeIso, timeLabel, status: "pending"|"ok"|"error" }
-    var _dmsStampOverrides = {};
-
-    var _DMS_STAMP_COLS = [
-      { key: "checkin",        label: "Check In",      msField: "checkInMs"        },
-      { key: "driveratdoor",   label: "Driver @ Door", msField: "driverAtDoorMs"   },
-      { key: "unloadstart",    label: "Unload Start",  msField: "unloadStartMs"    },
-      { key: "unloadfinish",   label: "Unload Finish", msField: "unloadFinishMs"   },
-      { key: "receivingfinish",label: "Rcv Finish",    msField: "receivingFinishMs"},
-    ];
-
-    function dmsStampSetDot(color, msg) {
-      if (els.dmsStampDot) els.dmsStampDot.style.background = color;
-      if (els.dmsStampStatus) els.dmsStampStatus.textContent = msg;
-    }
-
-    function dmsStampRenderLog() {
-      if (!els.dmsStampLogBody) return;
-      if (_dmsStampLog.length === 0) {
-        els.dmsStampLogBody.innerHTML = '<tr><td colspan="6" style="padding:12px 10px; color:var(--muted,#888); font-style:italic;">No stamps sent yet this session.</td></tr>';
-        if (els.dmsStampLogMeta) els.dmsStampLogMeta.textContent = "Stamps you send this session appear here.";
-        return;
-      }
-      if (els.dmsStampLogMeta) els.dmsStampLogMeta.textContent = _dmsStampLog.length + " stamp" + (_dmsStampLog.length !== 1 ? "s" : "") + " sent this session.";
-      els.dmsStampLogBody.innerHTML = _dmsStampLog.slice().reverse().map(function(e) {
-        const okStyle = e.ok === "pending" ? "color:#d69e2e; font-weight:700;" : e.ok ? "color:#276749; font-weight:700;" : "color:#c53030; font-weight:700;";
-        const okLabel = e.ok === "pending" ? "Sending..." : e.ok ? "OK" : "FAILED";
-        return "<tr>" +
-          "<td style='padding:7px 10px; color:var(--muted,#888); font-size:0.82em;'>" + e.sentAt + "</td>" +
-          "<td style='padding:7px 10px; font-weight:600;'>" + (e.loadId || " - ") + "</td>" +
-          "<td style='padding:7px 10px;'>" + (e.supplier || " - ") + "</td>" +
-          "<td style='padding:7px 10px;'>" + e.stampType + "</td>" +
-          "<td style='padding:7px 10px;'>" + e.stampTime + "</td>" +
-          "<td style='padding:7px 10px; " + okStyle + "'>" + okLabel + (e.endpoint ? "  -  " + e.endpoint.split("/").pop() : "") + "</td>" +
-        "</tr>";
-      }).join("");
-    }
-
-    function dmsStampBoardRender() {
-      const tbody = document.getElementById("dmsStampBoardBody");
-      const meta  = document.getElementById("dmsStampBoardMeta");
-      if (!tbody) return;
-
-      // Gather trucks from portal (live DMS rows + manual clocked-in trucks)
-      const live = state.portal.liveRows || [];
-      const manual = portalLoadTrucks();
-      const seen = new Set();
-      const trucks = [];
-      live.forEach(function(t)   { seen.add(t.id || t.ref); trucks.push(t); });
-      manual.forEach(function(t) { if (!seen.has(t.id || t.ref)) trucks.push(t); });
-
-      if (meta) meta.textContent = trucks.length
-        ? trucks.length + " truck" + (trucks.length !== 1 ? "s" : "") + " on board  -  click any cell to stamp."
-        : "No trucks found. Clock trucks in on My Portal first, then refresh.";
-
-      if (!trucks.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="padding:18px 10px; color:var(--muted,#888); text-align:center; font-style:italic;">No trucks on the board yet. Go to My Portal and clock in some trucks, then click Refresh Trucks.</td></tr>';
-        return;
-      }
-
-      function fmtMs(ms) {
-        if (!ms) return null;
-        return new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
-      }
-
-      tbody.innerHTML = "";
-      trucks.forEach(function(t) {
-        const truckKey = t.id || t.ref || (t.supplier + "_" + t.door);
-        const tr = document.createElement("tr");
-        tr.style.borderBottom = "1px solid var(--border,#e2e8f0)";
-
-        // Info cells
-        [[t.ref || t.loadId || " - ", "font-weight:600;"], [t.supplier || " - ", ""], [t.door || " - ", "color:var(--muted,#888);"]].forEach(function(pair) {
-          const td = document.createElement("td");
-          td.style.cssText = "padding:9px 10px; " + pair[1];
-          td.textContent = pair[0];
-          tr.appendChild(td);
-        });
-
-        // Stamp columns
-        _DMS_STAMP_COLS.forEach(function(col) {
-          const td = document.createElement("td");
-          td.style.cssText = "padding:6px 8px; text-align:center;";
-
-          const overrideKey = truckKey + ":" + col.key;
-          const override = _dmsStampOverrides[overrideKey];
-          const dmsTimeMs = t[col.msField];
-
-          if (override) {
-            // Locally stamped this session
-            const color = override.status === "ok" ? "#276749" : override.status === "error" ? "#c53030" : "#d69e2e";
-            const icon  = override.status === "ok" ? "OK" : override.status === "error" ? "X" : "...";
-            td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:' + color + ';">' + icon + ' ' + override.timeLabel + '</div>' +
-              '<div style="font-size:0.7em; color:' + color + '; opacity:0.8;">' + (override.status === "pending" ? "sending" : override.status) + '</div>';
-          } else if (dmsTimeMs) {
-            // Already stamped in DMS
-            td.innerHTML = '<div style="font-size:0.78em; font-weight:700; color:#276749;">OK ' + fmtMs(dmsTimeMs) + '</div>' +
-              '<div style="font-size:0.7em; color:#276749; opacity:0.7;">from DMS</div>';
-          } else {
-            // Stamp button
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.textContent = "Stamp";
-            btn.style.cssText = "font-size:0.75em; font-weight:700; padding:4px 10px; border-radius:5px; border:1.5px solid #00A9CA; color:#00A9CA; background:transparent; cursor:pointer; white-space:nowrap;";
-            btn.addEventListener("mouseenter", function() { btn.style.background = "#00A9CA"; btn.style.color = "#fff"; });
-            btn.addEventListener("mouseleave", function() { btn.style.background = "transparent"; btn.style.color = "#00A9CA"; });
-            btn.addEventListener("click", function() {
-              dmsStampFromBoard(t, truckKey, col.key);
-            });
-            td.appendChild(btn);
-          }
-          tr.appendChild(td);
-        });
-
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function dmsStampFromBoard(truck, truckKey, stampTypeKey) {
-      const overrideKey = truckKey + ":" + stampTypeKey;
-      const stampTimeIso = new Date().toISOString();
-      const timeLabel = new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
-      const sentAt = new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ });
-      const loadId = truck.loadId || truck.ref || truck.id || "";
-      const supplier = truck.supplier || "";
-
-      // Record locally immediately
-      _dmsStampOverrides[overrideKey] = { timeIso: stampTimeIso, timeLabel, status: "pending" };
-
-      // Write timestamp back to manual truck in localStorage so portal board reflects it
-      const _stampCol = _DMS_STAMP_COLS.find(function(c) { return c.key === stampTypeKey; });
-      if (_stampCol) {
-        const _manualTrucks = portalLoadTrucks();
-        const _match = _manualTrucks.find(function(x) { return (x.id || x.ref) === (truck.id || truck.ref); });
-        if (_match) {
-          _match[_stampCol.msField] = Date.parse(stampTimeIso);
-          if (stampTypeKey === "receivingfinish") _match.finishMs = Date.parse(stampTimeIso);
-          portalSaveTrucks(_manualTrucks);
-          setTimeout(function() { if (typeof renderPortalBoard === "function") renderPortalBoard(); }, 50);
-        }
-      }
-
-      dmsStampBoardRender();
-
-      const logEntry = { sentAt, loadId, supplier, stampType: stampTypeKey, stampTime: timeLabel, ok: "pending", endpoint: "" };
-      _dmsStampLog.push(logEntry);
-      dmsStampRenderLog();
-
-      try {
-        const resp = await fetch(apiUrl("/api/dms/stamp"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ load_id: loadId || null, po: truck.po || null, stamp_type: stampTypeKey, stamp_time: stampTimeIso })
-        });
-        const data = await resp.json().catch(function() { return {}; });
-        const ok = resp.ok && (data.ok !== false);
-        _dmsStampOverrides[overrideKey].status = ok ? "ok" : "error";
-        logEntry.ok = ok;
-        logEntry.endpoint = data.endpoint || "";
-        if (ok) {
-          dmsStampSetDot("#38a169", "Last stamp OK  -  " + supplier + "  -  " + stampTypeKey + " at " + timeLabel);
-        } else {
-          dmsStampSetDot("#e53e3e", "Stamp failed for " + (loadId || supplier) + "  -  " + (data.detail || "DMS error"));
-        }
-      } catch (err) {
-        _dmsStampOverrides[overrideKey].status = "error";
-        logEntry.ok = false;
-        dmsStampSetDot("#e53e3e", "Network error  -  stamp not sent to DMS");
-      }
-      dmsStampBoardRender();
-      dmsStampRenderLog();
-    }
-
-    async function dmsStampSend() {
-      const loadId = els.dmsStampLoadId ? els.dmsStampLoadId.value.trim() : "";
-      const po     = els.dmsStampPo     ? els.dmsStampPo.value.trim()     : "";
-      const type   = els.dmsStampType   ? els.dmsStampType.value          : "checkin";
-      const time   = els.dmsStampTime   ? els.dmsStampTime.value          : "";
-
-      if (!loadId && !po) {
-        if (els.dmsStampResult) {
-          els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
-          els.dmsStampResult.textContent = "Enter a Load ID or PO number before stamping.";
-        }
-        return;
-      }
-      if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.disabled = true;
-      if (els.dmsStampSpinner) els.dmsStampSpinner.style.display = "inline";
-      if (els.dmsStampResult) els.dmsStampResult.style.display = "none";
-
-      const stampTimeIso = time ? new Date(time).toISOString() : new Date().toISOString();
-      const sentAt = new Date().toLocaleTimeString("en-US", { timeZone: DOCK_TZ });
-      const timeLabel = new Date(stampTimeIso).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "numeric", minute: "2-digit", hour12: true });
-      try {
-        const resp = await fetch(apiUrl("/api/dms/stamp"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ load_id: loadId || null, po: po || null, stamp_type: type, stamp_time: stampTimeIso })
-        });
-        const data = await resp.json().catch(function() { return {}; });
-        const ok = resp.ok && (data.ok !== false);
-        _dmsStampLog.push({ sentAt, loadId, supplier: "", stampType: type, stampTime: timeLabel, ok, endpoint: data.endpoint || "" });
-        dmsStampRenderLog();
-        if (els.dmsStampResult) {
-          if (ok) {
-            els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#f0fff4; border:1.5px solid #38a169; color:#276749;";
-            els.dmsStampResult.textContent = "Stamp sent via " + (data.endpoint || "DMS") + ".";
-            dmsStampSetDot("#38a169", "Connected  -  stamp OK at " + sentAt);
-          } else {
-            const detail = data.detail || "DMS returned an error.";
-            els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
-            els.dmsStampResult.textContent = "Stamp failed: " + detail;
-            dmsStampSetDot("#e53e3e", "Stamp failed at " + sentAt);
-          }
-        }
-      } catch (err) {
-        _dmsStampLog.push({ sentAt, loadId, supplier: "", stampType: type, stampTime: timeLabel, ok: false, endpoint: "" });
-        dmsStampRenderLog();
-        if (els.dmsStampResult) {
-          els.dmsStampResult.style.cssText = "display:block; padding:10px 14px; border-radius:7px; font-size:0.84em; font-weight:600; background:#fff5f5; border:1.5px solid #e53e3e; color:#c53030;";
-          els.dmsStampResult.textContent = "Network error: " + (err.message || String(err));
-        }
-        dmsStampSetDot("#e53e3e", "Connection error");
-      } finally {
-        if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.disabled = false;
-        if (els.dmsStampSpinner) els.dmsStampSpinner.style.display = "none";
-      }
-    }
-
-    async function dmsStampTestConnection() {
-      dmsStampSetDot("#d69e2e", "Testing connection...");
-      if (els.dmsStampTestBtn) { els.dmsStampTestBtn.disabled = true; els.dmsStampTestBtn.textContent = "Testing..."; }
-      try {
-        const resp = await fetch(apiUrl("/api/dms/session"), { headers: { Accept: "application/json" } });
-        const data = await resp.json().catch(function() { return {}; });
-        if (resp.ok && data.ok) {
-          const loc = (data.location && (data.location.name || data.location.cCode)) || "Unknown location";
-          dmsStampSetDot("#38a169", "Connected to DMS  -  " + loc);
-        } else {
-          dmsStampSetDot("#e53e3e", "DMS connection failed: " + (data.detail || "Check credentials in dms_config.json"));
-        }
-      } catch (err) {
-        dmsStampSetDot("#e53e3e", "Could not reach server: " + (err.message || String(err)));
-      } finally {
-        if (els.dmsStampTestBtn) { els.dmsStampTestBtn.disabled = false; els.dmsStampTestBtn.textContent = "Test DMS Connection"; }
-      }
-    }
-
-    function renderDmsStamp() {
-      dmsStampBoardRender();
-      dmsStampRenderLog();
-    }
-
-    // Wire DMS Stamp buttons (runs after DOM ready via existing init block)
-    document.addEventListener("DOMContentLoaded", function() {
-      if (els.dmsStampTestBtn) els.dmsStampTestBtn.addEventListener("click", dmsStampTestConnection);
-      if (els.dmsStampNowBtn) {
-        els.dmsStampNowBtn.addEventListener("click", function() {
-          if (!els.dmsStampTime) return;
-          const now = new Date();
-          now.setSeconds(0, 0);
-          els.dmsStampTime.value = now.toISOString().slice(0, 16);
-        });
-      }
-      if (els.dmsStampSubmitBtn) els.dmsStampSubmitBtn.addEventListener("click", dmsStampSend);
-      if (els.dmsStampClearLog) {
-        els.dmsStampClearLog.addEventListener("click", function() {
-          _dmsStampLog = [];
-          dmsStampRenderLog();
-        });
-      }
-      const refreshBoardBtn = document.getElementById("dmsStampRefreshBoardBtn");
-      if (refreshBoardBtn) refreshBoardBtn.addEventListener("click", dmsStampBoardRender);
-    });
-
-    // -- End DMS Stamp ----------------------------------------------------------
-
     // -- ALDIOKS Container Log ---------------------------------------------------
 
     async function containerLogSend() {
@@ -25320,7 +25286,7 @@
 
     function firstAllowedTab(role) {
       const allowed = allowedTabsForRole(role || state.auth.role);
-      return allowed.find((tab) => document.querySelector('.tab-button[data-tab="' + tab + '"]')) || "help";
+      return allowed.find((tab) => document.querySelector('.tab-button[data-tab="' + tab + '"]')) || "myPortal";
     }
 
     // Where a login starts: its own My Portal (Minnesota's for the Minnesota login, OKS's for everyone else who has one),
@@ -25967,7 +25933,6 @@
       if (name === "turnTracker") renderTurnTracker();
       if (name === "clerkBoard") renderClerkLeaderboard();
       if (name === "trends") renderTrends();
-      if (name === "dmsStamp") renderDmsStamp();
       if (name === "azTimeAudit") {
         var azf = document.getElementById("azTimeAuditFrame");
         if (azf && !azf.getAttribute("data-loaded")) { azf.src = "az-time-audit.html"; azf.setAttribute("data-loaded", "1"); }
@@ -26499,5 +26464,3 @@
 
   </body>
 </html>
-
-

@@ -1061,7 +1061,7 @@ def _require_roles(*roles: str):
 
 
 # Mirrors ROLE_TABS in index.html: OKS-side DMS/portal routes serve the roles
-# that can open My Portal or DMS Stamp; Minnesota routes serve only minnesota.
+# that can open My Portal; Minnesota routes serve only minnesota.
 _require_oks_dms = _require_roles("oks", "manager", "teamlead", "clerk")
 _require_mn_dms = _require_roles("minnesota")
 # The Arizona-audit login (patrick) can also open both My Portals and Performance by Name. It reads the live boards and can take
@@ -1757,13 +1757,6 @@ def _learn_history(session: Dict[str, Any], days: int, site: str) -> Dict[str, A
             dates_done.append({"date": info, "error": str(e)})
     return {"ok": True, "days": days, "total_learned": total_learned, "by_date": dates_done}
 
-class DmsStampIn(BaseModel):
-    load_id: Optional[str] = None
-    po: Optional[str] = None
-    stamp_type: str
-    stamp_time: Optional[str] = None
-
-
 class DmsScheduleRowIn(BaseModel):
     row_number: Optional[int] = None
     dms_truck_number: Optional[int] = None
@@ -1788,20 +1781,6 @@ class DmsScheduleUploadIn(BaseModel):
     rows: List[DmsScheduleRowIn]
     skip_existing: bool = True
     dry_run: bool = False
-
-STAMP_TYPE_MAP = {
-    "checkin":          "checkIn",
-    "check_in":         "checkIn",
-    "driveratdoor":     "driverAtDoor",
-    "driver_at_door":   "driverAtDoor",
-    "unloadstart":      "unloadStart",
-    "unload_start":     "unloadStart",
-    "unloadfinish":     "unloadFinish",
-    "unload_finish":    "unloadFinish",
-    "receivingfinish":  "receivingFinish",
-    "receiving_finish": "receivingFinish",
-}
-
 
 def _schedule_digits(value: Any) -> str:
     return "".join(ch for ch in str(value or "") if ch.isdigit())
@@ -3643,42 +3622,6 @@ def dms_billing_audit_delete_run(run_id: int, _: str = Depends(require_auth)) ->
         conn.close()
     return {"ok": True, "id": run_id, "deleted_at": now}
 
-
-@app.post("/api/dms/stamp")
-def dms_stamp(body: DmsStampIn, _: str = Depends(_require_oks_dms)):
-    session = _ensure_dms_session()
-    stamp_key = STAMP_TYPE_MAP.get(body.stamp_type.lower().replace(" ", ""), body.stamp_type)
-    stamp_time = body.stamp_time or datetime.now(timezone.utc).isoformat()
-    payload = {
-        "loc":      session["loc"],
-        "userinfo": session["userinfo"],
-        "buck":     session.get("buck") or {},
-        "stampType": stamp_key,
-        "stampTime": stamp_time,
-    }
-    if body.load_id:
-        payload["loadId"] = body.load_id
-    if body.po:
-        payload["po"] = body.po
-    candidates = [
-        "api/stamp/saveStamp",
-        "api/stamp/addStamp",
-        "api/stamp/createStamp",
-        "api/stamp/stampLoad",
-    ]
-    last_err = None
-    for path in candidates:
-        try:
-            result = _dms_json_request(path, payload, session["config"])
-            ok_flag = True
-            if isinstance(result, dict):
-                ok_flag = result.get("ok") or result.get("success") or result.get("result") or not result.get("error")
-            if ok_flag:
-                _portal_cache_clear()
-            return {"ok": bool(ok_flag), "endpoint": path, "stamp_type": stamp_key, "stamp_time": stamp_time, "response": result}
-        except Exception as e:
-            last_err = str(e)
-    raise HTTPException(status_code=502, detail=f"DMS stamp failed on all known endpoints. Last error: {last_err}. Open DMS in Chrome DevTools (Network tab), stamp a truck manually, and note the POST URL — then set stamp_endpoint in dms_config.json.")
 
 class ShiftExportIn(BaseModel):
     shift_date: str
