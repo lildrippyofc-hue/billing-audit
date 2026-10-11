@@ -5244,16 +5244,6 @@
             </svg>
             Attach truck report
           </label>
-          <button id="sampleButton" type="button" class="work-only-btn">
-            <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M4 19V5"></path>
-              <path d="M4 19h16"></path>
-              <path d="M8 16v-5"></path>
-              <path d="M13 16V8"></path>
-              <path d="M18 16v-3"></path>
-            </svg>
-            Sample
-          </button>
           <button id="clearButton" type="button" class="work-only-btn">
             <svg class="icon" aria-hidden="true" viewBox="0 0 24 24">
               <path d="M3 6h18"></path>
@@ -9093,22 +9083,6 @@
       ]
     };
 
-    const sampleCsv = [
-      "Reference Number,Arrival Time,Dock Section,Area,Supplier Name,PO Number,Terms,Comments",
-      "REF-1001,05:10,Dry,North Yard,Tyson Foods Inc,PO-441,DDP,2c*/12:04",
-      "REF-1001,05:10,Dry,North Yard,Tyson Foods Inc,PO-442,DDP,2c*/12:04",
-      "REF-1002,05:45,Dry,North Yard,Sample Roll Off Supplier,PO-443,EXW,",
-      "REF-1003,06:15,Freezer,West Dock,Sanderson Farms LLC,PO-444,DDP,20c*/10:49",
-      "REF-1004,06:35,Egg,South Yard,Sample Roll Off Supplier,PO-445,EXW,",
-      "REF-1005,07:05,Dry,North Yard,Sample Roll Off Supplier,PO-446,DDP,",
-      "REF-1006,07:30,Freezer,East Dock,Taylor Farms Retail Inc,PO-447,EXW,1c 82 TO 78",
-      "REF-1006,07:30,Freezer,East Dock,Taylor Farms Retail Inc,PO-448,EXW,1c 82 TO 78",
-      "REF-1007,08:10,Egg,West Dock,Sample Roll Off Supplier,PO-449,DDP,",
-      "REF-1008,08:55,Freezer,East Dock,Ippolito International LP,PO-450,DDP,Space 16c",
-      "REF-1009,09:20,Dry,South Yard,Sample Roll Off Supplier,PO-451,EXW,",
-      "REF-1010,10:00,Egg,West Dock,Sample Roll Off Supplier,PO-452,DDP,"
-    ].join("\n");
-
     const HISTORICAL_DATA = window.TRUCK_REPORT_HISTORICAL_DATA || {};
     const HISTORICAL_BREAKDOWN_SUPPLIERS = HISTORICAL_DATA.breakdownSuppliers || [];
     const HISTORICAL_BREAKDOWN_SUPPLIER_KEYS = HISTORICAL_BREAKDOWN_SUPPLIERS.map((item) => ({
@@ -9240,7 +9214,6 @@
       sectionMenuCurrent: document.getElementById("sectionMenuCurrent"),
       sectionMenuSearch: document.getElementById("sectionMenuSearch"),
       sectionMenuSearchEmpty: document.getElementById("sectionMenuSearchEmpty"),
-      sampleButton: document.getElementById("sampleButton"),
       clearButton: document.getElementById("clearButton"),
       statusLine: document.getElementById("statusLine"),
       emptyOverview: document.getElementById("emptyOverview"),
@@ -9700,7 +9673,6 @@
     }
 
     els.file.addEventListener("change", handleFile);
-    els.sampleButton.addEventListener("click", () => loadTextReport(sampleCsv, "Sample truck report.csv"));
     els.clearButton.addEventListener("click", clearReport);
     if (els.loginForm) els.loginForm.addEventListener("submit", handleLoginSubmit);
     if (els.logoutButton) els.logoutButton.addEventListener("click", handleLogout);
