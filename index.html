@@ -622,6 +622,10 @@
     #portalFreeTime { width: 54px; padding: 5px 6px; border-radius: 7px; border: 1.5px solid var(--border,#e2e8f0); background: var(--card-bg,#fff); color: var(--text,#1a202c); font-size: 0.84em; text-align: center; font-weight: 700; }
     :root.dark #portalFreeTime { background: #132030; border-color: #1e3a55; color: #eaf4ff; }
     .portal-freetime-unit { font-size: 0.76em; color: var(--muted,#718096); }
+    .portal-staffing-wrap { display: flex; align-items: center; gap: 5px; }
+    .portal-staffing-label { font-size: 0.78em; font-weight: 600; color: var(--muted,#718096); white-space: nowrap; }
+    .portal-staffing-wrap input { width: 46px; padding: 5px 6px; border-radius: 7px; border: 1.5px solid var(--border,#e2e8f0); background: var(--card-bg,#fff); color: var(--text,#1a202c); font-size: 0.84em; text-align: center; font-weight: 700; }
+    :root.dark .portal-staffing-wrap input { background: #132030; border-color: #1e3a55; color: #eaf4ff; }
     .portal-date-wrap { display: flex; align-items: center; gap: 6px; }
     .portal-date-label { font-size: 0.78em; font-weight: 600; color: var(--muted,#718096); white-space: nowrap; }
     #portalBusinessDate { width: 145px; padding: 5px 8px; border-radius: 7px; border: 1.5px solid var(--border,#e2e8f0); background: var(--card-bg,#fff); color: var(--text,#1a202c); font-size: 0.84em; font-weight: 700; }
@@ -7192,6 +7196,13 @@
             <div class="portal-ctrl-cluster">
               <button id="portalShiftReportPageBtn" type="button" class="portal-ctrl-btn" title="Charts and a comparison with earlier nights, ready to download or save as a PDF">&#x1F4CA; Shift Report</button>
               <button id="portalShiftReportBtn" type="button" class="portal-ctrl-btn">&#x1F4CB; Report</button>
+              <span class="portal-staffing-wrap" title="Staffing counts used in the EOS email.">
+                <label for="portalEosDryStaff" class="portal-staffing-label">Dry staff</label>
+                <input id="portalEosDryStaff" type="number" min="0" max="99" value="14" inputmode="numeric">
+                <label for="portalEosCoolerStaff" class="portal-staffing-label">Cooler staff</label>
+                <input id="portalEosCoolerStaff" type="number" min="0" max="99" value="16" inputmode="numeric">
+              </span>
+              <button id="portalEosEmailBtn" type="button" class="portal-ctrl-btn" title="Build James's end-of-shift email from the OKS portal numbers.">&#x2709; EOS Email</button>
               <button id="portalExportBtn" type="button" class="portal-ctrl-btn">&#x2B07; Export</button>
             </div>
             <div class="portal-ctrl-sep"></div>
@@ -9329,6 +9340,8 @@
       portalDmsStatus: document.getElementById("portalDmsStatus"),
       portalBusinessDate: document.getElementById("portalBusinessDate"),
       portalFreeTime: document.getElementById("portalFreeTime"),
+      portalEosDryStaff: document.getElementById("portalEosDryStaff"),
+      portalEosCoolerStaff: document.getElementById("portalEosCoolerStaff"),
       portalScheduleToggleBtn: document.getElementById("portalScheduleToggleBtn"),
       portalSchedulePanel: document.getElementById("portalSchedulePanel"),
       portalScheduleFile: document.getElementById("portalScheduleFile"),
@@ -9543,6 +9556,7 @@
       portalDoorRange: document.getElementById("portalDoorRange"),
       portalAreaGrid: document.getElementById("portalAreaGrid"),
       portalShiftReportBtn: document.getElementById("portalShiftReportBtn"),
+      portalEosEmailBtn: document.getElementById("portalEosEmailBtn"),
       portalReportModal: document.getElementById("portalReportModal"),
       portalReportBody: document.getElementById("portalReportBody"),
       portalReportCopyBtn: document.getElementById("portalReportCopyBtn"),
@@ -10679,6 +10693,18 @@
       state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
       renderPortalBoard();
     });
+    if (els.portalEosDryStaff) {
+      els.portalEosDryStaff.value = safeLocalStorageGet("portalEosDryStaff") || "14";
+      els.portalEosDryStaff.addEventListener("change", function() {
+        safeLocalStorageSet("portalEosDryStaff", String(Math.max(0, parseInt(els.portalEosDryStaff.value, 10) || 0)));
+      });
+    }
+    if (els.portalEosCoolerStaff) {
+      els.portalEosCoolerStaff.value = safeLocalStorageGet("portalEosCoolerStaff") || "16";
+      els.portalEosCoolerStaff.addEventListener("change", function() {
+        safeLocalStorageSet("portalEosCoolerStaff", String(Math.max(0, parseInt(els.portalEosCoolerStaff.value, 10) || 0)));
+      });
+    }
     els.portalStatusFilter.addEventListener("change", renderPortalBoard);
     if (els.portalSearch) els.portalSearch.addEventListener("input", function() { renderPortalBoard(); });
     if (els.portalSortBy) els.portalSortBy.addEventListener("change", function() { renderPortalBoard(); });
@@ -10731,6 +10757,9 @@
     if (els.portalShiftReportBtn) {
       els.portalShiftReportBtn.addEventListener("click", portalOpenShiftReport);
     }
+    if (els.portalEosEmailBtn) {
+      els.portalEosEmailBtn.addEventListener("click", portalOpenEosEmail);
+    }
     if (els.portalReportCloseBtn) {
       els.portalReportCloseBtn.addEventListener("click", portalCloseShiftReport);
     }
@@ -10744,7 +10773,7 @@
         const text = els.portalReportBody ? els.portalReportBody.textContent : "";
         if (!text) return;
         navigator.clipboard.writeText(text).then(function() {
-          showToast("Shift report copied.");
+          showToast(state.portal.reportMode === "eosEmail" ? "EOS email copied." : "Shift report copied.");
         }, function() {
           showToast("Copy failed. Select the report text manually.");
         });
@@ -21396,7 +21425,97 @@
     }
 
     function portalOpenShiftReport() {
+      state.portal.reportMode = "shift";
       if (els.portalReportBody) els.portalReportBody.textContent = portalBuildShiftReport();
+      if (els.portalReportModal) els.portalReportModal.style.display = "flex";
+    }
+
+    function portalEosZoneRollup(rows, now) {
+      rows = rows || portalCurrentTrucks();
+      const zones = portalZonesCompute(rows, now);
+      const est = portalZoneEstimatesNow(now, "oks");
+      const eosClock = function(ms) {
+        return new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "2-digit", minute: "2-digit", hour12: false, hourCycle: "h23" });
+      };
+      const finishText = function(keys) {
+        let latest = 0;
+        keys.forEach(function(key) {
+          const group = zones.groups.find(function(g) { return g.def.key === key; });
+          const metrics = group ? group.metrics : null;
+          const zr = (est && est[key]) || portalZoneEndState(metrics);
+          if (zr && zr.status === "done" && zr.finishedMs) latest = Math.max(latest, zr.finishedMs);
+          else if (zr && zr.estMs) latest = Math.max(latest, zr.estMs);
+          else if (metrics && metrics.lastFinishMs) latest = Math.max(latest, metrics.lastFinishMs);
+        });
+        return latest ? eosClock(latest) : "--";
+      };
+      const scheduledFor = function(keys) {
+        return keys.reduce(function(sum, key) {
+          const group = zones.groups.find(function(g) { return g.def.key === key; });
+          return sum + (group && group.metrics ? Number(group.metrics.scheduled || 0) : 0);
+        }, 0);
+      };
+      return {
+        dryVolume: scheduledFor(["dry"]),
+        coolerVolume: scheduledFor(["freezer", "chilled"]),
+        dryFinish: finishText(["dry"]),
+        coolerFinish: finishText(["freezer", "chilled"])
+      };
+    }
+
+    function portalBuildEosEmail() {
+      const now = Date.now();
+      const rows = portalCurrentTrucks();
+      const rollup = portalEosZoneRollup(rows, now);
+      const dryStaff = (els.portalEosDryStaff && els.portalEosDryStaff.value ? els.portalEosDryStaff.value : safeLocalStorageGet("portalEosDryStaff")) || "14";
+      const coolerStaff = (els.portalEosCoolerStaff && els.portalEosCoolerStaff.value ? els.portalEosCoolerStaff.value : safeLocalStorageGet("portalEosCoolerStaff")) || "16";
+      const dryNum = parseInt(dryStaff, 10) || 0;
+      const coolerNum = parseInt(coolerStaff, 10) || 0;
+      const dryVol = rollup.dryVolume || 0;
+      const coolerVol = rollup.coolerVolume || 0;
+      const lines = [
+        "Staffing",
+        "",
+        "- Dry: " + dryStaff + " associates",
+        "- Cooler: " + coolerStaff + " associates",
+        "- Total: " + (dryNum + coolerNum) + " associates",
+        "",
+        "Volume",
+        "",
+        "- Dry: " + dryVol + " trucks",
+        "- Cooler: " + coolerVol + " trucks",
+        "- Total: " + (dryVol + coolerVol) + " trucks",
+        "",
+        "Finish Times",
+        "",
+        "- Dry: " + rollup.dryFinish,
+        "- Cooler: " + rollup.coolerFinish,
+        "",
+        "Safety Reminders",
+        "",
+        "- High-visibility vests must be worn at all times.",
+        "- Use site-approved PPE only.",
+        "- Use horns when operating equipment and when approaching intersections.",
+        "- Seatbelts must be worn while operating equipment.",
+        "- No earbuds on the floor.",
+        "- Keep container pallets clear of all fire lanes.",
+        "",
+        "General Communication",
+        "",
+        "- No drinks on the floor except water in a sealed container.",
+        "- Be mindful of product condition when down-stacking.",
+        "- Use slips when creating pallets.",
+        "- Complete all Lead/Supervisor checklists.",
+        "- Plug in all equipment at the end of the shift.",
+        "- Ensure dock pits are cleaned.",
+        "- Maintain clear communication throughout the shift."
+      ];
+      return lines.join("\n");
+    }
+
+    function portalOpenEosEmail() {
+      state.portal.reportMode = "eosEmail";
+      if (els.portalReportBody) els.portalReportBody.textContent = portalBuildEosEmail();
       if (els.portalReportModal) els.portalReportModal.style.display = "flex";
     }
 
