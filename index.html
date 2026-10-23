@@ -3905,16 +3905,6 @@
     /* -- Game frame panels ---------------------------------------- */
     #detentionPanel    { padding: 0; }
     #azTimeAuditPanel  { padding: 0; }
-    #orbitPanel        { padding: 0; }
-    .orbit-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 14px; border-bottom: 1px solid rgba(128,128,128,0.35); }
-    .orbit-title { font-weight: 800; letter-spacing: 0.04em; }
-    .orbit-seg { display: inline-flex; border: 1px solid rgba(128,128,128,0.5); border-radius: 6px; overflow: hidden; }
-    .orbit-seg button { border: 0; border-radius: 0; padding: 6px 12px; background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 0.85rem; }
-    .orbit-seg button[aria-pressed="true"] { background: rgba(0,140,220,0.22); font-weight: 800; }
-    .orbit-bar button.orbit-btn, .orbit-bar a.orbit-btn { border: 1px solid rgba(128,128,128,0.5); border-radius: 6px; padding: 6px 12px; background: transparent; color: inherit; cursor: pointer; font: inherit; font-size: 0.85rem; text-decoration: none; }
-    .orbit-note { font-size: 0.8rem; opacity: 0.75; }
-    .orbit-frame-wrap { width: 100%; height: calc(100vh - 130px); min-height: 420px; }
-    .orbit-frame-wrap iframe { width: 100%; height: 100%; border: 0; background: #fff; display: block; }
     .game-frame-wrap {
       width: 100%;
       height: calc(100vh - 82px);
@@ -5233,10 +5223,6 @@
           <div class="menu-group-title">Billing Audits</div>
           <button class="tab-button" type="button" aria-selected="false" data-tab="truckChargeAudit" data-menu-label="Billing Audits: OKS PowerView">OKS Billing Audit</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="mnBillingAudit" data-menu-label="Minnesota: PowerView Billing Audit">MN Billing Audit</button>
-        </div>
-        <div class="menu-group">
-          <div class="menu-group-title">Orbit</div>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="orbit" data-menu-label="Orbit: Orbit WMS">Orbit</button>
         </div>
       </div>
     </nav>
@@ -6966,22 +6952,6 @@
         <div class="motivation-bar" id="motivBar_detention"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
         <div class="game-frame-wrap">
           <iframe id="detentionFrame" src="" title="DMS Detention Report" loading="lazy"></iframe>
-        </div>
-      </section>
-      <!-- ORBIT PANEL (james login only: Orbit WMS in a frame, live or local) -->
-      <section id="orbitPanel" class="tab-panel" aria-label="Orbit">
-        <div class="orbit-bar">
-          <span class="orbit-title">Orbit</span>
-          <div class="orbit-seg" role="group" aria-label="Orbit source">
-            <button type="button" data-orbit-src="prod" aria-pressed="true">Live (Railway)</button>
-            <button type="button" data-orbit-src="local" aria-pressed="false">Local (this PC)</button>
-          </div>
-          <button type="button" class="orbit-btn" id="orbitReloadBtn">Reload</button>
-          <a class="orbit-btn" id="orbitOpenLink" href="#" target="_blank" rel="noopener">Open in new tab</a>
-          <span class="orbit-note" id="orbitNote"></span>
-        </div>
-        <div class="orbit-frame-wrap">
-          <iframe id="orbitFrame" title="Orbit" src="about:blank" referrerpolicy="no-referrer"></iframe>
         </div>
       </section>
       <!-- ARIZONA TIME AUDIT PANEL (Fareclock vs Turntime, runs in the browser) -->
@@ -25395,9 +25365,7 @@
     function allowedTabsForRole(role) {
       const configured = ROLE_TABS[role] || ROLE_TABS.guest;
       if (configured.includes("*")) {
-        const isJames = String(state.auth.username || "").toLowerCase() === "james";
-        return Array.from(document.querySelectorAll(".tab-button")).map((button) => button.dataset.tab).filter(Boolean)
-          .filter((tab) => tab !== "orbit" || isJames);
+        return Array.from(document.querySelectorAll(".tab-button")).map((button) => button.dataset.tab).filter(Boolean);
       }
       return configured.slice();
     }
@@ -26056,7 +26024,6 @@
       if (name === "turnTracker") renderTurnTracker();
       if (name === "clerkBoard") renderClerkLeaderboard();
       if (name === "trends") renderTrends();
-      if (name === "orbit") orbitShow();
       if (name === "azTimeAudit") {
         var azf = document.getElementById("azTimeAuditFrame");
         if (azf && !azf.getAttribute("data-loaded")) { azf.src = "az-time-audit.html"; azf.setAttribute("data-loaded", "1"); }
@@ -26066,55 +26033,6 @@
         if (df && !df.getAttribute("data-loaded")) { df.src = "detention-section.html"; df.setAttribute("data-loaded", "1"); }
       }
       document.dispatchEvent(new CustomEvent("tabSelected", { detail: name }));
-    }
-
-    // -- Orbit (james login only) -------------------------------------------------
-    const ORBIT_SOURCES = {
-      prod: "https://lumper-receiving-production.up.railway.app",
-      local: "http://127.0.0.1:8000"
-    };
-    function orbitSource() {
-      try {
-        const saved = localStorage.getItem("orbitSource");
-        if (saved && ORBIT_SOURCES[saved]) return saved;
-      } catch (err) {}
-      return "prod";
-    }
-    function orbitLoad(force) {
-      const frame = document.getElementById("orbitFrame");
-      if (!frame) return;
-      const key = orbitSource();
-      const url = ORBIT_SOURCES[key];
-      document.querySelectorAll("[data-orbit-src]").forEach(function(btn) {
-        btn.setAttribute("aria-pressed", String(btn.dataset.orbitSrc === key));
-      });
-      const link = document.getElementById("orbitOpenLink");
-      if (link) link.href = url;
-      const note = document.getElementById("orbitNote");
-      if (note) {
-        note.textContent = key === "local"
-          ? "Needs Orbit running on this PC (python app.py, port 8000). If it stays blank, use Open in new tab."
-          : "Orbit has its own sign-in.";
-      }
-      if (force || frame.getAttribute("data-url") !== url) {
-        frame.src = url;
-        frame.setAttribute("data-url", url);
-      }
-    }
-    function orbitShow() {
-      const panel = document.getElementById("orbitPanel");
-      if (panel && !panel.getAttribute("data-wired")) {
-        panel.setAttribute("data-wired", "1");
-        panel.querySelectorAll("[data-orbit-src]").forEach(function(btn) {
-          btn.addEventListener("click", function() {
-            try { localStorage.setItem("orbitSource", btn.dataset.orbitSrc); } catch (err) {}
-            orbitLoad(true);
-          });
-        });
-        const reload = document.getElementById("orbitReloadBtn");
-        if (reload) reload.addEventListener("click", function() { orbitLoad(true); });
-      }
-      orbitLoad(false);
     }
 
     function closeSectionMenu() {
