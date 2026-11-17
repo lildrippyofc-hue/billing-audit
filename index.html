@@ -7965,6 +7965,7 @@
                 <span id="portalMnSyncLabel">Sync MN DMS</span>
               </button>
               <button id="portalMnAlertsBtn" type="button" class="portal-ctrl-btn" title="Get desktop popups for detention risk, overdue unload starts, and unloader delays">Enable alerts</button>
+              <button id="portalMnDiagBtn" type="button" class="portal-ctrl-btn">Status</button>
               <button id="portalMnScheduleToggleBtn" type="button" class="portal-ctrl-btn work-only-btn">Upload Schedule</button>
             </div>
             <div class="portal-ctrl-sep"></div>
@@ -8011,6 +8012,7 @@
           </div>
         </div>
         <div class="portal-dms-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <div id="portalMnDiag" style="display:none; margin:6px 0 10px; padding:12px 14px; border-radius:8px; border:1px solid var(--border,#e2e8f0); background:var(--card-bg,#fff); font-size:0.82em;"></div>
         <section class="portal-schedule-panel" id="portalMnSchedulePanel" style="display:none;" aria-labelledby="portalMnScheduleTitle">
           <div class="portal-schedule-head">
             <div>
@@ -11011,7 +11013,8 @@
       const scriptCpy = document.getElementById("portalSheetsScriptCopyBtn");
 
       // Populate the script block
-      if (scriptPre) scriptPre.textContent = SHEETS_APPS_SCRIPT;
+      // SHEETS_APPS_SCRIPT is defined further down the script, so fill the box once the whole script has loaded.
+      setTimeout(function() { if (scriptPre && typeof SHEETS_APPS_SCRIPT !== "undefined") scriptPre.textContent = SHEETS_APPS_SCRIPT; }, 0);
 
       // Load saved config and show "Open Sheet" if configured
       var cfg = portalGetSheetsConfig();
@@ -11064,9 +11067,9 @@
       setInterval(portalPollSheetAssignments, 60000);
     })();
 
-    (function(){
-      const diagBtn = document.getElementById("portalDmsDiagBtn");
-      const diagBox = document.getElementById("portalDmsDiag");
+    function portalBindDmsDiag(btnId, boxId, endpoint, envNames) {
+      const diagBtn = document.getElementById(btnId);
+      const diagBox = document.getElementById(boxId);
       if (!diagBtn || !diagBox) return;
       diagBtn.addEventListener("click", async function() {
         diagBtn.disabled = true;
@@ -11075,7 +11078,7 @@
         diagBox.style.display = "";
         diagBox.innerHTML = "Contacting DMS...";
         try {
-          const resp = await fetch(apiUrl("/api/dms/portal?debug=true"), { headers: { "Accept": "application/json" } });
+          const resp = await fetch(apiUrl(endpoint + "?debug=true"), { headers: { "Accept": "application/json" } });
           const data = await resp.json().catch(function(){ return {}; });
           const d = data.debug || {};
           const esc = function(s){ return String(s).replace(/[&<>]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c]; }); };
@@ -11083,7 +11086,7 @@
           if (d.stage === "login" || (data.ok === false && d.error)) {
             diagBox.innerHTML = '<div style="font-weight:800;color:#c53030;margin-bottom:6px;">ERROR DMS login failed</div>'
               + '<div style="color:var(--muted,#888);">' + esc(d.error || "Unknown error") + '</div>'
-              + '<div style="margin-top:8px;">The board can\'t show live trucks until login works. Credentials live in Railway env vars DMS_USERNAME / DMS_PASSWORD.</div>';
+              + '<div style="margin-top:8px;">The board can\'t show live trucks until login works. Credentials live in Railway env vars ' + envNames + '.</div>';
             return;
           }
 
@@ -11115,7 +11118,7 @@
             + '<details style="margin-top:8px;"><summary style="cursor:pointer;color:var(--muted,#888);">Show raw data</summary>'
             + '<pre style="white-space:pre-wrap;word-break:break-all;font-size:0.78em;max-height:280px;overflow:auto;background:var(--bg,#f7fafc);padding:8px;border-radius:6px;">' + esc(raw) + '</pre></details>';
 
-          const copyBtn = document.getElementById("portalDmsDiagCopy");
+          const copyBtn = diagBox.querySelector("#portalDmsDiagCopy");
           if (copyBtn) copyBtn.addEventListener("click", function(){
             navigator.clipboard.writeText(raw).then(function(){ copyBtn.textContent = "OK Copied  -  paste it to me"; }, function(){ copyBtn.textContent = "Copy failed  -  select the raw data manually"; });
           });
@@ -11126,7 +11129,9 @@
           diagBtn.textContent = oldLabel;
         }
       });
-    })();
+    }
+    portalBindDmsDiag("portalDmsDiagBtn", "portalDmsDiag", "/api/dms/portal", "DMS_USERNAME / DMS_PASSWORD");
+    portalBindDmsDiag("portalMnDiagBtn", "portalMnDiag", "/api/dms/mn/portal", "DMS_MN_USERNAME / DMS_MN_PASSWORD");
 
     // -- My Portal "What's new" guided tour (OKS + Minnesota) ----------------------
     // Shows once per user per site per PORTAL_TOUR_VERSIONS[site]; skippable at any
@@ -20152,7 +20157,71 @@
       if (!grid) return;
       grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:8px 0;">Loading...</div>';
       if (meta) meta.textContent = "";
-      fetch(apiUrl("/api/portal/vendor-stats" + (site === "MN" ? "?site=MN" : "")))
+      const FREE = freeMin || 120;
+      const sortKey = "portalVendorSort", rateKey = "portalVendorRate";
+      // Sort + detention-rate controls, added once above the cards.
+      let bar = grid.parentNode ? grid.parentNode.querySelector(".vendor-score-bar") : null;
+      if (!bar && grid.parentNode) {
+        bar = document.createElement("div");
+        bar.className = "vendor-score-bar";
+        bar.style.cssText = "display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:6px 0 10px;font-size:0.82em;";
+        bar.innerHTML = '<label>Sort by <select class="lookup-input vs-sort" style="max-width:210px;">'
+          + '<option value="avg">Fastest average turn</option><option value="slow">Slowest average turn</option>'
+          + '<option value="over_min">Most minutes past free time</option><option value="over_pct">Highest % over free time</option>'
+          + '<option value="count">Most trucks</option></select></label>'
+          + '<label>Detention rate $/hour <input type="number" class="lookup-input vs-rate" min="0" step="1" placeholder="optional" style="width:90px;"></label>'
+          + '<span style="color:var(--muted,#718096);">Minutes past free time = check-in to unload finish, beyond the free-time window.</span>';
+        grid.parentNode.insertBefore(bar, grid);
+        bar.querySelector(".vs-sort").value = safeLocalStorageGet(sortKey) || "avg";
+        bar.querySelector(".vs-rate").value = safeLocalStorageGet(rateKey) || "";
+        const redo = function() {
+          safeLocalStorageSet(sortKey, bar.querySelector(".vs-sort").value);
+          safeLocalStorageSet(rateKey, bar.querySelector(".vs-rate").value);
+          if (grid._vendorStats) grid._vendorDraw();
+        };
+        bar.querySelector(".vs-sort").addEventListener("change", redo);
+        bar.querySelector(".vs-rate").addEventListener("input", redo);
+      }
+      const fmtMin = function(n) { n = Math.round(n); return n >= 60 ? Math.floor(n / 60) + "h " + (n % 60) + "m" : n + "m"; };
+      grid._vendorDraw = function() {
+        const stats = grid._vendorStats.slice();
+        const mode = bar ? bar.querySelector(".vs-sort").value : "avg";
+        const rate = bar ? Number(bar.querySelector(".vs-rate").value) || 0 : 0;
+        const pct = function(v) { return v.count ? v.over_count / v.count : 0; };
+        stats.sort(function(a, b) {
+          if (mode === "slow") return b.avg_min - a.avg_min;
+          if (mode === "over_min") return (b.over_min || 0) - (a.over_min || 0);
+          if (mode === "over_pct") return pct(b) - pct(a) || (b.over_min || 0) - (a.over_min || 0);
+          if (mode === "count") return b.count - a.count;
+          return a.avg_min - b.avg_min;
+        });
+        const total = stats.reduce(function(s, v) { return s + v.count; }, 0);
+        const totalOver = stats.reduce(function(s, v) { return s + (v.over_min || 0); }, 0);
+        if (meta) meta.textContent = stats.length + " vendors  -  " + total + " trucks tracked  -  " + fmtMin(totalOver) + " past free time"
+          + (rate ? " (about $" + Math.round(totalOver / 60 * rate).toLocaleString("en-US") + ")" : "");
+        grid.innerHTML = stats.map(function(v) {
+          const avgStr = fmtMin(v.avg_min), p75Str = fmtMin(v.p75_min);
+          const cls = v.avg_min < 90 ? "v-fast" : v.avg_min <= FREE ? "v-ok" : "v-slow";
+          const barW = Math.min(100, Math.round(v.avg_min / FREE * 100));
+          const lastDate = v.last_seen ? v.last_seen.slice(0, 10) : " - ";
+          const overN = v.over_count || 0, overMin = v.over_min || 0;
+          const overPct = v.count ? Math.round(overN / v.count * 100) : 0;
+          const cost = rate && overMin ? " (about $" + Math.round(overMin / 60 * rate).toLocaleString("en-US") + ")" : "";
+          return '<article class="vendor-card ' + cls + '">'
+            + '<div class="vendor-name" title="' + escapeHtml(v.vendor) + '">' + escapeHtml(v.vendor) + '</div>'
+            + '<div class="vendor-stats">'
+            + '<div class="vendor-stat"><span class="vendor-stat-val">' + avgStr + '</span>avg turn</div>'
+            + '<div class="vendor-stat"><span class="vendor-stat-val">' + p75Str + '</span>75th pct</div>'
+            + '<div class="vendor-stat"><span class="vendor-stat-val">' + v.count + '</span>trucks</div>'
+            + '<div class="vendor-stat"><span class="vendor-stat-val">' + overPct + '%</span>over free time</div>'
+            + '</div>'
+            + '<div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:' + barW + '%;"></div></div>'
+            + '<div style="font-size:0.72em;color:var(--muted,#888);margin-top:4px;">' + (overMin ? '<b>' + fmtMin(overMin) + '</b> past free time on ' + overN + ' truck' + (overN === 1 ? '' : 's') + cost + ' &nbsp; - &nbsp; ' : 'None past free time &nbsp; - &nbsp; ')
+            + 'Last seen: ' + lastDate + '</div>'
+            + '</article>';
+        }).join("");
+      };
+      fetch(apiUrl("/api/portal/vendor-stats?site=" + (site === "MN" ? "MN" : "OKS") + "&free_min=" + encodeURIComponent(FREE)))
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (site === "MN" && data.ok) {
@@ -20162,36 +20231,13 @@
             state.portalMn.vendorAvgsAt = Date.now();
           }
           if (!data.ok || !data.stats || !data.stats.length) {
+            grid._vendorStats = null;
             grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:12px 0;">No vendor history yet  -  data builds automatically as trucks hit unload finish.'
               + (site === "MN" ? ' Use <b>Load last 7 days</b> to fill it in from DMS now.' : '') + '</div>';
             return;
           }
-          const stats = data.stats.slice().sort(function(a, b) { return a.avg_min - b.avg_min; });
-          const total = stats.reduce(function(s, v) { return s + v.count; }, 0);
-          if (meta) meta.textContent = stats.length + " vendors  -  " + total + " trucks tracked";
-          const FREE = freeMin;
-          grid.innerHTML = stats.map(function(v) {
-            const h = Math.floor(v.avg_min / 60), m = v.avg_min % 60;
-            const avgStr = h > 0 ? h + "h " + m + "m" : m + "m";
-            const p75h = Math.floor(v.p75_min / 60), p75m = v.p75_min % 60;
-            const p75Str = p75h > 0 ? p75h + "h " + p75m + "m" : p75m + "m";
-            const cls = v.avg_min < 90 ? "v-fast" : v.avg_min <= FREE ? "v-ok" : "v-slow";
-            const barW = Math.min(100, Math.round(v.avg_min / FREE * 100));
-            const lastDate = v.last_seen ? v.last_seen.slice(0, 10) : " - ";
-            const minStr = Math.floor(v.min_min/60) + "h " + (v.min_min%60) + "m";
-            const maxStr = Math.floor(v.max_min/60) + "h " + (v.max_min%60) + "m";
-            return '<article class="vendor-card ' + cls + '">'
-              + '<div class="vendor-name" title="' + escapeHtml(v.vendor) + '">' + escapeHtml(v.vendor) + '</div>'
-              + '<div class="vendor-stats">'
-              + '<div class="vendor-stat"><span class="vendor-stat-val">' + avgStr + '</span>avg turn</div>'
-              + '<div class="vendor-stat"><span class="vendor-stat-val">' + p75Str + '</span>75th pct</div>'
-              + '<div class="vendor-stat"><span class="vendor-stat-val">' + v.count + '</span>trucks</div>'
-              + '<div class="vendor-stat"><span class="vendor-stat-val">' + minStr + '-' + maxStr + '</span>range</div>'
-              + '</div>'
-              + '<div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:' + barW + '%;"></div></div>'
-              + '<div style="font-size:0.72em;color:var(--muted,#888);margin-top:4px;">Last seen: ' + lastDate + ' &nbsp; - &nbsp; ' + barW + '% of free-time window</div>'
-              + '</article>';
-          }).join("");
+          grid._vendorStats = data.stats;
+          grid._vendorDraw();
         })
         .catch(function() {
           grid.innerHTML = '<div style="color:#e53e3e;font-size:0.85em;padding:8px 0;">Could not load vendor stats  -  is the server reachable?</div>';
@@ -21810,7 +21856,7 @@
       lines.push("", "Late Truck Separation");
       if (snap.lateRows.length) {
         snap.lateRows.slice(0, 30).forEach(function(ns) {
-          const appt = ns.appointmentMs ? portalFormatTime(ns.appointmentMs) : "no appointment";
+          const appt = portalIsoToMs(ns.appointmentIso) ? portalFormatTime(portalIsoToMs(ns.appointmentIso)) : "no appointment";
           lines.push("- " + (ns.ref || "No ref") + " | " + (ns.supplier || "No supplier") + " | Door " + (ns.door || "-") + " | Appt " + appt + " | not checked in");
         });
         if (snap.lateRows.length > 30) lines.push("- " + (snap.lateRows.length - 30) + " more late/no-show trucks not shown.");
@@ -21921,7 +21967,7 @@
           dockMin, portalStatusLabel(t.status), detMin, alertMap.get(String(t.id || t.ref || "")) || ""].map(portalCsvEsc).join(",");
       });
       const lateLines = late.map(function(ns) {
-        return [date, "Minnesota", ns.ref || "", ns.door || "", ns.area || "", ns.supplier || "", "", fmtT(ns.appointmentMs), "", "", "", "", "", "", "Late / no-show - not arrived", "", ""].map(portalCsvEsc).join(",");
+        return [date, "Minnesota", ns.ref || "", ns.door || "", ns.area || "", ns.supplier || "", "", fmtT(portalIsoToMs(ns.appointmentIso)), "", "", "", "", "", "", "Late / no-show - not arrived", "", ""].map(portalCsvEsc).join(",");
       });
       const csv = [headers.join(","), ...body, ...lateLines].join("\r\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

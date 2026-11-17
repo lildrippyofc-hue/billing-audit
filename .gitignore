@@ -43,3 +43,11 @@ desktop.ini
 
 # Logs
 *.log
+
+# Codex / AI tool scratch folders and installed packages (tens of thousands of files)
+.codex_build/
+.codex_spreadsheet_work/
+.codex-finalizer/
+.codex*/
+node_modules/
+_check_js.js

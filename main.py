@@ -79,6 +79,16 @@ _USERS: Dict[str, str] = {
 if os.environ.get("PATRICK_PASSWORD"):
     _USERS["patrick"] = _hash(os.environ["PATRICK_PASSWORD"])
 
+# Logins still on the built-in fallback password (their Railway variable is not set). Not changed here, so nobody gets locked out;
+# this just makes the risk visible in the deploy log so the variables can be set.
+_FALLBACK_PW_VARS = {"aldioks": "ALDIOKS_PASSWORD", "minnesota": "MINNESOTA_PASSWORD", "manager": "MANAGER_PASSWORD",
+                     "teamlead": "TEAMLEAD_PASSWORD", "clerk": "CLERK_PASSWORD", "client": "CLIENT_PASSWORD",
+                     "work": "WORK_PASSWORD", "guest": "GUEST_PASSWORD"}
+_on_fallback = [u for u, v in _FALLBACK_PW_VARS.items() if not os.environ.get(v) and not (u == "aldioks" and os.environ.get("APP_PASSWORD"))]
+if _on_fallback:
+    print("[security] These logins are using a built-in fallback password. Set these variables on Railway: "
+          + ", ".join(_FALLBACK_PW_VARS[u] for u in _on_fallback))
+
 # Role lookup
 _ROLES: Dict[str, str] = {
     "james":   "admin",
@@ -1576,9 +1586,51 @@ def dms_mn_session_status(force: bool = False, _: str = Depends(_require_mn_view
     }
 
 
+def _portal_debug_payload(site: str, date: Optional[str], force: bool) -> Dict[str, Any]:
+    """Diagnostic for the Status button: never 500s, returns whatever we can learn about the DMS pull. Read-only."""
+    dbg: Dict[str, Any] = {}
+    try:
+        session = _ensure_dms_mn_session(force=force) if site == "MN" else _ensure_dms_session(force=force)
+    except Exception as e:
+        return {"ok": False, "debug": {"stage": "login", "error": str(e)}}
+    info = _dms_business_date(date)
+    base_payload = {
+        "info": info, "loc": session["loc"],
+        "userinfo": session["userinfo"], "buck": session.get("buck") or {},
+    }
+    dbg["business_date"] = info
+    dbg["location"] = session["loc"]
+    try:
+        loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
+        loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
+    except Exception as e:
+        loads, dbg["loads_error"] = [], str(e)
+    try:
+        stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
+        stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
+    except Exception as e:
+        stamps, dbg["stamps_error"] = [], str(e)
+    trucks = _merge_dms_portal_rows(loads, stamps)
+    dbg.update({
+        "load_count": len(loads),
+        "stamp_count": len(stamps),
+        "load_keys": sorted(loads[0].keys()) if loads else [],
+        "stamp_keys": sorted(stamps[0].keys()) if stamps else [],
+        "sample_load": loads[0] if loads else None,
+        "sample_stamp": stamps[0] if stamps else None,
+        "first_truck_normalized": trucks[0] if trucks else None,
+        "truck_count": len(trucks),
+    })
+    return {"ok": True, "debug": dbg}
+
+
 @app.get("/api/dms/mn/portal")
-def dms_mn_portal(date: Optional[str] = None, force: bool = False, _: str = Depends(_require_mn_view)):
+def dms_mn_portal(date: Optional[str] = None, force: bool = False, debug: bool = False, username: str = Depends(_require_mn_view)):
     """Read Minnesota DMS load/stamp rows for the MN My Portal. This route never writes to DMS."""
+    if debug:
+        if _ROLES.get(username, "guest") == "azaudit":
+            raise HTTPException(status_code=403, detail="Not allowed for this login.")
+        return _portal_debug_payload("MN", date, force)
     # Every open Minnesota portal polls this route; the shared copy (see _portal_cached) keeps extra viewers from multiplying the
     # load on DMS. The Sync button (force) skips it.
     return _portal_payload_for("MN", date, force)
@@ -1591,40 +1643,7 @@ def dms_portal(date: Optional[str] = None, force: bool = False, debug: bool = Fa
     if debug:
         if _ROLES.get(username, "guest") == "azaudit":
             raise HTTPException(status_code=403, detail="Not allowed for this login.")
-        dbg: Dict[str, Any] = {}
-        try:
-            session = _ensure_dms_session(force=force)
-        except Exception as e:
-            return {"ok": False, "debug": {"stage": "login", "error": str(e)}}
-        info = _dms_business_date(date)
-        base_payload = {
-            "info": info, "loc": session["loc"],
-            "userinfo": session["userinfo"], "buck": session.get("buck") or {},
-        }
-        dbg["business_date"] = info
-        dbg["location"] = session["loc"]
-        try:
-            loads_response = _dms_json_request("api/load/getloaddetails", base_payload, session["config"])
-            loads = [x for x in _first_list(loads_response) if isinstance(x, dict)]
-        except Exception as e:
-            loads, dbg["loads_error"] = [], str(e)
-        try:
-            stamps_response = _dms_json_request("api/stamp/getStamps", base_payload, session["config"])
-            stamps = [x for x in _first_list(stamps_response) if isinstance(x, dict)]
-        except Exception as e:
-            stamps, dbg["stamps_error"] = [], str(e)
-        trucks = _merge_dms_portal_rows(loads, stamps)
-        dbg.update({
-            "load_count": len(loads),
-            "stamp_count": len(stamps),
-            "load_keys": sorted(loads[0].keys()) if loads else [],
-            "stamp_keys": sorted(stamps[0].keys()) if stamps else [],
-            "sample_load": loads[0] if loads else None,
-            "sample_stamp": stamps[0] if stamps else None,
-            "first_truck_normalized": trucks[0] if trucks else None,
-            "truck_count": len(trucks),
-        })
-        return {"ok": True, "debug": dbg}
+        return _portal_debug_payload("OKS", date, force)
 
     # Every open OKS portal polls this route; the shared copy (see _portal_cached) means one refresh serves them all. The Sync
     # button (force) skips it.
@@ -3723,8 +3742,9 @@ def _check_site_role(username: str, site: str) -> None:
 
 
 @app.get("/api/portal/vendor-stats")
-def portal_vendor_stats(site: str = "OKS", username: str = Depends(_require_vendor_stats)):
+def portal_vendor_stats(site: str = "OKS", free_min: int = 120, username: str = Depends(_require_vendor_stats)):
     site = _site_param(site)
+    free_min = max(30, min(int(free_min or 120), 480))
     _check_site_role(username, site)
     conn = get_db()
     rows = conn.execute("""
@@ -3748,8 +3768,11 @@ def portal_vendor_stats(site: str = "OKS", username: str = Depends(_require_vend
         n = len(mins_sorted)
         avg = round(sum(mins_sorted) / n)
         p75 = mins_sorted[int(n * 0.75)]
+        over = [x for x in mins_sorted if x > free_min]
         stats.append({
             "vendor": vendor,
+            "over_count": len(over),                         # trucks that took longer than the free time (check-in to unload finish)
+            "over_min": sum(x - free_min for x in over),     # total minutes past the free time
             "avg_min": avg,
             "p75_min": p75,
             "min_min": mins_sorted[0],
