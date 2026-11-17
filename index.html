@@ -5159,6 +5159,193 @@
       .tour-card { max-height:calc(100dvh - 16px); overflow-y:auto; }
     }
     </style>
+
+<style id="mn-dashboard-parity">
+/* Minnesota dashboard: same header, controls and schedule-uploader look as the OKS dashboard (copied from its #myPortalPanel rules). */
+#myPortalMnPanel .portal-command-bar {
+      border: 1px solid #163d5b;
+      border-radius: 8px;
+      box-shadow: 0 10px 28px rgba(20,37,54,0.14);
+      background: #fff;
+    }
+#myPortalMnPanel .portal-info-strip {
+      background: #0f2f49;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding: 10px 16px;
+    }
+#myPortalMnPanel .portal-controls-strip {
+      background: #f8fafc;
+      border-top: 1px solid #dce7f0;
+      padding: 9px 12px;
+    }
+#myPortalMnPanel .portal-sync-btn {
+      background: #145f92;
+      border-radius: 6px;
+      box-shadow: inset 0 -1px 0 rgba(0,0,0,0.22);
+    }
+#myPortalMnPanel .portal-sync-btn:hover {
+      background: #0f4f7c;
+    }
+#myPortalMnPanel .portal-ctrl-btn,
+    #myPortalMnPanel .portal-danger-btn,
+    #myPortalMnPanel #portalMnBusinessDate,
+    #myPortalMnPanel #portalMnFreeTime,
+    #myPortalMnPanel .lookup-input {
+      border-radius: 5px;
+    }
+#myPortalMnPanel .portal-dms-status {
+      margin: 8px 0 12px;
+      padding: 9px 12px;
+      border: 1px solid #c9d6e2;
+      border-left: 4px solid #00a9ca;
+      border-radius: 6px;
+      background: #fff;
+      color: #3f5264;
+      font-weight: 700;
+    }
+#myPortalMnPanel .portal-schedule-panel {
+      margin: 8px 0 12px;
+      border: 1px solid #c9d6e2;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 2px 10px rgba(20,37,54,0.06);
+      overflow: hidden;
+    }
+#myPortalMnPanel .portal-schedule-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #f7fafc;
+      border-bottom: 1px solid #dce7f0;
+    }
+#myPortalMnPanel .portal-schedule-title {
+      color: #102f49;
+      font-size: 0.98rem;
+      font-weight: 900;
+    }
+#myPortalMnPanel .portal-schedule-sub {
+      margin-top: 3px;
+      color: #5d7184;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+#myPortalMnPanel .portal-schedule-actions,
+    #myPortalMnPanel .portal-schedule-options {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+#myPortalMnPanel .portal-schedule-file-label {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+    }
+#myPortalMnPanel .portal-schedule-warning {
+      margin: 12px 14px 0;
+      padding: 9px 11px;
+      border: 1px solid #f6c843;
+      border-left: 4px solid #b7791f;
+      border-radius: 6px;
+      background: #fffbeb;
+      color: #744210;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+#myPortalMnPanel .portal-schedule-options {
+      padding: 12px 14px 8px;
+      color: #38556d;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+#myPortalMnPanel .portal-schedule-options input {
+      margin-right: 5px;
+      vertical-align: -2px;
+    }
+#myPortalMnPanel .portal-schedule-status {
+      padding: 0 14px 10px;
+      color: #5d7184;
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+#myPortalMnPanel .portal-schedule-status.good { color: #2f855a; }
+#myPortalMnPanel .portal-schedule-status.warn { color: #b7791f; }
+#myPortalMnPanel .portal-schedule-status.bad { color: #c53030; }
+#myPortalMnPanel .portal-schedule-preview-wrap {
+      max-height: 280px;
+      border-top: 1px solid #e4edf4;
+    }
+#myPortalMnPanel #portalMnSchedulePreviewTable {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+#myPortalMnPanel #portalMnSchedulePreviewTable th {
+      position: sticky;
+      top: 0;
+      background: #102f49;
+      color: #fff;
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+    }
+#myPortalMnPanel #portalMnSchedulePreviewTable td {
+      border-bottom: 1px solid #e4edf4;
+      padding: 7px 10px;
+      vertical-align: top;
+    }
+#myPortalMnPanel #portalMnSchedulePreviewTable tr.schedule-row-error td {
+      background: #fff5f5;
+      color: #9b2c2c;
+    }
+:root.dark #myPortalMnPanel .portal-dms-titlebar,
+    :root.dark #myPortalMnPanel .portal-info-strip {
+      background: #071421;
+    }
+:root.dark #myPortalMnPanel .portal-controls-strip,
+    :root.dark #myPortalMnPanel .table-toolbar {
+      background: #0e1e30;
+      border-color: #1e3a55;
+    }
+:root.dark #myPortalMnPanel .portal-dms-status,
+    :root.dark #myPortalMnPanel .portal-schedule-panel,
+    :root.dark #myPortalMnPanel .metric-card,
+    :root.dark #myPortalMnPanel .portal-action-panel,
+    :root.dark #myPortalMnPanel .portal-client-panel,
+    :root.dark #myPortalMnPanel .portal-chart-card,
+    :root.dark #myPortalMnPanel .table-wrap,
+    :root.dark #myPortalMnPanel .portal-view-switch {
+      background: #132030;
+      border-color: #1e3a55;
+    }
+:root.dark #myPortalMnPanel .portal-schedule-head {
+      background: #0e1e30;
+      border-color: #1e3a55;
+    }
+:root.dark #myPortalMnPanel .portal-schedule-warning {
+      background: #1f1700;
+      border-color: #f6c843;
+      color: #fbd38d;
+    }
+:root.dark #myPortalMnPanel .portal-schedule-preview-wrap,
+    :root.dark #myPortalMnPanel #portalMnSchedulePreviewTable td {
+      border-color: #1e3a55;
+    }
+#portalMnLiveClock { font-size: 1.3em; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .03em; color: #fff; }
+#portalMnFreeTime { width: 54px; padding: 5px 6px; border-radius: 7px; border: 1.5px solid var(--border,#e2e8f0); background: var(--card-bg,#fff); color: var(--text,#1a202c); font-size: 0.84em; text-align: center; font-weight: 700; }
+:root.dark #portalMnFreeTime { background: #132030; border-color: #1e3a55; color: #eaf4ff; }
+#portalMnBusinessDate { width: 145px; padding: 5px 8px; border-radius: 7px; border: 1.5px solid var(--border,#e2e8f0); background: var(--card-bg,#fff); color: var(--text,#1a202c); font-size: 0.84em; font-weight: 700; }
+:root.dark #portalMnBusinessDate { background: #132030; border-color: #1e3a55; color: #eaf4ff; }
+#myPortalMnPanel #portalMnSearch { min-width: 210px; }
+#myPortalMnPanel .portal-dms-status.good { color: #276749; }
+#myPortalMnPanel .portal-dms-status.bad { color: #c53030; font-weight: 700; }
+:root.dark #myPortalMnPanel .portal-dms-status.good { color: #68d391; }
+:root.dark #myPortalMnPanel .portal-dms-status.bad { color: #fc8181; }
+#myPortalMnPanel .portal-ctrl-cluster .lookup-input { max-width: 220px; }
+</style>
 </head>
 <body>
 
@@ -5211,7 +5398,6 @@
           <button class="tab-button" type="button" aria-selected="false" data-tab="unloaderPerformance" data-perf-site="OKS" data-menu-label="Live: Performance by Name (OKS)">Performance by Name (OKS)</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="unloaderPerformance" data-perf-site="MN" data-menu-label="Live: Performance by Name (MN)">Performance by Name (MN)</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="myPortalMn" data-menu-label="Live: My Portal (MN)">My Portal (MN)</button>
-          <button class="tab-button" type="button" aria-selected="false" data-tab="mnScheduleUploader" data-menu-label="Minnesota: Schedule Uploader">MN Schedule Uploader</button>
           <button class="tab-button" type="button" aria-selected="false" data-tab="alerts" data-menu-label="Live: Alerts">Alerts <span id="alertsTabBadge" class="alerts-tab-badge" style="display:none;">0</span></button>
         </div>
         <div class="menu-group">
@@ -7757,20 +7943,53 @@
               <div class="portal-dms-pill">MN My Portal</div>
             </div>
           </div>
+          <!-- Row 1: Live info -->
+          <div class="portal-info-strip">
+            <div class="portal-live-badge">
+              <span class="portal-live-dot" id="portalMnLiveDot"></span>
+              <span id="portalMnLiveClock">--:-- --</span>
+            </div>
+            <div class="portal-day-center">
+              <span class="portal-day-label" id="portalMnDayLabel">Loading...</span>
+            </div>
+            <div class="portal-4am-wrap">
+              <div class="portal-4am-timer" id="portalMn4amTimer">--:--:--</div>
+              <div class="portal-4am-sublabel">to 4:00 AM</div>
+            </div>
+          </div>
+          <!-- Row 2: Controls -->
           <div class="portal-controls-strip">
-            <div class="mn-controls">
+            <div class="portal-ctrl-cluster">
               <button id="portalMnSyncBtn" type="button" class="portal-sync-btn">
                 <svg aria-hidden="true" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.3"/><path d="M3 12a9 9 0 0 1 15.5-6.3"/><path d="M18 2v4h-4"/><path d="M6 22v-4h4"/></svg>
                 <span id="portalMnSyncLabel">Sync MN DMS</span>
               </button>
-              <button id="portalMnAlertsBtn" type="button" class="portal-sync-btn" title="Get desktop popups for detention risk, overdue unload starts, and unloader delays">Enable alerts</button>
-              <button id="portalMnShiftReportPageBtn" type="button" class="portal-sync-btn" title="Charts and a comparison with earlier nights, ready to download or save as a PDF">&#x1F4CA; Shift Report</button>
-              <label for="portalMnBusinessDate">DMS date</label>
-              <input id="portalMnBusinessDate" type="date" class="lookup-input" title="Choose the Minnesota DMS business date to load" style="max-width:150px;">
+              <button id="portalMnAlertsBtn" type="button" class="portal-ctrl-btn" title="Get desktop popups for detention risk, overdue unload starts, and unloader delays">Enable alerts</button>
+              <button id="portalMnScheduleToggleBtn" type="button" class="portal-ctrl-btn work-only-btn">Upload Schedule</button>
             </div>
-            <div class="mn-controls">
-              <input id="portalMnSearch" type="search" class="lookup-input" placeholder="Search PO, supplier, door..." autocomplete="off" style="max-width:240px;">
-              <select id="portalMnStatusFilter" class="lookup-input" style="max-width:160px;">
+            <div class="portal-ctrl-sep"></div>
+            <div class="portal-date-wrap">
+              <label for="portalMnBusinessDate" class="portal-date-label">DMS date</label>
+              <input id="portalMnBusinessDate" type="date" title="Choose the Minnesota DMS business date to load">
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <div class="portal-freetime-wrap">
+              <label for="portalMnFreeTime" class="portal-freetime-label">Free time</label>
+              <input id="portalMnFreeTime" type="number" value="120" min="30" max="480">
+              <span class="portal-freetime-unit">min</span>
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <div class="portal-ctrl-cluster">
+              <button id="portalMnShiftReportPageBtn" type="button" class="portal-ctrl-btn" title="Charts and a comparison with earlier nights, ready to download or save as a PDF">&#x1F4CA; Shift Report</button>
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <div class="portal-ctrl-cluster">
+              <button id="portalMnMuteBtn" type="button" class="portal-ctrl-btn" title="Toggle sound alerts">&#x1F514; Sound</button>
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <div class="portal-ctrl-cluster">
+              <input id="portalMnSearch" type="search" class="lookup-input" placeholder="Search PO, supplier, door..." autocomplete="off">
+              <select id="portalMnStatusFilter" class="lookup-input">
                 <option value="all">All arrived</option>
                 <option value="active">Active</option>
                 <option value="complete">Completed</option>
@@ -7778,7 +7997,36 @@
             </div>
           </div>
         </div>
-        <div class="mn-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <div class="portal-dms-status" id="portalMnStatus">Minnesota DMS has not refreshed yet.</div>
+        <section class="portal-schedule-panel" id="portalMnSchedulePanel" style="display:none;" aria-labelledby="portalMnScheduleTitle">
+          <div class="portal-schedule-head">
+            <div>
+              <div class="portal-schedule-title" id="portalMnScheduleTitle">Minnesota DMS PowerView Schedule Uploader</div>
+              <div class="portal-schedule-sub">Attach the ALDI truck schedule, review the preview, then upload it into Minnesota DMS. Uploads use the DMS date set above.</div>
+            </div>
+            <div class="portal-schedule-actions">
+              <input id="portalMnScheduleFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;">
+              <label class="portal-ctrl-btn portal-schedule-file-label" for="portalMnScheduleFile" data-file-trigger="portalMnScheduleFile">Attach schedule</label>
+              <button id="portalMnScheduleClearBtn" type="button" class="portal-ctrl-btn">Clear</button>
+            </div>
+          </div>
+          <div class="portal-schedule-warning">
+            Minnesota upload uses the same PowerView mapping: Reference #, PO, Scheduled Date Time, dock/category, supplier, and pallets are turned into DMS Load Details rows.
+          </div>
+          <div class="portal-schedule-options">
+            <label><input id="portalMnScheduleSkipExisting" type="checkbox" checked> Skip trucks already found in Minnesota DMS</label>
+            <label><input id="portalMnScheduleConfirm" type="checkbox"> I reviewed this preview and want to upload these rows to Minnesota DMS</label>
+            <button id="portalMnScheduleUploadBtn" type="button" class="portal-sync-btn" disabled>Upload to MN DMS</button>
+          </div>
+          <div class="portal-schedule-status" id="portalMnScheduleStatus">Attach a Minnesota schedule to begin.</div>
+          <div class="table-scroller portal-schedule-preview-wrap" style="margin-top:10px;">
+            <table id="portalMnSchedulePreviewTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
         <div class="portal-zone-label">Drill-down views</div>
         <div class="portal-view-switch" id="portalMnViewSwitch" style="margin-top:12px;">
           <button type="button" class="portal-view-btn active" data-view="zones">Zones</button>
@@ -8080,47 +8328,6 @@
           </div>
         </div>
 
-      </section>
-
-      <section id="mnScheduleUploaderPanel" class="tab-panel" aria-label="Minnesota Schedule Uploader">
-        <div class="motivation-bar" id="motivBar_mnScheduleUploader"><span class="motivation-bar-emoji"></span><span class="motivation-bar-text"></span></div>
-        <div class="portal-command-bar">
-          <div class="portal-dms-titlebar">
-            <div class="portal-dms-title-main">
-              <div class="portal-dms-system">Minnesota Schedule Uploader</div>
-              <div class="portal-dms-subtitle">Attach the ALDI schedule, review the preview, then upload the trucks into Minnesota DMS.</div>
-            </div>
-            <div class="portal-dms-pill">MN Schedule</div>
-          </div>
-        </div>
-        <section class="portal-schedule-panel" id="portalMnSchedulePanel" aria-labelledby="portalMnScheduleTitle">
-          <div class="portal-schedule-head">
-            <div>
-              <div class="portal-schedule-title" id="portalMnScheduleTitle">Minnesota DMS PowerView Schedule Uploader</div>
-              <div class="portal-schedule-sub">Attach the ALDI truck schedule, review the preview, then upload it into Minnesota DMS. Uploads use the business date set on the My Portal (MN) tab.</div>
-            </div>
-            <div class="portal-schedule-actions">
-              <input id="portalMnScheduleFile" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none;">
-              <label class="portal-ctrl-btn portal-schedule-file-label" for="portalMnScheduleFile" data-file-trigger="portalMnScheduleFile">Attach schedule</label>
-              <button id="portalMnScheduleClearBtn" type="button" class="portal-ctrl-btn">Clear</button>
-            </div>
-          </div>
-          <div class="portal-schedule-warning">
-            Minnesota upload uses the same PowerView mapping: Reference #, PO, Scheduled Date Time, dock/category, supplier, and pallets are turned into DMS Load Details rows.
-          </div>
-          <div class="portal-schedule-options">
-            <label><input id="portalMnScheduleSkipExisting" type="checkbox" checked> Skip trucks already found in Minnesota DMS</label>
-            <label><input id="portalMnScheduleConfirm" type="checkbox"> I reviewed this preview and want to upload these rows to Minnesota DMS</label>
-            <button id="portalMnScheduleUploadBtn" type="button" class="portal-sync-btn" disabled>Upload to MN DMS</button>
-          </div>
-          <div class="portal-schedule-status" id="portalMnScheduleStatus">Attach a Minnesota schedule to begin.</div>
-          <div class="table-scroller portal-schedule-preview-wrap" style="margin-top:10px;">
-            <table id="portalMnSchedulePreviewTable">
-              <thead></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
       </section>
 
       <!-- === ALERTS =========================================================== -->
@@ -9190,8 +9397,8 @@
     const ROLE_TABS = {
       admin: ["*"],
       oks: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "truckChargeAudit"],
-      minnesota: ["myPortalMn", "unloaderPerformance", "mnScheduleUploader", "mnBillingAudit", "overview", "data"],
-      manager: ["myPortal", "unloaderPerformance", "myPortalMn", "mnScheduleUploader", "alerts", "overview", "data", "truckChargeAudit", "mnBillingAudit"],
+      minnesota: ["myPortalMn", "unloaderPerformance", "mnBillingAudit", "overview", "data"],
+      manager: ["myPortal", "unloaderPerformance", "myPortalMn", "alerts", "overview", "data", "truckChargeAudit", "mnBillingAudit"],
       teamlead: ["myPortal", "unloaderPerformance", "alerts", "overview", "data", "truckChargeAudit"],
       clerk: ["myPortal", "alerts", "overview", "data"],
       client: ["overview", "data"],
@@ -9420,6 +9627,12 @@
       portalMnTimelineArrived: document.getElementById("portalMnTimelineArrived"),
       portalMnTimelineDone: document.getElementById("portalMnTimelineDone"),
       portalMnSchedulePanel: document.getElementById("portalMnSchedulePanel"),
+      portalMnScheduleToggleBtn: document.getElementById("portalMnScheduleToggleBtn"),
+      portalMnFreeTime: document.getElementById("portalMnFreeTime"),
+      portalMnLiveClock: document.getElementById("portalMnLiveClock"),
+      portalMnDayLabel: document.getElementById("portalMnDayLabel"),
+      portalMnLiveDot: document.getElementById("portalMnLiveDot"),
+      portalMnMuteBtn: document.getElementById("portalMnMuteBtn"),
       portalMnScheduleFile: document.getElementById("portalMnScheduleFile"),
       portalMnScheduleSkipExisting: document.getElementById("portalMnScheduleSkipExisting"),
       portalMnScheduleConfirm: document.getElementById("portalMnScheduleConfirm"),
@@ -10328,6 +10541,28 @@
           else              { timer.className += " timer-red timer-pulse"; }
         }
 
+        // Minnesota dashboard header: same clock, day label and 4 AM countdown as OKS
+        if (els.portalMnLiveClock) els.portalMnLiveClock.textContent = h12 + ":" + m + ":" + s + " " + ampm + " CT";
+        if (els.portalMnDayLabel) {
+          els.portalMnDayLabel.textContent = state.portalMn.businessDate
+            ? "DMS Business Date: " + state.portalMn.businessDate
+            : days2[dp.dow] + ", " + months[dp.mo] + " " + dp.d + ", " + dp.y;
+        }
+        if (els.portalMnLiveDot) els.portalMnLiveDot.style.opacity = dp.s % 2 === 0 ? "1" : "0.3";
+        const timerMn = document.getElementById("portalMn4amTimer");
+        if (timerMn) {
+          const totalSecMn = Math.floor((dockNextHourMs(4, now.getTime()) - now) / 1000);
+          const hhMn = Math.floor(totalSecMn / 3600);
+          const mmMn = String(Math.floor((totalSecMn % 3600) / 60)).padStart(2, "0");
+          const ssMn = String(totalSecMn % 60).padStart(2, "0");
+          timerMn.textContent = hhMn + ":" + mmMn + ":" + ssMn;
+          timerMn.className = "portal-4am-timer";
+          if (hhMn >= 3)      { /* green: default */ }
+          else if (hhMn >= 1) { timerMn.className += " timer-amber"; }
+          else if (totalSecMn > 1800) { timerMn.className += " timer-red"; }
+          else                { timerMn.className += " timer-red timer-pulse"; }
+        }
+
         if (now.getSeconds() % 30 === 0) {
           const panel = document.getElementById("myPortalPanel");
           if (panel && panel.classList.contains("active")) renderPortalBoard();
@@ -10556,6 +10791,16 @@
           els.portalSchedulePanel.style.display = hidden ? "" : "none";
         });
       }
+      if (els.portalMnScheduleToggleBtn && els.portalMnSchedulePanel) {
+        els.portalMnScheduleToggleBtn.addEventListener("click", function() {
+          const hidden = els.portalMnSchedulePanel.style.display === "none";
+          els.portalMnSchedulePanel.style.display = hidden ? "" : "none";
+          if (hidden) {
+            try { portalMnInitializeDate(); portalMnRenderSchedulePreview(); }
+            catch (err) { console.error("Minnesota schedule uploader render failed:", err); }
+          }
+        });
+      }
       if (els.portalScheduleFile) {
         els.portalScheduleFile.addEventListener("change", handlePortalScheduleFile);
       }
@@ -10606,22 +10851,25 @@
     });
     if (document.readyState !== "loading") portalAttachNotificationButtons();
 
-    // -- Mute toggle (Feature 1) -----------------------------------------------
+    // -- Mute toggle: one shared setting for the OKS and Minnesota Sound buttons ----------
     (function() {
-      var muteBtn = document.getElementById("portalMuteBtn");
+      var muteBtns = [document.getElementById("portalMuteBtn"), document.getElementById("portalMnMuteBtn")].filter(Boolean);
       function _syncMuteBtn() {
-        if (!muteBtn) return;
-        if (_portalMuted) { muteBtn.textContent = "Muted Muted"; muteBtn.classList.add("portal-muted"); }
-        else              { muteBtn.textContent = "Sound Sound"; muteBtn.classList.remove("portal-muted"); }
+        muteBtns.forEach(function(btn) {
+          if (_portalMuted) { btn.textContent = "\uD83D\uDD07 Muted"; btn.classList.add("portal-muted"); }
+          else              { btn.textContent = "\uD83D\uDD14 Sound"; btn.classList.remove("portal-muted"); }
+        });
       }
-      if (muteBtn) {
+      if (muteBtns.length) {
         _syncMuteBtn();
-        muteBtn.addEventListener("click", function() {
-          _portalMuted = !_portalMuted;
-          safeLocalStorageSet("portalMuted", _portalMuted ? "1" : "0");
-          _syncMuteBtn();
-          showToast(_portalMuted ? "Sound alerts muted." : "Sound alerts on.");
-          if (!_portalMuted) portalBeep("urgent");
+        muteBtns.forEach(function(btn) {
+          btn.addEventListener("click", function() {
+            _portalMuted = !_portalMuted;
+            safeLocalStorageSet("portalMuted", _portalMuted ? "1" : "0");
+            _syncMuteBtn();
+            showToast(_portalMuted ? "Sound alerts muted." : "Sound alerts on.");
+            if (!_portalMuted) portalBeep("urgent");
+          });
         });
       }
     })();
@@ -10665,6 +10913,12 @@
       state.portal.freeTimeMinutes = Math.max(30, parseInt(els.portalFreeTime.value, 10) || 120);
       renderPortalBoard();
     });
+    if (els.portalMnFreeTime) {
+      els.portalMnFreeTime.addEventListener("change", function() {
+        state.portalMn.freeTimeMinutes = Math.max(30, parseInt(els.portalMnFreeTime.value, 10) || 120);
+        renderPortalMn();
+      });
+    }
     if (els.portalEosDryStaff) {
       els.portalEosDryStaff.value = safeLocalStorageGet("portalEosDryStaff") || "14";
       els.portalEosDryStaff.addEventListener("change", function() {
@@ -12583,7 +12837,7 @@
         {
           const modelNote = data.model_error ? " DMS upload model was unavailable, so the known Load Details insert format was used." : "";
           state.portal.scheduleUpload.uploadSummaryText = "Upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
-          state.portal.scheduleUpload.uploadSummaryBad = false;
+          state.portal.scheduleUpload.uploadSummaryBad = Number(data.failed) > 0;
         }
         showToast("Schedule upload finished.");
         portalPullLiveDms(true);
@@ -12595,6 +12849,8 @@
         if (els.portalScheduleUploadBtn) {
           els.portalScheduleUploadBtn.textContent = "Upload to DMS";
         }
+        // Make the next upload a deliberate choice: re-tick the box to send again.
+        if (els.portalScheduleConfirm) els.portalScheduleConfirm.checked = false;
         portalRenderSchedulePreview();
       }
     }
@@ -12756,7 +13012,7 @@
         {
           const modelNote = data.model_error ? " DMS upload model was unavailable, so the known Load Details insert format was used." : "";
           state.portalMn.scheduleUpload.uploadSummaryText = "Minnesota upload finished: " + data.inserted + " inserted, " + data.skipped + " skipped, " + data.failed + " failed." + modelNote;
-          state.portalMn.scheduleUpload.uploadSummaryBad = false;
+          state.portalMn.scheduleUpload.uploadSummaryBad = Number(data.failed) > 0;
         }
         showToast("Minnesota schedule upload finished.");
       } catch (error) {
@@ -12767,6 +13023,7 @@
         if (els.portalMnScheduleUploadBtn) {
           els.portalMnScheduleUploadBtn.textContent = "Upload to MN DMS";
         }
+        if (els.portalMnScheduleConfirm) els.portalMnScheduleConfirm.checked = false;
         portalMnRenderSchedulePreview();
       }
     }
@@ -16906,7 +17163,7 @@
 
     function portalMnSetStatus(text, kind) {
       if (!els.portalMnStatus) return;
-      els.portalMnStatus.className = "mn-status" + (kind ? " " + kind : "");
+      els.portalMnStatus.className = "portal-dms-status" + (kind ? " " + kind : "");
       els.portalMnStatus.textContent = text;
     }
 
@@ -26009,14 +26266,6 @@
         }
         portalTourMaybeStart("mn");
       } else portalMnStopPolling();
-      if (name === "mnScheduleUploader") {
-        try {
-          portalMnInitializeDate();
-          portalMnRenderSchedulePreview();
-        } catch (err) {
-          console.error("Minnesota schedule uploader render failed:", err);
-        }
-      }
       if (name === "mnBillingAudit") renderMnBillingAudit();
       if (name === "alerts") renderAlertsTab();
       if (name === "unloaderPerformance") renderUnloaderPerformance();

@@ -2356,8 +2356,13 @@ def _run_dms_schedule_upload(session: Dict[str, Any], body: DmsScheduleUploadIn,
             for item in existing_loads:
                 for key in _schedule_po_keys(item.get("poNum") or item.get("po")):
                     existing_keys.add(f"po:{key}")
-        except Exception:
-            existing_keys = set()
+        except Exception as exc:
+            # Never carry on as if DMS were empty: that would re-insert every PO that is already there.
+            raise HTTPException(
+                status_code=502,
+                detail="Could not check DMS for loads that already exist (" + str(exc)[:160] + "). "
+                       "Nothing was uploaded. Try again in a moment.",
+            )
 
     results = []
     inserted = skipped = failed = 0
