@@ -7984,6 +7984,19 @@
             </div>
             <div class="portal-ctrl-sep"></div>
             <div class="portal-ctrl-cluster">
+              <button id="portalMnShiftReportBtn" type="button" class="portal-ctrl-btn">&#x1F4CB; Report</button>
+              <span class="portal-staffing-wrap" title="Staffing counts used in the Minnesota EOS email.">
+                <label for="portalMnEosDryStaff" class="portal-staffing-label">Dry staff</label>
+                <input id="portalMnEosDryStaff" type="number" min="0" max="99" value="14" inputmode="numeric">
+                <label for="portalMnEosCoolerStaff" class="portal-staffing-label">Cooler staff</label>
+                <input id="portalMnEosCoolerStaff" type="number" min="0" max="99" value="16" inputmode="numeric">
+              </span>
+              <button id="portalMnEosEmailBtn" type="button" class="portal-ctrl-btn" title="Build the end-of-shift email from the Minnesota portal numbers.">&#x2709; EOS Email</button>
+              <button id="portalMnExportBtn" type="button" class="portal-ctrl-btn">&#x2B07; Export</button>
+            </div>
+            <div class="portal-ctrl-sep"></div>
+            <div class="portal-ctrl-cluster">
+              <button id="portalMnKioskBtn" type="button" class="portal-ctrl-btn" title="Kiosk / TV mode">&#x1F4FA; Kiosk</button>
               <button id="portalMnMuteBtn" type="button" class="portal-ctrl-btn" title="Toggle sound alerts">&#x1F514; Sound</button>
             </div>
             <div class="portal-ctrl-sep"></div>
@@ -9790,8 +9803,6 @@
       trendsExportButton: document.getElementById("trendsExportButton"),
       opsAuditFile: document.getElementById("opsAuditFile"),
       dmsAuditFile: document.getElementById("dmsAuditFile"),
-      truckChargeOpsFile: document.getElementById("truckChargeOpsFile"),
-      truckChargeRangeFile: document.getElementById("truckChargeRangeFile"),
       breakdownsAuditKicker: document.getElementById("breakdownsAuditKicker"),
       breakdownsAuditStatus: document.getElementById("breakdownsAuditStatus"),
       opsBreakdownCount: document.getElementById("opsBreakdownCount"),
@@ -9818,48 +9829,6 @@
       missingBreakdownCommentMeta: document.getElementById("missingBreakdownCommentMeta"),
       missingBreakdownBillingTable: document.getElementById("missingBreakdownBillingTable"),
       missingBreakdownBillingMeta: document.getElementById("missingBreakdownBillingMeta"),
-      truckChargeAuditKicker: document.getElementById("truckChargeAuditKicker"),
-      truckChargeAuditRules: document.getElementById("truckChargeAuditRules"),
-      truckChargeCheckedCount: document.getElementById("truckChargeCheckedCount"),
-      truckChargeIssueCount: document.getElementById("truckChargeIssueCount"),
-      missedCncBillingCount: document.getElementById("missedCncBillingCount"),
-      pvBreakdownIssueCount: document.getElementById("pvBreakdownIssueCount"),
-      pvLeadMissRate: document.getElementById("pvLeadMissRate"),
-      pvLeadMissNote: document.getElementById("pvLeadMissNote"),
-      pvClerkPoErrorRate: document.getElementById("pvClerkPoErrorRate"),
-      pvClerkPoErrorNote: document.getElementById("pvClerkPoErrorNote"),
-      truckChargeAuditTable: document.getElementById("truckChargeAuditTable"),
-      truckChargeAuditMeta: document.getElementById("truckChargeAuditMeta"),
-      mnBillingOpsFile: document.getElementById("mnBillingOpsFile"),
-      mnBillingRangeFile: document.getElementById("mnBillingRangeFile"),
-      mnBillingAuditKicker: document.getElementById("mnBillingAuditKicker"),
-      mnBillingAuditRules: document.getElementById("mnBillingAuditRules"),
-      mnBillingCheckedCount: document.getElementById("mnBillingCheckedCount"),
-      mnBillingMissingCount: document.getElementById("mnBillingMissingCount"),
-      mnBillingWrongCount: document.getElementById("mnBillingWrongCount"),
-      mnBillingCncCount: document.getElementById("mnBillingCncCount"),
-      mnBillingMissingTable: document.getElementById("mnBillingMissingTable"),
-      mnBillingMissingMeta: document.getElementById("mnBillingMissingMeta"),
-      mnBillingWrongTable: document.getElementById("mnBillingWrongTable"),
-      mnBillingWrongMeta: document.getElementById("mnBillingWrongMeta"),
-      mnBillingCncTable: document.getElementById("mnBillingCncTable"),
-      mnBillingCncMeta: document.getElementById("mnBillingCncMeta"),
-      mnBillingValidationTable: document.getElementById("mnBillingValidationTable"),
-      mnBillingValidationMeta: document.getElementById("mnBillingValidationMeta"),
-      pvInternalBreakdownTable: document.getElementById("pvInternalBreakdownTable"),
-      pvInternalBreakdownMeta: document.getElementById("pvInternalBreakdownMeta"),
-      pvLeadMissTable: document.getElementById("pvLeadMissTable"),
-      pvLeadMissMeta: document.getElementById("pvLeadMissMeta"),
-      pvClerkPoTable: document.getElementById("pvClerkPoTable"),
-      pvClerkPoMeta: document.getElementById("pvClerkPoMeta"),
-      missedCncBillingTable: document.getElementById("missedCncBillingTable"),
-      uncleRaysTable: document.getElementById("uncleRaysTable"),
-      uncleRaysMeta: document.getElementById("uncleRaysMeta"),
-      bananaTable:  document.getElementById("bananaTable"),
-      bananaMeta:   document.getElementById("bananaMeta"),
-      recycleTable: document.getElementById("recycleTable"),
-      recycleMeta:  document.getElementById("recycleMeta"),
-      missedCncBillingMeta: document.getElementById("missedCncBillingMeta"),
       selectors: {},
       loginOverlay: document.getElementById("loginOverlay"),
       loginForm: document.getElementById("loginForm"),
@@ -10620,6 +10589,7 @@
     }
 
     // -- Feature 6: Kiosk per-second overlay update ----------------------------
+    var portalKioskSite = "oks";
     function portalTickKiosk() {
       var overlay = document.getElementById("portalKioskOverlay");
       if (!overlay || !overlay.classList.contains("active")) return;
@@ -10631,27 +10601,31 @@
       var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
       var days2 = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
       var kd = document.getElementById("kioskDate"); if (kd) kd.textContent = days2[dpk.dow] + ", " + months[dpk.mo] + " " + dpk.d;
-      var goalMs = portalShiftGoalMs() || dockNextHourMs(4, now.getTime());
+      var isMn = portalKioskSite === "mn";
+      var goalHr = isMn ? 5 : 4;
+      var goalLbl = goalHr + ":00 AM";
+      var goalMs = (isMn ? portalMnShiftGoalMs() : portalShiftGoalMs()) || dockNextHourMs(goalHr, now.getTime());
       var diffMs = goalMs - now.getTime(); var ts = Math.max(0, Math.floor(diffMs/1000));
       var k4 = document.getElementById("kiosk4am");
       if (k4) {
         var hh4 = Math.floor(ts/3600), mm4 = String(Math.floor((ts%3600)/60)).padStart(2,"0"), ss4 = String(ts%60).padStart(2,"0");
-        k4.textContent = hh4 + ":" + mm4 + ":" + ss4 + " to 4:00 AM";
+        k4.textContent = hh4 + ":" + mm4 + ":" + ss4 + " to " + goalLbl;
         k4.className = "kiosk-4am" + (hh4 < 1 ? " kiosk-behind" : "");
       }
-      var p = state.portal;
+      var p = isMn ? state.portalMn : state.portal;
+      var ksite = document.getElementById("kioskSiteLabel"); if (ksite) ksite.textContent = isMn ? "MINNESOTA" : "OKS";
       var ka = document.getElementById("kioskActive"); if (ka) ka.textContent = (p.kioskActive !== undefined ? p.kioskActive : " - ");
       var kdet = document.getElementById("kioskDetention"); if (kdet) kdet.textContent = (p.kioskDetention !== undefined ? p.kioskDetention : " - ");
       var kdn = document.getElementById("kioskDone"); if (kdn) kdn.textContent = (p.kioskDone !== undefined ? p.kioskDone : " - ");
       var kPace = document.getElementById("kioskPace");
       if (kPace) {
         var estMs = p.estMs || 0;
-        var goal4amMs = portalShiftGoalMs() || dockNextHourMs(4, now.getTime());
+        var goal4amMs = goalMs;
         var bMs = estMs ? estMs - goal4amMs : 0;
         if (!estMs) { kPace.textContent = "Calculating..."; kPace.className = "kiosk-pace"; }
         else if (bMs > 30*60000) { var bm=Math.round(bMs/60000); kPace.textContent = "BEHIND BY " + bm + " MIN  -  PICK IT UP"; kPace.className = "kiosk-pace pace-crit"; }
         else if (bMs > 0) { var bm2=Math.round(bMs/60000); kPace.textContent = "Slipping  -  " + bm2 + " min behind goal"; kPace.className = "kiosk-pace pace-warn"; }
-        else { kPace.textContent = "On track  -  finishing before 4:00 AM"; kPace.className = "kiosk-pace pace-good"; }
+        else { kPace.textContent = "On track  -  finishing before " + goalLbl; kPace.className = "kiosk-pace pace-good"; }
       }
     }
 
@@ -10875,26 +10849,36 @@
     })();
 
     // -- Kiosk toggle (Feature 6) ----------------------------------------------
+    // The overlay div sits after this script in the page, so it must be looked up when used, never at script start.
     (function() {
-      var kioskBtn = document.getElementById("portalKioskBtn");
-      var overlay  = document.getElementById("portalKioskOverlay");
+      function ov() { return document.getElementById("portalKioskOverlay"); }
       function exitKiosk() {
+        var overlay = ov();
         if (!overlay) return;
         overlay.classList.remove("active");
         if (document.fullscreenElement) document.exitFullscreen().catch(function(){});
       }
-      function enterKiosk() {
+      function enterKiosk(site) {
+        var overlay = ov();
         if (!overlay) return;
+        portalKioskSite = site === "mn" ? "mn" : "oks";
+        _portalTickerShapes.oks = ""; _portalTickerShapes.mn = "";
+        var tr = document.getElementById("kioskTickerTrack"); if (tr) tr.innerHTML = "";
         overlay.classList.add("active");
+        try { portalRenderTicker(portalKioskSite); } catch (err) { console.error("Kiosk ticker failed:", err); }
         portalTickKiosk();
-        try { overlay.requestFullscreen && overlay.requestFullscreen(); } catch(e) {}
+        try { var rf = overlay.requestFullscreen && overlay.requestFullscreen(); if (rf && rf.catch) rf.catch(function(){}); } catch(e) {}
       }
-      if (kioskBtn) kioskBtn.addEventListener("click", function() {
-        overlay && overlay.classList.contains("active") ? exitKiosk() : enterKiosk();
+      document.addEventListener("click", function(e) {
+        var overlay = ov();
+        var t = e.target;
+        if (overlay && overlay.classList.contains("active") && overlay.contains(t)) { exitKiosk(); return; }
+        var btn = t && t.closest ? t.closest("#portalKioskBtn, #portalMnKioskBtn") : null;
+        if (btn) enterKiosk(btn.id === "portalMnKioskBtn" ? "mn" : "oks");
       });
-      if (overlay) overlay.addEventListener("click", exitKiosk);
       document.addEventListener("keydown", function(e) { if (e.key === "Escape") exitKiosk(); });
       document.addEventListener("fullscreenchange", function() {
+        var overlay = ov();
         if (!document.fullscreenElement && overlay) overlay.classList.remove("active");
       });
     })();
@@ -17471,6 +17455,9 @@
       if (els.portalMnDetentionCount) els.portalMnDetentionCount.textContent = detention.length;
       if (els.portalMnDoneCount)      els.portalMnDoneCount.textContent      = complete.length;
       if (els.portalMnProgressNote)   els.portalMnProgressNote.textContent   = "of " + shiftTotal + " scheduled today.";
+      state.portalMn.kioskActive    = active.length + urgent.length + warning.length + detention.length;
+      state.portalMn.kioskDetention = detention.length;
+      state.portalMn.kioskDone      = complete.length;
 
       portalMnRenderActionQueue(enriched, now);
       const forecast = portalMnRenderRiskForecast(enriched, now, freeTimeMs);
@@ -20068,8 +20055,8 @@
       site = site === "mn" ? "mn" : "oks";
       const targets = site === "mn"
         ? [[document.getElementById("portalMnTicker"), document.getElementById("portalMnTickerTrack")]]
-        : [[document.getElementById("portalTicker"), document.getElementById("portalTickerTrack")],
-           [document.getElementById("kioskTicker"), document.getElementById("kioskTickerTrack")]];
+        : [[document.getElementById("portalTicker"), document.getElementById("portalTickerTrack")]];
+      if (portalKioskSite === site) targets.push([document.getElementById("kioskTicker"), document.getElementById("kioskTickerTrack")]);
       let items = null;
       try { items = portalTickerItems(Date.now(), site); } catch (err) { console.error("Ticker failed:", err); }
       if (!items || !items.length) {
@@ -21659,10 +21646,11 @@
       if (els.portalReportModal) els.portalReportModal.style.display = "flex";
     }
 
-    function portalEosZoneRollup(rows, now) {
-      rows = rows || portalCurrentTrucks();
+    function portalEosZoneRollup(rows, now, site) {
+      site = site === "mn" ? "mn" : "oks";
+      rows = rows || (site === "mn" ? portalMnEnrichedRows() : portalCurrentTrucks());
       const zones = portalZonesCompute(rows, now);
-      const est = portalZoneEstimatesNow(now, "oks");
+      const est = portalZoneEstimatesNow(now, site);
       const eosClock = function(ms) {
         return new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "2-digit", minute: "2-digit", hour12: false, hourCycle: "h23" });
       };
@@ -21751,6 +21739,211 @@
     function portalCloseShiftReport() {
       if (els.portalReportModal) els.portalReportModal.style.display = "none";
     }
+
+    // -- Minnesota: shift report, EOS email and CSV export ---------------------
+    function portalMnBusinessDateText() {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(portalMnSelectedBusinessDate() || "");
+      return m ? Number(m[2]) + "/" + Number(m[3]) + "/" + m[1] : new Date().toLocaleDateString("en-US", { timeZone: DOCK_TZ });
+    }
+
+    function portalMnSnapshot(rows, now) {
+      const st = state.portalMn;
+      const by = function(k) { return rows.filter(function(r) { return r.status === k; }); };
+      const complete = by("complete"), detention = by("detention"), startSoon = by("startsoon"), urgent = by("urgent"), warning = by("warning"), active = by("active");
+      const scheduled = Math.max(rows.length, Number(st.totalExpected || 0));
+      const lateRows = Array.isArray(st.noShowTrucks) ? st.noShowTrucks : [];
+      return {
+        generated: new Date(now).toLocaleString("en-US", { timeZone: DOCK_TZ, hour12: true }),
+        businessDate: portalMnBusinessDateText(),
+        scheduled: scheduled, arrived: rows.length, complete: complete.length,
+        open: Math.max(0, scheduled - complete.length),
+        active: active.length, detention: detention.length,
+        risk: warning.length + urgent.length + startSoon.length + detention.length,
+        rejected: st.rejectedCount || 0,
+        lateNoShow: Math.max(st.noShowCount || 0, lateRows.length),
+        lateRows: lateRows,
+        projected: st.estMs ? portalFormatTime(st.estMs) : (complete.length >= scheduled && scheduled > 0 ? "Done OK" : "--")
+      };
+    }
+
+    function portalMnBuildShiftReport() {
+      const now = Date.now();
+      const rows = portalMnEnrichedRows();
+      const snap = portalMnSnapshot(rows, now);
+      const score = portalMnBuildScorecard(rows);
+      const areas = portalMnAreaRows();
+      const forecast = portalBuildRiskForecast(rows, now, (state.portalMn.freeTimeMinutes || 120) * 60000, state.portalMn.vendorAvgs || {});
+      const alerts = portalMnGetAlerts();
+      const pct = snap.scheduled ? Math.round(snap.complete / snap.scheduled * 100) : 0;
+      const lines = [
+        "Minnesota End-of-Shift Operations Report",
+        "Generated: " + snap.generated,
+        "Business date: " + snap.businessDate,
+        "DMS sync: " + (state.portalMn.liveUpdatedAt ? new Date(state.portalMn.liveUpdatedAt).toLocaleString("en-US", { timeZone: DOCK_TZ, hour12: true }) : "not synced"),
+        "",
+        "Supervisor Summary",
+        "Scheduled trucks: " + snap.scheduled,
+        "Arrived trucks: " + snap.arrived,
+        "Unload finished: " + snap.complete + " (" + pct + "%)",
+        "Still open: " + snap.open,
+        "Projected finish: " + snap.projected,
+        "Active on dock: " + snap.active,
+        "Warning / urgent / detention: " + snap.risk,
+        "In detention: " + snap.detention,
+        "Late / no-show separated: " + snap.lateNoShow,
+        "",
+        "End-of-Shift Scorecard",
+        "Finished by 5 AM: " + score.donePct + "%",
+        "Detention risk count: " + score.risk,
+        "Late / no-show count: " + score.lateNoShow,
+        "Lowest area completion: " + score.worstArea,
+        "",
+        "Shift Timeline",
+        "Target: finish by 5:00 AM",
+        "Progress: " + snap.complete + " completed out of " + snap.scheduled + " scheduled",
+        "Arrival count: " + snap.arrived + " checked in / " + Math.max(0, snap.scheduled - snap.arrived) + " not checked in",
+        "",
+        "Area Summary"
+      ];
+      if (areas.length) areas.forEach(function(a) { lines.push("- " + a.area + ": " + a.completed + " complete / " + a.checked_in + " arrived / " + a.scheduled + " scheduled"); });
+      else lines.push("- No area totals available yet.");
+      lines.push("", "Late Truck Separation");
+      if (snap.lateRows.length) {
+        snap.lateRows.slice(0, 30).forEach(function(ns) {
+          const appt = ns.appointmentMs ? portalFormatTime(ns.appointmentMs) : "no appointment";
+          lines.push("- " + (ns.ref || "No ref") + " | " + (ns.supplier || "No supplier") + " | Door " + (ns.door || "-") + " | Appt " + appt + " | not checked in");
+        });
+        if (snap.lateRows.length > 30) lines.push("- " + (snap.lateRows.length - 30) + " more late/no-show trucks not shown.");
+      } else lines.push("- No late/no-show trucks separated right now.");
+      lines.push("", "Action Queue");
+      const actions = portalBuildActionItems(rows, now);
+      if (actions.length) actions.forEach(function(i) { lines.push("- " + (i.sev === "high" ? "HIGH" : "WATCH") + ": " + i.title + " | " + i.meta); });
+      else lines.push("- No active action items.");
+      lines.push("", "Detention Risk Forecast");
+      if (forecast.length) forecast.forEach(function(f) {
+        const lateText = f.projectedLateBy > 0 ? "projected " + f.projectedLateBy + " min late" : f.minsLeft + " min left";
+        lines.push("- " + f.score + "% risk | " + portalTruckName(f.truck) + " | " + lateText + " | " + f.reason);
+      });
+      else lines.push("- No forecasted detention misses.");
+      lines.push("", "Current Alerts");
+      if (alerts.length) {
+        alerts.slice(0, 20).forEach(function(a) { lines.push("- " + a.sevLabel + ": " + a.title + " | " + a.detail); });
+        if (alerts.length > 20) lines.push("- " + (alerts.length - 20) + " more alerts not shown.");
+      } else lines.push("- No active alerts.");
+      return lines.join("\n");
+    }
+
+    function portalMnBuildEosEmail() {
+      const now = Date.now();
+      const rollup = portalEosZoneRollup(portalMnEnrichedRows(), now, "mn");
+      const dEl = document.getElementById("portalMnEosDryStaff"), cEl = document.getElementById("portalMnEosCoolerStaff");
+      const dryStaff = (dEl && dEl.value ? dEl.value : safeLocalStorageGet("portalMnEosDryStaff")) || "14";
+      const coolerStaff = (cEl && cEl.value ? cEl.value : safeLocalStorageGet("portalMnEosCoolerStaff")) || "16";
+      const dryNum = parseInt(dryStaff, 10) || 0, coolerNum = parseInt(coolerStaff, 10) || 0;
+      const dryVol = rollup.dryVolume || 0, coolerVol = rollup.coolerVolume || 0;
+      return [
+        "Staffing", "",
+        "- Dry: " + dryStaff + " associates",
+        "- Cooler: " + coolerStaff + " associates",
+        "- Total: " + (dryNum + coolerNum) + " associates", "",
+        "Volume", "",
+        "- Dry: " + dryVol + " trucks",
+        "- Cooler: " + coolerVol + " trucks",
+        "- Total: " + (dryVol + coolerVol) + " trucks", "",
+        "Finish Times", "",
+        "- Dry: " + rollup.dryFinish,
+        "- Cooler: " + rollup.coolerFinish, "",
+        "Safety Reminders", "",
+        "- High-visibility vests must be worn at all times.",
+        "- Use site-approved PPE only.",
+        "- Use horns when operating equipment and when approaching intersections.",
+        "- Seatbelts must be worn while operating equipment.",
+        "- No earbuds on the floor.",
+        "- Keep container pallets clear of all fire lanes.", "",
+        "General Communication", "",
+        "- No drinks on the floor except water in a sealed container.",
+        "- Be mindful of product condition when down-stacking.",
+        "- Use slips when creating pallets.",
+        "- Complete all Lead/Supervisor checklists.",
+        "- Plug in all equipment at the end of the shift.",
+        "- Ensure dock pits are cleaned.",
+        "- Maintain clear communication throughout the shift."
+      ].join("\n");
+    }
+
+    // The OKS report window lives inside the OKS panel (hidden while Minnesota is showing), so Minnesota gets its own.
+    function portalMnShowText(title, text, toastMsg) {
+      let ov = document.getElementById("portalMnReportModal");
+      if (!ov) {
+        ov = document.createElement("div");
+        ov.id = "portalMnReportModal";
+        ov.className = "report-modal-overlay";
+        ov.innerHTML = '<div class="report-modal"><div class="report-modal-head"><div class="report-modal-title" id="portalMnReportTitle"></div>'
+          + '<div style="display:flex; gap:8px;"><button type="button" id="portalMnReportCopyBtn" class="secondary-btn" style="font-size:0.82em; font-weight:700;">Copy</button>'
+          + '<button type="button" id="portalMnReportCloseBtn" class="secondary-btn" style="font-size:0.82em;">Close</button></div></div>'
+          + '<pre class="report-body" id="portalMnReportBody"></pre></div>';
+        document.body.appendChild(ov);
+        ov.addEventListener("click", function(e) { if (e.target === ov) ov.style.display = "none"; });
+        document.getElementById("portalMnReportCloseBtn").addEventListener("click", function() { ov.style.display = "none"; });
+        document.getElementById("portalMnReportCopyBtn").addEventListener("click", function() {
+          const t = document.getElementById("portalMnReportBody").textContent;
+          if (!t) return;
+          navigator.clipboard.writeText(t).then(function() { showToast(ov.getAttribute("data-toast") || "Copied."); }, function() { showToast("Copy failed. Select the text manually."); });
+        });
+      }
+      ov.setAttribute("data-toast", toastMsg);
+      document.getElementById("portalMnReportTitle").textContent = title;
+      document.getElementById("portalMnReportBody").textContent = text;
+      ov.style.display = "flex";
+    }
+
+    function portalMnExportShift() {
+      const rows = portalMnEnrichedRows();
+      const late = Array.isArray(state.portalMn.noShowTrucks) ? state.portalMn.noShowTrucks : [];
+      if (!rows.length && !late.length) { alert("No Minnesota trucks on the board to export."); return; }
+      const now = Date.now();
+      const date = portalMnBusinessDateText();
+      const alertMap = new Map();
+      portalMnGetAlerts().forEach(function(a) {
+        const key = String((a.truck && (a.truck.id || a.truck.ref)) || "");
+        if (!key) return;
+        const note = a.sevLabel + ": " + a.detail;
+        alertMap.set(key, alertMap.has(key) ? alertMap.get(key) + " | " + note : note);
+      });
+      const fmtT = function(ms) { return ms ? new Date(ms).toLocaleTimeString("en-US", { timeZone: DOCK_TZ, hour: "2-digit", minute: "2-digit", hour12: true }) : ""; };
+      const headers = ["Shift Date","Site","Truck/Ref","Door","Area","Supplier","PO","Appointment","Check-In","Driver At Door","Unload Start","Unload Finish","Receiving Finish","Min on Dock","Status","Detention Min","Alerts"];
+      const body = rows.map(function(t) {
+        const finMs = t.unloadFinishMs || t.receivingFinishMs;
+        const dockMin = (t.checkInMs && finMs) ? Math.max(0, Math.round((finMs - t.checkInMs) / 60000)) : "";
+        const detMin = t.minutesInDetention != null ? Math.round(t.minutesInDetention) : "";
+        return [date, "Minnesota", t.ref || "", t.door || "", t.area || "", t.supplier || "", t.po || "",
+          fmtT(t.appointmentMs), fmtT(t.checkInMs), fmtT(t.driverAtDoorMs), fmtT(t.unloadStartMs), fmtT(t.unloadFinishMs), fmtT(t.receivingFinishMs),
+          dockMin, portalStatusLabel(t.status), detMin, alertMap.get(String(t.id || t.ref || "")) || ""].map(portalCsvEsc).join(",");
+      });
+      const lateLines = late.map(function(ns) {
+        return [date, "Minnesota", ns.ref || "", ns.door || "", ns.area || "", ns.supplier || "", "", fmtT(ns.appointmentMs), "", "", "", "", "", "", "Late / no-show - not arrived", "", ""].map(portalCsvEsc).join(",");
+      });
+      const csv = [headers.join(","), ...body, ...lateLines].join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "mn_shift_" + date.replace(/\//g, "-") + ".csv"; a.click();
+      URL.revokeObjectURL(url);
+      showToast("Minnesota shift exported.");
+    }
+
+    (function() {
+      function bind(id, fn) { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); }
+      bind("portalMnShiftReportBtn", function() { portalMnShowText("Minnesota End-of-Shift Report", portalMnBuildShiftReport(), "Shift report copied."); });
+      bind("portalMnEosEmailBtn", function() { portalMnShowText("Minnesota EOS Email", portalMnBuildEosEmail(), "EOS email copied."); });
+      bind("portalMnExportBtn", portalMnExportShift);
+      [["portalMnEosDryStaff", "portalMnEosDryStaff", "14"], ["portalMnEosCoolerStaff", "portalMnEosCoolerStaff", "16"]].forEach(function(c) {
+        const el = document.getElementById(c[0]);
+        if (!el) return;
+        el.value = safeLocalStorageGet(c[1]) || c[2];
+        el.addEventListener("change", function() { safeLocalStorageSet(c[1], String(Math.max(0, parseInt(el.value, 10) || 0))); });
+      });
+    })();
 
     function repairMyPortalPanel() {
       const panel = document.getElementById("myPortalPanel");
@@ -26777,6 +26970,7 @@
   <div id="portalKioskOverlay" role="dialog" aria-label="Kiosk display">
     <div class="kiosk-clock" id="kioskClock">--:-- --</div>
     <div class="kiosk-date" id="kioskDate"></div>
+    <div class="kiosk-date" id="kioskSiteLabel" style="font-weight:700;letter-spacing:.2em;">OKS</div>
     <div class="kiosk-4am" id="kiosk4am">--:--:-- to 4:00 AM</div>
     <div class="kiosk-cards">
       <div class="kiosk-card kiosk-active"><div class="kiosk-card-val" id="kioskActive"> - </div><div class="kiosk-card-lbl">Active</div></div>
