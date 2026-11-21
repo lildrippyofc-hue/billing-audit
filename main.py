@@ -299,6 +299,19 @@ def init_db():
             expires_at TEXT NOT NULL
         );
 
+        -- One row per scheduled truck per night: when it was due and when (if ever) it checked in. Feeds the vendor
+        -- no-show / late-arrival numbers. checkin_iso stays NULL for a truck that never came.
+        CREATE TABLE IF NOT EXISTS vendor_arrivals (
+            site          TEXT NOT NULL,
+            shift_date    TEXT NOT NULL,
+            truck_ref     TEXT NOT NULL,
+            vendor        TEXT NOT NULL,
+            appt_iso      TEXT NOT NULL,
+            checkin_iso   TEXT,
+            recorded_at   TEXT NOT NULL,
+            PRIMARY KEY (site, shift_date, truck_ref)
+        );
+
         -- Slack/webhook alerts already sent on a business date, so a deploy does not send them all again.
         CREATE TABLE IF NOT EXISTS alert_sent (
             dedupe_key    TEXT PRIMARY KEY,
@@ -839,6 +852,36 @@ def _merge_dms_portal_rows(loads: List[Dict[str, Any]], stamps: List[Dict[str, A
         if _keep(truck):
             trucks.append(truck)
     return trucks
+
+
+def _record_arrivals(trucks: List[Dict[str, Any]], shift_date: str, site: str) -> None:
+    """Remember, per vendor, when each scheduled truck was due and when it checked in. A truck that has not checked in is
+    only written once the night is over (a truck that is merely late right now is not a no-show yet). Best-effort."""
+    try:
+        closed = _night_is_closed(shift_date)
+        now_str = datetime.now(timezone.utc).isoformat()
+        rows = []
+        for t in trucks:
+            vendor = (t.get("supplier") or "").strip().upper()
+            appt = t.get("appointmentIso")
+            ref = str(t.get("rowid") or t.get("ref") or "").strip()
+            ci = t.get("checkInIso")
+            if not vendor or not appt or not ref or (not ci and not closed):
+                continue
+            rows.append((site, shift_date, ref, vendor, appt, ci or None, now_str))
+        if not rows:
+            return
+        conn = get_db()
+        conn.executemany(
+            "INSERT INTO vendor_arrivals (site, shift_date, truck_ref, vendor, appt_iso, checkin_iso, recorded_at) VALUES (?,?,?,?,?,?,?) "
+            "ON CONFLICT(site, shift_date, truck_ref) DO UPDATE SET vendor=excluded.vendor, appt_iso=excluded.appt_iso, "
+            "checkin_iso=COALESCE(excluded.checkin_iso, vendor_arrivals.checkin_iso)",
+            rows,
+        )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 
 def _learn_from_dms(trucks: List[Dict[str, Any]], shift_date: str, site: str = "OKS") -> int:
@@ -1487,6 +1530,7 @@ def _build_dms_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
     # Minnesota's Vendors tab builds its turn-time history from completed trucks
     # on every pull (this builder only serves the MN portal).
     _learn_from_dms(board, info, "MN")
+    _record_arrivals(all_trucks, info, "MN")
     _sync_unloader_stats(board, info, "MN")
 
     def _stat(st):
@@ -1669,6 +1713,7 @@ def _build_oks_portal_payload(session: Dict[str, Any], date: Optional[str]) -> D
     # Learn from completed trucks automatically (deduped) so the completion
     # estimate sharpens over time with zero manual save.
     _learn_from_dms(board, info)
+    _record_arrivals(all_trucks, info, "OKS")
     _sync_unloader_stats(board, info)
     # Counts for the end-of-shift report.
     def _stat(st):
@@ -1770,6 +1815,7 @@ def _learn_history(session: Dict[str, Any], days: int, site: str) -> Dict[str, A
             stamps = [x for x in _first_list(_dms_json_request("api/stamp/getStamps", payload, session["config"])) if isinstance(x, dict)]
             trucks = _merge_dms_portal_rows(loads, stamps)
             learned = _learn_from_dms(trucks, info, site)
+            _record_arrivals(trucks, info, site)
             total_learned += learned
             dates_done.append({"date": info, "trucks": len(trucks), "learned": learned})
         except Exception as e:
@@ -3781,6 +3827,55 @@ def portal_vendor_stats(site: str = "OKS", free_min: int = 120, username: str = 
             "last_seen": latest_seen.get(vendor, ""),
         })
     return {"ok": True, "stats": stats}
+
+
+def _iso_to_dt(text: Optional[str]) -> Optional[datetime]:
+    if not text:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(text).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+@app.get("/api/portal/arrival-stats")
+def portal_arrival_stats(site: str = "OKS", days: int = 30, late_min: int = 30, username: str = Depends(_require_vendor_stats)):
+    """Per vendor over the last N nights: trucks scheduled, no-shows (never checked in), and trucks that arrived more than
+    late_min minutes after their appointment. Only nights recorded so far are counted."""
+    site = _site_param(site)
+    _check_site_role(username, site)
+    days = max(1, min(int(days or 30), 180))
+    late_min = max(5, min(int(late_min or 30), 240))
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT vendor, shift_date, appt_iso, checkin_iso FROM vendor_arrivals WHERE site=?", (site,)
+    ).fetchall()
+    conn.close()
+    by_vendor: Dict[str, Dict[str, Any]] = {}
+    for vendor, shift_date, appt_iso, checkin_iso in rows:
+        appt = _iso_to_dt(appt_iso)
+        if appt is None or appt < cutoff:
+            continue
+        v = by_vendor.setdefault(vendor, {"vendor": vendor, "scheduled": 0, "no_shows": 0, "late": 0, "late_min_total": 0, "last_no_show": ""})
+        v["scheduled"] += 1
+        ci = _iso_to_dt(checkin_iso)
+        if ci is None:
+            v["no_shows"] += 1
+            v["last_no_show"] = max(v["last_no_show"], str(shift_date))
+            continue
+        late = round((ci - appt).total_seconds() / 60)
+        if late > late_min:
+            v["late"] += 1
+            v["late_min_total"] += late
+    stats = []
+    for v in by_vendor.values():
+        v["avg_late_min"] = round(v["late_min_total"] / v["late"]) if v["late"] else 0
+        v.pop("late_min_total")
+        stats.append(v)
+    stats.sort(key=lambda x: (-x["no_shows"], -x["late"], x["vendor"]))
+    return {"ok": True, "days": days, "late_min": late_min, "stats": stats}
 
 
 class DoorNoteIn(BaseModel):

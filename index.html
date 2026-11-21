@@ -20168,7 +20168,8 @@
         bar.innerHTML = '<label>Sort by <select class="lookup-input vs-sort" style="max-width:210px;">'
           + '<option value="avg">Fastest average turn</option><option value="slow">Slowest average turn</option>'
           + '<option value="over_min">Most minutes past free time</option><option value="over_pct">Highest % over free time</option>'
-          + '<option value="count">Most trucks</option></select></label>'
+          + '<option value="count">Most trucks</option>'
+          + '<option value="noshow">Most no-shows</option><option value="late">Most late arrivals</option></select></label>'
           + '<label>Detention rate $/hour <input type="number" class="lookup-input vs-rate" min="0" step="1" placeholder="optional" style="width:90px;"></label>'
           + '<span style="color:var(--muted,#718096);">Minutes past free time = check-in to unload finish, beyond the free-time window.</span>';
         grid.parentNode.insertBefore(bar, grid);
@@ -20193,6 +20194,8 @@
           if (mode === "over_min") return (b.over_min || 0) - (a.over_min || 0);
           if (mode === "over_pct") return pct(b) - pct(a) || (b.over_min || 0) - (a.over_min || 0);
           if (mode === "count") return b.count - a.count;
+          if (mode === "noshow") return (b.no_shows || 0) - (a.no_shows || 0) || (b.late || 0) - (a.late || 0);
+          if (mode === "late") return (b.late || 0) - (a.late || 0) || (b.no_shows || 0) - (a.no_shows || 0);
           return a.avg_min - b.avg_min;
         });
         const total = stats.reduce(function(s, v) { return s + v.count; }, 0);
@@ -20200,9 +20203,14 @@
         if (meta) meta.textContent = stats.length + " vendors  -  " + total + " trucks tracked  -  " + fmtMin(totalOver) + " past free time"
           + (rate ? " (about $" + Math.round(totalOver / 60 * rate).toLocaleString("en-US") + ")" : "");
         grid.innerHTML = stats.map(function(v) {
-          const avgStr = fmtMin(v.avg_min), p75Str = fmtMin(v.p75_min);
-          const cls = v.avg_min < 90 ? "v-fast" : v.avg_min <= FREE ? "v-ok" : "v-slow";
-          const barW = Math.min(100, Math.round(v.avg_min / FREE * 100));
+          const avgStr = v.noTurn ? "--" : fmtMin(v.avg_min), p75Str = v.noTurn ? "--" : fmtMin(v.p75_min);
+          const cls = v.noTurn ? "v-ok" : v.avg_min < 90 ? "v-fast" : v.avg_min <= FREE ? "v-ok" : "v-slow";
+          const barW = v.noTurn ? 0 : Math.min(100, Math.round(v.avg_min / FREE * 100));
+          const relBits = [];
+          if (v.no_shows) relBits.push('<b style="color:#c53030;">' + v.no_shows + ' no-show' + (v.no_shows === 1 ? '' : 's') + '</b>');
+          if (v.late) relBits.push(v.late + ' late 30+ min (avg ' + fmtMin(v.avg_late_min) + ' late)');
+          const relLine = v.arr_scheduled ? '<div style="font-size:0.74em;margin-top:4px;">Last 30 nights: ' + v.arr_scheduled + ' scheduled'
+            + (relBits.length ? ' &nbsp; - &nbsp; ' + relBits.join(' &nbsp; - &nbsp; ') : ' &nbsp; - &nbsp; always on time') + '</div>' : '';
           const lastDate = v.last_seen ? v.last_seen.slice(0, 10) : " - ";
           const overN = v.over_count || 0, overMin = v.over_min || 0;
           const overPct = v.count ? Math.round(overN / v.count * 100) : 0;
@@ -20216,27 +20224,45 @@
             + '<div class="vendor-stat"><span class="vendor-stat-val">' + overPct + '%</span>over free time</div>'
             + '</div>'
             + '<div class="vendor-bar-track"><div class="vendor-bar-fill" style="width:' + barW + '%;"></div></div>'
-            + '<div style="font-size:0.72em;color:var(--muted,#888);margin-top:4px;">' + (overMin ? '<b>' + fmtMin(overMin) + '</b> past free time on ' + overN + ' truck' + (overN === 1 ? '' : 's') + cost + ' &nbsp; - &nbsp; ' : 'None past free time &nbsp; - &nbsp; ')
-            + 'Last seen: ' + lastDate + '</div>'
+            + '<div style="font-size:0.72em;color:var(--muted,#888);margin-top:4px;">' + (v.noTurn ? 'No finished trucks recorded yet' : (overMin ? '<b>' + fmtMin(overMin) + '</b> past free time on ' + overN + ' truck' + (overN === 1 ? '' : 's') + cost + ' &nbsp; - &nbsp; ' : 'None past free time &nbsp; - &nbsp; ')
+            + 'Last seen: ' + lastDate) + '</div>'
+            + relLine
             + '</article>';
         }).join("");
       };
+      const arrivalsReq = fetch(apiUrl("/api/portal/arrival-stats?site=" + (site === "MN" ? "MN" : "OKS") + "&days=30&late_min=30"))
+        .then(function(r) { return r.json(); })
+        .then(function(d) { return d && d.ok ? (d.stats || []) : []; })
+        .catch(function() { return []; });
       fetch(apiUrl("/api/portal/vendor-stats?site=" + (site === "MN" ? "MN" : "OKS") + "&free_min=" + encodeURIComponent(FREE)))
         .then(function(r) { return r.json(); })
-        .then(function(data) {
+        .then(function(data) { return arrivalsReq.then(function(arr) { return [data, arr]; }); })
+        .then(function(pair) {
+          const data = pair[0], arrivals = pair[1];
           if (site === "MN" && data.ok) {
             const avgs = {};
             (data.stats || []).forEach(function(s) { avgs[s.vendor] = s.avg_min; });
             state.portalMn.vendorAvgs = avgs;
             state.portalMn.vendorAvgsAt = Date.now();
           }
-          if (!data.ok || !data.stats || !data.stats.length) {
+          const merged = (data.ok && data.stats ? data.stats : []).map(function(v) { return Object.assign({}, v); });
+          const byName = {};
+          merged.forEach(function(v) { byName[v.vendor] = v; });
+          arrivals.forEach(function(a) {
+            let v = byName[a.vendor];
+            if (!v) {   // a vendor that has scheduled trucks but never finished one here (for example only no-shows)
+              v = { vendor: a.vendor, avg_min: 0, p75_min: 0, min_min: 0, max_min: 0, count: 0, over_count: 0, over_min: 0, last_seen: "", noTurn: true };
+              byName[a.vendor] = v; merged.push(v);
+            }
+            v.arr_scheduled = a.scheduled; v.no_shows = a.no_shows; v.late = a.late; v.avg_late_min = a.avg_late_min;
+          });
+          if (!merged.length) {
             grid._vendorStats = null;
             grid.innerHTML = '<div style="color:var(--muted,#718096);font-size:0.85em;padding:12px 0;">No vendor history yet  -  data builds automatically as trucks hit unload finish.'
               + (site === "MN" ? ' Use <b>Load last 7 days</b> to fill it in from DMS now.' : '') + '</div>';
             return;
           }
-          grid._vendorStats = data.stats;
+          grid._vendorStats = merged;
           grid._vendorDraw();
         })
         .catch(function() {
