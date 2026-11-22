@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StormDesk β — Forecast Models, Ensembles &amp; 20-Day Local Forecast</title>
+<link rel="stylesheet" href="css/stormdesk.css">
+</head>
+<body>
+
+<header class="top">
+  <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false"><span></span><span></span><span></span><b class="badge" id="alertBadge" style="display:none"></b></button>
+  <div class="brand">Storm<span>Desk</span><sup>BETA</sup></div>
+  <div class="cursec" id="curSec">Dashboard</div>
+  <div class="hdr-right"><a class="locchip" href="/" title="Back to My Portal" style="text-decoration:none">↩ Portal</a><button class="locchip" id="locChip"></button><div class="locmenu" id="locMenu"></div><button class="iconbtn" id="themeBtn" aria-label="Toggle theme">☀️</button><div class="clock" id="clock"></div></div>
+</header>
+<div class="alertbar" id="alertBar" style="display:none"></div>
+<div class="toast" id="toast"></div>
+<div class="shade" id="drawerShade"></div>
+<nav class="drawer" id="drawer" aria-label="Sections">
+  <div class="drawer-head"><div class="brand">Storm<span>Desk</span><sup>BETA</sup></div><button class="dclose" id="drawerClose" aria-label="Close menu">✕</button></div>
+  <div id="drawerNav"></div>
+</nav>
+
+
+<!-- ======================= HOME ======================= -->
+<section class="tab" id="tab-home"><div class="home-grid" id="homeGrid"></div></section>
+<!-- ======================= WINTER DESK ======================= -->
+<section class="tab" id="tab-winter"><div id="winterMain"></div></section>
+<!-- ======================= SOUNDINGS ======================= -->
+<section class="tab" id="tab-sounding"><div id="sndMain"></div></section>
+
+<!-- ======================= FORECAST MODELS ======================= -->
+<section class="tab" id="tab-models">
+  <div class="modelbar" id="modelBar"></div>
+  <div class="layout">
+    <aside class="side">
+      <input type="text" id="paramFilter" class="filter" placeholder="Filter maps…  e.g. snow, 500">
+      <div id="modelSide"></div>
+      <details class="ext"><summary>More model sites ↗</summary><div id="extLinks"></div></details>
+    </aside>
+    <div>
+      <div class="viewer-head">
+        <div><div class="viewer-title" id="mvTitle">—</div><div class="small muted" id="mvDesc"></div></div>
+        <div class="row">
+          <button class="btn" id="cmpBtn" title="Show a second model at the same valid time">⇆ Compare</button>
+          <button class="btn" id="shareBtn" title="Copy a link to this exact map">🔗 Link</button>
+          <button class="btn" id="openImgBtn" title="Open the image in a new tab to save it">⤓ Image</button>
+        </div>
+        <div class="row" id="mvSelects">
+          <label class="lbl">Region<select id="mvArea"></select></label>
+          <label class="lbl">Run<select id="mvCycle"></select></label>
+        </div>
+      </div>
+      <div class="viewpair" id="viewPair">
+      <div class="imgwrap" id="mvWrap">
+        <img id="mvImg" alt="Model image">
+        <canvas id="mvOverlay" class="overlay"></canvas>
+        <div class="imgmsg"><div style="font-size:26px">⛅</div><div id="mvErr">Image not available for this hour/run yet — it may still be processing.</div><a id="mvSrc" href="https://mag.ncep.noaa.gov/" target="_blank" rel="noopener">Open NCEP MAG ↗</a></div>
+      </div>
+        <div id="cmpBox" style="display:none">
+          <div class="row" style="margin-bottom:6px"><select id="cmpModel"></select><select id="cmpParam"></select><span class="small muted" id="cmpInfo"></span></div>
+          <div class="imgwrap" id="cmpWrap"><img id="cmpImg" alt="Comparison model image"><div class="imgmsg"><div>No map for this model at that time.</div></div></div>
+        </div>
+      </div>
+      <input type="text" id="shareOut" readonly style="display:none;width:100%;margin-top:6px">
+
+      <div id="gridBox" style="display:none">
+        <div class="row" style="margin-bottom:8px;justify-content:space-between">
+          <div class="row"><label class="lbl">Region<select id="gRegion"></select></label>
+          <label class="chk"><input type="checkbox" id="gNums"> Show values</label></div>
+          <span id="gStatus" class="small muted"></span>
+        </div>
+        <div class="gridmap"><canvas id="gCanvas"></canvas><div class="gtip" id="gTip"></div></div>
+        <div class="cbar" id="gBar"></div>
+        <div class="timebar">
+          <div class="row"><button class="btn" id="gPrev">◀</button><button class="btn play" id="gPlay">▶ Play</button><button class="btn" id="gNext">▶</button>
+          <select id="gSpeed"><option value="900">Slow</option><option value="500" selected>Normal</option><option value="250">Fast</option></select></div>
+          <div class="tl" id="gHours"></div>
+        </div>
+        <div class="validline" id="gValid"></div>
+        <p class="small muted">Drawn from model point data (Open-Meteo), interpolated between grid points. Hover for values; the white dot is your ZIP. Shows the latest run available.</p>
+      </div>
+      <div id="mvLegend" class="wmslegend"></div>
+      <div class="timebar" id="mvTimebar">
+        <div class="row">
+          <button class="btn" id="mvPrev" title="Previous (←)">◀</button>
+          <button class="btn play" id="mvPlay" title="Play/Pause (space)">▶ Play</button>
+          <button class="btn" id="mvNext" title="Next (→)">▶</button>
+          <select id="mvSpeed" title="Loop speed"><option value="900">Slow</option><option value="450" selected>Normal</option><option value="200">Fast</option></select>
+        </div>
+        <div class="tl" id="mvHours"></div>
+      </div>
+      <div class="validline" id="mvValid"></div>
+      <p class="small muted">Maps: NOAA/NCEP Model Analyses &amp; Guidance. Interactive maps: Windy. A new run fills in one forecast hour at a time. Keys: ← → step, space plays.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= LONG RANGE ======================= -->
+<section class="tab" id="tab-longrange">
+  <div class="layout">
+    <aside class="side" id="lrSide"></aside>
+    <div id="lrMain"></div>
+  </div>
+</section>
+
+<!-- ======================= ENSEMBLES ======================= -->
+<section class="tab" id="tab-ensembles">
+  <div class="layout">
+    <aside class="side" id="ensSide"></aside>
+    <div>
+      <div class="viewer-bar">
+        <span class="viewer-title" id="evTitle">—</span>
+        <label class="small muted">Region</label><select id="evArea"></select>
+        <label class="small muted">Run</label><select id="evCycle"></select>
+        <button class="btn" id="evPrev">◀</button><button class="btn" id="evPlay">▶ Play</button><button class="btn" id="evNext">▶</button>
+      </div>
+      <div class="validline" id="evValid"></div>
+      <div class="imgwrap" id="evWrap" style="margin-top:6px">
+        <img id="evImg" alt="Ensemble image">
+        <div class="imgmsg"><div style="font-size:26px">📊</div><div>Not available for this hour/run.</div></div>
+      </div>
+      <div class="hours" id="evHours"></div>
+      <p class="small muted">GEFS = NOAA Global Ensemble (31 members). Mean/spread and probability maps from NCEP MAG. ECMWF ensemble products: <a href="https://charts.ecmwf.int/?facets=%7B%22Type%22%3A%5B%22Forecasts%22%5D%2C%22Product%20type%22%3A%5B%22Ensemble%20forecast%20(ENS)%22%5D%7D" target="_blank" rel="noopener">ECMWF Charts ↗</a></p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SPAGHETTI ======================= -->
+<section class="tab" id="tab-spaghetti">
+  <div class="grid g2">
+    <div class="card">
+      <h3>GEFS Spaghetti Maps <span class="pill">31 members</span></h3>
+      <div class="row" style="margin-bottom:8px">
+        <select id="spParam"></select>
+        <label class="small muted">Run</label><select id="spCycle"></select>
+        <button class="btn" id="spPrev">◀</button><button class="btn" id="spPlay">▶ Play</button><button class="btn" id="spNext">▶</button>
+      </div>
+      <div class="validline" id="spValid"></div>
+      <div class="imgwrap" id="spWrap" style="min-height:340px;margin-top:6px">
+        <img id="spImg" alt="Spaghetti map"><div class="imgmsg"><div>Not available for this hour.</div></div>
+      </div>
+      <div class="hours" id="spHours"></div>
+    </div>
+    <div class="card">
+      <h3>Point Spaghetti / Plume <span class="pill" id="ptLoc">set a ZIP in Local 20-Day</span></h3>
+      <div class="row" style="margin-bottom:8px">
+        <select id="ptModel">
+          <option value="gefs">GEFS 0.5° (31 members, 20 days)</option>
+          <option value="ecmwf">ECMWF IFS ENS (51 members, 15 days)</option>
+          <option value="aifs">ECMWF AIFS ENS (51 members, 15 days)</option>
+          <option value="gem">Canadian GEPS (21 members, 16 days)</option>
+          <option value="icon">DWD ICON-EPS (40 members, 7 days)</option>
+          <option value="gefs25">GEFS 0.25° (31 members, 10 days)</option>
+          <option value="aigfs">NOAA AIGFS ENS (31 members, 16 days)</option>
+          <option value="ukmo">UKMO MOGREPS-G (18 members, 8 days)</option>
+          <option value="wn2">Google WeatherNext 2 (64 members, 15 days)</option>
+        </select>
+        <select id="ptVar">
+          <option value="snowfall">Accumulated Snowfall (in)</option>
+          <option value="temperature_2m">2 m Temperature (°F)</option>
+          <option value="precipitation">Accumulated Precip (in)</option>
+          <option value="wind_speed_10m">10 m Wind (mph)</option>
+        </select>
+        <button class="btn" id="ptGo">Load</button>
+        <span id="ptStatus" class="small muted"></span>
+      </div>
+      <canvas class="chart" id="ptChart" style="height:360px"></canvas>
+      <div class="legend"><span><i style="background:#38bdf8"></i>individual members</span><span><i style="background:#f59e0b;height:4px"></i>ensemble mean</span><span><i style="background:#f87171"></i>control</span></div>
+      <p class="small muted">Point data: Open-Meteo Ensemble API. Each line is one ensemble member at your location.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <h3>Tropical Cyclone Spaghetti</h3>
+    <p class="small muted">When a storm is active, its track guidance shows up in the <a href="#" data-goto="tropics">Tropics tab</a>. Outside sources: <a href="https://www.tropicaltidbits.com/storminfo/" target="_blank" rel="noopener">Tropical Tidbits Storm Info ↗</a> · <a href="https://hurricanes.ral.ucar.edu/realtime/" target="_blank" rel="noopener">NCAR RAL Guidance ↗</a></p>
+  </div>
+</section>
+
+<!-- ======================= POINT MODEL COMPARE ======================= -->
+<section class="tab" id="tab-pointmodels">
+  <div class="card">
+    <h3>Model Comparison at Your Location <span class="pill" id="pmLoc">set a ZIP in Local 20-Day</span></h3>
+    <div class="row" style="margin-bottom:8px">
+      <select id="pmVar">
+        <option value="temperature_2m_max">Daily High (°F)</option>
+        <option value="temperature_2m_min">Daily Low (°F)</option>
+        <option value="precipitation_sum">Daily Precip (in)</option>
+        <option value="snowfall_sum">Daily Snowfall (in)</option>
+      </select>
+      <button class="btn" id="pmGo">Load models</button><span id="pmStatus" class="small muted"></span>
+    </div>
+    <canvas class="chart" id="pmChart" style="height:320px"></canvas>
+    <div class="legend" id="pmLegend"></div>
+    <div class="scrollx" style="margin-top:10px"><table class="t" id="pmTable"></table></div>
+    <p class="small muted">Deterministic runs via Open-Meteo: GFS, ECMWF IFS and AIFS, ICON, GEM, UKMO, JMA, Météo-France, NBM, HRRR, NAM, RDPS, HRDPS, GraphCast, AIGFS, KNMI, DMI, MET Norway, KMA, CMA, BOM and ItaliaMeteo. Each model has its own forecast range. Any model that doesn't cover your location is hidden automatically.</p>
+  </div>
+</section>
+
+<!-- ======================= SATELLITE ======================= -->
+<section class="tab" id="tab-satellite">
+  <div class="row" style="margin-bottom:10px">
+    <select id="satSat"><option value="GOES19">GOES-East (GOES-19)</option><option value="GOES18">GOES-West (GOES-18)</option></select>
+    <select id="satSector"></select>
+    <select id="satBand">
+      <option value="GEOCOLOR">GeoColor (true color / night IR)</option>
+      <option value="13">Band 13 – Clean IR</option>
+      <option value="09">Band 9 – Mid-level Water Vapor</option>
+      <option value="08">Band 8 – Upper-level Water Vapor</option>
+      <option value="02">Band 2 – Red Visible</option>
+      <option value="AirMass">Air Mass RGB</option>
+      <option value="Sandwich">Sandwich RGB</option>
+    </select>
+    <button class="btn on" id="satLoop">Loop</button><button class="btn" id="satStill">Latest still</button>
+    <button class="btn" id="satRefresh">↻ Refresh</button>
+  </div>
+  <div class="imgwrap" id="satWrap"><img id="satImg" alt="Satellite"><div class="imgmsg"><div>Satellite image unavailable.</div><a href="https://www.star.nesdis.noaa.gov/GOES/" target="_blank" rel="noopener">NOAA STAR GOES viewer ↗</a></div></div>
+  <p class="small muted">Imagery: NOAA/NESDIS STAR. The loop GIFs are large and can take a few seconds to load.</p>
+</section>
+
+<!-- ======================= RADAR ======================= -->
+<section class="tab" id="tab-radar">
+  <div class="row" style="margin-bottom:10px">
+    <select id="radSel">
+      <option value="CONUS-LARGE">CONUS (large)</option><option value="CONUS">CONUS</option>
+      <option value="NORTHEAST">Northeast</option><option value="SOUTHEAST">Southeast</option>
+      <option value="UPPERMISSVLY">Upper Mississippi Valley</option><option value="SOUTHMISSVLY">Southern Mississippi Valley</option>
+      <option value="CENTGRLAKES">Central Great Lakes</option><option value="SOUTHPLAINS">Southern Plains</option>
+      <option value="NORTHROCKIES">Northern Rockies</option><option value="SOUTHROCKIES">Southern Rockies</option>
+      <option value="PACNORTHWEST">Pacific Northwest</option><option value="PACSOUTHWEST">Pacific Southwest</option>
+      <option value="ALASKA">Alaska</option><option value="HAWAII">Hawaii</option>
+    </select>
+    <input type="text" id="radSite" placeholder="Site e.g. KDMX" style="width:120px">
+    <button class="btn" id="radGo">Show site</button>
+    <button class="btn" id="radRefresh">↻ Refresh</button>
+  </div>
+  <div class="imgwrap" id="radWrap"><img id="radImg" alt="Radar"><div class="imgmsg"><div>Radar loop unavailable.</div><a href="https://radar.weather.gov/" target="_blank" rel="noopener">radar.weather.gov ↗</a></div></div>
+  <p class="small muted">Radar: NWS RIDGE loops. After you enter a ZIP on the Local tab, your nearest radar site fills in here.</p>
+</section>
+
+<!-- ======================= ANALYSIS ======================= -->
+<section class="tab" id="tab-analysis"><div class="grid g3 gal" id="anaGal"></div></section>
+
+<!-- ======================= TROPICS ======================= -->
+<section class="tab" id="tab-tropics">
+  <div class="card" style="margin-bottom:12px"><h3>Active Storms</h3><div id="tcActive" class="small muted">Checking NHC… <span class="spinner"></span></div></div>
+  <div class="grid g3 gal" id="tcGal"></div>
+</section>
+
+<!-- ======================= OUTLOOKS ======================= -->
+<section class="tab" id="tab-outlooks"><div class="grid g3 gal" id="outGal"></div></section>
+
+
+<!-- ======================= POLITICS ======================= -->
+<section class="tab" id="tab-politics">
+  <div class="pol-top" id="polTop"></div>
+  <div class="pol-grid">
+    <div>
+      <div class="card pol"><div class="pol-h"><h3>2028 Republican Primary</h3><span class="pill" id="repMeta"></span></div><div id="repAvg"></div></div>
+      <div class="card pol"><div class="pol-h"><h3>2028 Democratic Primary</h3><span class="pill" id="demMeta"></span></div><div id="demAvg"></div></div>
+      <div class="card pol"><div class="pol-h"><h3>Latest Primary Polls</h3></div><div class="scrollx"><table class="t ptab" id="latestPolls"></table></div></div>
+      <div class="card pol"><div class="pol-h"><h3>2028 General Election</h3></div><div id="genElec"></div></div>
+    </div>
+    <div>
+      <div class="card pol"><div class="pol-h"><h3>Live News</h3><div class="seg" id="newsSeg"></div></div><div id="newsList" class="newslist"></div></div>
+      <div class="card pol"><div class="pol-h"><h3>Situation Briefs</h3><span class="pill">as of Nov 2026</span></div><div id="briefs"></div></div>
+      <div class="card pol"><div class="pol-h"><h3>Polling &amp; News Sources</h3></div><div id="polLinks" class="linkgrid"></div></div>
+    </div>
+  </div>
+  <p class="small muted">The polling numbers are a snapshot: averages from PollCheck through Nov 20, 2026. Update them in the POLITICS data block in the code. The news feed loads live headlines from the GDELT news index when the page opens. Primary polls this early swing a lot.</p>
+</section>
+
+<!-- ======================= LOCAL 20-DAY ======================= -->
+<section class="tab" id="tab-local">
+  <div class="zipbar">
+    <input type="text" id="zipIn" placeholder="ZIP code" maxlength="5" inputmode="numeric">
+    <button class="btn on" id="zipGo">Get 20-Day Forecast</button>
+    <span id="locStatus" class="small muted"></span>
+  </div>
+  <div id="localOut" style="display:none">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <div><div class="place" id="placeName"></div><div class="small muted" id="placeMeta"></div></div>
+      <div class="small muted" id="nowBox"></div>
+    </div>
+    <div id="alerts"></div>
+    <div class="card" style="margin:10px 0">
+      <h3>20-Day Outlook <span class="pill">Days 1–16: blended models</span> <span class="pill">Days 17–20: GEFS ensemble mean (dashed)</span></h3>
+      <div class="days" id="days"></div>
+      <p class="small muted" style="margin-top:8px"><b class="snowpct">Snow %</b> = share of ensemble members (GEFS 31 through day 20, ECMWF 51 through day 15, Canadian GEPS 21 through day 16, so roughly 100 runs) that show at least 0.1" of snow that day. "≥1in" is the share showing an inch or more. Treat days 10–20 as trends, not exact numbers.</p>
+    </div>
+    <div class="grid g2">
+      <div class="card"><h3>Temperature Trend</h3><canvas class="chart" id="tChart"></canvas>
+        <div class="legend"><span><i style="background:#f87171"></i>High</span><span><i style="background:#60a5fa"></i>Low</span><span><i style="background:rgba(248,113,113,.35);height:8px"></i>Ensemble high range (10–90%)</span></div></div>
+      <div class="card"><h3>Snow Chance by Day</h3><canvas class="chart" id="sChart"></canvas>
+        <div class="legend"><span><i style="background:#c4b5fd;height:8px"></i>Snow % (≥0.1")</span><span><i style="background:#f59e0b"></i>Snow % (≥1")</span></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>NWS Forecast</h3><div id="nwsText" class="small"></div></div>
+  </div>
+</section>
+
+<footer>
+  StormDesk β — a personal beta project. Data: NOAA/NWS/NCEP (MAG, WPC, CPC, SPC, NHC), NOAA/NESDIS STAR, Open-Meteo (CC BY 4.0), Zippopotam.us, Windy embed.
+  These forecasts are for reference only. For warnings and decisions, use your local NWS office.
+</footer>
+
+<script>/* Set to your proxy URL once deployed, e.g. "https://wx-proxy.you.workers.dev/?url=" */
+window.STORMDESK_PROXY = "/weather/proxy?url=";</script>
+<script src="js/stormdesk.js"></script>
+</body>
+</html>

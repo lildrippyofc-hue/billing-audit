@@ -18,7 +18,7 @@ import requests as req_lib
 from requests import Session as ReqSession
 
 from fastapi import FastAPI, HTTPException, Cookie, Response, Depends, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -5187,6 +5187,67 @@ def serve_az_time_audit(_user: str = Depends(_require_roles("azaudit"))):
             "Expires": "0",
         },
     )
+
+
+# -- StormDesk (weather models) -- private to the "james" login ---------------------------------------------------------
+# Static app lives in ./stormdesk. Every route checks the session cookie and only the james account gets through; anyone
+# else is sent back to the portal (page) or gets a 404 (files). /weather/proxy fetches the few weather sources that do not
+# allow browser requests from other sites, from an allowlist only, with a short in-memory cache.
+STORMDESK_DIR = BASE_DIR / "stormdesk"
+_STORMDESK_USER = "james"
+_SD_NOCACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
+_SD_PROXY_HOSTS = {"charts.ecmwf.int": 600, "geo.weather.gc.ca": 900, "www.nhc.noaa.gov": 300, "api.gdeltproject.org": 600}
+_sd_proxy_cache: Dict[str, Any] = {}
+
+
+def _stormdesk_user(session: Optional[str]) -> bool:
+    return _session_user(session) == _STORMDESK_USER
+
+
+@app.get("/weather")
+def stormdesk_redirect(session: Optional[str] = Cookie(default=None)):
+    return RedirectResponse("/weather/" if _stormdesk_user(session) else "/", status_code=303)
+
+
+@app.get("/weather/")
+def stormdesk_page(session: Optional[str] = Cookie(default=None)):
+    if not _stormdesk_user(session):
+        return RedirectResponse("/", status_code=303)
+    return FileResponse(str(STORMDESK_DIR / "index.html"), media_type="text/html", headers=_SD_NOCACHE)
+
+
+@app.get("/weather/proxy")
+def stormdesk_proxy(url: str, session: Optional[str] = Cookie(default=None)):
+    if not _stormdesk_user(session):
+        raise HTTPException(status_code=404, detail="Not found")
+    from urllib.parse import urlparse
+    host = urlparse(url).hostname or ""
+    if not url.startswith("https://") or host not in _SD_PROXY_HOSTS:
+        raise HTTPException(status_code=403, detail="Host not allowed")
+    hit = _sd_proxy_cache.get(url)
+    if hit and time.time() - hit[0] < _SD_PROXY_HOSTS[host]:
+        body, ctype, status = hit[1], hit[2], hit[3]
+    else:
+        try:
+            r = req_lib.get(url, timeout=15, headers={"User-Agent": "StormDesk/1.0 (jamehinna.net)"})
+        except Exception:
+            raise HTTPException(status_code=502, detail="Upstream unavailable")
+        body, ctype, status = r.content, r.headers.get("Content-Type", "application/octet-stream"), r.status_code
+        if status == 200:
+            if len(_sd_proxy_cache) > 300:
+                _sd_proxy_cache.clear()
+            _sd_proxy_cache[url] = (time.time(), body, ctype, status)
+    return Response(content=body, status_code=status, media_type=ctype)
+
+
+@app.get("/weather/{path:path}")
+def stormdesk_file(path: str, session: Optional[str] = Cookie(default=None)):
+    if not _stormdesk_user(session):
+        raise HTTPException(status_code=404, detail="Not found")
+    target = (STORMDESK_DIR / path).resolve()
+    if STORMDESK_DIR.resolve() not in target.parents or not target.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(str(target), headers=_SD_NOCACHE)
 
 
 @app.get("/historical-data.js")

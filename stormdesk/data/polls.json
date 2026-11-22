@@ -1,0 +1,225 @@
+{
+  "asOf": "Nov 20, 2026",
+  "approval": {
+    "approve": 37.8,
+    "disapprove": 59.8,
+    "note": "PollCheck average, Nov 20 (down 0.5 since Nov 13)",
+    "src": "https://www.pollcheck.com/"
+  },
+  "congress": {
+    "text": "Democrats won control of both the House and the Senate in the Nov 3 midterms",
+    "src": "https://www.opb.org/article/2026/11/04/2026-midterms-democrats-win-the-senate/"
+  },
+  "rep": {
+    "meta": "PollCheck avg · through Nov 20",
+    "src": "https://www.pollcheck.com/primaries/republican/",
+    "list": [
+      [
+        "JD Vance",
+        33.3,
+        -5.9
+      ],
+      [
+        "Marco Rubio",
+        32.6,
+        14.2
+      ],
+      [
+        "Ron DeSantis",
+        11.3,
+        2.3
+      ],
+      [
+        "Donald Trump Jr.",
+        6.1,
+        -6.7
+      ],
+      [
+        "Robert F. Kennedy Jr.",
+        3.3,
+        -1.4
+      ],
+      [
+        "Ted Cruz",
+        3.1,
+        -0.3
+      ],
+      [
+        "Nikki Haley",
+        2.4,
+        -1.4
+      ],
+      [
+        "Vivek Ramaswamy",
+        1.3,
+        0
+      ]
+    ]
+  },
+  "dem": {
+    "meta": "PollCheck avg · 17 polls · through Nov 20",
+    "src": "https://www.pollcheck.com/primaries/democratic/",
+    "list": [
+      [
+        "Kamala Harris",
+        18.3,
+        -7.4
+      ],
+      [
+        "Alexandria Ocasio-Cortez",
+        13.7,
+        3.5
+      ],
+      [
+        "Gavin Newsom",
+        13.2,
+        -2.7
+      ],
+      [
+        "Jon Ossoff",
+        13.2,
+        5.8
+      ],
+      [
+        "Pete Buttigieg",
+        12.9,
+        1.1
+      ],
+      [
+        "Mark Kelly",
+        5.6,
+        -0.7
+      ],
+      [
+        "Josh Shapiro",
+        4.7,
+        -0.1
+      ],
+      [
+        "Andy Beshear",
+        3.2,
+        0.6
+      ],
+      [
+        "JB Pritzker",
+        2.8,
+        0.1
+      ],
+      [
+        "Cory Booker",
+        2.4,
+        -1.1
+      ]
+    ]
+  },
+  "latest": [
+    [
+      "R",
+      "Emerson College",
+      "Nov 14–16",
+      "418 V",
+      "Rubio 44, Vance 24, DeSantis 9, Trump Jr. 6"
+    ],
+    [
+      "D",
+      "Emerson College",
+      "Nov 14–16",
+      "499 RV",
+      "Ossoff 16.5 leads field"
+    ],
+    [
+      "R",
+      "Echelon Insights",
+      "Nov 12–16",
+      "397 RV",
+      "Vance 40, Rubio 26, DeSantis 12"
+    ],
+    [
+      "D",
+      "Echelon Insights",
+      "Nov 12–16",
+      "531 LV",
+      "Harris 19 leads field"
+    ],
+    [
+      "R",
+      "Verasight",
+      "Nov 11–13",
+      "632 A",
+      "Rubio 33, Vance 27, DeSantis 19"
+    ],
+    [
+      "D",
+      "Verasight",
+      "Nov 11–13",
+      "726 A",
+      "Harris 18 leads field"
+    ],
+    [
+      "R",
+      "The Rainey Center",
+      "Nov 8–12",
+      "406 LV",
+      "Vance 36, Rubio 24, DeSantis 10"
+    ],
+    [
+      "D",
+      "Rainey Center",
+      "Nov 8–12",
+      "518 LV",
+      "Harris 17 leads field"
+    ],
+    [
+      "D",
+      "YouGov",
+      "Nov 9–11",
+      "489 A",
+      "Harris 20 leads field"
+    ],
+    [
+      "D",
+      "Cygnal",
+      "Nov 4–5",
+      "3,000 RV",
+      "Buttigieg 18.5, Ocasio-Cortez 17.9"
+    ]
+  ],
+  "general": {
+    "avg": [
+      [
+        "Gavin Newsom",
+        47,
+        "JD Vance",
+        39.5,
+        "Average of 5 polls"
+      ]
+    ],
+    "single": [
+      [
+        "Jon Ossoff",
+        50,
+        "JD Vance",
+        37
+      ],
+      [
+        "Gavin Newsom",
+        51,
+        "JD Vance",
+        38
+      ],
+      [
+        "Kamala Harris",
+        50,
+        "JD Vance",
+        40
+      ],
+      [
+        "Alexandria Ocasio-Cortez",
+        49,
+        "JD Vance",
+        40
+      ]
+    ],
+    "singleNote": "On Point Polling, Nov 16 (single poll)"
+  }
+}
