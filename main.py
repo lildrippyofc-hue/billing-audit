@@ -5196,8 +5196,15 @@ def serve_az_time_audit(_user: str = Depends(_require_roles("azaudit"))):
 STORMDESK_DIR = BASE_DIR / "stormdesk"
 _STORMDESK_USER = "james"
 _SD_NOCACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
-_SD_PROXY_HOSTS = {"charts.ecmwf.int": 600, "geo.weather.gc.ca": 900, "www.nhc.noaa.gov": 300, "api.gdeltproject.org": 600}
-_sd_proxy_cache: Dict[str, Any] = {}
+_SD_PROXY_HOSTS = {"charts.ecmwf.int": 600, "geo.weather.gc.ca": 900, "www.nhc.noaa.gov": 300, "api.gdeltproject.org": 600,
+                   "mag.ncep.noaa.gov": 1800}
+# NOAA's map server (MAG) can take 20-45 s per image, so maps are kept in memory (least-recently-used, ~150 MB budget):
+# a map that has been viewed once loads instantly for the rest of its cache window.
+from collections import OrderedDict as _SDOrderedDict
+_sd_proxy_cache: "_SDOrderedDict[str, Any]" = _SDOrderedDict()
+_sd_proxy_bytes = 0
+_SD_PROXY_BUDGET = 150 * 1024 * 1024
+_sd_proxy_lock = threading.Lock()
 
 
 def _stormdesk_user(session: Optional[str]) -> bool:
@@ -5224,19 +5231,34 @@ def stormdesk_proxy(url: str, session: Optional[str] = Cookie(default=None)):
     host = urlparse(url).hostname or ""
     if not url.startswith("https://") or host not in _SD_PROXY_HOSTS:
         raise HTTPException(status_code=403, detail="Host not allowed")
-    hit = _sd_proxy_cache.get(url)
-    if hit and time.time() - hit[0] < _SD_PROXY_HOSTS[host]:
+    global _sd_proxy_bytes
+    with _sd_proxy_lock:
+        hit = _sd_proxy_cache.get(url)
+        if hit and time.time() - hit[0] < _SD_PROXY_HOSTS[host]:
+            _sd_proxy_cache.move_to_end(url)
+        else:
+            hit = None
+    if hit:
         body, ctype, status = hit[1], hit[2], hit[3]
     else:
         try:
-            r = req_lib.get(url, timeout=15, headers={"User-Agent": "StormDesk/1.0 (jamehinna.net)"})
+            r = req_lib.get(url, timeout=(10, 90), headers={"User-Agent": "StormDesk/1.0 (jamehinna.net)"})
         except Exception:
             raise HTTPException(status_code=502, detail="Upstream unavailable")
         body, ctype, status = r.content, r.headers.get("Content-Type", "application/octet-stream"), r.status_code
-        if status == 200:
-            if len(_sd_proxy_cache) > 300:
-                _sd_proxy_cache.clear()
-            _sd_proxy_cache[url] = (time.time(), body, ctype, status)
+        if status == 200 and len(body) < 8 * 1024 * 1024:
+            with _sd_proxy_lock:
+                old = _sd_proxy_cache.pop(url, None)
+                if old:
+                    _sd_proxy_bytes -= len(old[1])
+                _sd_proxy_cache[url] = (time.time(), body, ctype, status)
+                _sd_proxy_bytes += len(body)
+                while _sd_proxy_bytes > _SD_PROXY_BUDGET and _sd_proxy_cache:
+                    _, ev = _sd_proxy_cache.popitem(last=False)
+                    _sd_proxy_bytes -= len(ev[1])
+    if status == 200:
+        return Response(content=body, status_code=200, media_type=ctype,
+                        headers={"Cache-Control": f"private, max-age={_SD_PROXY_HOSTS[host]}"})
     return Response(content=body, status_code=status, media_type=ctype)
 
 

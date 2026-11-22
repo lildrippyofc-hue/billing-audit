@@ -224,3 +224,8 @@ footer{padding:16px 18px;color:var(--muted);font-size:11px;border-top:1px solid 
   .layout{grid-template-columns:1fr} aside.side{position:static;max-height:none}
   .g2{grid-template-columns:1fr} .clock{display:none}
 }
+
+/* ---------- Model image loading state (slow NOAA server) ---------- */
+.imgwrap.loading img{opacity:.45;filter:grayscale(.3);transition:opacity .2s}
+.loadmsg{position:absolute;left:50%;top:14px;transform:translateX(-50%);max-width:92%;background:rgba(3,7,18,.88);color:#e6ecf7;border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:13px;text-align:center;z-index:3;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.loadmsg small{font-size:11px}

@@ -140,23 +140,28 @@ function fillCycles(sel, cycles, latency){
   const sorted = cycles.slice().sort((a,b)=>cycleDate(b,latency)-cycleDate(a,latency));
   sel.innerHTML = sorted.map(c=>`<option value="${c}" ${c===latest?'selected':''}>${fmtZ(cycleDate(c,latency))}${c===latest?' (latest)':''}</option>`).join('');
 }
-const magUrl = (dir,c,area,param,fh)=>`${MAG}/${dir}/${pad2(c)}/${area}/${param}/${dir}_${area}_${pad3(fh)}_${param}.gif`;
+const magUrl = (dir,c,area,param,fh)=>{ const u=`${MAG}/${dir}/${pad2(c)}/${area}/${param}/${dir}_${area}_${pad3(fh)}_${param}.gif`; return (window.STORMDESK_PROXY? window.STORMDESK_PROXY+encodeURIComponent(u) : u); };
 
 /* Re-usable image-loop controller (model, ensemble, spaghetti viewers).
    Short runs get hour buttons; long runs get a slider + day-jump chips. */
 class Looper{
-  constructor(o){Object.assign(this,o); this.idx=0; this.timer=null; this.bad=new Set();
+  /* Image-loop controller for model maps. NOAA's map server can take 20-45 s per image, so frames are loaded in the
+     background (a few at a time, nearest first), shown only once fully loaded, and play waits for frames instead of
+     skipping past them. A loading banner shows which hour is coming and how long it has been loading. */
+  constructor(o){
+    Object.assign(this,o); this.idx=0; this.timer=null; this.bad=new Set(); this.cache=new Map(); this.queue=[]; this.active=0; this.want=null;
+    this.maxParallel=this.maxParallel||4;
+    this.msg=document.createElement('div'); this.msg.className='loadmsg'; this.msg.hidden=true; this.wrap.appendChild(this.msg);
     this.img.addEventListener('load',()=>this.wrap.classList.remove('err'));
-    this.img.addEventListener('error',()=>{this.wrap.classList.add('err'); this.bad.add(this.idx); this.markBad();});
   }
   setHours(h){
-    this.hours=h; this.bad=new Set(); if(this.idx>=h.length)this.idx=0; const el=this.hoursEl;
+    this.hours=h; this.bad=new Set(); this.queue=[]; if(this.idx>=h.length)this.idx=0; const el=this.hoursEl;
     this.mode = h.length<=40 ? 'btn' : 'slider'; el.classList.toggle('hours', this.mode==='btn');
     if(this.mode==='btn'){
       el.innerHTML=h.map((x,i)=>`<button data-i="${i}">${x}</button>`).join('');
       el.querySelectorAll('button').forEach(b=>b.onclick=()=>{this.stop();this.go(+b.dataset.i)});
     } else {
-      const maxD=Math.ceil(h[h.length-1]/24); let chips=`<button data-i="0">Now</button>`;
+      const maxD=Math.ceil(h[h.length-1]/24); let chips=`<button data-i="0">Start</button>`;
       for(let d=1; d<=maxD; d++){const i=h.findIndex(x=>x>=d*24); if(i>=0) chips+=`<button data-i="${i}" data-d="${d}">D${d}</button>`;}
       el.innerHTML=`<div class="slider"><input type="range" min="0" max="${h.length-1}" value="${this.idx}" aria-label="Forecast hour"><span class="fh"></span></div><div class="daychips">${chips}</div>`;
       this.range=el.querySelector('input'); this.fhEl=el.querySelector('.fh');
@@ -165,23 +170,59 @@ class Looper{
     }
     this.go(this.idx);
   }
-  markBad(){ if(this.mode==='btn'){const b=this.hoursEl.children[this.idx]; if(b)b.classList.add('bad');} else if(this.fhEl) this.fhEl.textContent+=' ✕'; }
-  go(i){
-    if(!this.hours||!this.hours.length)return; this.idx=(i+this.hours.length)%this.hours.length; const fh=this.hours[this.idx];
-    if(this.mode==='btn') [...this.hoursEl.children].forEach((b,j)=>b.classList.toggle('active',j===this.idx));
-    else { this.range.value=this.idx; this.fhEl.textContent='f'+pad3(fh);
-      const day=Math.floor(fh/24); this.hoursEl.querySelectorAll('.daychips button').forEach(b=>b.classList.toggle('on', (+b.dataset.d||0)===day)); }
+  markBad(i){ this.bad.add(i); if(this.mode==='btn'){const b=this.hoursEl.children[i]; if(b)b.classList.add('bad');} }
+  /* frame state: undefined | {state:'loading'|'ok'|'err', url} keyed by the image URL (or a promise for async sources) */
+  frameKey(fh){ return this.url(fh) || (this.asyncKey? this.asyncKey(fh) : null); }
+  load(fh, cb){
+    const key=this.frameKey(fh); if(!key){ cb&&cb('err'); return; }
+    let f=this.cache.get(key);
+    if(f){ if(f.state==='loading'){ (f.cbs=f.cbs||[]).push(cb); } else cb&&cb(f.state,f.src); return; }
+    f={state:'loading',cbs:cb?[cb]:[],t0:Date.now()}; this.cache.set(key,f);
+    const finish=(state,src)=>{ f.state=state; f.src=src; this.active=Math.max(0,this.active-1); (f.cbs||[]).forEach(c=>c&&c(state,src)); f.cbs=[]; this.pump(); };
+    const fetchImg=src=>{ const im=new Image(); const to=setTimeout(()=>{ im.src=''; finish('err'); },90000);
+      im.onload=()=>{clearTimeout(to); finish('ok',src);}; im.onerror=()=>{clearTimeout(to); finish('err');}; im.src=src; };
+    this.active++;
     const u=this.url(fh);
-    if(u) this.img.src=u;
-    else if(this.asyncUrl){ const pr=this.asyncUrl(fh); if(pr) pr.then(x=>{ if(this.hours[this.idx]===fh) this.img.src=x; }).catch(()=>{ if(this.hours[this.idx]===fh){ this.wrap.classList.add('err'); this.bad.add(this.idx); } }); }
-    if(this.onChange)this.onChange(fh);
+    if(u) fetchImg(u);
+    else if(this.asyncUrl){ const pr=this.asyncUrl(fh); if(!pr){ finish('err'); return; }
+      Promise.race([pr, new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),30000))]).then(fetchImg).catch(()=>finish('err')); }
+    else finish('err');
   }
-  next(){let n=this.idx; for(let k=0;k<this.hours.length;k++){n=(n+1)%this.hours.length; if(!this.bad.has(n)||!this.timer)break;} this.go(n);}
-  prev(){this.go(this.idx-1);}
-  play(){if(this.timer)return this.stop(); this.playBtn.textContent='❚❚ Pause';
-    this.hours.forEach(fh=>{const u=this.url(fh); if(u){const i=new Image(); i.src=u;}}); // preload frames
-    const tick=()=>{this.next(); this.timer=setTimeout(tick,+(this.speedEl?this.speedEl.value:450));}; this.timer=setTimeout(tick,300);}
-  stop(){clearTimeout(this.timer); this.timer=null; if(this.playBtn)this.playBtn.textContent='▶ Play';}
+  pump(){ // background prefetch, nearest frames first
+    while(this.active<this.maxParallel && this.queue.length){ const fh=this.queue.shift(); const k=this.frameKey(fh); const f=k&&this.cache.get(k); if(!f) this.load(fh); }
+  }
+  prefetch(n){ if(!this.hours) return; const q=[]; for(let k=1;k<=n;k++){ q.push(this.hours[(this.idx+k)%this.hours.length]); } if(this.idx>0) q.push(this.hours[this.idx-1]); this.queue=q; this.pump(); }
+  showMsg(text){ this.msg.hidden=!text; if(text) this.msg.innerHTML=text; this.wrap.classList.toggle('loading',!!text); }
+  go(i){
+    if(!this.hours||!this.hours.length)return; this.idx=(i+this.hours.length)%this.hours.length; const fh=this.hours[this.idx], idx=this.idx;
+    if(this.mode==='btn') [...this.hoursEl.children].forEach((b,j)=>b.classList.toggle('active',j===idx));
+    else { this.range.value=idx; this.fhEl.textContent='f'+pad3(fh);
+      const day=Math.floor(fh/24); this.hoursEl.querySelectorAll('.daychips button').forEach(b=>b.classList.toggle('on', (+b.dataset.d||0)===day)); }
+    this.want=fh; clearInterval(this._tick);
+    const shown=()=>this.img.getAttribute('src')&&this.img.naturalWidth;
+    const done=(state,src)=>{ if(this.want!==fh) return; clearInterval(this._tick); this.showMsg('');
+      if(state==='ok'){ this.wrap.classList.remove('err'); this.img.src=src; }
+      else { this.wrap.classList.add('err'); this.markBad(idx); } };
+    const key=this.frameKey(fh), f=key&&this.cache.get(key);
+    if(!(f&&f.state!=='loading')){
+      const t0=f?f.t0:Date.now();
+      const upd=()=>this.showMsg(`<span class="spinner"></span> Loading <b>f${pad3(fh)}</b>… ${Math.round((Date.now()-t0)/1000)}s${shown()?' <span class="muted">· still showing the previous map</span>':''}<br><small class="muted">NOAA's map server is slow right now (often 20–45 s per map). Maps you've already viewed load instantly.</small>`);
+      upd(); this._tick=setInterval(upd,1000);
+    }
+    this.load(fh,done);
+    if(this.onChange)this.onChange(fh);
+    this.prefetch(this.timer?10:4);
+  }
+  nextIndex(){ let n=this.idx; for(let k=0;k<this.hours.length;k++){ n=(n+1)%this.hours.length; if(!this.bad.has(n)) return n; } return (this.idx+1)%this.hours.length; }
+  next(){ this.go(this.nextIndex()); }
+  prev(){ this.go(this.idx-1); }
+  play(){ if(this.timer) return this.stop(); this.playBtn.textContent='❚❚ Pause'; this.timer=1;
+    const step=()=>{ if(!this.timer) return; const n=this.nextIndex(), fh=this.hours[n], k=this.frameKey(fh), f=k&&this.cache.get(k);
+      if(f&&f.state==='ok'){ this.go(n); this.timer=setTimeout(step,+(this.speedEl?this.speedEl.value:450)); }
+      else if(f&&f.state==='err'){ this.markBad(n); this.timer=setTimeout(step,50); }
+      else { this.load(fh); this.prefetch(10); this.showMsg(`<span class="spinner"></span> Buffering <b>f${pad3(fh)}</b>… the loop continues as maps arrive.`); this.timer=setTimeout(step,500); } };
+    this.prefetch(10); this.timer=setTimeout(step,300); }
+  stop(){ clearTimeout(this.timer); this.timer=null; if(this.playBtn)this.playBtn.textContent='▶ Play'; if(this.want!=null){ const k=this.frameKey(this.want), f=k&&this.cache.get(k); if(f&&f.state!=='loading') this.showMsg(''); } }
 }
 function validText(c, latency, fh){
   const init=cycleDate(c,latency), v=new Date(init.getTime()+fh*3600e3);
@@ -224,6 +265,7 @@ const MV = {model:'gfs', param:'500_vort_ht', area:'namer', windyLayer:'temp', p
 const mvLoop = new Looper({img:$('mvImg'), wrap:$('mvWrap'), hoursEl:$('mvHours'), playBtn:$('mvPlay'), speedEl:$('mvSpeed'),
   url:fh=>{const m=MODELS[MV.model]; if(m.kind==='mag') return magUrl(m.dir, +$('mvCycle').value, MV.area, MV.param, fh); if(m.kind==='geomet') return wmsUrl(m,fh); return null;},
   asyncUrl:fh=>{const m=MODELS[MV.model]; return m.kind==='ecmwf' ? ecmwfUrl(m,fh) : null;},
+  asyncKey:fh=>{const m=MODELS[MV.model]; return m.kind==='ecmwf' ? `ec|${MV.param}|${$('mvCycle').value}|${MV.area}|${fh}` : null;},
   onChange:fh=>{const m=MODELS[MV.model];
     if(m.kind==='geomet'){ const L=m.layers&&m.layers[MV.param]; if(!L) return; const v=new Date(L.t0+fh*3600e3);
       $('mvValid').innerHTML=`Valid <b>${fmtZ(v)}</b> · ${fmtLocal(v)} your time · +${fh} h from first map · latest run`;
