@@ -5197,7 +5197,16 @@ STORMDESK_DIR = BASE_DIR / "stormdesk"
 _STORMDESK_USER = "james"
 _SD_NOCACHE = {"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0"}
 _SD_PROXY_HOSTS = {"charts.ecmwf.int": 600, "geo.weather.gc.ca": 900, "www.nhc.noaa.gov": 300, "api.gdeltproject.org": 600,
-                   "mag.ncep.noaa.gov": 1800}
+                   "mag.ncep.noaa.gov": 1800, "www.cpc.ncep.noaa.gov": 3600, "www.spc.noaa.gov": 600}
+
+
+def _sd_ttl(url: str, host: str) -> int:
+    # MAG's .php listing pages (which runs/hours exist) change as new runs arrive: keep them only briefly.
+    if host == "mag.ncep.noaa.gov" and ".php" in url:
+        return 120
+    if host == "geo.weather.gc.ca" and "GetCapabilities" in url:
+        return 300
+    return _SD_PROXY_HOSTS[host]
 # NOAA's map server (MAG) can take 20-45 s per image, so maps are kept in memory (least-recently-used, ~150 MB budget):
 # a map that has been viewed once loads instantly for the rest of its cache window.
 from collections import OrderedDict as _SDOrderedDict
@@ -5234,7 +5243,7 @@ def stormdesk_proxy(url: str, session: Optional[str] = Cookie(default=None)):
     global _sd_proxy_bytes
     with _sd_proxy_lock:
         hit = _sd_proxy_cache.get(url)
-        if hit and time.time() - hit[0] < _SD_PROXY_HOSTS[host]:
+        if hit and time.time() - hit[0] < _sd_ttl(url, host):
             _sd_proxy_cache.move_to_end(url)
         else:
             hit = None
@@ -5258,7 +5267,7 @@ def stormdesk_proxy(url: str, session: Optional[str] = Cookie(default=None)):
                     _sd_proxy_bytes -= len(ev[1])
     if status == 200:
         return Response(content=body, status_code=200, media_type=ctype,
-                        headers={"Cache-Control": f"private, max-age={_SD_PROXY_HOSTS[host]}"})
+                        headers={"Cache-Control": f"private, max-age={_sd_ttl(url, host)}"})
     return Response(content=body, status_code=status, media_type=ctype)
 
 

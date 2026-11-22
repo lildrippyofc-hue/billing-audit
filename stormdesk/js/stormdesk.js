@@ -6,20 +6,22 @@ const range = (a,b,s=1)=>{const r=[];for(let i=a;i<=b;i+=s)r.push(i);return r;};
 const pad3 = n=>String(n).padStart(3,'0'), pad2 = n=>String(n).padStart(2,'0');
 
 const P_GLOBAL = {
-  'Precipitation':{precip_p06:'6-hr Precip',precip_p24:'24-hr Precip',precip_ptot:'Total Precip',precip_rate_type:'Precip Rate / Type',sim_radar_comp:'Sim. Radar (Composite)',snodpth_chng:'Snow Depth Change'},
+  'Precipitation':{precip_p01:'1-hr Precip',precip_p03:'3-hr Precip',precip_p06:'6-hr Precip',precip_p12:'12-hr Precip',precip_p24:'24-hr Precip',precip_p48:'48-hr Precip',precip_ptot:'Total Precip',precip_rate_type:'Precip Rate / Type',sim_radar_comp:'Sim. Radar (Composite)',snodpth_chng:'Snow Depth Change'},
   'Surface':{'10m_wnd_2m_temp':'2m Temp / 10m Wind / MSLP','10m_wnd_precip':'MSLP / Wind / Precip','1000_500_thick':'MSLP + 1000–500 Thickness','850_temp_mslp_precip':'850mb Temp / MSLP / Precip','1000_850_thick':'1000–850 Thickness','850_700_thick':'850–700 Thickness'},
   'Upper Air':{'500_vort_ht':'500mb Vorticity','500_wnd_ht':'500mb Wind / Height','500_rh_ht':'500mb RH','250_wnd_ht':'250mb Jet','200_wnd_ht':'200mb Wind','300_wnd_ht':'300mb Wind','700_rh_ht':'700mb RH / Omega','850_temp_ht':'850mb Temp','850_pw_ht':'850mb PWAT','850_vort_ht':'850mb Vorticity','925_temp_ht':'925mb Temp','850vor_500ht_200wd':'850 Vort / 500 Ht / 200 Wind'}
 };
 const P_AIGFS = JSON.parse(JSON.stringify(P_GLOBAL));
-delete P_AIGFS['Precipitation'].precip_rate_type; delete P_AIGFS['Precipitation'].sim_radar_comp; delete P_AIGFS['Precipitation'].snodpth_chng; delete P_AIGFS['Upper Air']['850_pw_ht'];
+delete P_AIGFS['Precipitation'].precip_p01; delete P_AIGFS['Precipitation'].precip_p03; delete P_AIGFS['Precipitation'].precip_rate_type; delete P_AIGFS['Precipitation'].sim_radar_comp; delete P_AIGFS['Precipitation'].snodpth_chng; delete P_AIGFS['Upper Air']['850_pw_ht'];
 const P_MESO = {
   'Precipitation':{sim_radar_comp:'Sim. Radar (Composite)',sim_radar_1km:'Sim. Radar (1 km)',precip_p01:'1-hr Precip',precip_ptot:'Total Precip',precip_rate_type:'Precip Rate / Type'},
   'Surface':{'2m_temp_10m_wnd':'2m Temp / 10m Wind','2m_dewp_10m_wnd':'2m Dewpoint','10m_wnd_sfc_gust':'Wind Gusts','1000_500_thick':'MSLP + Thickness','850_temp_mslp_precip':'850 Temp / MSLP','ceiling':'Cloud Ceiling','vis':'Visibility'},
   'Severe':{sfc_cape_cin:'SB CAPE / CIN',best_cape_cin:'MU CAPE / CIN',helicity_1km:'0–1 km Helicity',helicity_3km:'0–3 km Helicity',max_updraft_hlcy:'Updraft Helicity',echo_top:'Echo Tops'},
   'Upper Air':{'500_vort_ht':'500mb Vorticity','850_temp_ht':'850mb Temp','700_rh_ht':'700mb RH / Omega'}
 };
-const P_HRRR = JSON.parse(JSON.stringify(P_MESO)); P_HRRR['Precipitation'].snow_total='Total Snowfall'; P_HRRR['Severe'].lightning='Lightning';
-const P_RRFS = JSON.parse(JSON.stringify(P_MESO)); P_RRFS['Precipitation'].snodpth_chng='Snow Depth Change'; P_RRFS['Precipitation'].precip_p06='6-hr Precip';
+const P_HRRR = JSON.parse(JSON.stringify(P_MESO)); P_HRRR['Precipitation'].snow_total='Total Snowfall'; P_HRRR['Precipitation'].sim_radar_max='Max Sim. Radar'; P_HRRR['Severe'].lightning='Lightning'; P_HRRR['Severe'].accu_max_updraft_hlcy='Accum. Updraft Helicity';
+Object.assign(P_HRRR['Surface'],{'10m_maxwnd':'Max 10m Wind','10m_wnd':'10m Wind'}); Object.assign(P_HRRR['Upper Air'],{'250_wnd':'250mb Wind','500_temp_ht':'500mb Temp','925_temp_wnd':'925mb Temp / Wind'});
+const P_RRFS = JSON.parse(JSON.stringify(P_MESO)); P_RRFS['Precipitation'].snodpth_chng='Snow Depth Change'; P_RRFS['Precipitation'].precip_p06='6-hr Precip'; P_RRFS['Precipitation'].precip_p03='3-hr Precip'; P_RRFS['Precipitation'].precip_p24='24-hr Precip';
+Object.assign(P_RRFS['Surface'],{'10m_wnd_precip':'MSLP / Wind / Precip','10m_maxwnd':'Max 10m Wind','1000_850_thick':'1000–850 Thickness','850_700_thick':'850–700 Thickness'}); Object.assign(P_RRFS['Upper Air'],{'250_wnd_ht':'250mb Jet','500_temp_ht':'500mb Temp','850_pw_ht':'850mb PWAT','925_temp_ht':'925mb Temp'});
 const P_GEFSMEAN = {
   'Precip':{precip_p06:'Mean 6-hr Precip',precip_p24:'Mean 24-hr Precip',precip_ptot:'Mean Total Precip',dom_precip_type:'Dominant Precip Type',snodpth_chng_mean:'Mean Snow Depth Change',snodpth_chng_sprd:'Snow Depth Change Spread'},
   'Probabilities':{'prob_precip_0.25in':'P(6-hr precip > 0.25")','prob_precip_0.5in':'P(6-hr precip > 0.50")','prob_precip_1in':'P(6-hr precip > 1.00")','prob_ice_0.25in':'P(Ice > 0.25")',prob_cape_500:'P(CAPE > 500)',prob_cape_2000:'P(CAPE > 2000)'},
@@ -33,7 +35,7 @@ const P_RAP = {
   'Upper Air':{'500_vort_ht':'500mb Vorticity','500_temp_ht':'500mb Temp','250_wnd_ht':'250mb Jet','700_rh_ht':'700mb RH / Omega','850_temp_ht':'850mb Temp','925_temp_ht':'925mb Temp'}
 };
 const P_NBM = {
-  'Snow & Ice':{total_accu_snow:'Total Snowfall',['6hour_accu_snow']:'6-hr Snowfall',['1hour_accu_snow']:'1-hr Snowfall',snow_liquid_ratio:'Snow:Liquid Ratio',prob_snow:'Prob. of Snow',prob_sleet:'Prob. of Sleet',prob_freezing_rain:'Prob. of Freezing Rain',['prob_1h_snow_1in']:'P(1-hr snow ≥ 1")',['10th_percentile_1hr_snow']:'10th %ile Hourly Snow',['50th_percentile_1hr_snow']:'50th %ile Hourly Snow',['90th_percentile_1hr_snow']:'90th %ile Hourly Snow'},
+  'Snow & Ice':{total_accu_snow:'Total Snowfall',['6hour_accu_snow']:'6-hr Snowfall',['1hour_accu_snow']:'1-hr Snowfall',snow_liquid_ratio:'Snow:Liquid Ratio',prob_snow:'Prob. of Snow',prob_sleet:'Prob. of Sleet',prob_freezing_rain:'Prob. of Freezing Rain',['prob_1h_snow_0.5in']:'P(1-hr snow ≥ 0.5")',['prob_1h_snow_1in']:'P(1-hr snow ≥ 1")',['prob_1h_snow_2in']:'P(1-hr snow ≥ 2")',['10th_percentile_1hr_snow']:'10th %ile Hourly Snow',['50th_percentile_1hr_snow']:'50th %ile Hourly Snow',['90th_percentile_1hr_snow']:'90th %ile Hourly Snow'},
   'Precipitation':{precip_p06:'6-hr Precip',precip_ptot:'Total Precip',['6hour_precip_chance']:'6-hr Precip Chance',['12hour_precip_chance']:'12-hr Precip Chance',prob_rain:'Prob. of Rain'},
   'Surface':{'2m_temp_10m_wnd':'2m Temp / Wind','2m_max_temp':'Max Temp','2m_min_temp':'Min Temp','2m_apparent_temp':'Wind Chill / Feels Like','10m_wnd_gust':'Wind Gusts','2m_dewp_10m_wnd':'Dewpoint',total_cloud_cover:'Cloud Cover',visibility:'Visibility'}
 };
@@ -64,26 +66,32 @@ const ECMWF_PRODUCTS = {
 /* Each model: dir (MAG folder), areas, cycles (UTC), latency (hrs after init before useful), hours(cycle) */
 const MODELS = {
   gfs:   {name:'GFS', desc:'NOAA Global, 0.25°, to 16 days', group:'Global', kind:'mag', dir:'gfs', params:P_GLOBAL,
-          areas:{namer:'North America','west-atl':'Western Atlantic',samer:'South America',alaska:'Alaska',europe:'Europe'},
-          cycles:[0,6,12,18], latency:4.5, hours:()=>range(0,120,3).concat(range(126,384,6))},
+          areas:{namer:'North America',conus:'CONUS','west-atl':'Western Atlantic','east-pac':'Eastern Pacific',alaska:'Alaska',samer:'South America',europe:'Europe',africa:'Africa',asia:'Asia'},
+          cycles:[0,6,12,18], latency:4.5, hours:()=>range(0,120).concat(range(123,240,3),range(246,384,6))},
   aigfs: {name:'AIGFS', desc:'NOAA AI global model', group:'Global', kind:'mag', dir:'aigfs', params:P_AIGFS,
-          areas:{namer:'North America'}, cycles:[0,6,12,18], latency:5, hours:()=>range(0,384,6)},
+          areas:{namer:'North America',conus:'CONUS','west-atl':'Western Atlantic','east-pac':'Eastern Pacific',alaska:'Alaska',samer:'South America',europe:'Europe',africa:'Africa',asia:'Asia',polar:'Polar'}, cycles:[0,6,12,18], latency:5, hours:()=>range(0,384,6)},
   ecmwf_oc:{name:'ECMWF', desc:'Official ECMWF IFS charts, 00Z/12Z runs to 15 days', group:'ECMWF', kind:'ecmwf', params:ECMWF_PRODUCTS, defaultParam:'medium-z500-t850',
           areas:{opencharts_north_america:'North America'}, cycles:[0,12], latency:7.5, hours:()=>range(0,144,6).concat(range(156,360,12))},
-  cmc_gdps_img:{name:'GDPS', desc:'Official Environment Canada GDPS maps, to 10 days', group:'Canada (CMC)', kind:'geomet', wms:['GDPS','GDPS_15km'], params:{'Loading…':{}}},
-  cmc_rdps_img:{name:'RDPS', desc:'Official Environment Canada regional model maps, ~3.5 days', group:'Canada (CMC)', kind:'geomet', wms:['RDPS','RDPS_10km'], params:{'Loading…':{}}},
-  cmc_hrdps_img:{name:'HRDPS', desc:'Official Environment Canada 2.5 km maps, 2 days', group:'Canada (CMC)', kind:'geomet', wms:['HRDPS','HRDPS_2.5km'], params:{'Loading…':{}}},
-  cmc_geps_img:{name:'GEPS', desc:'Canadian global ensemble maps (means & probabilities)', group:'Canada (CMC)', kind:'geomet', wms:['GEPS'], params:{'Loading…':{}}},
+  cmc_gdps_img:{name:'GDPS', desc:'Official Environment Canada GDPS maps, to 10 days', group:'Canada (CMC)', kind:'geomet', cmcLayers:()=>cmcStd('GDPS_15km_')},
+  cmc_rdps_img:{name:'RDPS', desc:'Official Environment Canada regional model maps, ~3.5 days', group:'Canada (CMC)', kind:'geomet', cmcLayers:()=>cmcStd('RDPS_10km_')},
+  cmc_hrdps_img:{name:'HRDPS', desc:'Official Environment Canada 2.5 km maps, 2 days', group:'Canada (CMC)', kind:'geomet', cmcLayers:()=>({
+    'Precip & Snow':{'HRDPS.CONTINENTAL.DIAG_PTYPE':'Precip type','HRDPS.CONTINENTAL.DIAG_SN_PT6H':'6-hr snow (liquid eq.)','HRDPS.CONTINENTAL_SN':'Total snow (liquid eq.)','HRDPS.CONTINENTAL.DIAG_PR_PT6H':'6-hr precipitation','HRDPS.CONTINENTAL_PR':'Total precipitation','HRDPS.CONTINENTAL.DIAG_FR_PT6H':'6-hr freezing rain','HRDPS.CONTINENTAL_FR':'Total freezing rain','HRDPS.CONTINENTAL_PE':'Total ice pellets','HRDPS.CONTINENTAL_SD':'Snow depth'},
+    'Surface':{'HRDPS.CONTINENTAL_TT':'2 m temperature','HRDPS.CONTINENTAL_PN-SLP':'Sea-level pressure','HRDPS.CONTINENTAL_WGE':'Wind gusts','HRDPS.CONTINENTAL_RE':'Wind chill','HRDPS.CONTINENTAL_BE':'CAPE'},
+    'Upper Air':{'HRDPS.CONTINENTAL_DZ':'1000–500 mb thickness','HRDPS.CONTINENTAL.PRES_GZ.500':'500 mb height','HRDPS.CONTINENTAL.PRES_TT.850':'850 mb temperature','HRDPS.CONTINENTAL.PRES_WSPD.250':'250 mb wind speed'}})},
+  cmc_geps_img:{name:'GEPS', desc:'Canadian global ensemble maps (means & probabilities)', group:'Canada (CMC)', kind:'geomet', cmcLayers:()=>({
+    'Precip & Snow (median member)':{'GEPS.DIAG.6_SNMM.ERC50':'6-hr snow (liquid eq.)','GEPS.DIAG.6_PRMM.ERC50':'6-hr precipitation','GEPS.DIAG.12_FRMM.ERC50':'12-hr freezing rain'},
+    'Surface':{'GEPS.DIAG_PN.ERMEAN':'Mean sea-level pressure','GEPS.DIAG.3_TT.ERC50':'2 m temperature (median)','GEPS.DIAG.3_WCF.ERC50':'Wind chill (median)'},
+    'Upper Air':{'GEPS.DIAG_GZ.500.ERMEAN':'Mean 500 mb height','GEPS.DIAG_TT_850.ERC50':'850 mb temperature (median)'}})},
   ecmwf: {name:'ECMWF', desc:'European IFS 9 km, interactive', group:'Interactive (Windy)', kind:'windy', product:'ecmwf'},
   icon:  {name:'ICON', desc:'German DWD global, interactive', group:'Interactive (Windy)', kind:'windy', product:'icon'},
   gfsw:  {name:'GFS', desc:'interactive version', group:'Interactive (Windy)', kind:'windy', product:'gfs'},
   iconeu:{name:'ICON-EU', desc:'7 km Europe, interactive', group:'Interactive (Windy)', kind:'windy', product:'iconEu'},
   hrrr:  {name:'HRRR', desc:'3 km, hourly runs', group:'Mesoscale (CONUS)', kind:'mag', dir:'hrrr', params:P_HRRR,
-          areas:{conus:'CONUS'}, cycles:range(0,23), latency:2, hours:c=>c%6===0?range(0,48):range(0,18)},
+          areas:{conus:'CONUS'}, cycles:range(0,24), latency:2, hours:c=>c%6===0?range(0,48):range(0,18)},
   rrfs:  {name:'RRFS', desc:'3 km Rapid Refresh FV3 (NAM successor)', group:'Mesoscale (CONUS)', kind:'mag', dir:'rrfs', params:P_RRFS,
-          areas:{conus:'CONUS'}, cycles:range(0,23), latency:2.5, hours:c=>c%6===0?range(0,48).concat(range(51,84,3)):range(0,18)},
+          areas:{conus:'CONUS'}, cycles:[0,6,12,18], latency:3, hours:()=>range(1,84)},
   rap:   {name:'RAP', desc:'13 km Rapid Refresh, hourly', group:'Mesoscale (CONUS)', kind:'mag', dir:'rap', params:P_RAP,
-          areas:{conus:'CONUS'}, cycles:range(0,23), latency:1.5, hours:c=>c%6===3?range(0,51):range(0,21)},
+          areas:{conus:'CONUS'}, cycles:range(0,24), latency:1.5, hours:c=>c%6===3?range(0,51):range(0,21)},
 
   /* --- Map viewer models (drawn from Open-Meteo point grids) --- */
   ecm_ifs:{name:'ECMWF IFS', desc:'European flagship HRES, 0.25°, to 15 days', group:'Data maps (drawn here)', kind:'grid', om:'ecmwf_ifs025', days:15, step:6},
@@ -102,18 +110,18 @@ const MODELS = {
   gfs_grid:{name:'GFS (map viewer)', desc:'GFS in the same viewer, for side-by-side checks', group:'More global', kind:'grid', om:'gfs_global', days:10, step:6},
   nam_grid:{name:'NAM 3 km', desc:'NCEP NAM CONUS nest, ~2.5 days', group:'More global', kind:'grid', om:'ncep_nam_conus', days:3, step:3},
   nbm:   {name:'NBM', desc:'National Blend — snow totals, ptype odds', group:'Blends & Winter', kind:'mag', dir:'nbm', params:P_NBM,
-          areas:{conus:'CONUS'}, cycles:range(0,23), latency:1.5, hours:()=>range(1,36).concat(range(39,264,3))},
+          areas:{conus:'CONUS'}, cycles:[0,6,12,18], latency:2, hours:()=>range(6,264,6)},
 };
 const WINDY_LAYERS = {temp:'Temperature',rain:'Rain / Snow / Thunder',ptype:'Precip Type',snowAccu:'Snow Accumulation',rainAccu:'Rain Accumulation',wind:'Wind',gust:'Wind Gusts',pressure:'Pressure',clouds:'Clouds',cape:'CAPE',dewpoint:'Dew Point'};
 
 const ENS_MODELS = {
   gefsmean:{name:'GEFS Mean & Spread', desc:'31 members, to 16 days', kind:'mag', dir:'gefs-mean-sprd', params:P_GEFSMEAN,
-            areas:{namer:'North America','west-atl':'Western Atlantic'}, cycles:[0,6,12,18], latency:6, hours:()=>range(0,384,6)},
+            areas:{namer:'North America',conus:'CONUS','west-atl':'Western Atlantic','east-pac':'Eastern Pacific',alaska:'Alaska',europe:'Europe',polar:'Polar'}, cycles:[0,6,12,18], latency:6, hours:()=>range(0,384,6)},
   refs:{name:'REFS', desc:'Rapid Refresh ensemble, CONUS, ~2.5 days', kind:'mag', dir:'refs', params:P_REFS,
             areas:{conus:'CONUS'}, cycles:[0,6,12,18], latency:4, hours:()=>range(1,60)}
 };
-const SPAG = {dir:'gefs-spag', area:'namer', cycles:[0,6,12,18], latency:6, hours:()=>range(0,384,6),
-  params:{'500_528_570_ht':'500mb 528/570 dam','500_522_564_ht':'500mb 522/564 dam','500_534_576_ht':'500mb 534/576 dam','500_540_582_ht':'500mb 540/582 dam','500_516_558_ht':'500mb 516/558 dam','500_510_552_ht':'500mb 510/552 dam','mslp_1000_1040_iso':'MSLP 1000/1040 mb','mslp_1004_1044_iso':'MSLP 1004/1044 mb','mslp_1008_1048_iso':'MSLP 1008/1048 mb','mslp_996_1036_iso':'MSLP 996/1036 mb','200_1200_ht':'200mb 1200 dam'}};
+const SPAG = {dir:'gefs-spag', area:'namer', areas:{namer:'North America','west-atl':'Western Atlantic','east-pac':'Eastern Pacific',samer:'South America',europe:'Europe',asia:'Asia'}, cycles:[0,6,12,18], latency:6, hours:()=>range(0,384,6),
+  params:{'500_528_570_ht':'500mb 528/570 dam','500_522_564_ht':'500mb 522/564 dam','500_534_576_ht':'500mb 534/576 dam','500_540_582_ht':'500mb 540/582 dam','500_516_558_ht':'500mb 516/558 dam','500_510_552_ht':'500mb 510/552 dam','mslp_1000_1040_iso':'MSLP 1000/1040 mb','mslp_1004_1044_iso':'MSLP 1004/1044 mb','mslp_1008_1048_iso':'MSLP 1008/1048 mb','mslp_996_1036_iso':'MSLP 996/1036 mb','mslp_1012_1052_iso':'MSLP 1012/1052 mb','mslp_984_1024_iso':'MSLP 984/1024 mb','200_1200_ht':'200mb 1200 dam','200_1176_ht':'200mb 1176 dam','200_1224_ht':'200mb 1224 dam'}};
 
 /* =========================================================
    2) HELPERS
@@ -140,7 +148,54 @@ function fillCycles(sel, cycles, latency){
   const sorted = cycles.slice().sort((a,b)=>cycleDate(b,latency)-cycleDate(a,latency));
   sel.innerHTML = sorted.map(c=>`<option value="${c}" ${c===latest?'selected':''}>${fmtZ(cycleDate(c,latency))}${c===latest?' (latest)':''}</option>`).join('');
 }
-const magUrl = (dir,c,area,param,fh)=>{ const u=`${MAG}/${dir}/${pad2(c)}/${area}/${param}/${dir}_${area}_${pad3(fh)}_${param}.gif`; return (window.STORMDESK_PROXY? window.STORMDESK_PROXY+encodeURIComponent(u) : u); };
+/* NCEP MAG file layout differs by model: GFS uses sub-folders per area/param, the others are flat,
+   and HRRR writes 5-digit hours (hour + "00" minutes). Only the most recent run of each cycle hour is kept. */
+const MAG_NESTED = new Set(['gfs']);
+const magFile = (dir,c,area,param,fh)=>{
+  const h = dir==='hrrr' ? pad3(fh)+'00' : pad3(fh);
+  return MAG_NESTED.has(dir) ? `${MAG}/${dir}/${pad2(c)}/${area}/${param}/${dir}_${area}_${h}_${param}.gif`
+                             : `${MAG}/${dir}/${pad2(c)}/${dir}_${area}_${h}_${param}.gif`;
+};
+const viaProxy = u => window.STORMDESK_PROXY ? window.STORMDESK_PROXY+encodeURIComponent(u) : u;
+const magUrl = (dir,c,area,param,fh)=>viaProxy(magFile(dir,c,area,param,fh));
+/* Live run list and exact forecast hours from MAG itself (through the site proxy). Falls back to the built-in schedule. */
+const MAG_INIT = {};   // dir -> {cycleHour: Date of that run}
+const MAG_HOURS = {};  // "dir|c|area|param" -> [hours]
+const magName = dir=>dir.toUpperCase();
+function magFetch(u, ms=15000){
+  if(!window.STORMDESK_PROXY) return Promise.reject(new Error('no proxy'));
+  return Promise.race([fetch(viaProxy(u)).then(r=>{ if(!r.ok) throw new Error(r.status); return r.text(); }),
+                       new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
+}
+async function magCycles(dir, area, param){
+  if(MAG_INIT[dir] && MAG_INIT[dir]._t > Date.now()-5*60e3) return MAG_INIT[dir];
+  const t = await magFetch(`https://mag.ncep.noaa.gov/model-guidance-model-parameter.php?group=Model+Guidance&model=${magName(dir)}&area=${area}&ps=area`);
+  const m = t.match(/id=["']?cycle_date_list_id["']?[^>]*value=["']([^"']+)/i) || t.match(/value=["']([^"']+)["'][^>]*id=["']?cycle_date_list_id/i);
+  if(!m) throw new Error('no cycles');
+  const out = {_t:Date.now(), _order:[]};
+  m[1].split(',').forEach(x=>{ const k=x.trim().match(/(\d+)\/(\d+)\/(\d+) (\d+)UTC/); if(!k) return;
+    const d=new Date(Date.UTC(+k[3],+k[1]-1,+k[2],+k[4])); const c=+k[4]; if(!(c in out)){ out[c]=d; out._order.push(c); } });
+  if(!out._order.length) throw new Error('no cycles');
+  return MAG_INIT[dir]=out;
+}
+async function magHours(dir, c, area, param){
+  const key=`${dir}|${c}|${area}|${param}`; if(MAG_HOURS[key]) return MAG_HOURS[key];
+  const init=(MAG_INIT[dir]||{})[c] || cycleDate(c,0);
+  const cyc=`${init.getUTCFullYear()}${pad2(init.getUTCMonth()+1)}${pad2(init.getUTCDate())} ${pad2(c)} UTC`;
+  const t = await magFetch(`https://mag.ncep.noaa.gov/model-fhrs.php?group=Model+Guidance&model=${magName(dir)}&area=${area}&param=${param}&ps=area&cycle=${encodeURIComponent(cyc)}`);
+  const re = new RegExp(`${dir}_${area}_(\\d{3,5})_${param.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\.gif`,'g');
+  const set=new Set(); let k; while((k=re.exec(t))){ const n=k[1].length===5 ? Math.floor(+k[1]/100) : +k[1]; set.add(n); }
+  const hrs=[...set].sort((a,b)=>a-b); if(!hrs.length) throw new Error('no hours');
+  return MAG_HOURS[key]=hrs;
+}
+const magInit = (m,c)=> (MAG_INIT[m.dir]||{})[c] || cycleDate(c,m.latency);
+/* Fill a run <select> for a MAG model: real run list when available, otherwise the schedule. */
+async function fillMagCycles(sel, m, area, param){
+  fillCycles(sel, m.cycles, m.latency);
+  try{ const L=await magCycles(m.dir, area, param); const cur=+sel.value;
+    sel.innerHTML=L._order.map((c,i)=>`<option value="${c}">${fmtZ(L[c])}${i===0?' (latest)':''}</option>`).join('');
+    sel.value = String(L._order[0]); return cur!==+sel.value; }catch(e){ return false; }
+}
 
 /* Re-usable image-loop controller (model, ensemble, spaghetti viewers).
    Short runs get hour buttons; long runs get a slider + day-jump chips. */
@@ -224,8 +279,8 @@ class Looper{
     this.prefetch(10); this.timer=setTimeout(step,300); }
   stop(){ clearTimeout(this.timer); this.timer=null; if(this.playBtn)this.playBtn.textContent='▶ Play'; if(this.want!=null){ const k=this.frameKey(this.want), f=k&&this.cache.get(k); if(f&&f.state!=='loading') this.showMsg(''); } }
 }
-function validText(c, latency, fh){
-  const init=cycleDate(c,latency), v=new Date(init.getTime()+fh*3600e3);
+function validText(c, latency, fh, initD){
+  const init=initD||cycleDate(c,latency), v=new Date(init.getTime()+fh*3600e3);
   return `Init <b>${fmtZ(init)}</b> · Hour <b>${pad3(fh)}</b> · Valid <b>${fmtZ(v)}</b> · ${fmtLocal(v)} your time`;
 }
 
@@ -270,7 +325,7 @@ const mvLoop = new Looper({img:$('mvImg'), wrap:$('mvWrap'), hoursEl:$('mvHours'
     if(m.kind==='geomet'){ const L=m.layers&&m.layers[MV.param]; if(!L) return; const v=new Date(L.t0+fh*3600e3);
       $('mvValid').innerHTML=`Valid <b>${fmtZ(v)}</b> · ${fmtLocal(v)} your time · +${fh} h from first map · latest run`;
       $('mvSrc').href='https://weather.gc.ca/model_forecast/index_e.html'; $('mvSrc').textContent='Environment Canada model charts ↗'; return; }
-    $('mvValid').innerHTML=validText(+$('mvCycle').value,m.latency,fh);
+    $('mvValid').innerHTML=validText(+$('mvCycle').value,m.latency,fh, m.kind==='mag'?magInit(m,+$('mvCycle').value):null);
     if(m.kind==='ecmwf'){ $('mvSrc').href='https://charts.ecmwf.int/products/'+MV.param.split('|')[0]; $('mvSrc').textContent='Open on charts.ecmwf.int ↗'; }
     else { $('mvSrc').href='https://mag.ncep.noaa.gov/'; $('mvSrc').textContent='Open NCEP MAG ↗'; } }});
 
@@ -286,6 +341,11 @@ async function ecmwfUrl(m,fh){
 }
 
 /* ---- Environment Canada MSC GeoMet (official CMC model maps via WMS) ---- */
+/* Layer names checked against GeoMet (Nov 2026). GDPS and RDPS share the same field names. */
+function cmcStd(pre){ const L=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[pre+k,v])); return {
+  'Precip & Snow':L({'PrecipType-Significant6h':'Precip type (6-hr)','Snow-Accum6h':'6-hr snow (liquid eq.)','Precip-Accum6h':'6-hr precipitation','Precip-Accum':'Total precipitation','FreezingRain-Accum':'Total freezing rain','SnowDepth':'Snow depth'}),
+  'Surface':L({'AirTemp_2m':'2 m temperature','Pressure_MSL':'Sea-level pressure','WindGust_10m':'Wind gusts','WindChill':'Wind chill','CAPE':'Surface CAPE'}),
+  'Upper Air':L({'Thickness_1000to500mb':'1000–500 mb thickness','GeopotentialHeight_500mb':'500 mb height','AbsoluteVorticity_500mb':'500 mb vorticity','AirTemp_850mb':'850 mb temperature','Winds_250mb':'250 mb wind'})}; }
 const WMS='https://geo.weather.gc.ca/geomet';
 function parseDim(s){ s=(s||'').trim(); if(!s) return null;
   const parts=s.split(','); let times=[];
@@ -293,23 +353,16 @@ function parseDim(s){ s=(s||'').trim(); if(!s) return null;
   times=times.filter(t=>!isNaN(t)).sort((a,b)=>a-b); if(!times.length) return null;
   return {t0:times[0], hours:times.map(t=>Math.round((t-times[0])/3600e3))};
 }
-async function geometDiscover(m){
-  if(m.layers) return true;
-  for(const g of m.wms){
-    try{
-      const r=await fetch(px(`${WMS}?service=WMS&version=1.3.0&request=GetCapabilities&layer=${encodeURIComponent(g)}`)); if(!r.ok) continue;
-      const xml=new DOMParser().parseFromString(await r.text(),'text/xml'); const layers={}, cats={};
-      [...xml.getElementsByTagName('Layer')].forEach(L=>{
-        const name=[...L.children].find(c=>c.localName==='Name'); const dim=[...L.children].find(c=>c.localName==='Dimension'&&c.getAttribute('name')==='time');
-        if(!name||!dim) return; const d=parseDim(dim.textContent); if(!d) return;
-        const title=([...L.children].find(c=>c.localName==='Title')||{}).textContent||name.textContent;
-        const par=L.parentElement, cat=((par&&[...par.children].find(c=>c.localName==='Title'))||{}).textContent||'Layers';
-        layers[name.textContent]={...d,title}; (cats[cat]=cats[cat]||{})[name.textContent]=title.replace(/^(GDPS|RDPS|HRDPS|GEPS)[^-–]*[-–]\s*/,'');
-      });
-      if(Object.keys(layers).length){ m.layers=layers; m.params=cats; return true; }
-    }catch(e){}
-  }
-  return false;
+function geometDiscover(m){ if(!m.params || !m.layers){ m.params=m.cmcLayers(); m.layers={}; } return true; }
+/* Times for one layer: single-layer GetCapabilities is small and fast. Cached for 5 minutes. */
+async function geometLayer(m, name){
+  const have=m.layers[name]; if(have && have._t>Date.now()-5*60e3) return have;
+  const r=await fetch(px(`${WMS}?service=WMS&version=1.3.0&request=GetCapabilities&layer=${encodeURIComponent(name)}`)); if(!r.ok) throw new Error('caps');
+  const xml=new DOMParser().parseFromString(await r.text(),'text/xml');
+  const L=[...xml.getElementsByTagName('Layer')].find(l=>[...l.children].some(c=>c.localName==='Name'&&c.textContent===name)); if(!L) throw new Error('missing');
+  const dim=[...L.children].find(c=>c.localName==='Dimension'&&c.getAttribute('name')==='time'); const d=dim&&parseDim(dim.textContent); if(!d) throw new Error('notime');
+  const title=([...L.children].find(c=>c.localName==='Title')||{}).textContent||name;
+  return m.layers[name]={...d,title,_t:Date.now()};
 }
 function wmsRegion(){ const r=gridRegions(); return r[MV.area]||r.conus; }
 function wmsUrl(m,fh){
@@ -365,44 +418,58 @@ function selectModel(k){
     if(!m.areas[MV.area]) MV.area=Object.keys(m.areas)[0];
     $('mvArea').innerHTML=Object.entries(m.areas).map(([a,n])=>`<option value="${a}" ${a===MV.area?'selected':''}>${n}</option>`).join('');
     fillCycles($('mvCycle'), m.cycles, m.latency);
+    if(m.kind==='mag'){ const k0=k; fillMagCycles($('mvCycle'), m, MV.area, MV.param).then(ch=>{ if(MV.model===k0 && ch) updateModel(); }); }
     $('mvCycle').parentElement.style.display=''; $('mvArea').parentElement.style.display=Object.keys(m.areas).length>1?'':'none';
   }
-  if(m.kind==='geomet'){
+  if(m.kind==='geomet'){ geometDiscover(m);
     const regs=gridRegions(); if(!regs[MV.area]) MV.area=getLoc()?'me':'conus';
     $('mvArea').innerHTML=Object.entries(regs).map(([a,r])=>`<option value="${a}" ${a===MV.area?'selected':''}>${r.name}</option>`).join('');
     $('mvArea').parentElement.style.display=''; $('mvCycle').parentElement.style.display='none';
   }
   renderModelBar(); renderModelSide(); updateModel(); store.set('wx.model',k);
 }
-const GEOMET_PREF=[/PrecipType/i,/Precip.*Accum|PR$|_PR\b/i,/AirTemp|_TT\b/i,/MSL|_PN\b/i];
-async function startGeomet(m){
-  $('mvTitle').textContent=`CMC ${m.name} · loading layer list…`; $('mvWrap').classList.remove('err');
-  const ok=await geometDiscover(m); if(MODELS[MV.model]!==m) return;
-  if(!ok){ $('mvTitle').textContent=`CMC ${m.name}`; $('mvWrap').classList.add('err'); $('mvErr').textContent="Couldn't load Environment Canada's map list from this page right now.";
-    $('mvSrc').href='https://weather.gc.ca/model_forecast/index_e.html'; $('mvSrc').textContent='Environment Canada model charts ↗'; return; }
-  if(!m.layers[MV.paramFor[MV.model]]){ const names=Object.keys(m.layers); MV.paramFor[MV.model]=GEOMET_PREF.map(re=>names.find(n=>re.test(n))).find(Boolean)||names[0]; }
+const GEOMET_PREF=[/PrecipType|PTYPE/i,/Snow-Accum6h|SN_PT6H|6_SNMM/i,/AirTemp_2m|_TT$|3_TT/i];
+function startGeomet(m){
+  geometDiscover(m); const names=Object.keys(Object.assign({},...Object.values(m.params)));
+  if(!names.includes(MV.paramFor[MV.model])) MV.paramFor[MV.model]=GEOMET_PREF.map(re=>names.find(n=>re.test(n))).find(Boolean)||names[0];
   MV.param=MV.paramFor[MV.model]; renderModelSide(); showGeometLayer();
 }
-function showGeometLayer(){ const m=MODELS[MV.model], L=m.layers[MV.param]; if(!L) return;
-  $('mvTitle').textContent=`CMC ${m.name} · ${L.title.replace(/^(GDPS|RDPS|HRDPS|GEPS)[^-–]*[-–]\s*/,'')}`;
-  $('mvLegend').innerHTML=`<img alt="Legend" src="${WMS}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetLegendGraphic&SLD_VERSION=1.1.0&LAYER=${encodeURIComponent(MV.param)}&FORMAT=image/png&LANG=en" onerror="this.remove()">`;
+async function showGeometLayer(){ const m=MODELS[MV.model], name=MV.param, all=Object.assign({},...Object.values(m.params));
+  $('mvTitle').textContent=`CMC ${m.name} · ${all[name]||name} · loading times…`; $('mvWrap').classList.remove('err');
+  let L; try{ L=await geometLayer(m,name); }catch(e){
+    if(MV.param!==name) return; $('mvTitle').textContent=`CMC ${m.name} · ${all[name]||name}`; $('mvWrap').classList.add('err');
+    $('mvErr').textContent="Environment Canada's map server didn't answer for this map. Try again in a minute, or pick another map.";
+    $('mvSrc').href='https://weather.gc.ca/model_forecast/index_e.html'; $('mvSrc').textContent='Environment Canada model charts ↗'; return; }
+  if(MV.param!==name || MODELS[MV.model]!==m) return;
+  $('mvTitle').textContent=`CMC ${m.name} · ${all[name]||L.title}`;
+  $('mvLegend').innerHTML=`<img alt="Legend" src="${WMS}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetLegendGraphic&SLD_VERSION=1.1.0&LAYER=${encodeURIComponent(name)}&FORMAT=image/png&LANG=en" onerror="this.remove()">`;
   mvLoop.idx=0; mvLoop.setHours(L.hours); }
 function updateModel(){
   const m=MODELS[MV.model], wrap=$('mvWrap'), isMag=m.kind==='mag', isGrid=m.kind==='grid';
   const isImg=['mag','ecmwf','geomet'].includes(m.kind);
+  $('mvErr').textContent='Image not available for this hour/run yet — it may still be processing.';
   $('mvTimebar').style.display=isImg?'':'none'; $('mvSelects').style.display=isImg?'':'none'; $('mvLegend').innerHTML=''; $('mvOverlay').style.display='none';
   $('gridBox').style.display=isGrid?'':'none'; wrap.style.display=isGrid?'none':''; if(!isGrid) gStop();
   const old=wrap.querySelector('iframe'); if(old)old.remove();
   $('mvDesc').textContent = m.desc + (isMag ? ` · runs ${m.cycles.length===24?'hourly':m.cycles.map(c=>pad2(c)+'Z').join(' ')}` : isGrid ? ' · map viewer' : ' · interactive map');
   if(isGrid){ mvLoop.stop(); $('mvValid').innerHTML=''; loadGrid(); return; }
   if(m.kind==='geomet'){ const old=wrap.querySelector('iframe'); if(old)old.remove(); $('mvImg').style.display=''; $('mvDesc').textContent=m.desc;
-    if(m.layers && m.layers[MV.param]) showGeometLayer(); else startGeomet(m); return; }
+    startGeomet(m); return; }
   if(m.kind==='ecmwf'){ $('mvImg').style.display=''; const all=Object.assign({},...Object.values(m.params));
-    $('mvTitle').textContent=`ECMWF · ${all[MV.param]}`; $('mvDesc').textContent=m.desc+' · © ECMWF, CC BY 4.0'; mvLoop.setHours(m.hours()); return; }
+    $('mvTitle').textContent=`ECMWF · ${all[MV.param]}`; $('mvDesc').textContent=m.desc+' · © ECMWF, CC BY 4.0';
+    $('mvErr').innerHTML=`ECMWF's chart server isn't returning this map right now (it has been slow or down at times).<br><button class="btn" data-model-switch="ecm_ifs" style="margin-top:8px">Show ECMWF IFS as a data map instead</button>`;
+    mvLoop.setHours(m.hours()); return; }
   if(isMag){
     $('mvImg').style.display=''; const all=Object.assign({},...Object.values(m.params));
     $('mvTitle').textContent=`${m.name} · ${all[MV.param]}`;
-    mvLoop.setHours(m.hours(+$('mvCycle').value));
+    const c=+$('mvCycle').value, sel=`${MV.model}|${c}|${MV.area}|${MV.param}`; MV.magSel=sel;
+    const known=MAG_HOURS[`${m.dir}|${c}|${MV.area}|${MV.param}`];
+    mvLoop.setHours(known || m.hours(c));
+    if(!known) magHours(m.dir, c, MV.area, MV.param).then(h=>{ if(MV.magSel!==sel) return;
+      const cur=mvLoop.hours[mvLoop.idx]; let i=h.indexOf(cur); if(i<0) i=Math.max(0,h.findIndex(x=>x>cur)); mvLoop.idx=i; mvLoop.setHours(h);
+      const full=m.hours(c), last=full[full.length-1];
+      if(h[h.length-1] < last*0.8) $('mvDesc').textContent=`${m.desc} · this run is still coming in (out to f${pad3(h[h.length-1])} so far)`;
+    }).catch(()=>{});
   } else {
     $('mvImg').style.display='none'; wrap.classList.remove('err');
     const loc=getLoc(); const lat=loc?loc.lat.toFixed(2):39, lon=loc?loc.lon.toFixed(2):-95;
@@ -413,6 +480,7 @@ function updateModel(){
     f.allowFullscreen=true; wrap.appendChild(f);
   }
 }
+document.addEventListener('click',e=>{const b=e.target.closest('[data-model-switch]'); if(b){e.preventDefault(); selectModel(b.dataset.modelSwitch);}});
 $('mvArea').onchange=()=>{MV.area=$('mvArea').value; if(MODELS[MV.model].kind==='geomet') mvLoop.go(mvLoop.idx); else updateModel();};
 $('mvCycle').onchange=()=>updateModel();
 $('mvPrev').onclick=()=>{mvLoop.stop();mvLoop.prev();}; $('mvNext').onclick=()=>{mvLoop.stop();mvLoop.next();}; $('mvPlay').onclick=()=>mvLoop.play();
@@ -588,7 +656,7 @@ function renderLr(){
     M.innerHTML=`<div class="viewer-head"><div><div class="viewer-title">NMME · ${NMME_MODELS[LR.nm]} · ${LR.nv==='tmp2m'?'Temperature':'Precipitation'} · ≈ ${monLabel(addMonths(base+LR.lead-1))}</div><div class="small muted">Monthly anomaly vs. normal. Issued around the 8th of each month.</div></div>
       <div class="seg" id="nmVar"><button data-v="tmp2m" class="${LR.nv==='tmp2m'?'on':''}">Temp</button><button data-v="prate" class="${LR.nv==='prate'?'on':''}">Precip</button></div></div>
       <div class="row" style="margin-bottom:8px">${Object.entries(NMME_MODELS).map(([k,n])=>`<button class="chip ${k===LR.nm?'on':''}" data-nm="${k}">${n}</button>`).join('')}</div>
-      <div class="imgwrap" id="lrWrap"><img id="lrImg" src="${url}" alt="NMME map"><div class="imgmsg"><div>Map unavailable.</div><a href="${CPC}/NMME/monanom.shtml" target="_blank" rel="noopener">NMME page ↗</a></div></div>
+      <div class="imgwrap" id="lrWrap"><img id="lrImg" src="${viaProxy(url)}" alt="NMME map"><div class="imgmsg"><div>Map unavailable.</div><a href="${CPC}/NMME/monanom.shtml" target="_blank" rel="noopener">NMME page ↗</a></div></div>
       <div class="timebar"><span class="small muted">Lead</span><div class="hours" style="margin:0">${[1,2,3,4,5,6,7].map(l=>`<button data-lead="${l}" class="${l===LR.lead?'active':''}" style="min-width:70px">${MON[addMonths(base+l-1).getMonth()]} (${l})</button>`).join('')}</div></div>`;
     $('lrImg').onerror=()=>$('lrWrap').classList.add('err');
     M.querySelectorAll('[data-nm]').forEach(b=>b.onclick=()=>{LR.nm=b.dataset.nm; renderLr();});
@@ -700,7 +768,7 @@ document.addEventListener('keydown',e=>{
 const EV={model:'gefsmean', param:'500_vort_ht', area:'namer'};
 const evLoop = new Looper({img:$('evImg'), wrap:$('evWrap'), hoursEl:$('evHours'), playBtn:$('evPlay'),
   url:fh=>magUrl(ENS_MODELS[EV.model].dir, +$('evCycle').value, EV.area, EV.param, fh),
-  onChange:fh=>$('evValid').innerHTML=validText(+$('evCycle').value, ENS_MODELS[EV.model].latency, fh)});
+  onChange:fh=>{const m=ENS_MODELS[EV.model], c=+$('evCycle').value; $('evValid').innerHTML=validText(c, m.latency, fh, magInit(m,c));}});
 function renderEnsSide(){
   const m=ENS_MODELS[EV.model]; let h='<h4>Ensemble Systems</h4>';
   for(const k in ENS_MODELS) h+=`<button class="item ${k===EV.model?'active':''}" data-ens="${k}">${ENS_MODELS[k].name} <small>${ENS_MODELS[k].desc}</small></button>`;
@@ -716,7 +784,8 @@ function updateEns(){const m=ENS_MODELS[EV.model]; const all=Object.assign({},..
   $('evTitle').textContent=`${m.name} — ${all[EV.param]}`; evLoop.setHours(m.hours());}
 function initEns(){const m=ENS_MODELS[EV.model];
   $('evArea').innerHTML=Object.entries(m.areas).map(([a,n])=>`<option value="${a}" ${a===EV.area?'selected':''}>${n}</option>`).join('');
-  fillCycles($('evCycle'), m.cycles, m.latency); renderEnsSide(); updateEns();}
+  fillCycles($('evCycle'), m.cycles, m.latency); renderEnsSide(); updateEns();
+  const k0=EV.model; fillMagCycles($('evCycle'), m, EV.area, EV.param).then(ch=>{ if(ch && EV.model===k0) updateEns(); });}
 $('evArea').onchange=()=>{EV.area=$('evArea').value;updateEns();}; $('evCycle').onchange=updateEns;
 $('evPrev').onclick=()=>{evLoop.stop();evLoop.prev();}; $('evNext').onclick=()=>{evLoop.stop();evLoop.next();}; $('evPlay').onclick=()=>evLoop.play();
 
@@ -725,10 +794,13 @@ $('evPrev').onclick=()=>{evLoop.stop();evLoop.prev();}; $('evNext').onclick=()=>
    ========================================================= */
 const spLoop = new Looper({img:$('spImg'), wrap:$('spWrap'), hoursEl:$('spHours'), playBtn:$('spPlay'),
   url:fh=>magUrl(SPAG.dir, +$('spCycle').value, SPAG.area, $('spParam').value, fh),
-  onChange:fh=>$('spValid').innerHTML=validText(+$('spCycle').value, SPAG.latency, fh)});
+  onChange:fh=>{const c=+$('spCycle').value; $('spValid').innerHTML=validText(c, SPAG.latency, fh, magInit(SPAG,c));}});
 function initSpag(){
   $('spParam').innerHTML=Object.entries(SPAG.params).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+  if($('spArea')){ $('spArea').innerHTML=Object.entries(SPAG.areas).map(([a,n])=>`<option value="${a}" ${a===SPAG.area?'selected':''}>${n}</option>`).join('');
+    $('spArea').onchange=()=>{ SPAG.area=$('spArea').value; spLoop.go(spLoop.idx); }; }
   fillCycles($('spCycle'), SPAG.cycles, SPAG.latency); spLoop.setHours(SPAG.hours());
+  fillMagCycles($('spCycle'), SPAG, SPAG.area, '500_528_570_ht').then(ch=>{ if(ch) spLoop.setHours(SPAG.hours()); });
   const loc=getLoc(); if(loc){ $('ptLoc').textContent=loc.name; loadPlume(); }
 }
 $('spParam').onchange=()=>spLoop.go(spLoop.idx); $('spCycle').onchange=()=>spLoop.setHours(SPAG.hours());
@@ -742,9 +814,7 @@ const ENS_IDS = {
   gem:{ids:['gem_global','cmc_gem_geps'], days:16, label:'GEPS'},
   icon:{ids:['icon_seamless','dwd_icon_seamless_eps','icon_global'], days:7, label:'ICON-EPS'},
   gefs25:{ids:['gfs025','ncep_gefs025'], days:10, label:'GEFS 0.25°'},
-  aigfs:{ids:['ncep_aigfs025','aigfs025'], days:16, label:'AIGFS ENS'},
-  ukmo:{ids:['ukmo_global_ensemble_20km','ukmo_mogreps_g'], days:8, label:'MOGREPS-G'},
-  wn2:{ids:['google_weathernext2','weathernext2'], days:15, label:'WeatherNext 2'}
+  ukmo:{ids:['ukmo_global_ensemble_20km','ukmo_mogreps_g'], days:8, label:'MOGREPS-G'}
 };
 const ensCache={};
 async function fetchEnsemble(key, lat, lon, vars){
@@ -806,6 +876,10 @@ const DET = [
   ['kma_gdps','KMA GDPS','#fbbf24'],['kma_ldps','KMA LDPS','#f59e0b'],['ncep_hrrr_conus_15min','HRRR 15-min','#06b6d4'],
   ['ncep_nam_conus','NAM CONUS 3 km','#fb7185'],['ncep_gfs_graphcast025','GraphCast (alt id)','#60a5fa']
 ];
+/* These Open-Meteo models only cover Europe/Japan/Korea and return nothing for US points: leave them out. */
+{ const REGIONAL=new Set(['icon_d2','icon_eu','italia_meteo_arpae_icon_2i','jma_msm','kma_ldps','meteofrance_arome_france','meteofrance_arpege_europe','meteoswiss_icon_ch1','meteoswiss_icon_ch2','metno_nordic','ukmo_uk_deterministic_2km','ncep_gfs_graphcast025']);
+  const seen=new Set(); for(let i=DET.length-1;i>=0;i--){ const id=DET[i][0]; if(REGIONAL.has(id)) DET.splice(i,1); }
+  for(let i=0;i<DET.length;i++){ if(seen.has(DET[i][0])){ DET.splice(i,1); i--; } else seen.add(DET[i][0]); } }
 let detData=null;
 async function loadDet(){
   const loc=getLoc(); if(!loc){$('pmStatus').textContent='Enter a ZIP on the Local 20-Day tab first.';return;}
@@ -845,6 +919,7 @@ function satUrl(){
   const base=`https://cdn.star.nesdis.noaa.gov/${sat}/ABI/${sec}/${band}/`;
   const [still,loop]=SAT_SIZES[sec]||['1200x1200','600x600'];
   const secName=sec.startsWith('SECTOR/')?sec.split('/')[1]:sec;
+  if(sec==='FD') return `${base}${still}.jpg`; // full disk has no animated loop on the NOAA server
   return satMode==='loop' ? `${base}${sat}-${secName.toUpperCase()}-${band}-${loop}.gif` : `${base}${still}.jpg`;
 }
 function loadSat(){ $('satWrap').classList.remove('err'); $('satImg').src=satUrl()+'?t='+Math.floor(Date.now()/300000); }
@@ -855,7 +930,7 @@ $('satStill').onclick=()=>{satMode='still';$('satStill').classList.add('on');$('
 
 function loadRadar(site){
   const id=site||$('radSel').value; $('radWrap').classList.remove('err');
-  $('radImg').src=`https://radar.weather.gov/ridge/standard/${id}_loop.gif?t=${Math.floor(Date.now()/120000)}`;
+  $('radImg').referrerPolicy='no-referrer'; $('radImg').src=`https://radar.weather.gov/ridge/standard/${id}_loop.gif?t=${Math.floor(Date.now()/120000)}`;
 }
 $('radImg').onerror=()=>$('radWrap').classList.add('err'); $('radImg').onload=()=>$('radWrap').classList.remove('err');
 $('radSel').onchange=()=>loadRadar(); $('radRefresh').onclick=()=>loadRadar($('radSite').value.trim().toUpperCase()||null);
@@ -864,17 +939,23 @@ $('radGo').onclick=()=>{const s=$('radSite').value.trim().toUpperCase(); if(s)lo
 /* =========================================================
    9) IMAGE GALLERIES (Analysis / Tropics / Outlooks)
    ========================================================= */
+/* CPC's image server often times out when loaded straight from the browser; the site proxy fetches it reliably. */
+const slowHost = u => /^https:\/\/www\.cpc\.ncep\.noaa\.gov\//.test(u);
 function gallery(el, items){
   const bust='?t='+Math.floor(Date.now()/600000);
-  el.innerHTML=items.map(([title,src,link])=>`<div class="card"><figure><img loading="lazy" src="${src}${bust}" alt="${title}" onerror="this.outerHTML='<div class=broken>Image unavailable right now.<br>Try the source link.</div>'"><figcaption><span>${title}</span><a href="${link||src}" target="_blank" rel="noopener">source ↗</a></figcaption></figure></div>`).join('');
+  el.innerHTML=items.map(([title,src,link])=>`<div class="card"><figure><img loading="lazy" src="${slowHost(src)?viaProxy(src+bust):src+(src.includes('%3A')?'':bust)}" alt="${title}" onerror="this.outerHTML='<div class=broken>Image unavailable right now.<br>Try the source link.</div>'"><figcaption><span>${title}</span><a href="${link||src}" target="_blank" rel="noopener">source ↗</a></figcaption></figure></div>`).join('');
 }
+/* SPC upper-air maps are named by date and balloon time (00Z/12Z); plotting finishes ~2 h after launch. */
+function spcUA(lvl){ const d=new Date(Date.now()-2.5*3600e3); d.setUTCHours(d.getUTCHours()>=12?12:0,0,0,0);
+  return `https://www.spc.noaa.gov/obswx/maps/${lvl}_${String(d.getUTCFullYear()).slice(2)}${pad2(d.getUTCMonth()+1)}${pad2(d.getUTCDate())}_${pad2(d.getUTCHours())}.gif`; }
 const ANALYSIS = [
   ['WPC Surface Analysis (fronts)','https://www.wpc.ncep.noaa.gov/basicwx/92fndfd.gif','https://www.wpc.ncep.noaa.gov/html/sfc-zoom.php'],
   ['WPC Surface Analysis w/ Obs','https://www.wpc.ncep.noaa.gov/sfc/namussfcwbg.gif','https://www.wpc.ncep.noaa.gov/html/sfc-zoom.php'],
-  ['Observed 250 mb','https://www.spc.noaa.gov/obswx/maps/250.gif','https://www.spc.noaa.gov/obswx/maps/'],
-  ['Observed 500 mb','https://www.spc.noaa.gov/obswx/maps/500.gif','https://www.spc.noaa.gov/obswx/maps/'],
-  ['Observed 700 mb','https://www.spc.noaa.gov/obswx/maps/700.gif','https://www.spc.noaa.gov/obswx/maps/'],
-  ['Observed 850 mb','https://www.spc.noaa.gov/obswx/maps/850.gif','https://www.spc.noaa.gov/obswx/maps/'],
+  ['Observed 250 mb',spcUA('250'),'https://www.spc.noaa.gov/obswx/maps/'],
+  ['Observed 500 mb',spcUA('500'),'https://www.spc.noaa.gov/obswx/maps/'],
+  ['Observed 700 mb',spcUA('700'),'https://www.spc.noaa.gov/obswx/maps/'],
+  ['Observed 850 mb',spcUA('850'),'https://www.spc.noaa.gov/obswx/maps/'],
+  ['Observed 925 mb',spcUA('925'),'https://www.spc.noaa.gov/obswx/maps/'],
   ['Weekly SST Anomaly (CPC)','https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_update/sstweek_c.gif','https://www.cpc.ncep.noaa.gov/products/analysis_monitoring/enso_update/sst.shtml'],
   ['National Snow Depth (NOHRSC)','https://www.nohrsc.noaa.gov/snow_model/images/full/National/nsm_depth/'+nohrscDate()+'_nsm_depth.jpg','https://www.nohrsc.noaa.gov/nsa/'],
   ['SPC Mesoanalysis','https://www.spc.noaa.gov/exper/mesoanalysis/s19/pmsl/pmsl.gif','https://www.spc.noaa.gov/exper/mesoanalysis/'],
@@ -904,9 +985,9 @@ const OUTLOOKS = [
   ['WPC Day 2 QPF','https://www.wpc.ncep.noaa.gov/qpf/fill_98qwbg.gif','https://www.wpc.ncep.noaa.gov/qpf/qpf2.shtml'],
   ['WPC Day 3 QPF','https://www.wpc.ncep.noaa.gov/qpf/fill_99qwbg.gif','https://www.wpc.ncep.noaa.gov/qpf/qpf2.shtml'],
   ['WPC 7-Day Total QPF','https://www.wpc.ncep.noaa.gov/qpf/p168i.gif','https://www.wpc.ncep.noaa.gov/qpf/qpf2.shtml'],
-  ['SPC Day 1 Convective Outlook','https://www.spc.noaa.gov/products/outlook/day1otlk.gif','https://www.spc.noaa.gov/products/outlook/'],
-  ['SPC Day 2 Convective Outlook','https://www.spc.noaa.gov/products/outlook/day2otlk.gif','https://www.spc.noaa.gov/products/outlook/'],
-  ['SPC Day 3 Convective Outlook','https://www.spc.noaa.gov/products/outlook/day3otlk.gif','https://www.spc.noaa.gov/products/outlook/'],
+  ['SPC Day 1 Convective Outlook','https://www.spc.noaa.gov/products/outlook/day1otlk.png','https://www.spc.noaa.gov/products/outlook/'],
+  ['SPC Day 2 Convective Outlook','https://www.spc.noaa.gov/products/outlook/day2otlk.png','https://www.spc.noaa.gov/products/outlook/'],
+  ['SPC Day 3 Convective Outlook','https://www.spc.noaa.gov/products/outlook/day3otlk.png','https://www.spc.noaa.gov/products/outlook/'],
   ['CPC 6–10 Day Temperature','https://www.cpc.ncep.noaa.gov/products/predictions/610day/610temp.new.gif','https://www.cpc.ncep.noaa.gov/products/predictions/610day/'],
   ['CPC 6–10 Day Precipitation','https://www.cpc.ncep.noaa.gov/products/predictions/610day/610prcp.new.gif','https://www.cpc.ncep.noaa.gov/products/predictions/610day/'],
   ['CPC 8–14 Day Temperature','https://www.cpc.ncep.noaa.gov/products/predictions/814day/814temp.new.gif','https://www.cpc.ncep.noaa.gov/products/predictions/814day/'],
@@ -1313,7 +1394,7 @@ async function initHome(){
    .catch(()=>$('hNow').textContent='Current conditions unavailable.');
   // radar
   (async()=>{ let st=L.radar; if(!st){ try{ const p=await (await fetch(`https://api.weather.gov/points/${L.lat},${L.lon}`)).json(); st=p.properties.radarStation; if(st){ L.radar=st; store.set('wx.loc',JSON.stringify(L)); } }catch(e){} }
-    $('hRadar').innerHTML=st?`<img src="https://radar.weather.gov/ridge/standard/${st}_loop.gif?t=${Math.floor(Date.now()/120000)}" alt="Radar" style="width:100%;border-radius:6px" onerror="this.outerHTML='<p class=muted>Radar loop unavailable.</p>'"><div class="small muted">${st} loop</div>`:'<p class="muted">Radar site not found.</p>'; })();
+    $('hRadar').innerHTML=st?`<img referrerpolicy="no-referrer" src="https://radar.weather.gov/ridge/standard/${st}_loop.gif?t=${Math.floor(Date.now()/120000)}" alt="Radar" style="width:100%;border-radius:6px" onerror="this.outerHTML='<p class=muted>Radar loop unavailable.</p>'"><div class="small muted">${st} loop</div>`:'<p class="muted">Radar site not found.</p>'; })();
   // snow totals + snow day
   stormData(L).then(mods=>{
     const t0=Date.now(), t1=t0+7*864e5; const rows=mods.map(m=>({n:m.name,t:stormTotals(m,t0,t1)})).filter(r=>r.t).sort((a,b)=>b.t.sk-a.t.sk);
@@ -1328,8 +1409,16 @@ async function initHome(){
    ========================================================= */
 function imgExists(u){return new Promise(res=>{const i=new Image(); const to=setTimeout(()=>res(false),9000); i.onload=()=>{clearTimeout(to);res(true)}; i.onerror=()=>{clearTimeout(to);res(false)}; i.src=u;});}
 const RUN_CHECK=[['gfs','500_vort_ht'],['aigfs','500_vort_ht'],['hrrr','500_vort_ht'],['rrfs','500_vort_ht'],['rap','500_vort_ht'],['nbm','2m_temp_10m_wnd']];
+/* Preferred: ask MAG which hours of the newest run are posted (one small request per model). */
+async function runOneLive(key,param){
+  const m=MODELS[key], area=Object.keys(m.areas)[0]; const L=await magCycles(m.dir,area,param); const c=L._order[0];
+  delete MAG_HOURS[`${m.dir}|${c}|${area}|${param}`]; const h=await magHours(m.dir,c,area,param);
+  const full=m.hours(c), max=Math.max(full[full.length-1], h[h.length-1]), fh=h[h.length-1];
+  return {name:m.name,c,init:L[c],fh,max,done:fh>=max*0.97};
+}
 let runCache=null, runCacheT=0;
 async function runOne(key,param){
+  try{ return await runOneLive(key,param); }catch(e){}
   const m=MODELS[key]; const area=Object.keys(m.areas)[0];
   const cands=m.cycles.slice().sort((a,b)=>cycleDate(b,0.5)-cycleDate(a,0.5)).slice(0,2);
   for(const c of cands){ const hrs=m.hours(c), u=fh=>magUrl(m.dir,c,area,param,fh);
@@ -1350,8 +1439,8 @@ async function renderRuns(el){
   el.innerHTML='<span class="spinner"></span> checking model folders…';
   const res=await Promise.all([...RUN_CHECK.map(([k,p])=>runOne(k,p)), runEcmwf()]);
   const html=`<table class="t"><tr><th>Model</th><th>Run</th><th>Out to</th><th></th></tr>`+res.map(r=>r.none?`<tr><td>${r.name}</td><td colspan="3" class="muted">${r.err?'could not check from this page':'no recent run found'}</td></tr>`:
-    `<tr><td><b>${r.name}</b></td><td>${pad2(r.c)}Z</td><td>f${pad3(r.fh)} / f${pad3(r.max)}</td><td><span class="runbar"><i style="width:${Math.round(r.fh/r.max*100)}%;background:${r.done?'var(--good)':'var(--accent2)'}"></i></span> ${r.done?'✓':Math.round(r.fh/r.max*100)+'%'}</td></tr>`).join('')+
-    `</table><p class="small muted" style="margin:6px 0 0">Checked ${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}. A folder can briefly still hold yesterday's run of the same hour, so a "✓" right at run time may be the old one.</p>`;
+    `<tr><td><b>${r.name}</b></td><td>${r.init?fmtZ(r.init):pad2(r.c)+'Z'}</td><td>f${pad3(r.fh)} / f${pad3(r.max)}</td><td><span class="runbar"><i style="width:${Math.round(r.fh/r.max*100)}%;background:${r.done?'var(--good)':'var(--accent2)'}"></i></span> ${r.done?'✓':Math.round(r.fh/r.max*100)+'%'}</td></tr>`).join('')+
+    `</table><p class="small muted" style="margin:6px 0 0">Checked ${new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}. Run lists come straight from NOAA's model-graphics server.</p>`;
   runCache=html; runCacheT=Date.now(); el.innerHTML=html;
 }
 
