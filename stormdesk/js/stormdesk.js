@@ -1458,6 +1458,7 @@ async function initWinter(){
   <div class="viewer-head"><div><div class="viewer-title">Winter Desk · ${esc(L.name)}</div><div class="small muted">Every model's snow, ice and cold for your ZIP, side by side.</div></div>
     <div class="seg" id="wdWin">${Object.keys(WINS).map(k=>`<button data-w="${k}" class="${k===WD.win?'on':''}">${k}</button>`).join('')}</div></div>
   <div class="pol-top" id="wdStats"></div>
+  <div class="card pol"><div class="pol-h"><h3>Next Snow Chances</h3><span class="pill">GEFS · ECMWF · GEPS · 15 days</span></div><div id="wdChance" style="padding:8px 12px"><span class="spinner"></span> reading ~100 ensemble members…</div></div>
   <div class="grid g2">
     <div class="card pol"><div class="pol-h"><h3>Storm Totals by Model</h3><span class="pill">from now</span></div><div class="scrollx"><table class="t" id="wdTable"><tr><td><span class="spinner"></span> loading ${STORM_MODELS.length} models…</td></tr></table></div>
       <p class="small muted" style="padding:0 12px">Kuchera adjusts the snow ratio for how cold the air column is: fluffier snow in very cold air, wetter near freezing. 10:1 assumes 10" of snow per 1" of water. Ice is freezing rain liquid (rain with the surface at or below 32°F); actual ice buildup is usually a bit less.</p></div>
@@ -1468,6 +1469,8 @@ async function initWinter(){
     </div>
   </div>
   <div class="card pol"><div class="pol-h"><h3>Model Trend (run-to-run)</h3><span class="pill">same window, earlier runs</span></div><div id="wdTrend" style="padding:8px 12px"><span class="spinner"></span></div></div>
+  <div class="card pol"><div class="pol-h"><h3>Precip Type Timeline</h3><div class="seg" id="wdPtH"><button data-h="3">3 days</button><button data-h="7" class="on">7 days</button><button data-h="10">10 days</button></div></div><div id="wdPtype" style="padding:8px 12px"><span class="spinner"></span></div>
+    <p class="small muted" style="padding:0 12px 10px;margin:0">Rain, snow, sleet or freezing rain in each model, worked out from the surface temperature and the warmest layer aloft (925–700 mb). Sleet and freezing rain happen when a warm layer melts the snow and it refreezes near the ground.</p></div>
   <div class="card pol"><div class="pol-h"><h3>Run-to-Run Maps</h3><div class="row"><select id="rrModel"><option value="gfs">GFS</option><option value="aigfs">AIGFS</option><option value="gefsmean">GEFS mean</option></select><select id="rrParam"></select><select id="rrValid"></select></div></div>
     <div class="grid g2 gal" id="rrGal" style="padding:10px"></div><p class="small muted" style="padding:0 12px 10px">The last 4 runs for the same valid time. Watch how the storm shifts from run to run.</p></div>
   <div class="grid g3">
@@ -1481,11 +1484,23 @@ async function initWinter(){
       <p><a href="https://www.google.com/search?q=${encodeURIComponent(st+' 511 road conditions traffic cameras')}" target="_blank" rel="noopener">Find ${esc(st)} road conditions ↗</a></p>
       <p><a href="https://www.fhwa.dot.gov/trafficinfo/" target="_blank" rel="noopener">FHWA traffic &amp; road info by state ↗</a></p>
       <p><a href="https://www.weather.gov/wwamap/" target="_blank" rel="noopener">NWS national alerts map ↗</a></p></div></div>
-  </div>`;
+  </div>
+  <div class="grid g2">
+    <div class="card pol"><div class="pol-h"><h3>WPC Winter Probabilities</h3><div class="seg" id="wdWpcSeg">${Object.entries(WPCP).map(([k,n])=>`<button data-k="${k}">${n}</button>`).join('')}</div></div>
+      <div class="gal" id="wdWpc" style="padding:10px"></div>
+      <p class="small muted" style="padding:0 12px 10px;margin:0">Official NWS Weather Prediction Center odds. For impacts (travel, snow load, blowing snow) see the <a href="https://www.wpc.ncep.noaa.gov/wwd/wssi/wssi.php" target="_blank" rel="noopener">Winter Storm Severity Index ↗</a>.</p></div>
+    <div class="card pol"><div class="pol-h"><h3>Pattern Watch · when the cold comes</h3><span class="pill">2-week signals</span></div>
+      <div style="padding:8px 12px 0" class="small"><p style="margin:0 0 6px">Cold air reaches the Plains most often when the <b>AO</b> and <b>NAO</b> go negative (the Arctic's cold leaks south) and the <b>PNA</b> goes positive (a western ridge and an eastern trough). The <b>MJO</b> in phases 8, 1 and 2 tends to favor cold in the central and eastern U.S. In a strong El Niño winter these are the signals that most often break the mild pattern.</p></div>
+      <div class="gal" id="wdPattern" style="padding:10px"></div></div>
+  </div>
+  <div class="card pol"><div class="pol-h"><h3>Snow History · ${esc(L.name)}</h3><span class="pill">since 1980 · El Niño winters highlighted</span></div><div id="wdHist" style="padding:8px 12px 12px"><span class="spinner"></span> loading 45 years of daily snow…</div></div>`;
   $('wdWin').querySelectorAll('button').forEach(b=>b.onclick=()=>{WD.win=b.dataset.w; $('wdWin').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderWinterTables(); renderEnsOdds(); renderTrend();});
   $('wdTracks').onclick=()=>{ showTab('spaghetti'); setTimeout(()=>{ $('spParam').value='mslp_1000_1040_iso'; spLoop.go(spLoop.idx); },50); };
   const ice=[1,2,3].map(d=>[`Day ${d} freezing rain ≥ 0.25"`,`https://www.wpc.ncep.noaa.gov/wwd/day${d}_pice_gt_25_conus.gif`,'https://www.wpc.ncep.noaa.gov/wwd/winter_wx.shtml']);
   gallery($('wdIce'),ice);
+  $('wdWpcSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>renderWpcProb(b.dataset.k)); renderWpcProb(); renderPattern();
+  $('wdPtH').querySelectorAll('button').forEach(b=>b.onclick=()=>{ WD.ptH=+b.dataset.h; $('wdPtH').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderPtype(); });
+  renderSnowChances(); renderHistory();
   // run-to-run maps
   const fillRR=()=>{ const m=MODELS[$('rrModel').value]||ENS_MODELS[$('rrModel').value]; const all=Object.assign({},...Object.values(m.params));
     const pref=['precip_p06','precip_ptot','1000_500_thick','500_vort_ht','mslp','snodpth_chng'];
@@ -1500,7 +1515,146 @@ async function initWinter(){
       `<div class="card"><div class="broken">${fmtZ(it.init)} run doesn't reach this time (f${pad3(it.fh)}).</div></div>`).join(''); };
   $('rrModel').onchange=fillRR; $('rrParam').onchange=drawRR; $('rrValid').onchange=drawRR; fillRR();
   try{ WD.mods=await stormData(L); }catch(e){ WD.mods=[]; }
-  renderWinterTables(); $('wdSnowDay').innerHTML=snowDayHTML(snowDayCalc(WD.mods)); renderEnsOdds(); renderTrend();
+  renderWinterTables(); $('wdSnowDay').innerHTML=snowDayHTML(snowDayCalc(WD.mods)); renderEnsOdds(); renderTrend(); renderPtype();
+}
+/* =========================================================
+   18b) WINTER DESK EXTRAS
+   ========================================================= */
+/* --- Next Snow Chances: every member of GEFS, ECMWF ENS and GEPS pooled, day by day --- */
+async function renderSnowChances(){
+  const L=getLoc(), el=$('wdChance'); if(!el||!L) return;
+  const res=await Promise.all(['gefs','ecmwf','gem'].map(k=>fetchEnsemble(k,L.lat,L.lon,'temperature_2m,precipitation,snowfall').then(j=>({k,j})).catch(()=>null)));
+  const days={}; // 'YYYY-MM-DD' -> {k: [member daily totals]}
+  res.filter(Boolean).forEach(({k,j})=>{ const S=members(j.hourly,'snowfall');
+    S.forEach((m,mi)=>{ const per={}; j.hourly.time.forEach((t,i)=>{ const d=t.slice(0,10), v=m.y[i]; if(v==null) return; (per[d]=per[d]||{s:0,n:0}); per[d].s+=v; per[d].n++; });
+      Object.entries(per).forEach(([d,o])=>{ if(o.n<20) return; ((days[d]=days[d]||{})[k]=days[d][k]||[]).push(o.s); }); }); });
+  const today=new Date().toLocaleDateString('en-CA'); const list=Object.keys(days).filter(d=>d>=today).sort().slice(0,16);
+  if(!list.length){ el.innerHTML='<p class="muted small">Ensemble data unavailable right now.</p>'; return; }
+  const P=(arr,th)=>arr.length?arr.filter(x=>x>=th).length/arr.length:null;
+  const row=list.map(d=>{ const all=Object.values(days[d]).flat(); const by=Object.fromEntries(Object.entries(days[d]).map(([k,a])=>[k,P(a,1)]));
+    return {d, n:all.length, p01:P(all,0.1), p1:P(all,1), p3:P(all,3), p6:P(all,6), by, mx:Math.max(...all)}; });
+  const nxt=row.find(r=>r.p1>=0.2);
+  const lbl=d=>new Date(d+'T12:00').toLocaleDateString([], {weekday:'short', month:'numeric', day:'numeric'});
+  const pc=v=>v==null?'–':Math.round(v*100)+'%';
+  const cell=(v,c)=>`<td class="pcell" style="background:${v>0?`color-mix(in srgb, ${c} ${Math.round(Math.min(1,v*1.4)*85)+10}%, transparent)`:'transparent'}">${v>=0.05?Math.round(v*100):''}</td>`;
+  const names={gefs:'GEFS',ecmwf:'ECMWF',gem:'GEPS'};
+  el.innerHTML=`<p style="margin:2px 0 10px">${nxt?`<b>Next real snow chance: ${lbl(nxt.d)}</b> — ${pc(nxt.p1)} of ${nxt.n} ensemble members show 1"+ that day (${Object.entries(nxt.by).map(([k,v])=>`${names[k]} ${pc(v)}`).join(' · ')}).`
+      :`<b>No day in the next ${row.length} reaches a 20% chance of 1"+ snow.</b> ${row.some(r=>r.p01>=0.2)?'A few days show light snow or flurries.':'Nothing notable showing yet.'}`}</p>
+    <div class="scrollx"><table class="t ptab"><tr><th></th>${row.map(r=>`<th>${lbl(r.d).replace(' ','<br>')}</th>`).join('')}</tr>
+    <tr><td>Any snow (0.1"+)</td>${row.map(r=>cell(r.p01,'#93c5fd')).join('')}</tr>
+    <tr><td><b>1"+</b></td>${row.map(r=>cell(r.p1,'#60a5fa')).join('')}</tr>
+    <tr><td><b>3"+</b></td>${row.map(r=>cell(r.p3,'#3b82f6')).join('')}</tr>
+    <tr><td><b>6"+</b></td>${row.map(r=>cell(r.p6,'#a855f7')).join('')}</tr>
+    <tr><td class="muted">Wettest member</td>${row.map(r=>`<td class="muted small">${r.mx>=0.1?r.mx.toFixed(1)+'"':''}</td>`).join('')}</tr></table></div>
+    <p class="small muted" style="margin:6px 0 0">Numbers are the % of all ensemble members (GEFS, ECMWF ENS and Canadian GEPS pooled) showing that much snow on that calendar day. Beyond ~7 days, even 20–30% is a real signal worth watching.</p>`;
+}
+
+/* --- Precip-type timeline: what falls, hour by hour, in each model --- */
+const PTYPE={SN:['Snow','#60a5fa'],IP:['Sleet','#a78bfa'],ZR:['Freezing rain','#f472b6'],MX:['Rain/snow mix','#67e8f9'],RA:['Rain','#22c55e']};
+function ptypeHour(h,i){
+  const pr=h.precipitation?.[i]; if(pr==null||pr<0.005) return null;
+  const swe=(h.snowfall?.[i]||0)/7, liq=(h.rain?.[i]||0)+(h.showers?.[i]||0), T=h.temperature_2m?.[i];
+  const aloft=[h.temperature_925hPa?.[i],h.temperature_850hPa?.[i],h.temperature_700hPa?.[i]].filter(v=>v!=null), warm=aloft.length?Math.max(...aloft):null;
+  let t;
+  if(swe>=0.7*pr) t='SN';
+  else if(T!=null&&T<=32){ t = warm!=null&&warm>=36 ? 'ZR' : warm!=null&&warm>32 ? 'IP' : (swe>0?'SN':'ZR'); }
+  else if(swe>0.15*pr) t='MX';
+  else t='RA';
+  return {t,pr};
+}
+function renderPtype(){
+  const el=$('wdPtype'); if(!el) return; const mods=(WD.mods||[]).filter(m=>m.h.precipitation);
+  if(!mods.length){ el.innerHTML='<p class="muted small">Model data unavailable right now.</p>'; return; }
+  const H=WD.ptH||7, step=3, t0=Math.floor(Date.now()/(step*3600e3))*step*3600e3, nb=H*24/step;
+  const bins=range(0,nb).map(b=>t0+b*step*3600e3);
+  const rank={ZR:5,IP:4,SN:3,MX:2,RA:1};
+  const rows=mods.map(m=>{ const cells=bins.map(()=>({am:{},tot:0}));
+    m.ms.forEach((t,i)=>{ const b=Math.floor((t-t0)/(step*3600e3)); if(b<0||b>=nb) return; const r=ptypeHour(m.h,i); if(!r) return; cells[b].am[r.t]=(cells[b].am[r.t]||0)+r.pr; cells[b].tot+=r.pr; });
+    const have=m.ms.length && m.ms[m.ms.length-1];
+    return {n:m.name, cells:cells.map((c,k)=>{ if(bins[k]>have) return {na:true}; if(!c.tot) return null;
+      // the type with the most precip; ice wins ties because it matters most
+      const t=Object.keys(c.am).sort((a,b)=>(c.am[b]-c.am[a])||(rank[b]-rank[a]))[0]; return {t,tot:c.tot,ice:(c.am.ZR||0)+(c.am.IP||0)}; })}; });
+  const dayHead=[]; bins.forEach((b,k)=>{ const d=new Date(b); if(k===0||d.getHours()<step){ dayHead.push({k,lbl:d.toLocaleDateString([], {weekday:'short', month:'numeric', day:'numeric'})}); } });
+  const colspan=k=>{ const i=dayHead.findIndex(x=>x.k===k); return (i<dayHead.length-1?dayHead[i+1].k:nb)-k; };
+  const op=v=>Math.max(0.3,Math.min(1,0.3+v*5));
+  el.innerHTML=`<div class="scrollx"><table class="pt"><tr><th></th>${dayHead.map(x=>`<th colspan="${colspan(x.k)}">${x.lbl}</th>`).join('')}</tr>
+    ${rows.map(r=>`<tr><td class="pt-n">${esc(r.n)}</td>${r.cells.map((c,k)=>{ const tm=new Date(bins[k]).toLocaleString([], {weekday:'short',hour:'numeric'});
+      if(!c) return `<td title="${tm}: dry"></td>`; if(c.na) return `<td class="pt-na" title="beyond this model's run"></td>`;
+      return `<td style="background:${PTYPE[c.t][1]};opacity:${op(c.tot)}" title="${tm}: ${PTYPE[c.t][0]}, ${c.tot.toFixed(2)}&quot; liquid${c.ice>0&&c.t!=='ZR'&&c.t!=='IP'?' (some ice)':''}"></td>`; }).join('')}</tr>`).join('')}</table></div>
+    <div class="row small" style="gap:12px;margin-top:8px">${Object.values(PTYPE).map(([n,c])=>`<span><i class="sw" style="background:${c}"></i>${n}</span>`).join('')}<span class="muted">Darker = heavier. Each box is 3 hours. Hover a box for details.</span></div>`;
+}
+
+/* --- Snow history for your spot (ERA5 reanalysis since 1980) + this season so far --- */
+const STRONG_NINO=new Set([1982,1987,1991,1997,2009,2015,2023]); // seasons starting in these years: ONI ≥ 1.5
+const histCache={};
+async function snowHistory(L){
+  const k=L.lat+','+L.lon; if(histCache[k]) return histCache[k];
+  const end=new Date(Date.now()-6*864e5).toISOString().slice(0,10);
+  const p=(async()=>{
+    const [a,f]=await Promise.all([
+      fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${L.lat}&longitude=${L.lon}&start_date=1980-07-01&end_date=${end}&daily=snowfall_sum&timezone=auto&precipitation_unit=inch`).then(r=>r.json()),
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&daily=snowfall_sum&past_days=14&forecast_days=1&timezone=auto&precipitation_unit=inch`).then(r=>r.json()).catch(()=>null)]);
+    if(!a.daily) throw new Error(a.reason||'no data');
+    const day={}; a.daily.time.forEach((t,i)=>day[t]=a.daily.snowfall_sum[i]);
+    if(f&&f.daily){ const today=new Date().toLocaleDateString('en-CA'); f.daily.time.forEach((t,i)=>{ if(t<today && day[t]==null && f.daily.snowfall_sum[i]!=null) day[t]=f.daily.snowfall_sum[i]; }); }
+    return day; })();
+  histCache[k]=p; p.catch(()=>delete histCache[k]); return p;
+}
+function seasonOf(d){ const y=+d.slice(0,4), m=+d.slice(5,7); return m>=7?y:y-1; }
+function doy(d){ const s=seasonOf(d); return Math.round((Date.parse(d)-Date.UTC(s,6,1))/864e5); } // days since Jul 1
+async function renderHistory(){
+  const L=getLoc(), el=$('wdHist'); if(!el||!L) return;
+  let day; try{ day=await snowHistory(L); }catch(e){ el.innerHTML='<p class="muted small">Historical data unavailable right now — try again later.</p>'; return; }
+  const S={}; Object.keys(day).sort().forEach(d=>{ const s=seasonOf(d), v=day[d]||0; const o=S[s]=S[s]||{tot:0,max1:0,max3:0,first:null,d1:0,days:[],cum:[]};
+    o.days.push(v); o.tot+=v; o.max1=Math.max(o.max1,v); if(v>=1){ o.d1++; if(o.first==null) o.first=d; }
+    const n=o.days.length, three=o.days.slice(Math.max(0,n-3)).reduce((a,b)=>a+b,0); o.max3=Math.max(o.max3,three); o.cum[doy(d)]=o.tot; });
+  const cur=seasonOf(new Date().toLocaleDateString('en-CA')), C=S[cur];
+  const full=Object.keys(S).map(Number).filter(s=>s<cur && S[s].days.length>300).sort();
+  if(full.length<10){ el.innerHTML='<p class="muted small">Not enough history for this spot.</p>'; return; }
+  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length, tots=full.map(s=>S[s].tot), nino=full.filter(s=>STRONG_NINO.has(s));
+  const dNow=C?C.cum.length-1:0, toDate=s=>{ const c=S[s].cum; for(let i=Math.min(dNow,c.length-1);i>=0;i--) if(c[i]!=null) return c[i]; return 0; };
+  const avgToDate=avg(full.map(toDate)), curTot=C?C.tot:0;
+  const pct=f=>Math.round(100*full.filter(f).length/full.length);
+  const firstAvg=avg(full.filter(s=>S[s].first).map(s=>doy(S[s].first))), fd=n=>{ const d=new Date(Date.UTC(cur,6,1)+n*864e5); return d.toLocaleDateString([], {month:'short', day:'numeric', timeZone:'UTC'}); };
+  const lo=full.reduce((a,b)=>S[a].tot<S[b].tot?a:b), hi=full.reduce((a,b)=>S[a].tot>S[b].tot?a:b);
+  const sl=s=>`${s}–${String(s+1).slice(2)}`;
+  const max=Math.max(...tots), W=Math.max(560,full.length*16), Hh=160, bw=W/full.length;
+  const bars=full.map((s,i)=>{ const h=S[s].tot/max*(Hh-18); return `<rect x="${i*bw+1}" y="${Hh-h}" width="${bw-2}" height="${h}" rx="2" fill="${STRONG_NINO.has(s)?'#f59e0b':'#60a5fa'}"><title>${sl(s)}: ${S[s].tot.toFixed(1)}" total · biggest 3-day storm ${S[s].max3.toFixed(1)}"${STRONG_NINO.has(s)?' · strong El Niño':''}</title></rect>`+(i%5===0?`<text x="${i*bw+bw/2}" y="${Hh+12}" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">${s}</text>`:''); }).join('');
+  const avgY=Hh-avg(tots)/max*(Hh-18);
+  el.innerHTML=`<div class="pol-top" style="margin:0 0 10px">
+      <div class="stat"><div class="k">This season so far</div><div class="v" style="color:var(--snow)">${curTot.toFixed(1)}"</div><div class="s">average by this date: ${avgToDate.toFixed(1)}"</div></div>
+      <div class="stat"><div class="k">Average season</div><div class="v">${avg(tots).toFixed(1)}"</div><div class="s">strong El Niño seasons: ${avg(nino.map(s=>S[s].tot)).toFixed(1)}"</div></div>
+      <div class="stat"><div class="k">Seasons with a 6"+ storm</div><div class="v">${pct(s=>S[s].max3>=6)}%</div><div class="s">10"+ storm: ${pct(s=>S[s].max3>=10)}% · 3-day totals</div></div>
+      <div class="stat"><div class="k">First 1"+ snow day</div><div class="v">${fd(Math.round(firstAvg))}</div><div class="s">on average${C&&C.first?` · this season: ${new Date(C.first+'T12:00').toLocaleDateString([], {month:'short',day:'numeric'})}`:' · none yet this season'}</div></div></div>
+    <div class="scrollx"><svg viewBox="0 -4 ${W} ${Hh+18}" width="${W}" height="${Hh+18}" style="display:block">${bars}<line x1="0" x2="${W}" y1="${avgY}" y2="${avgY}" stroke="currentColor" stroke-dasharray="4 4" opacity=".45"/><text x="${W-4}" y="${avgY-4}" font-size="10" text-anchor="end" fill="currentColor" opacity=".7">avg ${avg(tots).toFixed(1)}"</text></svg></div>
+    <div class="row small" style="gap:12px;margin:6px 0 10px"><span><i class="sw" style="background:#f59e0b"></i>Strong El Niño winter</span><span><i class="sw" style="background:#60a5fa"></i>Other winters</span><span class="muted">Hover a bar for that season.</span></div>
+    <div class="grid g2"><div><h4 style="margin:4px 0">Strong El Niño winters here</h4><table class="t small"><tr><th>Season</th><th>Total</th><th>Biggest 3-day storm</th><th>First 1"+ day</th></tr>
+      ${nino.map(s=>`<tr><td>${sl(s)}</td><td>${S[s].tot.toFixed(1)}"</td><td>${S[s].max3.toFixed(1)}"</td><td>${S[s].first?new Date(S[s].first+'T12:00').toLocaleDateString([], {month:'short',day:'numeric'}):'none'}</td></tr>`).join('')}</table></div>
+      <div><h4 style="margin:4px 0">Extremes since ${full[0]}</h4><table class="t small">
+      <tr><td>Least snowy</td><td>${sl(lo)} · ${S[lo].tot.toFixed(1)}"</td></tr><tr><td>Snowiest</td><td>${sl(hi)} · ${S[hi].tot.toFixed(1)}"</td></tr>
+      <tr><td>Seasons under 5"</td><td>${full.filter(s=>S[s].tot<5).length} of ${full.length}</td></tr><tr><td>Seasons with no 1"+ day</td><td>${full.filter(s=>!S[s].first).length} of ${full.length}</td></tr></table></div></div>
+    <p class="small muted" style="margin:8px 0 0">Estimated from ERA5 reanalysis (a ~25 km grid), not an official gauge. It smooths out the peaks of big storms, so real single-storm totals are often higher; official records are kept by the <a href="https://www.weather.gov/wrh/climate" target="_blank" rel="noopener">NWS</a>. Seasons run July–June.</p>`;
+}
+
+/* --- Pattern watch + WPC probabilities --- */
+const CPCW='https://www.cpc.ncep.noaa.gov/products/precip/CWlink/';
+function renderPattern(){
+  const el=$('wdPattern'); if(!el) return;
+  gallery(el,[['Arctic Oscillation (AO) forecast',CPCW+'daily_ao_index/ao.gefs.sprd2.png',CPCW+'daily_ao_index/ao.shtml'],
+    ['North Atlantic Oscillation (NAO) forecast',CPCW+'pna/nao.gefs.sprd2.png',CPCW+'pna/nao.shtml'],
+    ['Pacific–North American (PNA) forecast',CPCW+'pna/pna.gefs.sprd2.png',CPCW+'pna/pna.shtml'],
+    ['MJO forecast · ECMWF',CPCW+'MJO/CLIVAR/ECMF_phase_51m_small.gif',CPCW+'MJO/mjo.shtml'],
+    ['MJO forecast · GEFS',CPCW+'MJO/CLIVAR/NCPE_phase_21m_small.gif',CPCW+'MJO/mjo.shtml']]);
+}
+const WPCP={'4':'Snow ≥ 4"','8':'Snow ≥ 8"','12':'Snow ≥ 12"','ice':'Ice ≥ 0.25"','d47':'Days 4–7'};
+function renderWpcProb(k){
+  WD.wp=k=k||WD.wp||'4'; const el=$('wdWpc'); if(!el) return;
+  $('wdWpcSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+  const W='https://www.wpc.ncep.noaa.gov/wwd/', link=W+'winter_wx.shtml';
+  const items = k==='d47' ? [4,5,6,7].map(d=>[`Day ${d}: chance of 0.25"+ liquid as snow/sleet`,`${W}pwpf_d47/gif/prbww_sn25_DAY${d}_conus.gif`,W+'pwpf_d47/pwpf_medr.php'])
+    : k==='ice' ? [1,2,3].map(d=>[`Day ${d}: chance of 0.25"+ freezing rain`,`${W}day${d}_pice_gt_25_conus.gif`,link])
+    : [1,2,3].map(d=>[`Day ${d}: chance of ${k}"+ snow`,`${W}day${d}_psnow_gt_${pad2(+k)}_conus.gif`,link]);
+  gallery(el,items);
 }
 function wdWindow(){ const t0=Date.now(); return [t0, t0+WINS[WD.win]*864e5]; }
 function renderWinterTables(){
