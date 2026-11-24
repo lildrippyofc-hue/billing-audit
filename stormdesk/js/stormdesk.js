@@ -87,9 +87,9 @@ const MODELS = {
   gfsw:  {name:'GFS', desc:'interactive version', group:'Interactive (Windy)', kind:'windy', product:'gfs'},
   iconeu:{name:'ICON-EU', desc:'7 km Europe, interactive', group:'Interactive (Windy)', kind:'windy', product:'iconEu'},
   hrrr:  {name:'HRRR', desc:'3 km, hourly runs', group:'Mesoscale (CONUS)', kind:'mag', dir:'hrrr', params:P_HRRR,
-          areas:{conus:'CONUS'}, cycles:range(0,24), latency:2, hours:c=>c%6===0?range(0,48):range(0,18)},
+          areas:{conus:'CONUS','us-nc':'North Central (KS · MO · NE · IA)','us-sc':'South Central (OK · TX · AR)','us-ne':'Northeast','us-se':'Southeast','us-nw':'Northwest','us-sw':'Southwest'}, cycles:range(0,24), latency:2, hours:c=>c%6===0?range(0,48):range(0,18)},
   rrfs:  {name:'RRFS', desc:'3 km Rapid Refresh FV3 (NAM successor)', group:'Mesoscale (CONUS)', kind:'mag', dir:'rrfs', params:P_RRFS,
-          areas:{conus:'CONUS'}, cycles:[0,6,12,18], latency:3, hours:()=>range(1,84)},
+          areas:{conus:'CONUS','us-nc':'North Central (KS · MO · NE · IA)','us-sc':'South Central (OK · TX · AR)','us-ne':'Northeast','us-se':'Southeast','us-nw':'Northwest','us-sw':'Southwest'}, cycles:[0,6,12,18], latency:3, hours:()=>range(1,84)},
   rap:   {name:'RAP', desc:'13 km Rapid Refresh, hourly', group:'Mesoscale (CONUS)', kind:'mag', dir:'rap', params:P_RAP,
           areas:{conus:'CONUS'}, cycles:range(0,24), latency:1.5, hours:c=>c%6===3?range(0,51):range(0,21)},
 
@@ -108,7 +108,9 @@ const MODELS = {
   kma:{name:'KMA', desc:'Korea global, 12 days', group:'More global', kind:'grid', om:'kma_gdps', days:12, step:6},
   bom:{name:'ACCESS-G', desc:'Australia BOM global, 10 days', group:'More global', kind:'grid', om:'bom_access_global', days:10, step:6},
   gfs_grid:{name:'GFS (map viewer)', desc:'GFS in the same viewer, for side-by-side checks', group:'More global', kind:'grid', om:'gfs_global', days:10, step:6},
-  nam_grid:{name:'NAM 3 km', desc:'NCEP NAM CONUS nest, ~2.5 days', group:'More global', kind:'grid', om:'ncep_nam_conus', days:3, step:3},
+  rrfs_grid:{name:'RRFS 3 km (data map)', desc:'NOAA RRFS drawn here, ~3.5 days', group:'Mesoscale (CONUS)', kind:'grid', om:'ncep_rrfs_conus', days:3, step:3},
+  hrrr_grid:{name:'HRRR (data map)', desc:'NOAA HRRR drawn here, ~2 days', group:'Mesoscale (CONUS)', kind:'grid', om:'ncep_hrrr_conus', days:2, step:3},
+  rdps_grid:{name:'CMC RDPS (data map)', desc:'Canadian regional 10 km, ~3.5 days', group:'Mesoscale (CONUS)', kind:'grid', om:'gem_regional', days:3, step:3},
   nbm:   {name:'NBM', desc:'National Blend — snow totals, ptype odds', group:'Blends & Winter', kind:'mag', dir:'nbm', params:P_NBM,
           areas:{conus:'CONUS'}, cycles:[0,6,12,18], latency:2, hours:()=>range(6,264,6)},
 };
@@ -117,8 +119,8 @@ const WINDY_LAYERS = {temp:'Temperature',rain:'Rain / Snow / Thunder',ptype:'Pre
 const ENS_MODELS = {
   gefsmean:{name:'GEFS Mean & Spread', desc:'31 members, to 16 days', kind:'mag', dir:'gefs-mean-sprd', params:P_GEFSMEAN,
             areas:{namer:'North America',conus:'CONUS','west-atl':'Western Atlantic','east-pac':'Eastern Pacific',alaska:'Alaska',europe:'Europe',polar:'Polar'}, cycles:[0,6,12,18], latency:6, hours:()=>range(0,384,6)},
-  refs:{name:'REFS', desc:'Rapid Refresh ensemble, CONUS, ~2.5 days', kind:'mag', dir:'refs', params:P_REFS,
-            areas:{conus:'CONUS'}, cycles:[0,6,12,18], latency:4, hours:()=>range(1,60)}
+  refs:{name:'REFS', desc:'Rapid Refresh ensemble (replaced HREF in Nov 2026), ~2.5 days', kind:'mag', dir:'refs', params:P_REFS,
+            areas:{conus:'CONUS','us-nc':'North Central (KS · MO · NE · IA)','us-sc':'South Central (OK · TX · AR)','us-ne':'Northeast','us-se':'Southeast','us-nw':'Northwest','us-sw':'Southwest'}, cycles:[0,6,12,18], latency:4, hours:()=>range(1,60)}
 };
 const SPAG = {dir:'gefs-spag', area:'namer', areas:{namer:'North America','west-atl':'Western Atlantic','east-pac':'Eastern Pacific',samer:'South America',europe:'Europe',asia:'Asia'}, cycles:[0,6,12,18], latency:6, hours:()=>range(0,384,6),
   params:{'500_528_570_ht':'500mb 528/570 dam','500_522_564_ht':'500mb 522/564 dam','500_534_576_ht':'500mb 534/576 dam','500_540_582_ht':'500mb 540/582 dam','500_516_558_ht':'500mb 516/558 dam','500_510_552_ht':'500mb 510/552 dam','mslp_1000_1040_iso':'MSLP 1000/1040 mb','mslp_1004_1044_iso':'MSLP 1004/1044 mb','mslp_1008_1048_iso':'MSLP 1008/1048 mb','mslp_996_1036_iso':'MSLP 996/1036 mb','mslp_1012_1052_iso':'MSLP 1012/1052 mb','mslp_984_1024_iso':'MSLP 984/1024 mb','200_1200_ht':'200mb 1200 dam','200_1176_ht':'200mb 1176 dam','200_1224_ht':'200mb 1224 dam'}};
@@ -862,7 +864,7 @@ const DET = [
   ['gfs_seamless','GFS','#38bdf8'],['ecmwf_ifs025','ECMWF IFS','#f87171'],['ecmwf_aifs025_single','ECMWF AIFS','#fb923c'],
   ['icon_seamless','ICON','#34d399'],['gem_seamless','GEM','#facc15'],['ukmo_seamless','UKMO','#c084fc'],
   ['jma_seamless','JMA','#f472b6'],['meteofrance_seamless','Météo-France','#a3e635'],['ncep_nbm_conus','NBM','#e5e7eb'],['gfs_hrrr','HRRR','#22d3ee'],
-  ['ncep_nam_conus','NAM','#fda4af'],['gem_regional','GEM Regional (RDPS)','#fde68a'],['gem_hrdps_continental','HRDPS','#fef08a'],
+  ['ncep_rrfs_conus','RRFS 3 km','#fda4af'],['gem_regional','GEM Regional (RDPS)','#fde68a'],['gem_hrdps_continental','HRDPS','#fef08a'],
   ['gfs_graphcast025','GraphCast (AI)','#93c5fd'],['ncep_aigfs025','AIGFS (AI)','#7dd3fc'],['knmi_seamless','KNMI Harmonie','#d8b4fe'],
   ['dmi_seamless','DMI Harmonie','#f0abfc'],['metno_seamless','MET Norway','#bbf7d0'],['kma_seamless','KMA (Korea)','#fcd34d'],
   ['cma_grapes_global','CMA GRAPES (China)','#fca5a5'],['bom_access_global','BOM ACCESS (Australia)','#a5f3fc'],['italia_meteo_arpae_icon_2i','ItaliaMeteo ICON-2I','#bef264'],
@@ -874,7 +876,7 @@ const DET = [
   ['jma_gsm','JMA GSM','#ec4899'],['jma_msm','JMA MSM','#db2777'],['metno_nordic','MET Nordic','#86efac'],
   ['meteoswiss_icon_ch1','MeteoSwiss ICON-CH1','#f9a8d4'],['meteoswiss_icon_ch2','MeteoSwiss ICON-CH2','#fbcfe8'],
   ['kma_gdps','KMA GDPS','#fbbf24'],['kma_ldps','KMA LDPS','#f59e0b'],['ncep_hrrr_conus_15min','HRRR 15-min','#06b6d4'],
-  ['ncep_nam_conus','NAM CONUS 3 km','#fb7185'],['ncep_gfs_graphcast025','GraphCast (alt id)','#60a5fa']
+  ['ncep_hrrr_conus','HRRR CONUS 3 km','#fb7185']
 ];
 /* These Open-Meteo models only cover Europe/Japan/Korea and return nothing for US points: leave them out. */
 { const REGIONAL=new Set(['icon_d2','icon_eu','italia_meteo_arpae_icon_2i','jma_msm','kma_ldps','meteofrance_arome_france','meteofrance_arpege_europe','meteoswiss_icon_ch1','meteoswiss_icon_ch2','metno_nordic','ukmo_uk_deterministic_2km','ncep_gfs_graphcast025']);
@@ -1310,7 +1312,7 @@ setInterval(checkAlerts, 5*60e3);
    15) STORM TOTALS ENGINE (multi-model, Kuchera, ice)
    ========================================================= */
 const STORM_MODELS=[['gfs_seamless','GFS'],['ecmwf_ifs025','ECMWF'],['ecmwf_aifs025_single','ECMWF AIFS'],['gem_seamless','CMC (GEM)'],['icon_seamless','ICON'],
-  ['ukmo_seamless','UKMO'],['ncep_nbm_conus','NBM'],['ncep_nam_conus','NAM 3 km'],['gfs_hrrr','HRRR'],['gfs_graphcast025','GraphCast'],['jma_seamless','JMA'],['meteofrance_seamless','ARPEGE']];
+  ['ukmo_seamless','UKMO'],['ncep_nbm_conus','NBM'],['ncep_rrfs_conus','RRFS 3 km'],['gfs_hrrr','HRRR'],['gem_regional','CMC RDPS'],['gfs_graphcast025','GraphCast'],['jma_seamless','JMA'],['meteofrance_seamless','ARPEGE']];
 function kuchRatio(temps){ const ts=temps.filter(v=>v!=null&&isFinite(v)); if(!ts.length) return 10;
   const tk=(Math.max(...ts)-32)*5/9+273.15; const r= tk>271.16 ? 12+2*(271.16-tk) : 12+(271.16-tk); return Math.max(0,Math.min(r,30)); }
 const stormCache={};
@@ -1458,6 +1460,7 @@ async function initWinter(){
   <div class="viewer-head"><div><div class="viewer-title">Winter Desk · ${esc(L.name)}</div><div class="small muted">Every model's snow, ice and cold for your ZIP, side by side.</div></div>
     <div class="seg" id="wdWin">${Object.keys(WINS).map(k=>`<button data-w="${k}" class="${k===WD.win?'on':''}">${k}</button>`).join('')}</div></div>
   <div class="pol-top" id="wdStats"></div>
+  <div class="card pol"><div class="pol-h"><h3>Next 24 Hours · every 15 min</h3><span class="pill">HRRR · RRFS</span></div><div id="wdNow" style="padding:8px 12px"><span class="spinner"></span></div></div>
   <div class="card pol"><div class="pol-h"><h3>Next Snow Chances</h3><span class="pill">GEFS · ECMWF · GEPS · 15 days</span></div><div id="wdChance" style="padding:8px 12px"><span class="spinner"></span> reading ~100 ensemble members…</div></div>
   <div class="grid g2">
     <div class="card pol"><div class="pol-h"><h3>Storm Totals by Model</h3><span class="pill">from now</span></div><div class="scrollx"><table class="t" id="wdTable"><tr><td><span class="spinner"></span> loading ${STORM_MODELS.length} models…</td></tr></table></div>
@@ -1477,6 +1480,7 @@ async function initWinter(){
     <div class="card pol"><div class="pol-h"><h3>Storm Tracks</h3></div><div style="padding:10px 12px" class="small">
       <p style="margin-top:0">See where the ensemble members put the low-pressure center:</p>
       <button class="btn" id="wdTracks">GEFS sea-level pressure spaghetti →</button>
+      <p><a href="https://www.spc.noaa.gov/exper/refs/viewer/" target="_blank" rel="noopener">SPC REFS viewer (snowfall odds, 1–2 days) ↗</a></p>
       <p><a href="https://charts.ecmwf.int/products/medium-mslp-wind850" target="_blank" rel="noopener">ECMWF pressure charts ↗</a> · <a href="https://www.wpc.ncep.noaa.gov/medr/medr.shtml" target="_blank" rel="noopener">WPC days 3–7 fronts ↗</a></p></div></div>
     <div class="card pol"><div class="pol-h"><h3>Ice Threat (WPC)</h3></div><div class="gal" id="wdIce" style="padding:10px"></div></div>
     <div class="card pol"><div class="pol-h"><h3>Roads &amp; Cameras · ${esc(st)}</h3></div><div style="padding:10px 12px" class="small">
@@ -1500,7 +1504,7 @@ async function initWinter(){
   gallery($('wdIce'),ice);
   $('wdWpcSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>renderWpcProb(b.dataset.k)); renderWpcProb(); renderPattern();
   $('wdPtH').querySelectorAll('button').forEach(b=>b.onclick=()=>{ WD.ptH=+b.dataset.h; $('wdPtH').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderPtype(); });
-  renderSnowChances(); renderHistory();
+  renderSnowChances(); renderHistory(); renderNowcast();
   // run-to-run maps
   const fillRR=()=>{ const m=MODELS[$('rrModel').value]||ENS_MODELS[$('rrModel').value]; const all=Object.assign({},...Object.values(m.params));
     const pref=['precip_p06','precip_ptot','1000_500_thick','500_vort_ht','mslp','snodpth_chng'];
@@ -1656,6 +1660,29 @@ function renderWpcProb(k){
     : [1,2,3].map(d=>[`Day ${d}: chance of ${k}"+ snow`,`${W}day${d}_psnow_gt_${pad2(+k)}_conus.gif`,link]);
   gallery(el,items);
 }
+/* --- Next 24 hours, every 15 minutes: HRRR and RRFS (NOAA's 3 km short-range models) --- */
+async function renderNowcast(){
+  const L=getLoc(), el=$('wdNow'); if(!el||!L) return;
+  const M=[['ncep_hrrr_conus','HRRR'],['ncep_rrfs_conus','RRFS']];
+  const res=await Promise.all(M.map(([id,n])=>fetch(`https://api.open-meteo.com/v1/forecast?latitude=${L.lat}&longitude=${L.lon}&minutely_15=precipitation,snowfall,rain,temperature_2m&models=${id}&forecast_minutely_15=96&timezone=auto&precipitation_unit=inch&temperature_unit=fahrenheit`)
+    .then(r=>r.json()).then(j=>j.minutely_15&&j.minutely_15.time?{n,m:j.minutely_15,off:(j.utc_offset_seconds||0)*1000}:null).catch(()=>null)));
+  const ok=res.filter(Boolean); if(!ok.length){ el.innerHTML='<p class="muted small">Short-range model data unavailable right now.</p>'; return; }
+  const typeOf=(m,i)=>{ const p=m.precipitation[i]; if(p==null||p<0.002) return null; const sn=(m.snowfall[i]||0)/7, T=m.temperature_2m[i];
+    if(sn>=0.6*p) return 'SN'; if(T!=null&&T<=32) return 'ZR'; if(sn>0.15*p) return 'MX'; return 'RA'; };
+  const fmtT=ms=>new Date(ms).toLocaleTimeString([], {weekday:'short',hour:'numeric',minute:'2-digit'});
+  const rows=ok.map(({n,m,off})=>{ const ms=m.time.map(s=>Date.parse(s+'Z')-off); let snow=0,liq=0,ice=0,first=null,last=null,peak=0,peakT=null;
+    const cells=m.time.map((_,i)=>{ const t=typeOf(m,i); if(t){ const p=m.precipitation[i]; liq+=p; if(t==='ZR') ice+=p; if(first==null) first=ms[i]; last=ms[i]; }
+      const s=m.snowfall[i]||0; snow+=s; if(s*4>peak){ peak=s*4; peakT=ms[i]; } return {t, p:m.precipitation[i]||0, s, T:m.temperature_2m[i], ms:ms[i]}; });
+    return {n,cells,snow,liq,ice,first,last,peak,peakT}; });
+  const head=ok[0].m.time.map((s,i)=>i%4===0?`<th colspan="4">${new Date(Date.parse(s+'Z')-ok[0].off).toLocaleTimeString([], {hour:'numeric'})}</th>`:'').join('');
+  const op=v=>Math.max(0.35,Math.min(1,0.35+v*25));
+  el.innerHTML=`<div class="pol-top" style="margin:0 0 10px">${rows.map(r=>`<div class="stat"><div class="k">${r.n} · next 24 h</div>
+      <div class="v" style="color:var(--snow)">${r.snow.toFixed(1)}"</div>
+      <div class="s">${r.first?`starts ${fmtT(r.first)} · ends ${fmtT(r.last+15*60e3)}`:'dry'}${r.peak>=0.1?` · heaviest ${r.peak.toFixed(1)}"/hr around ${new Date(r.peakT).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})}`:''}${r.ice>=0.01?` · <b style="color:var(--hot)">${r.ice.toFixed(2)}" freezing rain</b>`:''}</div></div>`).join('')}</div>
+    <div class="scrollx"><table class="pt now"><tr><th></th>${head}</tr>${rows.map(r=>`<tr><td class="pt-n">${r.n}</td>${r.cells.map(c=>{ const tm=new Date(c.ms).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+      return c.t?`<td style="background:${PTYPE[c.t][1]};opacity:${op(c.p)}" title="${tm}: ${PTYPE[c.t][0]} · ${c.p.toFixed(3)}&quot; liquid${c.s?` · ${c.s.toFixed(2)}&quot; snow`:''} · ${Math.round(c.T)}°F"></td>`:`<td title="${tm}: dry · ${c.T!=null?Math.round(c.T)+'°F':''}"></td>`; }).join('')}</tr>`).join('')}</table></div>
+    <p class="small muted" style="margin:6px 0 0">Each box is 15 minutes. Snow totals are the models' own snowfall (about 10:1); in very cold air expect a bit more, near freezing a bit less. These two models are updated every hour, so they're the best guide to timing within the next day.</p>`;
+}
 function wdWindow(){ const t0=Date.now(); return [t0, t0+WINS[WD.win]*864e5]; }
 function renderWinterTables(){
   const mods=WD.mods||[]; const [t0,t1]=wdWindow();
@@ -1707,7 +1734,7 @@ async function renderTrend(){
    19) SOUNDINGS (Skew-T from model pressure levels)
    ========================================================= */
 const LEVELS=[1000,975,950,925,900,850,800,750,700,650,600,550,500,450,400,350,300,250,200];
-const SND_MODELS=[['gfs_seamless','GFS'],['ecmwf_ifs025','ECMWF IFS'],['gem_seamless','CMC (GEM)'],['icon_seamless','ICON'],['ncep_nam_conus','NAM 3 km'],['gfs_hrrr','HRRR'],['ukmo_seamless','UKMO'],['ecmwf_aifs025_single','ECMWF AIFS'],['meteofrance_seamless','ARPEGE'],['jma_seamless','JMA']];
+const SND_MODELS=[['gfs_seamless','GFS'],['ecmwf_ifs025','ECMWF IFS'],['gem_seamless','CMC (GEM)'],['icon_seamless','ICON'],['ncep_rrfs_conus','RRFS 3 km'],['gfs_hrrr','HRRR'],['ukmo_seamless','UKMO'],['ecmwf_aifs025_single','ECMWF AIFS'],['meteofrance_seamless','ARPEGE'],['jma_seamless','JMA']];
 const SD={model:'gfs_seamless',idx:0,data:{},timer:null};
 function initSounding(){
   const L=getLoc(), M=$('sndMain');
